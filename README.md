@@ -9,6 +9,10 @@ CLI runner, tickets through the Atlassian MCP server. Everything the agent knows
 about *your* projects lives in plain Markdown files in your repo — reviewable,
 diffable, and shared with your team through Git.
 
+> **👉 [Check out the detailed overview](https://sn4kygit.github.io/claude_blueprint/overview.html)** —
+> the whole architecture rendered as a one-pager: five layers, 13 core skills,
+> five verdicts, and what is enforced rather than merely written down.
+
 > **This is a public blueprint.** It contains no credentials, no internal URLs, no
 > customer systems. Everything site-specific is onboarded into `projects/<KEY>/`
 > at your end.
@@ -17,7 +21,6 @@ diffable, and shared with your team through Git.
 |---|---|
 | **Target** | Atlassian Cloud (JIRA + Confluence), remote MCP server, OAuth 2.1 |
 | **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 96 fixtures · 8 eval cases |
-| **Overview** | [Detailed one-pager, rendered](https://sn4kygit.github.io/claude_blueprint/overview.html) — the architecture at a glance |
 | **Two ways in** | Merged into your repo (integrate), or as a plugin |
 | **License** | MIT |
 
