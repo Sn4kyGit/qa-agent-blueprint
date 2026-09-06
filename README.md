@@ -16,8 +16,9 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | Atlassian Cloud (JIRA + Confluence), remote MCP server, OAuth 2.1 |
-| **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 83 fixtures · 8 eval cases |
-| **Two ways in** | Standalone repo, or merged into an existing one — or as a plugin |
+| **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 96 fixtures · 8 eval cases |
+| **Overview** | [Detailed one-pager, rendered](https://sn4kygit.github.io/claude_blueprint/overview.html) — the architecture at a glance |
+| **Two ways in** | Merged into your repo (integrate), or as a plugin |
 | **License** | MIT |
 
 ---
@@ -74,8 +75,8 @@ cd claude_blueprint
 ```
 
 Run in a fresh clone it sets up the blueprint repo itself. Run it **from inside
-your own project** and it asks which of the three ways in you want — integrate,
-plugin, or standalone — and explains the trade-off before you pick.
+your own project** and it asks which of the two ways in you want — integrate or
+plugin — and explains the trade-off before you pick.
 
 Then start Claude Code in the repo:
 
@@ -196,10 +197,10 @@ Rules are advisory. These are not:
 | Hook | Enforces | Fixtures |
 |---|---|---|
 | `pre-tool-guard` | No writes to `.env*` or secret-named paths, no `rm -rf`, no force-push | 23 |
-| `stop-evidence-check` | No verdict without `execution_summary.json` — **and** without a `learnings` declaration | 12 |
-| `session-start` | Orientation: projects and their products, ungroomed learnings, missing secrets file, first-run MCP hint | 9 (listing only) |
+| `stop-evidence-check` | No verdict without `execution_summary.json` — **and** without a `learnings` declaration | 17 |
+| `session-start` | Orientation: projects and their products, ungroomed learnings, missing secrets file, first-run MCP hint; plugin mode injects `CLAUDE.md` verbatim | 13 |
 | `post-jira-audit` | Every JIRA write lands in an append-only audit log, headless runs included | — |
-| `install.sh` (not a hook, same standard) | Namespacing, path rewriting, idempotency, uninstall, plugin wiring | 37 |
+| `install.sh` (not a hook, same standard) | Namespacing, path rewriting, idempotency, uninstall, plugin wiring, self-setup | 43 |
 | `context-budget` | The always-loaded layer stays inside its budget | measured, not asserted |
 
 > **Why the fixtures exist.** The PreToolUse guard silently blocked *nothing* for
@@ -260,7 +261,9 @@ transcript, a file, a ticket, or an artifact.
 
 ## Bringing it into an existing repo
 
-Already have your own `CLAUDE.md`, skills, and `.mcp.json`? Two supported paths:
+Already have your own `CLAUDE.md`, skills, and `.mcp.json`? Two supported paths.
+**One repo → integrate. Many repos → plugin. When in doubt, integrate —
+reviewable beats centrally updatable.**
 
 | | **A) Checkout + integrate** | **B) Plugin** |
 |---|---|---|
@@ -305,7 +308,8 @@ key does not change:
 ```
 
 Restart Claude Code and accept the trust dialog. Since plugins don't load
-`CLAUDE.md`, a SessionStart hook injects the router as session context and creates
+`CLAUDE.md`, a SessionStart hook injects the plugin's `CLAUDE.md` verbatim as
+session context (one router text, no drift between install modes) and creates
 `projects/`, `memory/`, `evidence/` plus a `.env.playwright-secrets` placeholder —
 the Playwright server exits at startup without that file, which otherwise shows up
 only as a connection error.

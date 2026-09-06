@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 #
 # session-start.sh — SessionStart hook. Prints compact orientation context:
-# available projects, Playwright version, and (plugin mode only) the router
-# that CLAUDE.md would normally provide, since plugins do not load CLAUDE.md.
+# available projects, Playwright version, and (plugin mode only) the plugin's
+# own CLAUDE.md, injected verbatim as the router — plugins do not load CLAUDE.md,
+# and a hand-maintained summary here would be a second source of truth drifting
+# from the real router with every edit.
 #
 # Detects plugin mode automatically: if the running project has no managed
 # qa-agent-blueprint block in CLAUDE.md and no .claude/rules/qa-blueprint/
 # namespace, this is a plugin-mode bootstrap — inject the router and scaffold
 # projects/, memory/, evidence/ from the plugin's own copies (never overwriting
-# existing content). Otherwise (standalone blueprint repo, or integrate mode
+# existing content). Otherwise (the blueprint repo itself, or integrate mode
 # where CLAUDE.md/.claude/rules/qa-blueprint already exist) just print the
 # short preamble; the router already lives in the project's own CLAUDE.md.
 #
@@ -92,7 +94,8 @@ bootstrap_dirs() {
   # Playwright MCP is launched with `--secrets .env.playwright-secrets` and that
   # flag is a hard fail: a missing file makes the server exit at startup
   # (ENOENT), so plugin users would get a dead browser server with no obvious
-  # cause. install.sh seeds this template in standalone/integrate mode; plugin
+  # cause. install.sh seeds this template in integrate mode (including
+  # self-setup); plugin
   # mode copies nothing, so seed the same placeholder here. Values stay the
   # user's job — this file never contains anything but comments when written.
   if [ ! -f "$CWD/.env.playwright-secrets" ]; then
@@ -165,45 +168,27 @@ $(list_projects)
   PROJECT.md + learnings.md. No full-repo scans.$(mcp_hint)$(inbox_status)$(secrets_status)"
 
 if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
+  # The router is the plugin's own CLAUDE.md, injected VERBATIM. If the file is
+  # unreadable, say so loudly — a session that silently misses its router
+  # misbehaves in ways nobody can diagnose from the transcript.
+  if [ -f "$PLUGIN_ROOT/CLAUDE.md" ]; then
+    ROUTER="$(cat "$PLUGIN_ROOT/CLAUDE.md")"
+  else
+    ROUTER="WARNING: \$PLUGIN_ROOT/CLAUDE.md is unreadable — this session has no router. Reinstall the plugin."
+  fi
   CONTEXT="## QA Agent Blueprint (plugin mode)
 
-You are a QA Manager and Tester. Test JIRA tickets autonomously, report per
-project specification, always deliver evidence.
+Blueprint rules, skills, agents and hooks load from the plugin at
+\`$PLUGIN_ROOT\`; project data lives in THIS repo under \`projects/\`,
+\`memory/\`, \`evidence/\` (bootstrapped now if missing). \`projects/\` starts
+empty — the scaffold and the filled reference stay in the plugin: read them
+from $PLUGIN_ROOT/projects/_template/ and $PLUGIN_ROOT/projects/EXAMPLE/ when
+onboarding, and write only the new \`projects/<KEY>/\` into this repo.
+The router below is the plugin's CLAUDE.md, injected verbatim. Its relative
+references (\`.claude/...\`, \`docs/...\`) resolve under \$PLUGIN_ROOT;
+\`projects/\`, \`memory/\` and \`evidence/\` are this repo's own.
 
-- Route ticket prefixes (\`SHOP-1234\` → \`SHOP\`) to \`projects/<KEY>/PROJECT.md\`
-  before testing; unknown prefix → run the \`onboard-project\` skill or ask.
-- Products are optional. If that PROJECT.md has a \`## Products\` section, route on
-  to a product and read \`products/<PRODUCT>/PRODUCT.md\` + \`learnings.md\` in
-  addition — the product wins, what it omits is inherited. Order: explicit mention →
-  component → label → \`project-wide\` → the project's declared secondary signals
-  (epic, fix version, MR paths) → a declared default. Conflict or nothing → ask
-  (headless → BLOCKED); a default resolves silence, never a conflict. No such
-  section → the project file is the whole context. New product →
-  \`/onboard-product\`. Details: the product-layer rule in the plugin.
-- Blueprint rules load from the plugin; project data lives in this repo under
-  \`projects/\`, \`memory/\`, \`evidence/\` (bootstrapped now if missing).
-  \`projects/\` starts empty — the scaffold and the filled reference stay in the
-  plugin: read them from $PLUGIN_ROOT/projects/_template/ and
-  $PLUGIN_ROOT/projects/EXAMPLE/ when onboarding, and write only the new
-  \`projects/<KEY>/\` into this repo.
-- Skills: /test-ticket · /retest-bug · /exploratory-testing ·
-  /playwright-regression · /bug-report · /report-to-jira · /deploy-to-stage ·
-  /onboard-project · /onboard-product · /retro-learn
-  + 10 vendored specialist skills for every project (risk-based-testing,
-  bug-reproduction, api-testing, accessibility-testing, security-testing,
-  visual-testing, test-reliability, qa-metrics, test-case-management,
-  release-readiness) — see .claude/skills/THIRD_PARTY_NOTICES.md.
-- Vendored skills are global; their context is per-project and per-product. Point
-  one at .agents/qa-project-context/<KEY>.md — or <KEY>/<PRODUCT>.md once the project
-  has products — for the CURRENT ticket explicitly, never a generic or
-  previously-used path, which may hold another project's or product's data.
-- Learning loop: capture surprises into memory/learnings/_inbox.md; promote via
-  /retro-learn. Every run declares its \`learnings\` in execution_summary.json — the
-  entries, or one sentence why there were none. The Stop hook blocks without it.
-- Hard rules: evidence mandatory · no secrets in chat/code/tickets/screenshots ·
-  no full project scans (start at memory/INDEX.md + the project file) · MCP servers
-  are a declared set (currently playwright, atlassian) — propose, never add one
-  yourself; credential servers resolve references, never surface values.
+$ROUTER
 
 $CONTEXT"
 fi

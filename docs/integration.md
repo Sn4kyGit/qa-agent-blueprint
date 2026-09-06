@@ -5,17 +5,20 @@ existing ecosystem — your own `CLAUDE.md`, `.claude/`, `.mcp.json`, already
 installed Playwright browsers, your own hooks — and merges the blueprint
 non-destructively.
 
+**Choosing a mode: one repo → integrate. Many repos → plugin. When in doubt,
+integrate — reviewable beats centrally updatable.**
+
 > **Principle: Detect → Merge → Report.**
 > Never overwrite. Always back up. Idempotent. Dry-run capable.
 
 ```bash
-./install.sh [--mode standalone|integrate|plugin] [--target <path>]
+./install.sh [--mode integrate|plugin] [--target <path>]
              [--dry-run] [--yes] [--uninstall]
 ```
 
 | Flag | Meaning |
 |---|---|
-| `--mode` | `standalone` · `integrate` · `plugin`. Default: **auto-detect** (see below). |
+| `--mode` | `integrate` · `plugin`. Default: **auto-detect** (see below). |
 | `--target <path>` | Repo to integrate into. Default: current working directory. |
 | `--dry-run` | Prints every planned action, changes nothing. |
 | `--yes` / `-y` | Non-interactive (accepts the auto-detected proposal). |
@@ -23,14 +26,16 @@ non-destructively.
 
 ---
 
-## The three modes
+## The two modes (plus one special case)
 
-### `standalone` — fresh blueprint repo
+### Self-setup — the blueprint repo itself is the target
 
-The previous behavior: sets up the blueprint repo itself (Playwright Chromium,
-the `.env.playwright-secrets` template,
-self-test checklist). The detection checks still apply — e.g. if Playwright
-browsers are already in the cache, the download is skipped.
+Running the installer in a fresh clone (or pointing `--target` at it) sets up
+the blueprint repo itself: Playwright Chromium, the `.env.playwright-secrets`
+template, self-test checklist. Nothing is copied — every copy step would be a
+self-copy — so this is a branch of `integrate`, not a mode of its own. The
+detection checks still apply — e.g. if Playwright browsers are already in the
+cache, the download is skipped.
 
 ### `integrate` — merge into your repo (default when an ecosystem is detected)
 
@@ -65,7 +70,7 @@ plugin, and only your project-specific data lives in your repo.
 1. The repo ships a marketplace descriptor (`.claude-plugin/marketplace.json`,
    `source: "./"`) and a plugin manifest (`.claude-plugin/plugin.json`). The
    manifest declares the component paths explicitly because this repo keeps
-   them under `.claude/` (shared with integrate/standalone mode):
+   them under `.claude/` (shared with integrate mode):
    `skills → ./.claude/skills`, `agents → ./.claude/agents`,
    `hooks → ./hooks/hooks.json`, `mcpServers → ./.mcp.json`.
 2. In your project's `.claude/settings.json` you register the marketplace and
@@ -107,12 +112,15 @@ A `CLAUDE.md` at the plugin root is ignored by Claude Code. The blueprint's
 router (ticket-prefix → `projects/<KEY>/`, skill routing, hard rules) is
 therefore injected by the plugin's **SessionStart hook**
 (`${CLAUDE_PLUGIN_ROOT}/.claude/hooks/session-start.sh`, declared in
-`hooks/hooks.json`). The hook detects plugin mode automatically: if your repo
-has no managed `qa-agent-blueprint` block in `CLAUDE.md` and no
-`.claude/rules/qa-blueprint/` namespace, it prints the compact router as
-session context and bootstraps `projects/`, `memory/`, `evidence/` in your
-repo. In an integrated repo the same hook keeps its old behavior (preamble
-only) — one script serves both modes.
+`hooks/hooks.json`) — **verbatim**: the hook `cat`s the plugin's own
+`CLAUDE.md` into the session context, preceded only by a short path preamble
+(what resolves under the plugin vs. your repo). There is exactly one router
+text, so it cannot drift between install modes. The hook detects plugin mode
+automatically: if your repo has no managed `qa-agent-blueprint` block in
+`CLAUDE.md` and no `.claude/rules/qa-blueprint/` namespace, it injects the
+router and bootstraps `projects/`, `memory/`, `evidence/` in your repo. In an
+integrated repo the same hook keeps its old behavior (preamble only) — one
+script serves both modes.
 
 ### Updates & rollback
 

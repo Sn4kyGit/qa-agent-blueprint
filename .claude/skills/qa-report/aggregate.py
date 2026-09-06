@@ -117,13 +117,21 @@ def summarize(runs):
         out[key] = {
             "runs": len(group),
             "verdicts": dict(verdicts),
-            # Pass rate counts decided runs only: BLOCKED means the test never ran,
-            # so folding it in would punish the product for a broken environment.
+            # Pass rate counts decided runs only: BLOCKED and NO_TEST mean the
+            # test never ran, so folding them in would punish the product for a
+            # broken environment or an investigation session.
             "pass_rate": round(100 * verdicts["PASS"] / decided, 1) if decided else None,
             "findings_by_severity": dict(severities),
             "blocked_reasons": [
                 r.get("blocked_reason") or (r.get("steps_executed") or ["(no reason recorded)"])[-1]
                 for r in group if r.get("verdict") == "BLOCKED"
+            ],
+            # NO_TEST sessions tested nothing — excluded from the pass rate like
+            # BLOCKED, but listed so repeated investigations of the same ticket
+            # stay visible instead of vanishing from the metrics.
+            "no_test_reasons": [
+                r.get("no_test_reason") or "(no reason recorded)"
+                for r in group if r.get("verdict") == "NO_TEST"
             ],
             "routing": {"by": dict(routed_by), "weak_or_manual": weak},
             "cause_classes": dict(cause_classes),
@@ -177,6 +185,8 @@ def render(stats, runs, broken, args):
         detail = []
         if s["blocked_reasons"]:
             detail.append("  - BLOCKED: " + "; ".join(str(r) for r in s["blocked_reasons"][:5]))
+        if s["no_test_reasons"]:
+            detail.append("  - NO_TEST: " + "; ".join(str(r) for r in s["no_test_reasons"][:5]))
         if s["routing"]["weak_or_manual"]:
             detail.append(
                 f"  - {s['routing']['weak_or_manual']} of {s['runs']} run(s) resolved the product by "

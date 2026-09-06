@@ -160,7 +160,7 @@ PY
 
 if looks_like_a_test_run && ! has_recent_evidence; then
   cat >&2 <<'EOF'
-Evidence check failed: this session actually invoked a Playwright MCP tool, an
+QA_EVIDENCE_MISSING: this session actually invoked a Playwright MCP tool, an
 Atlassian write (create/edit/transition/...), or the Playwright CLI runner,
 but no execution_summary.json was written under evidence/<KEY>/<TICKET>/ in
 the last 2 hours.
@@ -168,8 +168,10 @@ the last 2 hours.
 Before ending the session:
   - write evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/execution_summary.json
     (schema: .claude/rules/core/evidence-policy.md), or
-  - if no test actually completed (still investigating, blocked), say so
-    explicitly rather than stopping silently.
+  - if no test actually completed (still investigating, aborted), write a
+    minimal summary with "verdict": "NO_TEST", a one-line "no_test_reason"
+    and the usual "learnings" declaration — the explicit alternative to
+    stopping silently.
 EOF
   exit 2
 fi
@@ -179,8 +181,8 @@ if looks_like_a_test_run; then
   MISSING="$(summaries_missing_learnings)"
   if [ -n "$MISSING" ]; then
     {
-      echo "Learning check failed: this run produced evidence, but the summary does"
-      echo "not declare what was learned. Affected file(s):"
+      echo "QA_LEARNINGS_MISSING: this run produced evidence, but the summary"
+      echo "does not declare what was learned. Affected file(s):"
       printf '%s\n' "$MISSING" | sed 's/^/  /'
       cat <<'EOF'
 

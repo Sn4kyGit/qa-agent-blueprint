@@ -15,6 +15,12 @@ and `"shadow": true` in the summary, and tell the user it is waiting for review.
 No comment, no transition, no attachment — see `.claude/rules/core/security.md` →
 "Shadow mode".
 
+## NO_TEST posts nothing
+
+A `NO_TEST` summary means no test completed — there is no verdict to report. Do
+not comment, do not transition, do not attach. The summary itself is the record
+(`.claude/rules/core/evidence-policy.md`).
+
 ## Steps
 
 1. Read `projects/<KEY>/PROJECT.md` → "Reporting": report format

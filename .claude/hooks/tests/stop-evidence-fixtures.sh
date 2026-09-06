@@ -67,6 +67,25 @@ run_hook() {
   echo $?
 }
 
+# Same, but keeps stderr so the machine-readable marker can be asserted.
+run_hook_stderr() {
+  local cwd="$1" transcript="$2" errfile="$3"
+  printf '{"cwd":"%s","transcript_path":"%s","stop_hook_active":false}' "$cwd" "$transcript" \
+    | bash "$HOOK" >/dev/null 2>"$errfile"
+  echo $?
+}
+
+check_marker() {
+  local name="$1" marker="$2" errfile="$3"
+  if head -1 "$errfile" | grep -qF "$marker"; then
+    printf 'ok    %-52s marker=%s\n' "$name" "$marker"
+  else
+    printf 'FAIL  %-52s missing marker %s in:\n' "$name" "$marker"
+    sed 's/^/        /' "$errfile"
+    fails=$((fails + 1))
+  fi
+}
+
 check() {
   local name="$1" want="$2" got="$3"
   if [ "$got" = "$want" ]; then
@@ -83,12 +102,14 @@ check "no test ran → session may end" 0 "$(run_hook "$C1" "$C1/t.jsonl")"
 
 # --- case 2: test ran, no evidence at all → blocked ---------------------------
 C2="$WORK/c2"; mkdir -p "$C2/evidence"; write_transcript "$C2/t.jsonl" test_ran
-check "test ran, no execution_summary.json" 2 "$(run_hook "$C2" "$C2/t.jsonl")"
+check "test ran, no execution_summary.json" 2 "$(run_hook_stderr "$C2" "$C2/t.jsonl" "$C2/err")"
+check_marker "evidence block carries QA_EVIDENCE_MISSING" "QA_EVIDENCE_MISSING:" "$C2/err"
 
 # --- case 3: evidence present but learnings omitted → blocked -----------------
 C3="$WORK/c3"; write_transcript "$C3/t.jsonl" test_ran
 write_summary "$C3/evidence/SHOP/SHOP-1/20260906-100000" omit
-check "evidence without a learnings declaration" 2 "$(run_hook "$C3" "$C3/t.jsonl")"
+check "evidence without a learnings declaration" 2 "$(run_hook_stderr "$C3" "$C3/t.jsonl" "$C3/err")"
+check_marker "learnings block carries QA_LEARNINGS_MISSING" "QA_LEARNINGS_MISSING:" "$C3/err"
 
 # --- case 4: learnings present but empty on both sides → blocked --------------
 C4="$WORK/c4"; write_transcript "$C4/t.jsonl" test_ran
@@ -144,6 +165,16 @@ check "npm run test:e2e counts" 2 "$(run_hook "$C11" "$C11/t.jsonl")"
 
 C12="$WORK/c12"; write_transcript "$C12/t.jsonl" heredoc_mentions_runner
 check "heredoc mentioning the runner does not" 0 "$(run_hook "$C12" "$C12/t.jsonl")"
+
+# --- case 13: NO_TEST — the explicit no-verdict verdict -----------------------
+# Tools ran but no test completed; the summary says so with a reason instead of
+# the session ending silently. The hook must not know the verdict vocabulary
+# (case 6b guards that), so this passes on the declaration alone.
+C13="$WORK/c13"; write_transcript "$C13/t.jsonl" test_ran
+mkdir -p "$C13/evidence/SHOP/SHOP-1/20260906-100000"
+printf '%s\n' '{"ticket":"SHOP-1","project":"SHOP","verdict":"NO_TEST","no_test_reason":"reproduced twice, root cause not isolated","learnings":{"captured":[],"none_because":"no product knowledge gained"}}' \
+  > "$C13/evidence/SHOP/SHOP-1/20260906-100000/execution_summary.json"
+check "NO_TEST with reason and learnings declaration" 0 "$(run_hook "$C13" "$C13/t.jsonl")"
 
 echo
 if [ "$fails" -eq 0 ]; then

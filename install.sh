@@ -6,17 +6,19 @@
 # idempotent, dry-run capable.
 #
 # Modes:
-#   standalone  Set up THIS blueprint repo itself (fresh clone). Default when
-#               no existing ecosystem is detected.
-#   integrate   Merge the blueprint non-destructively into an existing repo
+#   integrate   Merge the blueprint non-destructively into the target repo
 #               (own CLAUDE.md / .claude/ / .mcp.json / hooks / browsers).
+#               Running it with the blueprint repo itself as target is the
+#               "self-setup" case: nothing is copied (the files already ARE the
+#               blueprint), only the environment is prepared.
 #   plugin      Copy nothing — print instructions for using this repo as a
 #               Claude Code plugin via .claude-plugin/marketplace.json.
-#   (default)   Auto-detect: if the target has CLAUDE.md, .claude/ or .git,
-#               "integrate" is proposed (interactive prompt unless --yes).
+#   (default)   Auto-detect: target == blueprint repo → integrate (self-setup);
+#               target with CLAUDE.md/.claude//.git → integrate is proposed
+#               (interactive prompt unless --yes).
 #
 # Usage:
-#   ./install.sh [--mode standalone|integrate|plugin] [--target <path>]
+#   ./install.sh [--mode integrate|plugin] [--target <path>]
 #                [--dry-run] [--yes] [--uninstall]
 #                [--non-interactive] [-h|--help]
 #
@@ -74,8 +76,8 @@ while [ $# -gt 0 ]; do
 done
 
 case "$MODE" in
-  ""|standalone|integrate|plugin) ;;
-  *) err "Invalid --mode '$MODE' (expected standalone|integrate|plugin)"; exit 1 ;;
+  ""|integrate|plugin) ;;
+  *) err "Invalid --mode '$MODE' (expected integrate|plugin)"; exit 1 ;;
 esac
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -425,7 +427,7 @@ setup_playwright() {
 autodetect_mode() {
   [ -z "$MODE" ] || return 0
   local signals=""
-  [ "$TARGET" != "$REPO_ROOT" ] || { MODE="standalone"; return 0; }
+  [ "$TARGET" != "$REPO_ROOT" ] || { MODE="integrate"; return 0; }  # self-setup: see run_integrate
   [ -f "$TARGET/CLAUDE.md" ] && signals="$signals CLAUDE.md"
   [ -d "$TARGET/.claude" ]   && signals="$signals .claude/"
   [ -d "$TARGET/.git" ]      && signals="$signals .git/"
@@ -453,28 +455,24 @@ autodetect_mode() {
       echo "                  → zero footprint, central updates via /plugin, commands"
       echo "                    are namespaced (/qa-agent-blueprint:test-ticket)."
       echo
-      echo "    3) standalone Treat this directory as the blueprint repo itself."
-      echo "                  → only right if this IS a checkout of the blueprint."
-      echo
-      printf "  Choose [1/2/3, default 1]: "
+      printf "  Choose [1/2, default 1]: "
       read -r answer
       case "$answer" in
-        2|p|plugin)     MODE="plugin" ;;
-        3|s|standalone) MODE="standalone" ;;
-        *)              MODE="integrate" ;;
+        2|p|plugin) MODE="plugin" ;;
+        *)          MODE="integrate" ;;
       esac
     fi
   else
-    # No ecosystem detected. Standalone is the usual case (a fresh clone), but a
-    # brand-new project repo is a perfectly good plugin target, so offer it.
+    # No ecosystem detected — an empty repo is a fine integrate target (it gets
+    # a fresh CLAUDE.md managed block) and a fine plugin target, so offer both.
     if [ "$YES" -eq 1 ]; then
-      MODE="standalone"
+      MODE="integrate"
     else
-      printf "No existing Claude Code setup found here. Set this up as the blueprint repo itself (standalone), or use the blueprint as a plugin? [S/p] "
+      printf "No existing Claude Code setup found here. Integrate the blueprint into this directory, or use it as a plugin? [I/p] "
       read -r answer
       case "$answer" in
         p|P|plugin) MODE="plugin" ;;
-        *)          MODE="standalone" ;;
+        *)          MODE="integrate" ;;
       esac
     fi
   fi
@@ -908,7 +906,7 @@ integrate_dirs() {
   done
 
   # Deliberately no dotenv file and no credential prompts — see the same decision
-  # in run_standalone(). Nothing in the blueprint loads such a file, the Atlassian
+  # in run_self_setup(). Nothing in the blueprint loads such a file, the Atlassian
   # MCP server uses OAuth via /mcp, and the vault prefix belongs in
   # projects/<KEY>/PROJECT.md where it is actually read. An existing .env of yours
   # is neither touched nor read.
@@ -1361,12 +1359,12 @@ EOF
 }
 
 # =================================================================================
-# STANDALONE MODE — set up the blueprint repo itself (previous behavior)
+# SELF-SETUP — the blueprint repo itself is the target (integrate special case)
 # =================================================================================
 
-run_standalone() {
+run_self_setup() {
   cd "$REPO_ROOT"
-  info "Standalone setup of the blueprint repo: $REPO_ROOT"
+  info "Self-setup of the blueprint repo: $REPO_ROOT"
 
   setup_playwright
 
@@ -1448,9 +1446,15 @@ integrate_docs() {
 }
 
 run_integrate() {
-  [ "$TARGET" = "$REPO_ROOT" ] && { err "integrate target is the blueprint repo itself — use --mode standalone"; exit 1; }
   if [ "$UNINSTALL" -eq 1 ]; then
     uninstall_integrate
+    return 0
+  fi
+  # Target IS the blueprint repo: the files are already in place, so nothing is
+  # copied or merged — only the environment is prepared. Self-setup is a branch
+  # here, not a separate mode, because every copy step would be a self-copy.
+  if [ "$TARGET" = "$REPO_ROOT" ]; then
+    run_self_setup
     return 0
   fi
   info "Integrating blueprint into existing ecosystem: $TARGET"
@@ -1518,7 +1522,6 @@ fi
 check_prereqs
 
 case "$MODE" in
-  standalone) run_standalone ;;
   integrate)  run_integrate ;;
   plugin)     run_plugin_mode ;;
 esac

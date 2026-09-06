@@ -89,6 +89,32 @@ EMPTY_CTX="$(context_for "$WORK/empty")"
 check_contains "empty projects/ prompts onboarding" "$EMPTY_CTX" "(none yet — run /onboard-project)"
 
 echo
+echo "== plugin mode injects the plugin's CLAUDE.md verbatim =="
+# The plugin router used to be a hand-maintained summary inside session-start.sh
+# — a second source of truth that drifted from CLAUDE.md. The hook now cats the
+# file, so a marker written into the plugin's CLAUDE.md must surface verbatim.
+PLUGIN="$WORK/plugin"; CONSUMER="$WORK/consumer"
+mkdir -p "$PLUGIN" "$CONSUMER"
+printf '# QA Agent Blueprint — Router\n\nFIXTURE_ROUTER_MARKER_7f3a\n' > "$PLUGIN/CLAUDE.md"
+PCTX="$(printf '{"cwd":"%s"}' "$CONSUMER" | CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_contains "plugin CLAUDE.md content is injected" "$PCTX" "FIXTURE_ROUTER_MARKER_7f3a"
+check_contains "plugin preamble names the plugin root" "$PCTX" "$PLUGIN"
+# A plugin session must not double-print the router: the consumer repo's own
+# (non-existent) CLAUDE.md contributes nothing.
+[ -f "$CONSUMER/.env.playwright-secrets" ] \
+  && printf 'ok    %s\n' "plugin bootstrap seeds .env.playwright-secrets" \
+  || { printf 'FAIL  %s\n' "plugin bootstrap seeds .env.playwright-secrets"; fails=$((fails + 1)); }
+# Without CLAUDE_PLUGIN_ROOT the same consumer repo gets no router injection.
+NPCTX="$(context_for "$CONSUMER")"
+check_absent "no injection without CLAUDE_PLUGIN_ROOT" "$NPCTX" "FIXTURE_ROUTER_MARKER_7f3a"
+
+echo
 if [ "$fails" -eq 0 ]; then
   echo "all fixtures passed"
 else

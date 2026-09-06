@@ -43,7 +43,7 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
   "scope": "product",
   "product_routed_by": "component",
   "timestamp": "2026-09-04T14:30:00Z",
-  "verdict": "PASS | FAIL | BLOCKED | NEEDS_REVIEW",
+  "verdict": "PASS | FAIL | BLOCKED | NEEDS_REVIEW | NO_TEST",
   "test_type": "exploratory | regression | mixed",
   "environment": { "name": "stage", "version_or_build": "2.14.0-rc3", "commit": "a3f9c21" },
   "deploy": { "from_version": "2.13.4", "to_version": "2.14.0-rc3", "pipeline_run": "…", "at": "…" },
@@ -58,6 +58,7 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
       "test_case": "TC-CHK-014", "cause_class": "product-defect" }
   ],
   "blocked_reason": "<why, on BLOCKED only>",
+  "no_test_reason": "<why, on NO_TEST only>",
   "evidence_dir": "evidence/SHOP/SHOP-1234/20260904-143000/",
   "reported_to_jira": true,
   "shadow": false,
@@ -91,7 +92,8 @@ transition (worst verdict wins: `FAIL > BLOCKED > NEEDS_REVIEW > PASS`).
 
 ## Failure fields — conditional, like the product fields
 
-`deploy`, `test_cases[]`, `blocked_reason` and `failure_analysis` are written only
+`deploy`, `test_cases[]`, `blocked_reason`, `no_test_reason` and
+`failure_analysis` are written only
 when they have a value — never as `null`. `test_cases[]` needs a runner reporting per
 case; an exploratory run keeps `steps_executed` alone. `failure_analysis` is written
 on every FAIL, **before** a bug is filed; its full shape and the six classes are
@@ -101,6 +103,10 @@ on every FAIL, **before** a bug is filed; its full shape and the six classes are
 transition, a proposal for a human. **Interactive only** — headless it stays `FAIL`.
 It counts as not-passed in every metric until `human_ruling` names who decided, so
 the classification is never a cheaper route to green than fixing the product.
+
+`NO_TEST` = test tools ran, no test completed: one-sentence `no_test_reason`,
+no JIRA post, excluded from the pass rate — the explicit Stop-hook answer when
+there is no verdict.
 
 ## `learnings` — declared, not remembered
 

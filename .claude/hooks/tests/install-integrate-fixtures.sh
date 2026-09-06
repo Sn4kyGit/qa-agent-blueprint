@@ -140,6 +140,28 @@ BEFORE="$(cat "$SET")"
   || fail "plugin re-run changes nothing" "settings.json was rewritten on the second run"
 
 echo
+echo "== self-setup: the blueprint repo as its own target (integrate special case) =="
+# Dry-run only — this fixture runs against the REAL blueprint repo, so it must
+# never write. The assertions check the routing decision, not the side effects.
+OUT4="$("$INSTALL" --mode integrate --target "$REPO" --yes --dry-run 2>&1)"
+if [ $? -ne 0 ]; then fail "self-setup exits 0" "$(printf '%s' "$OUT4" | tail -3)"; else pass "self-setup exits 0"; fi
+printf '%s' "$OUT4" | grep -qF "Self-setup of the blueprint repo" \
+  && pass "self-setup branch taken" \
+  || fail "self-setup branch taken" "output lacks the self-setup banner"
+printf '%s' "$OUT4" | grep -q "managed router block" \
+  && fail "no CLAUDE.md merge planned on self" "self-setup planned to append to the router itself" \
+  || pass "no CLAUDE.md merge planned on self"
+assert_no_grep "own CLAUDE.md carries no managed block" "$REPO/CLAUDE.md" "qa-agent-blueprint (managed, do not edit)"
+
+echo
+echo "== --mode standalone is gone =="
+OUT5="$("$INSTALL" --mode standalone --target "$TARGET" --yes 2>&1)"
+[ $? -ne 0 ] && pass "standalone rejected" || fail "standalone rejected" "installer accepted the removed mode"
+printf '%s' "$OUT5" | grep -qF "expected integrate|plugin" \
+  && pass "error names the two remaining modes" \
+  || fail "error names the two remaining modes" "$(printf '%s' "$OUT5" | tail -1)"
+
+echo
 if [ "$fails" -eq 0 ]; then
   echo "all fixtures passed"
 else

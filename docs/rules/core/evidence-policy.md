@@ -1,7 +1,7 @@
 # Evidence Policy — details
 
 On-demand companion to `.claude/rules/core/evidence-policy.md`, which stays in the
-always-loaded layer and carries the norms. **Read this file when the Stop hook blocks a session and you need to know exactly what it checks, or when you are about to write `NEEDS_REVIEW` into a summary.**
+always-loaded layer and carries the norms. **Read this file when the Stop hook blocks a session and you need to know exactly what it checks, or when you are about to write `NEEDS_REVIEW` or `NO_TEST` into a summary.**
 Splitting it out is what keeps the always-on layer small; nothing here is
 optional when its topic comes up.
 
@@ -12,6 +12,39 @@ test action (a Playwright MCP/CLI run, a reported verdict) with no matching
 `execution_summary.json` under `evidence/`, the hook blocks the stop and asks for
 the missing artifact. This is not a reminder — the session cannot end clean without
 it.
+
+The block message carries a machine-readable first-line marker so a headless
+pipeline can tell "the agent violated the evidence obligation" apart from a crash:
+`QA_EVIDENCE_MISSING:` (no summary at all) or `QA_LEARNINGS_MISSING:` (summary
+without a `learnings` declaration). See `docs/rules/core/cicd.md` for the exit
+semantics in `claude -p`.
+
+## `NO_TEST` — the explicit way out
+
+The hook fires whenever a test *tool* was invoked, which includes sessions that
+legitimately completed no test: still investigating a reported problem, debugging
+a flaky spec, or aborted early. The answer is not to end the session silently
+(that works only via the loop-breaker and leaves no record) — it is a minimal
+summary:
+
+```json
+{
+  "ticket": "SHOP-1234", "project": "SHOP", "timestamp": "…",
+  "verdict": "NO_TEST",
+  "no_test_reason": "reproduced twice, root cause not isolated before session end",
+  "learnings": { "captured": [], "none_because": "no product knowledge gained" }
+}
+```
+
+Three consequences, all deliberate:
+
+- `report-to-jira` posts **nothing** for `NO_TEST` — there is no verdict to report.
+- `aggregate.py` excludes the run from the pass-rate denominator, exactly like
+  BLOCKED: a session that tested nothing must not move the product's numbers in
+  either direction. The reasons are listed in the report so `NO_TEST` clusters
+  (same ticket, repeated investigations) stay visible.
+- The `learnings` obligation still applies. A session that investigated and found
+  nothing is precisely where a captured dead end saves the next session an hour.
 
 ## Why `NEEDS_REVIEW` costs the same as a FAIL
 

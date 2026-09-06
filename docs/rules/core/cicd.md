@@ -43,6 +43,13 @@ When this blueprint runs unattended (e.g. a nightly-regression pipeline invoking
   Without it the routing table is asked to resolve from nothing and quietly falls to
   the default.
 - Evidence and the Stop-hook requirement still apply unchanged.
+- **A Stop-hook block is not a crash.** When the hook blocks a headless run, the
+  run exits non-zero with a machine-readable first line on stderr:
+  `QA_EVIDENCE_MISSING:` (test tools ran, no summary written) or
+  `QA_LEARNINGS_MISSING:` (summary without a `learnings` declaration). Match
+  these markers in the pipeline instead of treating every non-zero exit alike —
+  a marker means "the run was incomplete by policy", not "the agent errored",
+  and the fix is in the prompt/permissions, not in a retry.
 - The JIRA-write audit log (`evidence/.audit/jira-writes.log`) is exactly as
   important here — headless runs are the case most likely to go unwatched.
 - Failures should file/update tickets per `report-to-jira`, not just exit non-zero

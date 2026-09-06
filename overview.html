@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Agent Blueprint — Repo-Blaupause für Claude Code</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --bg-soft: #11141c;
+    --card: rgba(255, 255, 255, 0.045);
+    --card-border: rgba(255, 255, 255, 0.09);
+    --ink: #eef0f6;
+    --muted: #9aa1b5;
+    --violet: #8b5cf6;
+    --fuchsia: #e0457b;
+    --orange: #ff8a5c;
+    --teal: #2dd4bf;
+    --grad: linear-gradient(100deg, #8b5cf6 0%, #e0457b 48%, #ff8a5c 100%);
+    --mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    padding: 0 1.5rem 4rem;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* ambient glow blobs */
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(130px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    width: 560px; height: 560px;
+    background: radial-gradient(circle, rgba(139,92,246,0.28), transparent 65%);
+    top: -180px; left: -120px;
+  }
+  body::after {
+    width: 620px; height: 620px;
+    background: radial-gradient(circle, rgba(224,69,123,0.20), transparent 65%);
+    top: 30%; right: -220px;
+  }
+  .page { max-width: 920px; margin: 0 auto; position: relative; z-index: 1; }
+
+  code, .mono {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: rgba(139, 92, 246, 0.14);
+    border: 1px solid rgba(139, 92, 246, 0.22);
+    border-radius: 5px;
+    padding: 0.1em 0.4em;
+    color: #cdbcff;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    background: #07090d;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    overflow-x: auto;
+    line-height: 1.55;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+  }
+  pre code { background: none; border: none; padding: 0; color: #d7dae6; }
+  pre .c { color: #6b7280; }
+  pre .a { color: var(--orange); }
+
+  /* ---------- hero ---------- */
+  header.hero {
+    padding: 5.5rem 0 3rem;
+    text-align: left;
+  }
+  .kicker {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--teal);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    background: rgba(45, 212, 191, 0.08);
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    margin-bottom: 1.4rem;
+  }
+  h1 {
+    font-size: clamp(2.6rem, 6vw, 4rem);
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    margin-bottom: 1.1rem;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lede { font-size: 1.14rem; color: var(--muted); max-width: 46rem; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    gap: 0.7rem;
+    margin: 2.4rem 0 0;
+  }
+  .stat {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 0.9rem 0.7rem;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    transition: transform 0.18s ease, border-color 0.18s ease;
+  }
+  .stat:hover { transform: translateY(-3px); border-color: rgba(139,92,246,0.5); }
+  .stat .n {
+    font-size: 1.5rem; font-weight: 800; font-family: var(--mono);
+    background: var(--grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat .l { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
+
+  /* ---------- sections ---------- */
+  section { margin-bottom: 3.4rem; }
+  h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+  h2::before {
+    content: "";
+    width: 26px; height: 4px;
+    border-radius: 2px;
+    background: var(--grad);
+    flex: none;
+  }
+  .sub { color: var(--muted); margin-bottom: 1.3rem; max-width: 46rem; }
+  h3 {
+    font-size: 1.02rem; margin: 1.6rem 0 0.6rem;
+    color: var(--teal);
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.15rem 1.35rem;
+    margin-bottom: 0.8rem;
+    backdrop-filter: blur(10px);
+    transition: border-color 0.18s ease;
+  }
+  .card:hover { border-color: rgba(224,69,123,0.4); }
+  .card h4 { font-size: 0.98rem; margin-bottom: 0.3rem; }
+  .card h4 .num {
+    font-family: var(--mono); margin-right: 0.5rem;
+    background: var(--grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+  }
+  .card p { color: var(--muted); font-size: 0.92rem; }
+  .card .path { display: block; margin-top: 0.55rem; font-family: var(--mono); font-size: 0.76rem; color: var(--teal); background: none; border: none; padding: 0; }
+
+  /* ---------- tables ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.6rem 0 1.1rem; }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    border-bottom: 1px solid rgba(255,255,255,0.18);
+    padding: 0.55rem 0.7rem 0.45rem 0;
+  }
+  td { border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0.6rem 0.7rem 0.6rem 0; vertical-align: top; color: #c9cedd; }
+  td:first-child { font-family: var(--mono); font-size: 0.79rem; color: #cdbcff; }
+  tr:hover td { background: rgba(139,92,246,0.05); }
+
+  .callout {
+    position: relative;
+    background: linear-gradient(120deg, rgba(139,92,246,0.12), rgba(224,69,123,0.10));
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 14px;
+    padding: 1.1rem 1.35rem;
+    margin: 1.2rem 0;
+    font-size: 0.93rem;
+    color: #d7dae6;
+  }
+  .callout strong { color: var(--ink); }
+  .note { color: var(--muted); font-size: 0.87rem; margin-top: 0.7rem; }
+  .note strong { color: #d7dae6; }
+
+  .flow {
+    display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center;
+    font-family: var(--mono); font-size: 0.79rem; margin: 0.9rem 0 0.4rem;
+  }
+  .flow .step {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem;
+    backdrop-filter: blur(8px);
+  }
+  .flow .arrow {
+    background: var(--grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+  }
+
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: 0.72rem;
+    border-radius: 999px; padding: 0.15rem 0.65rem;
+    border: 1px solid transparent;
+  }
+  .pill.ok    { background: rgba(45,212,191,0.12); color: var(--teal); border-color: rgba(45,212,191,0.35); }
+  .pill.warn  { background: rgba(255,138,92,0.12); color: var(--orange); border-color: rgba(255,138,92,0.35); }
+  .pill.never { background: rgba(224,69,123,0.14); color: #ff7ba3; border-color: rgba(224,69,123,0.4); }
+
+  footer {
+    color: var(--muted);
+    font-size: 0.82rem;
+    border-top: 1px solid rgba(255,255,255,0.09);
+    padding-top: 1.4rem;
+    margin-top: 2.5rem;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <p class="kicker">Claude Code · Repo-Blaupause</p>
+  <h1>QA Agent Blueprint</h1>
+  <p class="lede">
+    Macht Claude Code zu einem ticketgetriebenen QA-Manager und Tester: JIRA-Ticket rein,
+    getestetes Ticket raus — mit Pflicht-Evidence, projekt- und produktspezifischem Wissen
+    und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
+  </p>
+  <div class="stats">
+    <div class="stat"><div class="n">23</div><div class="l">Skills</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">Subagents</div></div>
+    <div class="stat"><div class="n">5+9</div><div class="l">Regeln (immer / on demand)</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
+    <div class="stat"><div class="n">96</div><div class="l">Fixtures</div></div>
+    <div class="stat"><div class="n">8</div><div class="l">Eval-Cases</div></div>
+    <div class="stat"><div class="n">7,5k</div><div class="l">Token immer geladen</div></div>
+  </div>
+</header>
+
+<section>
+  <h2>Der Ablauf</h2>
+  <div class="flow">
+    <span class="step">Ticket</span><span class="arrow">→</span>
+    <span class="step">Projekt erkannt</span><span class="arrow">→</span>
+    <span class="step">Produkt erkannt</span><span class="arrow">→</span>
+    <span class="step">Wissen angewendet</span><span class="arrow">→</span>
+    <span class="step">getestet</span><span class="arrow">→</span>
+    <span class="step">Evidence</span><span class="arrow">→</span>
+    <span class="step">berichtet</span><span class="arrow">→</span>
+    <span class="step">gelernt</span>
+  </div>
+  <p class="note">Jede Stufe hat eine Datei als Quelle und, wo es zählt, einen Hook als Durchsetzung.</p>
+</section>
+
+<section>
+  <h2>Die fünf Ebenen</h2>
+  <p class="sub">Was die Tokenkosten niedrig hält: nur Ebene 1 ist immer im Kontext, alles andere lädt bei Bedarf — oder nie.</p>
+
+  <div class="card">
+    <h4><span class="num">1</span>Globaler Kern — nur die Normen</h4>
+    <p>Router plus fünf Regeldateien: alles, was binden muss, bevor irgendein Skill geladen ist.
+    Das Detail dahinter liegt in <code>docs/rules/</code> und wird gelesen, wenn sein Thema kommt —
+    jede Datei nennt ihren Auslöser oben.</p>
+    <span class="path">CLAUDE.md + .claude/rules/core/ · gemessen 7.491 Token, Budget 7.500</span>
+  </div>
+  <div class="card">
+    <h4><span class="num">2</span>Skills &amp; Subagents</h4>
+    <p>Erst bei Bedarf geladen. Subagents haben eigene Kontextfenster, damit ein
+    30-Schritte-Browser-Transkript nicht im Hauptkontext landet — zurück kommt nur ein Verdikt.</p>
+    <span class="path">.claude/skills/ · .claude/agents/</span>
+  </div>
+  <div class="card">
+    <h4><span class="num">3</span>Projekt- und Produktkontext</h4>
+    <p>Nur das aktive Projekt wird gelesen. Deckt ein JIRA-Projekt mehrere Produkte ab, kommt
+    genau eine kurze Produktdatei dazu — die nur Abweichungen nennt.</p>
+    <span class="path">projects/&lt;KEY&gt;/ → products/&lt;PRODUCT&gt;/</span>
+  </div>
+  <div class="card">
+    <h4><span class="num">4</span>Lernsystem</h4>
+    <p>Inbox als Auffangbank, Themendateien als verdichtete Mitte, Beförderung in Regeln und
+    Projekt-/Produktdateien als Ziel. Wissen zählt erst, wenn es dort ankommt.</p>
+    <span class="path">memory/INDEX.md · memory/learnings/</span>
+  </div>
+  <div class="card">
+    <h4><span class="num">5</span>Evidence</h4>
+    <p>Screenshots, Logs, Traces und ein maschinenlesbares Summary pro Lauf. Nie im
+    Modellkontext — und nicht write-only: <code>/qa-report</code> liest sie zurück.</p>
+    <span class="path">evidence/&lt;KEY&gt;/&lt;TICKET&gt;/&lt;YYYYMMDD-HHMMSS&gt;/</span>
+  </div>
+</section>
+
+<section>
+  <h2>Was der Agent kann</h2>
+  <p class="sub">
+    Skill oder Subagent — der Unterschied ist nicht kosmetisch. Ein Skill ist eine Anleitung,
+    die erst beim Aufruf in den Kontext geladen wird; idle kostet er nur seinen Namen und seine
+    Beschreibung. Ein Subagent hat zusätzlich ein eigenes Kontextfenster und eine eingeschränkte
+    Werkzeugliste — er läuft abgeschottet und gibt nur ein Ergebnis zurück. Deshalb sind alle
+    Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptkontext nicht fluten.
+  </p>
+
+  <h3>Die 13 eigenen Skills — der Ticket-Ablauf</h3>
+  <table>
+    <tr><th>Skill</th><th>Was er tut</th><th>Wann er greift</th></tr>
+    <tr>
+      <td>/test-ticket</td>
+      <td>Der Haupteinstieg: liest das Ticket, routet zu Projekt und Produkt, prüft die Stage,
+      wählt die Teststrategie, erzeugt Evidence, berichtet zurück. Delegiert die Orchestrierung an qa-manager.</td>
+      <td>„Teste SHOP-1234"</td>
+    </tr>
+    <tr>
+      <td>/retest-bug</td>
+      <td>Schmalere Variante: spielt exakt die ursprünglichen Repro-Schritte nach und macht danach
+      einen engen Regressions-Sweep um die Fundstelle. Ist der Report dünn, wird erst eine
+      verifizierte Repro erzeugt.</td>
+      <td>Ein Fix ist auf Stage gelandet</td>
+    </tr>
+    <tr>
+      <td>/exploratory-testing</td>
+      <td>Chartered Session nach SBTM: ein Auftrag, eine Zeitbox, Playwright MCP im isolierten
+      Browser. Für unklares Verhalten, neue Features, erste Blicke.</td>
+      <td>Kein wiederholbarer Spec vorhanden</td>
+    </tr>
+    <tr>
+      <td>/playwright-regression</td>
+      <td>Schreibt oder fährt deterministische Specs über den CLI-Runner — TC-ID im Titel,
+      Web-First-Assertions, Retries nur in CI (und dort, um den Trace des Flakes einzufangen).</td>
+      <td>Ein Ablauf ist verstanden und wiederholungswürdig</td>
+    </tr>
+    <tr>
+      <td>/failure-analysis</td>
+      <td>Triagiert jeden FAIL, bevor ein Bug aufgemacht wird: echtes Produkt-Defizit, oder ist
+      der Testfall selbst veraltet, weil sich das Produkt absichtlich geändert hat? Vergleicht
+      Assertion, JIRA-Änderungshistorie und Versionsfenster — <strong>schlägt vor, wendet nie an</strong>.</td>
+      <td>Automatisch bei jedem FAIL</td>
+    </tr>
+    <tr>
+      <td>/bug-report</td>
+      <td>Gießt eine Fundstelle in die Vorlage des Projekts oder des Produkts — nie eine eigene
+      Struktur, nie eine übersprungene Sektion. Prüft auf Duplikate.</td>
+      <td>Ein FAIL-Verdikt liegt vor, Klasse <code>product-defect</code></td>
+    </tr>
+    <tr>
+      <td>/report-to-jira</td>
+      <td>Kommentar, Anhänge und die exakte Workflow-Transition. Kennt den Shadow-Modus: dann
+      wird komponiert und abgelegt statt gepostet. <code>NO_TEST</code> postet grundsätzlich nichts.</td>
+      <td>Ein Lauf ist fertig — PASS, FAIL, BLOCKED oder NEEDS_REVIEW</td>
+    </tr>
+    <tr>
+      <td>/deploy-to-stage</td>
+      <td>Fährt das Deploy-Runbook des Projekts mit Sicherheitschecks. Prüft vorab, ob überhaupt
+      ein Ausführungsweg existiert, und meldet sonst BLOCKED statt zu improvisieren.</td>
+      <td>Der Fix ist noch nicht auf Stage</td>
+    </tr>
+    <tr>
+      <td>/onboard-project</td>
+      <td>Das lange Interview (~30–60 min), das PROJECT.md füllt: Umgebungen, Testuser als
+      Vault-Referenzen, Runbook, Gates, Reporting. Holt Transitions und Prioritäten aus JIRA
+      statt zu fragen.</td>
+      <td>Ein Ticket-Präfix hat noch kein Projekt</td>
+    </tr>
+    <tr>
+      <td>/onboard-product</td>
+      <td>Die kurze Variante (5–15 min): nur was vom Projekt abweicht, plus die
+      Feature-/Testmethoden-Matrix. Holt die echten JIRA-Komponenten fürs Routing.</td>
+      <td>Ein Projekt deckt mehrere Produkte ab</td>
+    </tr>
+    <tr>
+      <td>/scaffold-suite</td>
+      <td>Erzeugt das Playwright-Projekt, das die Blaupause voraussetzt: package.json, eine
+      Config, deren Capture-Einstellungen die Evidence-Matrix sind, und eine erste laufende Smoke-Spec.</td>
+      <td>„Test assets: none yet"</td>
+    </tr>
+    <tr>
+      <td>/qa-report</td>
+      <td>Liest alle <code>execution_summary.json</code> zurück: Pass-Rate pro Produkt, P0/P1,
+      BLOCKED- und NO_TEST-Gründe, Routing-Qualität, Learning-Durchsatz. Nennt ausdrücklich,
+      was das Schema nicht hergibt.</td>
+      <td>„Wie läuft's?", Wochen- oder Sprintbericht</td>
+    </tr>
+    <tr>
+      <td>/retro-learn</td>
+      <td>Capture → Groom → Promote. Klassifiziert eine Überraschung nach Reichweite (Projekt,
+      Produkt, projektübergreifend) und befördert sie beim zweiten Auftreten in eine Regel oder
+      Projektdatei.</td>
+      <td>Session-Ende, oder wöchentlich zum Verdichten</td>
+    </tr>
+  </table>
+
+  <h3>Die 10 Spezialisten — vendored, MIT</h3>
+  <p class="sub">
+    Aus <code>petrkindlmann/qa-skills</code> übernommen und unverändert gelassen. Sie gelten für
+    jedes onboardete Produkt; ihren Kontext bekommen sie über eine vorgemergte Bridge-Datei pro
+    Projekt und Produkt. qa-manager zieht einen davon, wenn die Feature-Matrix des Produkts es
+    vorgibt — nicht nach Gefühl.
+  </p>
+  <table>
+    <tr><th>Skill</th><th>Wofür</th><th>Auslöser im Ticket</th></tr>
+    <tr><td>api-testing</td><td>REST und GraphQL: Schema-Validierung, Auth-Flows, CRUD-Lebenszyklus, Fehler- und Header-Prüfung, Pagination</td><td>Backend-Änderung ohne UI, öffentliche API</td></tr>
+    <tr><td>accessibility-testing</td><td>WCAG 2.2 AA mit axe-core, Tastatur-Audits, Screenreader, ARIA-Muster — plus die rechtliche Zuordnung (ADA, EAA)</td><td>UI mit externen Nutzern, Layout/Kontrast/ARIA</td></tr>
+    <tr><td>security-testing</td><td>OWASP Top 10 automatisiert: ZAP, Dependency-Scan, Semgrep, Auth-/Session-Tests, XSS/CSRF/SQLi-Muster</td><td>Auth, Eingabefelder, Upload, alles Security-geflaggte</td></tr>
+    <tr><td>visual-testing</td><td>Screenshot-Regression: Baselines verwalten, Diff-Schwellen justieren, dynamische Inhalte maskieren, Viewports</td><td>Layout- oder branding-kritische Änderung</td></tr>
+    <tr><td>risk-based-testing</td><td>Risikomatrix aus Auswirkung × Wahrscheinlichkeit, Failure-Mode-Analyse, Abdeckung auf Risikozonen abbilden</td><td>Release oder Epic — „wo überhaupt anfangen?"</td></tr>
+    <tr><td>bug-reproduction</td><td>Aus einem dünnen Report eine verifizierte, minimale, deterministische Repro machen — inklusive <code>git bisect</code> und Rot-vor-Grün-Regressionstest</td><td>Bug-Report ohne belastbare Schritte</td></tr>
+    <tr><td>test-reliability</td><td>Flaky-Tests zur Laufzeit heilen und klassifizieren: Selektor-Heilung, Quarantäne, konfidenzbewertete Reparatur</td><td>Ein Test war nur beim Retry grün</td></tr>
+    <tr><td>qa-metrics</td><td>Kennzahlen definieren und interpretieren: Coverage, Flakiness, Defect-Escape-Rate, MTTR, Quality Gates, realistische Zielwerte</td><td>Formeln und Zielwerte für /qa-report</td></tr>
+    <tr><td>test-case-management</td><td>Manuelle Testfälle in TestRail, Xray, Zephyr, Qase: Anatomie, Bulk-Import aus User Stories, Traceability, wann ein Fall automatisiert gehört</td><td>Manuelle Suite pflegen oder importieren</td></tr>
+    <tr><td>release-readiness</td><td>Go/No-Go anhand von Belegen: Checklisten, Smoke-Suite-Design, Rollback-Kriterien, Nachverifikation</td><td>Release statt Einzelticket</td></tr>
+  </table>
+  <div class="callout">
+    Sie sind fremder Code und nicht eingegrenzt. Zwei Beispiele aus dem Audit:
+    <code>release-readiness</code> operiert auf Produktions-Canary mit Auto-Rollback — beides in
+    dieser Blaupause hart verboten. <code>risk-based-testing</code> will in die Bridge-Datei
+    schreiben, die als read-only gilt. Und ihre Beschreibungen verweisen auf rund 24 Skills, die
+    es hier nicht gibt. Die Eingrenzung steht als offener Punkt auf der Liste; bis dahin ist
+    qa-manager die Instanz, die entscheidet, was von einem Spezialisten tatsächlich ausgeführt wird.
+  </div>
+
+  <h3>Die 5 Subagents</h3>
+  <table>
+    <tr><th>Subagent</th><th>Rolle</th><th>Werkzeuge</th></tr>
+    <tr>
+      <td>qa-manager</td>
+      <td>Der Dirigent: liest das Ticket, routet zu Projekt und Produkt, entscheidet die Strategie
+      anhand der Feature-Matrix, delegiert an die anderen — und prüft am Ende, ob Evidence und
+      Deklaration wirklich da sind. Fährt selbst keinen Browser und schreibt keine Specs.</td>
+      <td>Read, Write, Edit, Grep, Glob, Bash, Task, atlassian</td>
+    </tr>
+    <tr>
+      <td>test-executor</td>
+      <td>Exploratives Testen und Reproduktion über Playwright MCP, isolierte Browser-Session pro
+      Lauf. Nutzt den Accessibility-Snapshot zum Navigieren und Screenshots nur als Beweis —
+      nicht zum „Ansehen" der Seite.</td>
+      <td>playwright (MCP), Read, Write, Bash</td>
+    </tr>
+    <tr>
+      <td>test-automator</td>
+      <td>Schreibt und fährt Specs über den CLI-Runner — rund 4× günstiger als derselbe Ablauf
+      turn-by-turn über MCP. Kennt den Unterschied zwischen einem Flake und einem Pass.</td>
+      <td>Bash, Read, Write, Edit, Grep, Glob</td>
+    </tr>
+    <tr>
+      <td>failure-analyst</td>
+      <td>Triagiert jeden FAIL vor dem Bug-Report: Produkt falsch, oder Test veraltet? Kommt
+      <strong>absichtlich ohne Write und Edit</strong> — ein Agent, der einen roten Test grün
+      schreiben kann, ist genau der Fehlermodus, den diese Rolle verhindert.</td>
+      <td>Read, Grep, Glob, Bash, atlassian</td>
+    </tr>
+    <tr>
+      <td>bug-reporter</td>
+      <td>Verwandelt eine Fundstelle in einen Report nach der exakten Projekt- oder
+      Produktvorlage, mit Severity→Priorität-Mapping und Evidence-Referenzen statt
+      eingebetteter Bilder.</td>
+      <td>Read, Write, Grep, Glob, atlassian</td>
+    </tr>
+  </table>
+  <p class="note">
+    Die Werkzeuglisten sind Absicht: test-executor hat keinen Zugriff auf JIRA, bug-reporter
+    keinen auf einen Browser, failure-analyst kann nichts editieren. Wer nicht schreiben können
+    muss, kann es nicht.
+  </p>
+</section>
+
+<section>
+  <h2>Wissensarchitektur</h2>
+  <pre><code><span class="c"># Projektweites Wissen oben, Abweichungen unten</span>
+projects/SHOP/
+├── PROJECT.md              <span class="c">← gilt für ALLE Produkte, enthält die Routing-Registry</span>
+├── learnings.md
+├── templates/bug-report.md
+└── products/               <span class="c">← fehlt bei Ein-Produkt-Projekten komplett</span>
+    ├── STOREFRONT/           <span class="c">← nennt NUR, was abweicht (~60 Zeilen)</span>
+    └── ADMIN/</code></pre>
+  <p class="note">
+    Der Kniff, der ~30 Dateiänderungen erspart hat: wo eine Regel <code>PROJECT.md</code> sagt,
+    ist die <em>effektive</em> Projektdatei gemeint — Projektdatei, gemergt mit der gerouteten
+    Produktdatei. Kein geroutetes Produkt heißt: nichts gemergt, Verhalten exakt wie vorher.
+  </p>
+
+  <h3>Routing-Leiter</h3>
+  <table>
+    <tr><th>Stufe</th><th>Signal</th></tr>
+    <tr><td>1</td><td>Produkt explizit genannt (<code>--product=ADMIN</code> oder „teste das im Admin")</td></tr>
+    <tr><td>2</td><td>Genau ein Treffer über die JIRA-Komponente</td></tr>
+    <tr><td>3</td><td>Genau ein Treffer über ein Label (exakt, kein Beinahe-Treffer)</td></tr>
+    <tr><td>4</td><td>Treffer auf einen <code>project-wide</code>-Eintrag → Infra-Ticket, nur Projektdatei</td></tr>
+    <tr><td>5</td><td>Sekundärsignale: Epic/Parent, Fix Version, geänderte MR-Pfade</td></tr>
+    <tr><td>6</td><td>Kein Treffer, aber ein Default deklariert → Default mit niedriger Konfidenz</td></tr>
+    <tr><td>7</td><td>Mehrdeutig oder unbekannt → nachfragen; headless: BLOCKED</td></tr>
+  </table>
+  <p class="note">
+    Ein Default löst <strong>Stille</strong> auf, niemals einen <strong>Konflikt</strong> — sonst
+    testet der Agent überzeugend grün am falschen Produkt vorbei. Und das Routing lernt: eine vom
+    Menschen formulierte Regel landet sofort in der Registry, ein Einzelfall nach der zweiten
+    gleichartigen Auflösung, eine Ausnahme nie.
+  </p>
+
+  <h3>Was ein Produkt überschreiben darf</h3>
+  <table>
+    <tr><th>Bereich</th><th>Override</th></tr>
+    <tr><td>Umgebungen, Testuser, Test-Assets, Feature-Matrix, Gotchas, Bug-Template, Deploy-Schritte</td><td><span class="pill ok">ja</span></td></tr>
+    <tr><td>Quality Gates (Pass-Rate, P0/P1, Coverage)</td><td><span class="pill warn">nur strenger</span></td></tr>
+    <tr><td>„Agent darf deployen", „Agent darf MRs kommentieren"</td><td><span class="pill warn">nur einschränkend</span></td></tr>
+    <tr><td>JIRA-Transitions, Report-Format, Evidence-Pflicht, alle Sicherheitsregeln</td><td><span class="pill never">nie</span></td></tr>
+  </table>
+  <p class="note">
+    Die zwei gefährlichsten sind strukturell gelöst statt überwacht: deploy-to-stage und
+    report-to-jira lesen Deploy-Berechtigung und Transitions ausschließlich aus der Projektdatei.
+    Keine Produktdatei kann sie erteilen — egal, was ein Merge produziert.
+  </p>
+</section>
+
+<section>
+  <h2>Was mechanisch erzwungen wird</h2>
+  <p class="sub">Der wichtigste Teil, weil Regeln beratend sind und Hooks nicht.</p>
+  <table>
+    <tr><th>Mechanik</th><th>Erzwingt</th><th>Fixtures</th></tr>
+    <tr><td>pre-tool-guard</td><td>Keine Schreibzugriffe auf <code>.env*</code> oder secret-benannte Pfade, kein <code>rm -rf</code>, kein Force-Push</td><td>23</td></tr>
+    <tr><td>stop-evidence-check</td><td>Kein Verdikt ohne <code>execution_summary.json</code> — und ohne deklarierte <code>learnings</code>. Block-Meldungen tragen maschinenlesbare Marker (<code>QA_EVIDENCE_MISSING:</code> / <code>QA_LEARNINGS_MISSING:</code>), damit eine Pipeline eine Policy-Verletzung von einem Crash unterscheiden kann</td><td>17</td></tr>
+    <tr><td>session-start</td><td>Orientierung: Projekte samt Produkten, ungegroomte Learnings, fehlende Secrets-Datei, MCP-Hinweis beim Erstlauf. Im Plugin-Modus injiziert er die <code>CLAUDE.md</code> des Plugins <strong>wortwörtlich</strong> — ein Router-Text, keine Drift zwischen Installationsarten</td><td>13</td></tr>
+    <tr><td>post-jira-audit</td><td>Jeder JIRA-Schreibzugriff landet im Audit-Log, auch headless</td><td>—</td></tr>
+    <tr><td>install.sh</td><td>Kein Hook, gleicher Anspruch: Namespacing, Pfad-Rewriting, Idempotenz, Uninstall, Plugin-Verdrahtung, Self-Setup</td><td>43</td></tr>
+    <tr><td>context-budget</td><td>Die immer geladene Ebene bleibt im Budget — gemessen statt behauptet</td><td>Check</td></tr>
+  </table>
+  <div class="callout">
+    <strong>Warum es diese Fixtures gibt.</strong> Der Guard-Hook hat über die gesamte Lebenszeit
+    des Repos nichts blockiert: die Python-Ausdrücke waren falsch gequotet, der Parser scheiterte
+    still, jede Prüfung wurde übersprungen — und in der Review sah alles korrekt aus. Seitdem
+    gilt: ein Hook ist erst dann Durchsetzung, wenn ein Test beweist, dass er blockt. Dieselbe
+    Regel hat später weitere echte Fehler gefunden, darunter einen, der jeden Skill beim zweiten
+    Installationslauf als Kollision meldete.
+  </div>
+</section>
+
+<section>
+  <h2>Die fünf Verdikte</h2>
+  <table>
+    <tr><th>Verdikt</th><th>Bedeutung</th><th>Folgen</th></tr>
+    <tr><td>PASS</td><td>Getestet, keine Befunde</td><td>Kommentar + PASS-Transition, Screenshot als Beleg</td></tr>
+    <tr><td>FAIL</td><td>Mindestens ein Befund; failure-analysis hat die Klasse geliefert</td><td>Bug-Report bei <code>product-defect</code>; Transition je nach Klasse</td></tr>
+    <tr><td>BLOCKED</td><td>Der Test lief nie: Umgebung weg, Fix nicht deployed, Routing unauflösbar</td><td>Kommentar mit Grund und Entblocker; nicht in der Pass-Rate</td></tr>
+    <tr><td>NEEDS_REVIEW</td><td>Der Test ist vermutlich selbst veraltet (<code>test-outdated</code>/<code>test-brittle</code>)</td><td>Vorschlag an einen Menschen, keine Transition, zählt wie FAIL in der Pass-Rate; headless unerreichbar</td></tr>
+    <tr><td>NO_TEST</td><td>Testwerkzeuge liefen, aber kein Test wurde abgeschlossen — Untersuchung, Flaky-Debugging, früher Abbruch</td><td>Ein-Satz-<code>no_test_reason</code>, kein JIRA-Post, aus der Pass-Rate ausgenommen — der explizite Ausweg aus dem Stop-Hook statt stillem Session-Ende</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Shadow-Modus</h2>
+  <p class="sub">
+    <code>QA_AGENT_SHADOW=1</code> oder <code>Shadow mode: on</code> im Projektfile: der Agent
+    testet vollständig, erzeugt Evidence, komponiert Kommentar und Transition — und legt sie als
+    Vorschlag ab, statt sie zu posten. Prüfbar am bestehenden Audit-Log: ein Shadow-Lauf mit
+    einem Eintrag darin ist ein Bug, keine Ermessensfrage.
+  </p>
+  <div class="callout">
+    Das größte Adoptionsrisiko ist nicht Technik, sondern Vertrauen. Ein Agent, der ab Tag eins
+    in echte Tickets schreibt, wird beim ersten falschen Reopen abgeschaltet — und dann ist die
+    Blaupause politisch tot, egal wie gut sie ist. Zwei Wochen Shadow-Betrieb sind der Nachweis,
+    den ein Team braucht, um Schreibrechte zu vergeben.
+  </div>
+</section>
+
+<section>
+  <h2>Der Lernkreislauf</h2>
+  <div class="card">
+    <h4><span class="num">→</span>Capture wird erzwungen</h4>
+    <p>Jeder Lauf deklariert im Summary, was gelernt wurde — oder in einem Satz, warum nichts
+    anfiel. Fehlt die Deklaration, blockt der Stop-Hook.</p>
+  </div>
+  <div class="card">
+    <h4><span class="num">→</span>Grooming wird sichtbar</h4>
+    <p>Der Session-Start meldet die Zahl ungegroomter Einträge, damit kein Rückstau still anwächst.</p>
+  </div>
+  <div class="card">
+    <h4><span class="num">→</span>Promotion ist das Ziel</h4>
+    <p>Zweimal gesehen heißt: rein in eine Regel, eine Projekt- oder Produktdatei — dort wird es
+    automatisch geladen und nie wieder erklärt. Die Feature-Matrix wird nachgezogen: eine
+    veraltete Matrix ist schlechter als keine, weil sie belegt aussieht.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Getestet, geschrieben, oder nichts von beidem</h2>
+  <p class="sub">Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gleich gut abgesichert.</p>
+  <table>
+    <tr><th>Bereich</th><th>Absicherung</th></tr>
+    <tr><td>Hooks (Guard, Stop, SessionStart)</td><td>53 Fixtures — jede Regel mit eigenem Fall</td></tr>
+    <tr><td>Installer (Integrate, Plugin, Self-Setup, Uninstall)</td><td>43 Fixtures — end-to-end gegen ein Wegwerf-Repo</td></tr>
+    <tr><td>Kontextkosten</td><td>gemessen — Budget-Check, 7.491 von 7.500 Token belegt</td></tr>
+    <tr><td>Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen)</td><td>8 Eval-Cases — ein eigenes Skript fährt sie über <code>claude -p</code></td></tr>
+    <tr><td>Ein echtes Projekt, ein echtes Ticket</td><td><strong>nie</strong> — genau das ist der Pilot</td></tr>
+  </table>
+  <p class="note">
+    Der erste gelaufene Eval-Case war lehrreich: die Antwort war präziser als der Grader — sie
+    las zusätzlich <code>memory/INDEX.md</code>, was die Lookup-Policy vorschreibt. Ein Grader,
+    der eine richtige Antwort durchfallen lässt, ist kaputt und wurde nachgeschärft. Genau dafür
+    ist ein erster Lauf da.
+  </p>
+</section>
+
+<section>
+  <h2>MCP-Server</h2>
+  <p class="sub">
+    Kein festes Limit, sondern ein deklariertes Register: <code>.mcp.json</code> ist die
+    Verdrahtung, die Tabelle in der Regel die Begründung. Steht ein Server nur in einem von
+    beiden, ist das ein Befund. Der Agent fügt nie selbst einen hinzu — er schlägt vor, der
+    Mensch entscheidet.
+  </p>
+  <table>
+    <tr><th>Server</th><th>Warum im Budget</th></tr>
+    <tr><td>playwright</td><td>Ohne Browser kein UI-Test. Läuft <code>--isolated --headless --secrets</code>.</td></tr>
+    <tr><td>atlassian</td><td>Tickets rein, Ergebnisse raus — die ganze Prämisse ist ticketgetrieben.</td></tr>
+  </table>
+  <p class="note">
+    <strong>Ein CLI ist kein Server.</strong> Eine Pipeline zu triggern (<code>gh</code>,
+    <code>glab</code>, <code>curl</code>) ist ein Bash-Kommando, das im Projektfile steht — kein
+    Grund für einen dritten MCP-Server. /deploy-to-stage prüft dieses Feld vorab und meldet
+    BLOCKED, wenn es fehlt, statt sich ein plausibel aussehendes Kommando auszudenken.
+  </p>
+  <p class="note">
+    <strong>Credential-Server sind erlaubt, aber mit Auflage.</strong> Ein Vault-MCP darf eine
+    Referenz für das Tool auflösen, das sie braucht — und nie einen Wert ins Transkript, in eine
+    Datei, ein Ticket oder ein Artefakt bringen. Browser-Logins laufen weiterhin über die
+    <code>--secrets</code>-Maskierung.
+  </p>
+</section>
+
+<footer>
+  <p>
+    QA Agent Blueprint · MIT · Stand: 6. September 2026 —
+    aktualisiert auf Repo-Stand (23 Skills, 5 Subagents, 96 Fixtures, 5 Verdikte,
+    Verbatim-Router-Injektion, zwei Installationsmodi + Self-Setup).
+    Quelle der Wahrheit ist das Repo: <code>CLAUDE.md</code>, <code>memory/INDEX.md</code>, <code>README.md</code>.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>
