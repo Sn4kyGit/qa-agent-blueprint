@@ -259,7 +259,7 @@
     <div class="stat"><div class="n">5</div><div class="l">Subagents</div></div>
     <div class="stat"><div class="n">5+9</div><div class="l">Regeln (immer / on demand)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
-    <div class="stat"><div class="n">96</div><div class="l">Fixtures</div></div>
+    <div class="stat"><div class="n">100</div><div class="l">Fixtures</div></div>
     <div class="stat"><div class="n">8</div><div class="l">Eval-Cases</div></div>
     <div class="stat"><div class="n">7,5k</div><div class="l">Token immer geladen</div></div>
   </div>
@@ -545,7 +545,7 @@ projects/SHOP/
     <tr><th>Mechanik</th><th>Erzwingt</th><th>Fixtures</th></tr>
     <tr><td>pre-tool-guard</td><td>Keine Schreibzugriffe auf <code>.env*</code> oder secret-benannte Pfade, kein <code>rm -rf</code>, kein Force-Push</td><td>23</td></tr>
     <tr><td>stop-evidence-check</td><td>Kein Verdikt ohne <code>execution_summary.json</code> — und ohne deklarierte <code>learnings</code>. Block-Meldungen tragen maschinenlesbare Marker (<code>QA_EVIDENCE_MISSING:</code> / <code>QA_LEARNINGS_MISSING:</code>), damit eine Pipeline eine Policy-Verletzung von einem Crash unterscheiden kann</td><td>17</td></tr>
-    <tr><td>session-start</td><td>Orientierung: Projekte samt Produkten, ungegroomte Learnings, fehlende Secrets-Datei, MCP-Hinweis beim Erstlauf. Im Plugin-Modus injiziert er die <code>CLAUDE.md</code> des Plugins <strong>wortwörtlich</strong> — ein Router-Text, keine Drift zwischen Installationsarten</td><td>13</td></tr>
+    <tr><td>session-start</td><td>Orientierung: Projekte samt Produkten, ungegroomte Learnings, fehlende Secrets-Datei, MCP-Config-Scan (Dedupe, unmaskierte Secrets, Erstlauf-Hinweis). Im Plugin-Modus injiziert er die <code>CLAUDE.md</code> des Plugins <strong>wortwörtlich</strong> — ein Router-Text, keine Drift zwischen Installationsarten</td><td>17</td></tr>
     <tr><td>post-jira-audit</td><td>Jeder JIRA-Schreibzugriff landet im Audit-Log, auch headless</td><td>—</td></tr>
     <tr><td>install.sh</td><td>Kein Hook, gleicher Anspruch: Namespacing, Pfad-Rewriting, Idempotenz, Uninstall, Plugin-Verdrahtung, Self-Setup</td><td>43</td></tr>
     <tr><td>context-budget</td><td>Die immer geladene Ebene bleibt im Budget — gemessen statt behauptet</td><td>Check</td></tr>
@@ -657,7 +657,7 @@ projects/SHOP/
 <footer>
   <p>
     QA Agent Blueprint · MIT · Stand: 6. September 2026 —
-    aktualisiert auf Repo-Stand (23 Skills, 5 Subagents, 96 Fixtures, 5 Verdikte,
+    aktualisiert auf Repo-Stand (23 Skills, 5 Subagents, 100 Fixtures, 5 Verdikte,
     Verbatim-Router-Injektion, zwei Installationsmodi + Self-Setup, Shadow-Modus als Default).
     Quelle der Wahrheit ist das Repo: <code>CLAUDE.md</code>, <code>memory/INDEX.md</code>, <code>README.md</code>.
   </p>
