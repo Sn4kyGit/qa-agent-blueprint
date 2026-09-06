@@ -71,6 +71,12 @@ prompt. All of it came from files the agent read because the ticket key told it 
 
 ## Quickstart
 
+**Recommended mode: plugin.** Nothing is copied into your project — rules,
+skills, agents and hooks load from the plugin; only your own data
+(`projects/`, `memory/`, `evidence/`) lives in your repo.
+
+### The standard way: clone + installer
+
 ```bash
 git clone https://github.com/Sn4kyGit/claude_blueprint.git
 cd claude_blueprint
@@ -79,9 +85,38 @@ cd claude_blueprint
 
 Run in a fresh clone it sets up the blueprint repo itself. Run it **from inside
 your own project** and it asks which of the two ways in you want — integrate or
-plugin — and explains the trade-off before you pick.
+plugin — and explains the trade-off before you pick. Pick **plugin** for the
+recommended mode.
 
-Then start Claude Code in the repo:
+### Plugin-only, without a clone
+
+If you only want the plugin and trust the GitHub source, you can skip the clone
+and wire the marketplace yourself. Add these two keys to your project's
+`.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "qa-agent-blueprint": {
+      "source": { "source": "github", "repo": "Sn4kyGit/claude_blueprint" }
+    }
+  },
+  "enabledPlugins": {
+    "qa-agent-blueprint@qa-agent-blueprint-marketplace": true
+  }
+}
+```
+
+Restart Claude Code and accept the trust dialog. On first session start the
+plugin's SessionStart hook bootstraps `projects/`, `memory/`, `evidence/` and a
+`.env.playwright-secrets` placeholder in your repo, and injects the router.
+
+For more details — detection matrix, per-file collision policy, plugin
+mechanics, FAQ — have a look at [docs/integration.md](docs/integration.md).
+
+### First session
+
+Either way, then start Claude Code in your project:
 
 ```
 /mcp                    # one-time: authorize "atlassian" (OAuth 2.1)
@@ -265,8 +300,8 @@ transcript, a file, a ticket, or an artifact.
 ## Bringing it into an existing repo
 
 Already have your own `CLAUDE.md`, skills, and `.mcp.json`? Two supported paths.
-**One repo → integrate. Many repos → plugin. When in doubt, integrate —
-reviewable beats centrally updatable.**
+**Trying it out → plugin (the Quickstart's recommended mode). One repo,
+long-term → integrate. Many repos → plugin.**
 
 | | **A) Checkout + integrate** | **B) Plugin** |
 |---|---|---|

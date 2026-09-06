@@ -5,8 +5,8 @@ existing ecosystem — your own `CLAUDE.md`, `.claude/`, `.mcp.json`, already
 installed Playwright browsers, your own hooks — and merges the blueprint
 non-destructively.
 
-**Choosing a mode: one repo → integrate. Many repos → plugin. When in doubt,
-integrate — reviewable beats centrally updatable.**
+**Choosing a mode: trying it out → plugin (the Quickstart's recommended mode).
+One repo, long-term → integrate. Many repos → plugin.**
 
 > **Principle: Detect → Merge → Report.**
 > Never overwrite. Always back up. Idempotent. Dry-run capable.
