@@ -1,0 +1,104 @@
+---
+name: retro-learn
+description: Capture, groom, and promote learnings — the session-end step whenever something unexpected happened (selector broke, env behaved oddly, user corrected the report format), plus the periodic grooming pass that dedupes and promotes proven learnings into rules/skills/project files. Use at session end, or "/retro-learn" for an explicit grooming pass.
+---
+
+# /retro-learn — Capture → Groom → Promote
+
+The learning loop behind `docs/architecture.md` → "Layer 4". Three distinct
+operations; know which one you're doing.
+
+## Capture (every session with a surprise)
+
+Append to `memory/learnings/_inbox.md` in the fixed format:
+
+```
+## YYYY-MM-DD — <TICKET or context>
+- Problem: <what happened, 1 sentence>
+- Cause: <why, if known — otherwise "unknown">
+- Working solution: <what actually worked>
+- Candidate target: <rule | skill | PROJECT.md <KEY> | PRODUCT.md <KEY>/<PRODUCT> | learnings file>
+```
+
+If the surprise was a mistake **the agent itself made** (not an environment
+quirk), do a compact 5-Whys first — target the system gap (a rule that was
+unclear, a check that was missing), not just "I should be more careful."
+
+## Capture is declared, not remembered
+
+Every run that produced evidence also declares what it learned, in
+`execution_summary.json` → `learnings` (`.claude/rules/core/evidence-policy.md`):
+either the entries written to `_inbox.md`, or one sentence stating why there were
+none. The Stop hook blocks the session end when that declaration is missing — the
+same firmness the evidence rule has always had, because fifteen prose reminders to
+"run retro-learn" enforced exactly nothing.
+
+The declaration is a pointer, not the entry: the full Problem → Cause → Solution
+still goes into `_inbox.md` in the capture format above.
+
+## Groom (weekly or on demand)
+
+1. Read `_inbox.md` top to bottom.
+2. For each entry, `grep` the relevant `memory/learnings/*.md` or
+   `projects/<KEY>/learnings.md` for a similar existing entry:
+   - Duplicate found → bump its `seen:` counter, append the new date, delete the
+     inbox entry (don't keep both).
+   - Genuinely new → classify with three questions, first hit wins: true for a
+     *different JIRA project* → the matching `memory/learnings/*.md` file; true for
+     a *sibling product* of this project → `projects/<KEY>/learnings.md`; otherwise
+     → `projects/<KEY>/products/<PRODUCT>/learnings.md`.
+     Write it in that file's entry format, newest on top.
+   - **When unsure, go narrow.** A too-narrow learning costs one repeated surprise
+     in a sibling product and corrects itself on the second sighting; a too-broad
+     one silently misleads every product. Note which product each sighting came
+     from (`seen: 2 — STOREFRONT, ADMIN`) — two *different* products is the signal
+     to widen from the product file up to the project's. There is only ever one
+     `_inbox.md`: scope is decided here, at groom time, when the information exists.
+3. Delete stale entries that no longer hold (env changed, bug actually got fixed
+   upstream) — outdated learnings mislead more than missing ones.
+4. Clear graduated/deduped entries out of `_inbox.md`.
+
+## Promote (gate: seen in ≥ 2 sessions)
+
+An entry whose `seen:` counter reaches 2 stops being "a learning" and becomes
+permanent knowledge — move it into whichever candidate target it named:
+
+- A rule file under `.claude/rules/` (cross-cutting, applies regardless of
+  project).
+- A skill's `SKILL.md` (changes how a specific workflow should behave).
+- `projects/<KEY>/PROJECT.md` (a durable fact about one project — a gotcha, a
+  corrected assumption).
+- `projects/<KEY>/products/<PRODUCT>/PRODUCT.md` (the same, but true for one product
+  only — a deviating environment, an extra test user, a product-specific trap).
+
+**Routing upkeep — the cheapest repetition to eliminate.** A ticket the agent could
+not route on its own, and a human answered: promote it per
+`.claude/rules/core/product-layer.md` → "Routing learns from being corrected". A
+stated *rule* goes into the `PROJECT.md` registry immediately (a human already
+generalized it — do not make them say it twice). A single case waits for the normal
+`seen: 2` gate and then becomes a component/label row. An exception never becomes a
+row; it belongs in "Routing overrides" if it recurs. Same for anything that had to
+fall back to a secondary signal or a default: capture it so the table gains a real
+entry instead of leaning on a weak one forever.
+
+**Feature-matrix upkeep — do this on every promotion pass, not only when something
+broke.** A product's "Feature & test-method matrix" is filled once at onboarding and
+then drives `qa-manager`'s strategy on every later ticket. Left alone it rots
+*authoritatively*: stale, but sourced-looking, which is worse than guessing. So: if a
+ticket exercised a feature that is missing from the matrix, or one marked
+`Applies: no`, add or flip that row in `PRODUCT.md` now. This does not wait for the
+`seen: 2` gate — one sighting is proof the matrix is wrong.
+
+Anything promoted into `PROJECT.md` or a `PRODUCT.md` invalidates the generated
+bridge file(s) under `.agents/qa-project-context/` — regenerate the affected ones in
+the same pass, or the vendored skills keep reading the pre-promotion picture.
+
+Once promoted, remove the now-redundant entry from the learnings file — Tier 1
+(rules/skills/project files) is now the source of truth for it, loaded
+automatically, never explained again.
+
+## Housekeeping
+
+- Keep `memory/INDEX.md` in sync: new learning file or project → one-line entry.
+- If a listed `INDEX.md` entry is empty or stale, fix or remove it — entries are
+  promises, not decoration.

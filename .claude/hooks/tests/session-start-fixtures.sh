@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+#
+# session-start-fixtures.sh — fixture test for session-start.sh's project/product
+# listing. Companion to guard-fixtures.sh, and for the same reason: this hook is
+# the only executable piece of the product layer, and its failure modes are silent
+# (a literal '*' as a product name, a lost "none yet" branch, a scaffold directory
+# listed as a real product).
+#
+# Usage:  bash .claude/hooks/tests/session-start-fixtures.sh
+# Exit:   0 = all fixtures pass, otherwise the number of failures.
+#
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOOK="$HERE/../session-start.sh"
+[ -f "$HOOK" ] || { echo "session-start.sh not found at $HOOK" >&2; exit 1; }
+
+fails=0
+WORK="$(mktemp -d)"
+trap 'rm -r "$WORK" 2>/dev/null' EXIT
+
+# Render the hook's additionalContext for a given cwd.
+context_for() {
+  printf '{"cwd":"%s"}' "$1" | bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+'
+}
+
+check_contains() {
+  local name="$1" haystack="$2" needle="$3"
+  if printf '%s' "$haystack" | grep -qF -- "$needle"; then
+    printf 'ok    %s\n' "$name"
+  else
+    printf 'FAIL  %s\n      expected to find: %s\n' "$name" "$needle"
+    fails=$((fails + 1))
+  fi
+}
+
+check_absent() {
+  local name="$1" haystack="$2" needle="$3"
+  if printf '%s' "$haystack" | grep -qF -- "$needle"; then
+    printf 'FAIL  %s\n      should NOT contain: %s\n' "$name" "$needle"
+    fails=$((fails + 1))
+  else
+    printf 'ok    %s\n' "$name"
+  fi
+}
+
+# --- fixture tree -------------------------------------------------------------
+# AAA: two products plus the scaffold directory that must never be listed.
+mkdir -p "$WORK/repo/projects/AAA/products/"{STOREFRONT,ADMIN,_template}
+# BBB: no products at all — must render exactly as before the product layer.
+mkdir -p "$WORK/repo/projects/BBB"
+# CCC: products/ exists but is empty — the unguarded-glob trap.
+mkdir -p "$WORK/repo/projects/CCC/products"
+# The scaffold and the reference project must stay hidden, as always.
+mkdir -p "$WORK/repo/projects/_template" "$WORK/repo/projects/EXAMPLE"
+mkdir -p "$WORK/empty/projects"
+
+CTX="$(context_for "$WORK/repo")"
+
+echo "== a project with products lists them inline =="
+# Glob order, i.e. alphabetical — deterministic, so assert it exactly.
+check_contains "AAA lists both products inline" "$CTX" "- AAA (products: ADMIN, STOREFRONT)"
+check_absent   "scaffold _template is not a product" "$CTX" "_template"
+
+echo
+echo "== a project without products renders exactly as before =="
+check_contains "BBB is a plain row" "$CTX" "- BBB"
+check_absent   "BBB has no empty product parens" "$CTX" "- BBB (products:"
+
+echo
+echo "== an empty products/ directory prints no product, and never a literal '*' =="
+check_contains "CCC is a plain row" "$CTX" "- CCC"
+check_absent   "no unexpanded glob leaked in" "$CTX" "products: *"
+
+echo
+echo "== scaffold and reference project stay hidden =="
+check_absent "projects/_template not listed" "$CTX" "- _template"
+check_absent "projects/EXAMPLE not listed"  "$CTX" "- EXAMPLE"
+
+echo
+echo "== the 'none yet' branch survives =="
+EMPTY_CTX="$(context_for "$WORK/empty")"
+check_contains "empty projects/ prompts onboarding" "$EMPTY_CTX" "(none yet — run /onboard-project)"
+
+echo
+if [ "$fails" -eq 0 ]; then
+  echo "all fixtures passed"
+else
+  echo "$fails fixture(s) failed"
+fi
+exit "$fails"

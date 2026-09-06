@@ -1,0 +1,56 @@
+# Token Discipline
+
+Why the blueprint stays cheap to run, and the rules that keep it that way.
+
+## Lookup policy — read this, not everything
+
+1. `memory/INDEX.md` first — it points at exactly the file you need.
+2. `projects/<KEY>/PROJECT.md` + `learnings.md` for the active project only.
+3. Only if that project has a `## Products` section and the ticket routed to a
+   product: `products/<PRODUCT>/PRODUCT.md` + its `learnings.md` **in addition**.
+   A `project-wide` ticket loads no product file at all, and a project without
+   products never globs for one. Before loading all four, check the field-ownership
+   table in `.claude/rules/core/product-layer.md`: a narrow question about a sealed
+   field (transitions, report format, deploy authorization) is answered by
+   `PROJECT.md` alone.
+4. Everything else (other projects, other learning files, docs/) is loaded **only
+   when a specific reason exists** — a skill instructs it, or the index points there.
+
+**Never** run a full-repo scan, `find` over the whole tree, or open every file in
+`projects/` "just in case". If the project file doesn't answer a question, that is a
+signal to run `onboard-project` or ask the user — not to start exploring.
+
+## Grep over reading
+
+Prefer targeted `grep`/`rg` for a known string (a selector, an error message, a
+learning keyword) over opening a file to skim it. Read a file fully only once you
+know it's the right one.
+
+## Subagent policy
+
+Delegate to a subagent when the work would otherwise dump a large, disposable
+transcript into the main context:
+
+- `test-executor` — every Playwright MCP exploratory session (browser snapshots,
+  console logs, network dumps stay inside the subagent; only a verdict returns).
+- `test-automator` — spec authoring/execution via the CLI runner.
+- `bug-reporter` — bug report composition against the project's template.
+- `qa-manager` — overall ticket orchestration when the flow spans multiple of the
+  above.
+
+Do not spawn a subagent for a single quick read or a one-line answer — that costs
+more than it saves.
+
+## Context hygiene
+
+- Evidence (`evidence/`) is gitignored and covered by `.claudeignore` — never read a
+  screenshot/log/trace back into context "to check it looked right"; trust the
+  capture step and reference the path in reports instead.
+- Close out exploratory sessions with a short verdict, not a full transcript replay,
+  when reporting back to the user or to JIRA.
+- Long `memory/learnings/*.md` files are meant to be grepped, not read end-to-end,
+  once they exceed a screenful — that's the trigger for `/retro-learn` to consolidate.
+
+## Details, read when the topic comes up
+
+`docs/rules/core/token-discipline.md` — MCP budget. Read it when someone proposes adding, removing or configuring an MCP server.

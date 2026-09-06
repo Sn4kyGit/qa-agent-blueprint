@@ -1,0 +1,35 @@
+# QA Agent Blueprint
+
+# Secrets — never committed
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Evidence — local test artifacts, gitignored per docs/artifact-strategy.md
+evidence/*
+!evidence/README.md
+
+# Local memory store, if you ever wire an external memory server yourself
+# (not shipped — see docs/memory-layers.md)
+memory/.mnemosyne/
+
+# Eval runs (results are output, cases are source)
+evals/results/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Installer backups
+*.bak-*
+
+# Node
+node_modules/
+
+# OS
+.DS_Store

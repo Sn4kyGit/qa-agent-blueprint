@@ -1,0 +1,226 @@
+#!/usr/bin/env bash
+#
+# session-start.sh — SessionStart hook. Prints compact orientation context:
+# available projects, Playwright version, and (plugin mode only) the router
+# that CLAUDE.md would normally provide, since plugins do not load CLAUDE.md.
+#
+# Detects plugin mode automatically: if the running project has no managed
+# qa-agent-blueprint block in CLAUDE.md and no .claude/rules/qa-blueprint/
+# namespace, this is a plugin-mode bootstrap — inject the router and scaffold
+# projects/, memory/, evidence/ from the plugin's own copies (never overwriting
+# existing content). Otherwise (standalone blueprint repo, or integrate mode
+# where CLAUDE.md/.claude/rules/qa-blueprint already exist) just print the
+# short preamble; the router already lives in the project's own CLAUDE.md.
+#
+set -uo pipefail
+
+INPUT="$(cat)"
+CWD="$PWD"
+if command -v python3 >/dev/null 2>&1; then
+  parsed_cwd="$(printf '%s' "$INPUT" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("cwd") or "")' 2>/dev/null || true)"
+  [ -n "$parsed_cwd" ] && CWD="$parsed_cwd"
+fi
+
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+
+is_plugin_bootstrap() {
+  [ -n "$PLUGIN_ROOT" ] || return 1
+  [ -d "$CWD/.claude/rules/qa-blueprint" ] && return 1
+  [ -f "$CWD/CLAUDE.md" ] && grep -qF '<!-- >>> qa-agent-blueprint (managed, do not edit) -->' "$CWD/CLAUDE.md" 2>/dev/null && return 1
+  return 0
+}
+
+playwright_version() {
+  npx --no-install playwright --version 2>/dev/null || echo "not installed"
+}
+
+# Products of one project, rendered inline: " (products: STOREFRONT, ADMIN)".
+# Inline and capped on purpose — one line per product would turn a three-line
+# preamble into a wall for a project with a dozen of them. Costs no file reads,
+# just one more glob level, and prints nothing at all when the project has no
+# products/ directory, which keeps the single-product output byte-identical.
+product_suffix() {
+  local proj_dir="$1" p pname count=0 list=""
+  [ -d "$proj_dir/products" ] || return 0
+  for p in "$proj_dir"/products/*/; do
+    # Guard: an existing but EMPTY products/ leaves the glob unexpanded, which
+    # would otherwise print a literal '*' as a product name.
+    [ -d "$p" ] || continue
+    pname="$(basename "$p")"
+    case "$pname" in _template) continue ;; esac
+    count=$((count + 1))
+    [ "$count" -le 6 ] && list="${list:+$list, }$pname"
+  done
+  [ "$count" -eq 0 ] && return 0
+  if [ "$count" -gt 6 ]; then
+    printf ' (products: %s, +%s more)' "$list" "$((count - 6))"
+  else
+    printf ' (products: %s)' "$list"
+  fi
+}
+
+list_projects() {
+  local d name found=0
+  for d in "$CWD"/projects/*/; do
+    [ -d "$d" ] || continue
+    name="$(basename "$d")"
+    case "$name" in _template|EXAMPLE) continue ;; esac
+    echo "  - $name$(product_suffix "$d")"
+    found=1
+  done
+  # One branch for all three empty cases: no projects/ directory, an empty one,
+  # and one holding nothing but the scaffold/reference dirs — the last of which
+  # is the state of every fresh install, where this used to print a blank line.
+  [ "$found" -eq 1 ] || echo "  (none yet — run /onboard-project)"
+}
+
+bootstrap_dirs() {
+  local d
+  for d in memory evidence; do
+    if [ ! -d "$CWD/$d" ] && [ -d "$PLUGIN_ROOT/$d" ]; then
+      cp -r "$PLUGIN_ROOT/$d" "$CWD/$d" 2>/dev/null || true
+    fi
+  done
+  # projects/ is created EMPTY on purpose: it holds the consumer's own onboarded
+  # projects. projects/_template (scaffold) and projects/EXAMPLE (reference) stay
+  # in the plugin and are read from $PLUGIN_ROOT on demand by onboard-project —
+  # copying them would fork scaffolds that plugin updates can no longer reach.
+  # (Copying the whole projects/ tree here is what the comment used to claim it
+  # avoided while doing exactly that.)
+  [ -d "$CWD/projects" ] || mkdir -p "$CWD/projects" 2>/dev/null || true
+
+  # Playwright MCP is launched with `--secrets .env.playwright-secrets` and that
+  # flag is a hard fail: a missing file makes the server exit at startup
+  # (ENOENT), so plugin users would get a dead browser server with no obvious
+  # cause. install.sh seeds this template in standalone/integrate mode; plugin
+  # mode copies nothing, so seed the same placeholder here. Values stay the
+  # user's job — this file never contains anything but comments when written.
+  if [ ! -f "$CWD/.env.playwright-secrets" ]; then
+    cat > "$CWD/.env.playwright-secrets" <<'SECRETS_TEMPLATE' 2>/dev/null || true
+# Secrets consumed by Playwright MCP via --secrets (values are masked in tool
+# responses, so the agent never sees them). Gitignored — never commit.
+# Reference per-project test users by the keys used in projects/<KEY>/PROJECT.md.
+# Example:
+# SHOP_QA_STANDARD_PASSWORD=replace-me
+SECRETS_TEMPLATE
+    # Plugin mode copies no .gitignore, so the consumer repo may not ignore this
+    # file yet. Only append if git says it isn't already ignored.
+    if command -v git >/dev/null 2>&1 \
+       && git -C "$CWD" rev-parse --git-dir >/dev/null 2>&1 \
+       && ! git -C "$CWD" check-ignore -q .env.playwright-secrets 2>/dev/null; then
+      printf '\n# QA Agent Blueprint — Playwright MCP secrets, never commit\n.env.playwright-secrets\n' \
+        >> "$CWD/.gitignore" 2>/dev/null || true
+    fi
+  fi
+}
+
+# The Stop hook forces learnings to be CAPTURED; nothing forces them to be groomed,
+# so an inbox quietly grows until it is useless. Count ungroomed entries (capture
+# headers, "## YYYY-MM-DD — ...") and say so once per session. Counting only, no
+# file content in the context, and silent at zero.
+inbox_status() {
+  local inbox="$CWD/memory/learnings/_inbox.md" n
+  [ -f "$inbox" ] || return 0
+  n="$(grep -cE '^## [0-9]{4}-[0-9]{2}-[0-9]{2} ' "$inbox" 2>/dev/null || echo 0)"
+  # The template ships one illustrative example entry; one is not a backlog.
+  [ "${n:-0}" -gt 1 ] || return 0
+  printf '\n- %s ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).' "$n"
+}
+
+# The two most likely day-one failures are not detectable from here (a hook cannot
+# ask an MCP server whether it started), so say what to check instead of pretending
+# to know: this is a one-line hint, only while no project has been onboarded yet.
+mcp_hint() {
+  [ -d "$CWD/projects" ] || return 0
+  local d
+  for d in "$CWD"/projects/*/; do
+    [ -d "$d" ] || continue
+    case "$(basename "$d")" in _template|EXAMPLE) continue ;; esac
+    return 0   # a real project exists — the user is past first-run setup
+  done
+  printf '\n- First run: confirm both MCP servers are live before testing — `claude mcp list` should show playwright and atlassian, and /mcp must show atlassian as authorized (OAuth). A dead playwright server and an unauthorized atlassian are the two failures that look like a broken blueprint.'
+}
+
+# A missing secrets file breaks the playwright MCP server in every mode, and the
+# only symptom the user sees is a connection error at startup — name it here.
+secrets_status() {
+  [ -f "$CWD/.env.playwright-secrets" ] && return 0
+  # Leading newline: this is appended inside the CONTEXT string as its own line.
+  printf '\n- WARNING: .env.playwright-secrets is missing — the playwright MCP server exits at startup (--secrets ENOENT). Create it (install.sh writes a template) before any browser test.'
+}
+
+# Bootstrap first, then build the context — otherwise the secrets warning below
+# would fire on the very run that just seeded the file.
+PLUGIN_BOOTSTRAP=0
+if is_plugin_bootstrap; then
+  PLUGIN_BOOTSTRAP=1
+  bootstrap_dirs
+fi
+
+CONTEXT="QA Agent Blueprint — session start
+- Onboarded projects:
+$(list_projects)
+- Playwright CLI: $(playwright_version)
+- Read memory/INDEX.md before anything else; then only the active project's
+  PROJECT.md + learnings.md. No full-repo scans.$(mcp_hint)$(inbox_status)$(secrets_status)"
+
+if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
+  CONTEXT="## QA Agent Blueprint (plugin mode)
+
+You are a QA Manager and Tester. Test JIRA tickets autonomously, report per
+project specification, always deliver evidence.
+
+- Route ticket prefixes (\`SHOP-1234\` → \`SHOP\`) to \`projects/<KEY>/PROJECT.md\`
+  before testing; unknown prefix → run the \`onboard-project\` skill or ask.
+- Products are optional. If that PROJECT.md has a \`## Products\` section, route on
+  to a product and read \`products/<PRODUCT>/PRODUCT.md\` + \`learnings.md\` in
+  addition — the product wins, what it omits is inherited. Order: explicit mention →
+  component → label → \`project-wide\` → the project's declared secondary signals
+  (epic, fix version, MR paths) → a declared default. Conflict or nothing → ask
+  (headless → BLOCKED); a default resolves silence, never a conflict. No such
+  section → the project file is the whole context. New product →
+  \`/onboard-product\`. Details: the product-layer rule in the plugin.
+- Blueprint rules load from the plugin; project data lives in this repo under
+  \`projects/\`, \`memory/\`, \`evidence/\` (bootstrapped now if missing).
+  \`projects/\` starts empty — the scaffold and the filled reference stay in the
+  plugin: read them from $PLUGIN_ROOT/projects/_template/ and
+  $PLUGIN_ROOT/projects/EXAMPLE/ when onboarding, and write only the new
+  \`projects/<KEY>/\` into this repo.
+- Skills: /test-ticket · /retest-bug · /exploratory-testing ·
+  /playwright-regression · /bug-report · /report-to-jira · /deploy-to-stage ·
+  /onboard-project · /onboard-product · /retro-learn
+  + 10 vendored specialist skills for every project (risk-based-testing,
+  bug-reproduction, api-testing, accessibility-testing, security-testing,
+  visual-testing, test-reliability, qa-metrics, test-case-management,
+  release-readiness) — see .claude/skills/THIRD_PARTY_NOTICES.md.
+- Vendored skills are global; their context is per-project and per-product. Point
+  one at .agents/qa-project-context/<KEY>.md — or <KEY>/<PRODUCT>.md once the project
+  has products — for the CURRENT ticket explicitly, never a generic or
+  previously-used path, which may hold another project's or product's data.
+- Learning loop: capture surprises into memory/learnings/_inbox.md; promote via
+  /retro-learn. Every run declares its \`learnings\` in execution_summary.json — the
+  entries, or one sentence why there were none. The Stop hook blocks without it.
+- Hard rules: evidence mandatory · no secrets in chat/code/tickets/screenshots ·
+  no full project scans (start at memory/INDEX.md + the project file) · MCP servers
+  are a declared set (currently playwright, atlassian) — propose, never add one
+  yourself; credential servers resolve references, never surface values.
+
+$CONTEXT"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  CONTEXT="$CONTEXT" python3 -c '
+import json, os
+print(json.dumps({
+    "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": os.environ["CONTEXT"],
+    }
+}))
+'
+else
+  # No python3 — fall back to plain stdout, which most Claude Code versions
+  # still surface as session context for SessionStart hooks.
+  printf '%s\n' "$CONTEXT"
+fi
+exit 0

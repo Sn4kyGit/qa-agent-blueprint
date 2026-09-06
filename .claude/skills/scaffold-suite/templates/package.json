@@ -1,0 +1,13 @@
+{
+  "name": "<key>-web-tests",
+  "private": true,
+  "description": "Playwright suite for <KEY>[/<PRODUCT>], scaffolded by /scaffold-suite",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.0"
+  }
+}
