@@ -133,6 +133,8 @@ in the product files — note that they carry a product segment in the key, so t
   (see their product files). Only `SEC` is shared across both.
 - **Test data**: seed via `POST /api/testdata/seed` on stage (test-only endpoint);
   reset between runs when orders are created
+- **App repo (optional, read-only)**: none — `failure-analysis` runs from JIRA plus
+  version history here, and says so in its output rather than guessing at a diff
 
 ## Gotchas
 

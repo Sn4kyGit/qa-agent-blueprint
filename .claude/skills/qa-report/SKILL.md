@@ -32,6 +32,11 @@ that is already there.
    - **Routing needed a human** — every `user`, `default` or `secondary` resolution
      is a missing component/label row in the project's registry. Propose the rows;
      `retro-learn` promotes them (`.claude/rules/core/product-layer.md`).
+   - **Awaiting ruling** — every `test-outdated` failure still waiting on a human is
+     a test the suite is currently lying about. One or two is normal traffic; a
+     number that grows week over week means the suite is drifting away from the
+     product, and the fix is a grooming session with the test owners, not a metric.
+     Report the count and the age of the oldest, never a percentage.
    - **Undeclared learnings** — a run that produced evidence without declaring its
      `learnings` means the Stop hook did not fire. That is an enforcement gap, not a
      reporting detail: check that the hook is wired in this repo before trusting any
@@ -50,11 +55,12 @@ that is already there.
 ## What this skill does not do
 
 Invent metrics the schema cannot support. The aggregator prints an explicit "not
-computable" section — flake rate, defect escape rate and coverage are **not**
-derivable from `execution_summary.json` as it stands. Estimating them anyway would
-produce exactly the kind of sourced-looking-but-wrong number this blueprint keeps
-warning about. If a flake rate is genuinely needed, extend the evidence schema first
-(a retry count per run), then extend the aggregator — in that order.
+computable" section — defect escape rate and coverage are **not** derivable from
+`execution_summary.json`, and the flake rate covers only runs that reported
+`test_cases[]` (the CLI runner; never an exploratory session). Estimating the rest
+anyway would produce exactly the kind of sourced-looking-but-wrong number this
+blueprint keeps warning about. The flake rate is the worked example of the right
+order: the schema grew `attempts` first, then the aggregator started counting.
 
 It also does not judge people. The unit of every number here is a *run*, not a
 tester.

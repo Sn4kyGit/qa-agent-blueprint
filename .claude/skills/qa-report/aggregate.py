@@ -76,7 +76,26 @@ def summarize(runs):
         verdicts = Counter(r.get("verdict", "UNKNOWN") for r in group)
         findings = [f for r in group for f in (r.get("findings") or [])]
         severities = Counter(f.get("severity", "?") for f in findings)
-        decided = verdicts["PASS"] + verdicts["FAIL"]
+        # NEEDS_REVIEW ("the test may be outdated") sits in the denominator and never
+        # in the numerator, on purpose: a classification that improved the pass rate
+        # would be a cheaper route to green than fixing the product.
+        decided = verdicts["PASS"] + verdicts["FAIL"] + verdicts["NEEDS_REVIEW"]
+
+        analyses = [r["failure_analysis"] for r in group if isinstance(r.get("failure_analysis"), dict)]
+        cause_classes = Counter(a.get("class", "?") for a in analyses)
+        awaiting = [
+            r for r, a in zip(group, analyses)
+            if a.get("human_decision_required") and not a.get("human_ruling")
+        ]
+        oldest_awaiting = min((parse_ts(r.get("timestamp")) for r in awaiting if parse_ts(r.get("timestamp"))), default=None)
+
+        # A retry count exists per test case now, so the flake rate is measurable
+        # rather than the "not computable" it used to be. Cases only; a run without
+        # test_cases[] (every exploratory run) simply contributes nothing.
+        cases = [c for r in group for c in (r.get("test_cases") or [])]
+        # Pass-on-retry only. A case that still failed after two attempts is not a
+        # flake, it is a failure that was tried twice.
+        retried = sum(1 for c in cases if (c.get("attempts") or 1) > 1 and c.get("outcome") in ("pass", "flaky"))
 
         routed_by = Counter(r.get("product_routed_by") for r in group if r.get("product_routed_by"))
         # "Needed a human, or leaned on a weak signal" — the number that says whether
@@ -107,6 +126,16 @@ def summarize(runs):
                 for r in group if r.get("verdict") == "BLOCKED"
             ],
             "routing": {"by": dict(routed_by), "weak_or_manual": weak},
+            "cause_classes": dict(cause_classes),
+            "awaiting_ruling": len(awaiting),
+            "oldest_awaiting_days": (
+                (datetime.now(timezone.utc) - oldest_awaiting).days if oldest_awaiting else None
+            ),
+            "flake": {
+                "cases": len(cases),
+                "retried": retried,
+                "rate": round(100 * retried / len(cases), 1) if cases else None,
+            },
             "learnings": {
                 "entries_captured": captured,
                 "runs_declaring_none": declared_none,
@@ -130,14 +159,15 @@ def render(stats, runs, broken, args):
         lines.append("runs are writing evidence somewhere other than the configured directory.")
         return "\n".join(lines)
 
-    lines.append("| Scope | Runs | Pass rate | P0 | P1 | BLOCKED | Routing needed a human | Learnings |")
-    lines.append("|---|---|---|---|---|---|---|---|")
+    lines.append("| Scope | Runs | Pass rate | P0 | P1 | BLOCKED | Awaiting ruling | Routing needed a human | Learnings |")
+    lines.append("|---|---|---|---|---|---|---|---|---|")
     for key, s in stats.items():
         sev = s["findings_by_severity"]
         lines.append(
             f"| {key} | {s['runs']} | "
             f"{'—' if s['pass_rate'] is None else str(s['pass_rate']) + ' %'} | "
             f"{sev.get('P0', 0)} | {sev.get('P1', 0)} | {s['verdicts'].get('BLOCKED', 0)} | "
+            f"{s['awaiting_ruling']} | "
             f"{s['routing']['weak_or_manual']} | "
             f"{s['learnings']['entries_captured']} captured, {s['learnings']['runs_undeclared']} undeclared |"
         )
@@ -152,6 +182,24 @@ def render(stats, runs, broken, args):
                 f"  - {s['routing']['weak_or_manual']} of {s['runs']} run(s) resolved the product by "
                 f"{', '.join(k for k in s['routing']['by'] if k in ('user', 'default', 'secondary'))} "
                 "— each one is a missing component/label row in the registry"
+            )
+        if s["cause_classes"]:
+            detail.append(
+                "  - FAIL causes: "
+                + ", ".join(f"{k} {v}" for k, v in sorted(s["cause_classes"].items(), key=lambda kv: -kv[1]))
+            )
+        if s["awaiting_ruling"]:
+            age = s["oldest_awaiting_days"]
+            detail.append(
+                f"  - {s['awaiting_ruling']} failure(s) awaiting a human ruling"
+                + (f", oldest {age} day(s) old" if age is not None else "")
+                + " — every one is a test the suite is currently lying about; a number that"
+                " grows week over week means the suite is drifting from the product"
+            )
+        if s["flake"]["rate"] is not None and s["flake"]["retried"]:
+            detail.append(
+                f"  - {s['flake']['retried']} of {s['flake']['cases']} test case(s) passed only on"
+                f" retry ({s['flake']['rate']} %)"
             )
         if s["learnings"]["runs_undeclared"]:
             detail.append(
@@ -172,9 +220,9 @@ def render(stats, runs, broken, args):
 
     lines.append("## Not computable from the evidence schema")
     lines.append("")
-    lines.append("- **Flake rate** — a run that passed only on retry is not recorded anywhere;")
-    lines.append("  the summary has one verdict per run. Add a retry count to the schema before")
-    lines.append("  quoting a flake number, rather than inferring one.")
+    lines.append("- **Flake rate for exploratory runs** — computed above from `test_cases[].attempts`,")
+    lines.append("  which only the CLI runner produces. An exploratory run contributes no cases and")
+    lines.append("  is therefore absent from that number, not counted as clean.")
     lines.append("- **Defect escape rate** — needs production incidents, which this repo never sees.")
     lines.append("- **Coverage** — lives in the test suite's own reporting, not in the evidence.")
     return "\n".join(lines)

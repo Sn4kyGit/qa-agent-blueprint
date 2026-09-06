@@ -93,7 +93,10 @@ User: "Test SHOP-1234"
   → test-executor (exploratory, MCP) and/or test-automator (specs, CLI)
   → evidence: evidence/SHOP/SHOP-1234/<ts>/ (+ Stop hook enforcement)
   → PASS → report-to-jira: comment + final screenshot + transition "Verify"
-  → FAIL → bug-reporter: project template (no pipe tables), attachments, "Reopen"
+  → FAIL → failure-analyst: product wrong, or test wrong? (class + confidence)
+       ↳ product-defect / undetermined → bug-reporter: project template, "Reopen"
+       ↳ test-outdated / test-brittle  → NEEDS_REVIEW: propose, no bug, no transition
+       ↳ environment → BLOCKED  ·  flake → test-reliability, no product bug
   → retro-learn: unexpected findings → _inbox.md
 ```
 

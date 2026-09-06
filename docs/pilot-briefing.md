@@ -86,7 +86,14 @@ for us to see what actually happened without reading your tickets.
 
 ## Known unfinished, so you do not report them as bugs
 
-- **`evals/`** — six semantic test cases exist and have never been run: the
+- **`/failure-analysis` starts blind and gets better.** Its strongest evidence is
+  "this test case last passed on version X" — and on day one there is no run history
+  to say that. For the first sprints it is essentially an acceptance-criterion
+  comparison: it will land on `undetermined` more often than it later will, and that
+  is the feature working, not failing. Two things speed it up: run the CLI suite (it
+  is the only producer of the per-case history) and rule on `NEEDS_REVIEW` failures
+  promptly, since a confirmed ruling is what teaches it.
+- **`evals/`** — eight semantic test cases exist and have never been run: the
   `claude plugin eval` runner is in early access and refused to start here. They are
   runnable by hand (see `evals/README.md`).
 - **No mobile, cross-browser or non-web testing.** Chromium, headless, web only.

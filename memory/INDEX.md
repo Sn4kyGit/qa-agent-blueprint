@@ -12,6 +12,7 @@ lookups never require a full scan).
 | `learnings/selector-failures.md` | Unstable selectors and working alternatives (data-testid-first, paste-event traps) |
 | `learnings/flaky-tests.md` | Known flakes, root causes, retry/quarantine strategies |
 | `learnings/env-gotchas.md` | Environment pitfalls: caches, feature flags, sandboxes, shared-stage rules |
+| `learnings/product-changes.md` | Confirmed deliberate behaviour changes that made a test case outdated (written on a human ruling only) |
 
 ## Projects (Layer 3)
 

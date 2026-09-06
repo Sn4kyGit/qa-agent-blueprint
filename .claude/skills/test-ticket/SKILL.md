@@ -23,7 +23,9 @@ subagent, which follows `docs/architecture.md` → "End-to-end ticket flow".
    `api-testing`/`accessibility-testing`/`security-testing`/`visual-testing`/
    `bug-reproduction` — when the ticket calls for one; see `qa-manager`'s
    "Specialized skills" section), ensure evidence, and report via
-   `report-to-jira` (or `bug-report` first on FAIL).
+   `report-to-jira`. On FAIL, `failure-analysis` runs first and decides what comes
+   next: `bug-report` for a product defect, a proposal for a human when the test
+   case itself turns out to be the stale one.
 3. Unknown project prefix or missing `projects/<KEY>/PROJECT.md` → stop and run
    `onboard-project` (or tell the user to), per `CLAUDE.md` project routing rule.
    Never guess a project's process. Same for products: a product named in the

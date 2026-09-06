@@ -36,6 +36,12 @@ reads only this section must understand whether to drop what they are doing.>
 - Feature flags: <flag = on/off, if the project uses them>
 - Browser / client: <e.g. Chromium 131, viewport 1280x800>
 - Related: <linked tickets, MRs, Confluence test plan>
+- Cause analysis: <class> (confidence: <level>) — <one-line basis, e.g. "TC-CHK-014
+  last passed on 2.13.4; no ticket in the 2.14.0 window documents this behaviour">
+  <Only `product-defect` and `undetermined` ever reach this template
+  (`.claude/agents/bug-reporter.md` → precondition). On `undetermined`, add the one
+  artifact that would have decided it — a developer who knows what we could not check
+  wastes no time re-checking it.>
 
 ### Steps to Reproduce
 

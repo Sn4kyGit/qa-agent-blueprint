@@ -43,13 +43,21 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
   "scope": "product",
   "product_routed_by": "component",
   "timestamp": "2026-09-04T14:30:00Z",
-  "verdict": "PASS | FAIL | BLOCKED",
+  "verdict": "PASS | FAIL | BLOCKED | NEEDS_REVIEW",
   "test_type": "exploratory | regression | mixed",
-  "environment": { "name": "stage", "version_or_build": "2.14.0-rc3" },
+  "environment": { "name": "stage", "version_or_build": "2.14.0-rc3", "commit": "a3f9c21" },
+  "deploy": { "from_version": "2.13.4", "to_version": "2.14.0-rc3", "pipeline_run": "…", "at": "…" },
   "steps_executed": ["login as qa-standard", "add item to cart", "checkout"],
-  "findings": [
-    { "severity": "P1", "summary": "coupon code silently ignored", "ticket_filed": "SHOP-1240" }
+  "test_cases": [
+    { "id": "TC-CHK-014", "outcome": "pass | fail | skipped | flaky", "attempts": 2,
+      "spec": "specs/checkout/coupon.spec.ts:42", "assertion": "expected 80.10, got 90.00" }
   ],
+  "failure_analysis": { "class": "…", "confidence": "…", "human_decision_required": true },
+  "findings": [
+    { "severity": "P1", "summary": "coupon code silently ignored", "ticket_filed": "SHOP-1240",
+      "test_case": "TC-CHK-014", "cause_class": "product-defect" }
+  ],
+  "blocked_reason": "<why, on BLOCKED only>",
   "evidence_dir": "evidence/SHOP/SHOP-1234/20260904-143000/",
   "reported_to_jira": true,
   "shadow": false,
@@ -79,7 +87,20 @@ product or the project.
 One ticket that genuinely spans two products produces **one run per product**:
 `evidence/<KEY>/<TICKET>/<ts>__<PRODUCT>/`, each with its own
 `execution_summary.json`, aggregated into a single JIRA comment with at most one
-transition (worst verdict wins: `FAIL > BLOCKED > PASS`).
+transition (worst verdict wins: `FAIL > BLOCKED > NEEDS_REVIEW > PASS`).
+
+## Failure fields — conditional, like the product fields
+
+`deploy`, `test_cases[]`, `blocked_reason` and `failure_analysis` are written only
+when they have a value — never as `null`. `test_cases[]` needs a runner reporting per
+case; an exploratory run keeps `steps_executed` alone. `failure_analysis` is written
+on every FAIL, **before** a bug is filed; its full shape and the six classes are
+`.claude/skills/failure-analysis/references/classification.md`.
+
+`NEEDS_REVIEW` is the verdict for class `test-outdated`/`test-brittle`: no bug, no
+transition, a proposal for a human. **Interactive only** — headless it stays `FAIL`.
+It counts as not-passed in every metric until `human_ruling` names who decided, so
+the classification is never a cheaper route to green than fixing the product.
 
 ## `learnings` — declared, not remembered
 

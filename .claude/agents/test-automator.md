@@ -42,6 +42,16 @@ Copy the relevant run artifacts (report, trace on failure, screenshots on failur
 into `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` per
 `.claude/rules/core/evidence-policy.md`, including `execution_summary.json`.
 
+**Write `test_cases[]` — you are the only producer of it.** One entry per case the
+runner reported: `id` (the TC-ID), `outcome`, `attempts`, `spec` (file:line) and, on
+a failure, the `assertion` text. Playwright's `json` reporter already carries all
+five; you are copying, not deriving. This is the same data you return in prose, and
+persisting it is what lets a later run answer "did this case ever pass, and on which
+version?" — the question `failure-analysis` is built on and cannot ask of a summary
+that only lists steps. A case whose TC-ID you cannot determine gets its title as the
+`id` and a note, never a made-up ID: a wrong ID silently joins two different cases'
+histories together.
+
 ## What you return
 
 Pass/fail counts per TC-ID, flake occurrences (pass-on-retry), and the evidence

@@ -47,6 +47,13 @@ When this blueprint runs unattended (e.g. a nightly-regression pipeline invoking
   important here — headless runs are the case most likely to go unwatched.
 - Failures should file/update tickets per `report-to-jira`, not just exit non-zero
   and vanish into a CI log.
+- **`NEEDS_REVIEW` is unreachable headless.** `failure-analysis` still runs — one JQL,
+  and the class plus the proposal are exactly what a human wants waiting for them in
+  the morning — but the verdict stays `FAIL`, the FAIL transition is applied, and the
+  proposal is attached rather than acted on. The verdict means "a person has to rule
+  on this", and in a pipeline there is no person. Letting it resolve itself there
+  would turn "the test is probably outdated" into a green build, which is the one
+  outcome the whole classification is designed not to buy.
 
 ## What the agent never does in CI/CD
 

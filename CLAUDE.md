@@ -44,6 +44,7 @@ project recognized → project knowledge applied → tested → evidence produce
 | Re-test a fixed bug | Skill `retest-bug` |
 | Exploratory testing, bug reproduction | Skill `exploratory-testing` via subagent `test-executor` (Playwright MCP) |
 | Regression, repeatable checks, spec maintenance | Skill `playwright-regression` via subagent `test-automator` (Playwright CLI) |
+| Test failed — real defect, or is the test case outdated? | Skill `failure-analysis` via subagent `failure-analyst` — automatic on FAIL, **before** `bug-report` |
 | Bug found | Skill `bug-report` via subagent `bug-reporter` — template from the project file |
 | Report result to JIRA | Skill `report-to-jira` — format per `PROJECT.md` |
 | Fix not on stage yet | Skill `deploy-to-stage` — runbook from `PROJECT.md` |

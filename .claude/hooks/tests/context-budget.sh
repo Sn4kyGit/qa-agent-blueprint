@@ -20,13 +20,21 @@
 #               Raised to 7200 deliberately rather than trimming five tokens of
 #               prose to hit a round number — the check exists to force this call,
 #               not to be gamed. The next raise needs the same kind of sentence.
+#   2026-09-06  failure triage (/failure-analysis) added four fields every run writer
+#               has to know about — a fourth verdict, test_cases[], deploy,
+#               blocked_reason — plus one router row. The part that is detail of one
+#               skill (the six classes, the failure_analysis object, the rule-in /
+#               rule-out table) went to that skill's references/ and to docs/rules/
+#               instead, which is what kept this to 7427. Budget 7500. The schema is
+#               the one thing that genuinely must bind before any skill loads: a run
+#               written to the old shape is unreadable by every reader downstream.
 #
 # Usage:  bash .claude/hooks/tests/context-budget.sh
 # Exit:   0 within budget, 1 over.
 #
 set -uo pipefail
 
-BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-7200}"
+BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-7500}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"

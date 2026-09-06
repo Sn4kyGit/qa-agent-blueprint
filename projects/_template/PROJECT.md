@@ -98,6 +98,13 @@ into `.env.playwright-secrets` for the Playwright MCP `--secrets` masking.
 - **Playwright suite**: <repo path/location, config file> — or "none yet"
 - **TC categories**: <AUTH, CHK, ... — for TC-<CAT>-<NNN> IDs>
 - **Test data**: <seed scripts / fixtures / reset mechanism>
+- **App repo (optional, read-only)**: <local checkout, e.g. `../shop-web/`, or
+  "none — failure analysis runs from JIRA + version history only">
+  Lets `failure-analysis` add a bounded `git log`/`git diff` over the version window
+  when a test fails, which is the difference between "a ticket *claims* this changed"
+  and "these commits touched this area". Read-only: it never checks out a branch,
+  never builds, and never bisects unasked. Left as "none", the analysis says so in
+  its output instead of guessing.
 
 ## Gotchas
 

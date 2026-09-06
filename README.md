@@ -16,7 +16,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | Atlassian Cloud (JIRA + Confluence), remote MCP server, OAuth 2.1 |
-| **Contents** | 22 skills · 4 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 81 fixtures · 6 eval cases |
+| **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 83 fixtures · 8 eval cases |
 | **Two ways in** | Standalone repo, or merged into an existing one — or as a plugin |
 | **License** | MIT |
 
@@ -138,7 +138,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>12 core skills</b> — the ticket workflow</summary>
+<summary><b>13 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
@@ -146,6 +146,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 | `/retest-bug` | Focused re-test of a fixed bug + a tight regression sweep |
 | `/exploratory-testing` | Chartered SBTM session via Playwright MCP |
 | `/playwright-regression` | Write/run deterministic specs via the CLI runner |
+| `/failure-analysis` | A failing test triaged: real defect, or is the test case itself outdated? Proposes, never applies |
 | `/bug-report` | A bug report exactly per the project's (or product's) template |
 | `/report-to-jira` | Comment + attachments + the correct workflow transition |
 | `/deploy-to-stage` | The project's deploy runbook, with safety checks |
@@ -172,13 +173,14 @@ than by guesswork.
 </details>
 
 <details>
-<summary><b>4 subagents</b> — separate context windows</summary>
+<summary><b>5 subagents</b> — separate context windows</summary>
 
 | Subagent | Role |
 |---|---|
 | `qa-manager` | Orchestrates one ticket end to end; decides strategy, delegates, quality-gates the result |
 | `test-executor` | Exploratory testing and bug reproduction via Playwright MCP |
 | `test-automator` | Deterministic specs via the Playwright CLI runner |
+| `failure-analyst` | Triages a FAIL before a bug is filed — holds no `Write`, so it can never edit a test green |
 | `bug-reporter` | Composes the bug report against the project's template |
 
 A 30-step browser session stays inside `test-executor`; only a verdict comes back.

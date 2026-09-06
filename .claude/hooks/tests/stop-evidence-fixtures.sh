@@ -51,12 +51,12 @@ write_transcript() {
 }
 
 write_summary() {
-  local dir="$1" learnings="$2"
+  local dir="$1" learnings="$2" verdict="${3:-PASS}"
   mkdir -p "$dir"
   if [ "$learnings" = "omit" ]; then
-    printf '{"ticket":"SHOP-1","project":"SHOP","verdict":"PASS"}\n' > "$dir/execution_summary.json"
+    printf '{"ticket":"SHOP-1","project":"SHOP","verdict":"%s"}\n' "$verdict" > "$dir/execution_summary.json"
   else
-    printf '{"ticket":"SHOP-1","project":"SHOP","verdict":"PASS","learnings":%s}\n' "$learnings" > "$dir/execution_summary.json"
+    printf '{"ticket":"SHOP-1","project":"SHOP","verdict":"%s","learnings":%s}\n' "$verdict" "$learnings" > "$dir/execution_summary.json"
   fi
 }
 
@@ -104,6 +104,21 @@ check "learnings captured" 0 "$(run_hook "$C5" "$C5/t.jsonl")"
 C6="$WORK/c6"; write_transcript "$C6/t.jsonl" test_ran
 write_summary "$C6/evidence/SHOP/SHOP-1/20260906-100000" '{"captured":[],"none_because":"clean run, no surprises"}'
 check "explicit none_because" 0 "$(run_hook "$C6" "$C6/t.jsonl")"
+
+# --- case 6b: NEEDS_REVIEW is a verdict like any other -------------------------
+# The hook must not know the verdict vocabulary. It checks that a declaration EXISTS,
+# not what it says -- so a fourth verdict is allowed to appear without touching the
+# hook. If this ever fails, someone taught the hook to enumerate verdicts, and the
+# next verdict added will silently block every session that uses it.
+C6B="$WORK/c6b"; write_transcript "$C6B/t.jsonl" test_ran
+write_summary "$C6B/evidence/SHOP/SHOP-1/20260906-100000" \
+  '{"captured":["TC-CHK-014 asserts the pre-2.14.0 contract"],"none_because":null}' NEEDS_REVIEW
+check "NEEDS_REVIEW with a learnings declaration" 0 "$(run_hook "$C6B" "$C6B/t.jsonl")"
+
+# --- case 6c: ... and it is still blocked without one -------------------------
+C6C="$WORK/c6c"; write_transcript "$C6C/t.jsonl" test_ran
+write_summary "$C6C/evidence/SHOP/SHOP-1/20260906-100000" omit NEEDS_REVIEW
+check "NEEDS_REVIEW without a learnings declaration" 2 "$(run_hook "$C6C" "$C6C/t.jsonl")"
 
 # --- case 7: fan-out, one product declares and the other does not → blocked ---
 C7="$WORK/c7"; write_transcript "$C7/t.jsonl" test_ran

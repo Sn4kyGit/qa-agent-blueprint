@@ -81,6 +81,21 @@ row; it belongs in "Routing overrides" if it recurs. Same for anything that had 
 fall back to a secondary signal or a default: capture it so the table gains a real
 entry instead of leaning on a weak one forever.
 
+**Failure-analysis upkeep — the two rulings that matter.** When a human rules on a
+`NEEDS_REVIEW` failure (`.claude/skills/failure-analysis/`):
+
+- **Confirmed "the test was outdated"** → the product changed and nobody told QA.
+  That is a learning about the team's flow, not about a selector. Log the confirmed
+  change in `memory/learnings/product-changes.md` so the next failure in the same
+  area classifies in one step instead of another JIRA hunt, and if the team ships
+  behaviour changes without updating acceptance criteria *habitually*, that belongs
+  in `projects/<KEY>/learnings.md` as a gotcha after the second sighting.
+- **Rejected — the agent said "outdated", the human said "defect"** → this is the
+  single most valuable capture in the whole loop, and it goes through the existing
+  5-Whys treatment for agent mistakes under Capture. Which rule-out in
+  `references/classification.md` should have fired and didn't? If the answer is
+  "none of them", the table is missing a row, and adding it is the promotion.
+
 **Feature-matrix upkeep — do this on every promotion pass, not only when something
 broke.** A product's "Feature & test-method matrix" is filled once at onboarding and
 then drives `qa-manager`'s strategy on every later ticket. Left alone it rots

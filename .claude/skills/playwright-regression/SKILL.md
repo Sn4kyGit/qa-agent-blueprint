@@ -21,13 +21,22 @@ description: Write or run deterministic Playwright specs via the CLI runner for 
 3. Check `memory/learnings/flaky-tests.md` and `selector-failures.md` first —
    don't rediscover a known flake or a known-bad selector pattern.
 4. Produce evidence (report, trace-on-failure, `execution_summary.json`) per
-   `.claude/rules/core/evidence-policy.md`.
-5. Report pass/fail counts and flake occurrences; anything P0–P2 found →
-   `bug-report`. A recurring flake or a new selector pattern worth generalizing →
-   `retro-learn`.
+   `.claude/rules/core/evidence-policy.md` — including `test_cases[]`, which the CLI
+   runner is the only source of and which every later failure analysis depends on.
+5. **On a failure, do not conclude anything yet.** `failure-analysis` decides whether
+   the product broke or the test aged out; a red spec is a question, not a verdict.
+6. Report pass/fail counts and flake occurrences; anything P0–P2 confirmed as a
+   product defect → `bug-report`. A recurring flake or a new selector pattern worth
+   generalizing → `retro-learn`.
 
 ## Nightly / headless use
 
 This skill is what a nightly-regression pipeline invokes via `claude -p` — see
 `docs/rules/core/cicd.md` for headless-run constraints (no interactive
 prompts, pre-authorized actions only).
+
+`failure-analysis` still runs headless — the analysis is the useful part and it
+costs one JQL — but the `NEEDS_REVIEW` verdict is unreachable there: a nightly writes
+`FAIL` with the class and the proposal attached, and a human picks it up in the
+morning. A pipeline that went green on "the test was probably outdated" would be
+worse than one that went red.

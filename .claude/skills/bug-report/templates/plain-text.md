@@ -30,6 +30,9 @@ CONTEXT
 - Feature flags: <flag = on/off, if used>
 - Browser / client: <e.g. Chromium 131, viewport 1280x800>
 - Related: <tickets, MRs, test plan>
+- Cause analysis: <class> (confidence: <level>) — <one-line basis. Only
+  product-defect and undetermined reach this template; on undetermined, name the
+  artifact that would have decided it.>
 
 STEPS TO REPRODUCE
 1. <One action per step, imperative. Name the test user by role and vault

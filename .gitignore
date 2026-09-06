@@ -33,3 +33,8 @@ node_modules/
 
 # OS
 .DS_Store
+
+# Python bytecode — a stray __pycache__/ next to a skill makes the installer
+# report that skill as a collision (see tc-history.py).
+__pycache__/
+*.pyc

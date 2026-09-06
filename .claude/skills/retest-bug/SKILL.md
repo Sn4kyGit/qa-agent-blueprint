@@ -35,7 +35,14 @@ repro from the original report.
 4. Regression sweep: check 2–4 adjacent flows the fix could plausibly have
    affected (same component, same code path, same feature area) — not the whole
    application. Risk-based, per `.claude/rules/core/qa-principles.md`.
-5. Evidence and reporting exactly as in `test-ticket`: evidence dir with
+5. **If anything fails, analyse before concluding "not fixed".** Run
+   `failure-analysis` (subagent `failure-analyst`) on the failing cases. A re-test is
+   where the two cheap wrong answers live: the fix was never deployed (class
+   `environment` → BLOCKED, not FAIL), and **the original repro is itself outdated**
+   — a fix that changed the flow can make the recorded steps unfollowable without
+   the fix being absent. Neither is "the bug is back", and reporting them as such
+   burns the reporter's trust in our re-tests.
+6. Evidence and reporting exactly as in `test-ticket`: evidence dir with
    `execution_summary.json`, then `report-to-jira` on PASS or `bug-report` +
    `report-to-jira` if the fix didn't hold or a regression was introduced.
 
@@ -44,6 +51,11 @@ repro from the original report.
 Do not soften this into a "partial pass." Report FAIL, keep the original ticket
 open/reopened per the project's FAIL transition, and note precisely what part of
 the original repro still reproduces.
+
+The opposite error is just as expensive: do not report "not fixed" when the truth is
+"not deployed", or when the repro steps no longer match a flow the fix deliberately
+changed. That is what step 5 is for — the analysis distinguishes them, and only
+`product-defect` and `undetermined` justify reopening.
 
 ## If a regression was introduced
 

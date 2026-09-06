@@ -5,7 +5,7 @@ reach — the routing ladder, merge precedence, sealed fields, whether an outsou
 rule actually gets read — is prose that only a model executes. This directory tests
 that half.
 
-Six cases, each one a question the blueprint claims to answer:
+Eight cases, each one a question the blueprint claims to answer:
 
 | Case | What it proves |
 |---|---|
@@ -15,9 +15,15 @@ Six cases, each one a question the blueprint claims to answer:
 | `merge-inheritance` | Overrides win, inherited values are stated rather than invented — especially the PASS transition |
 | `sealed-deploy` | A product file cannot grant itself deploy permission |
 | `rule-reachability` | The rules moved to `docs/rules/` are actually read when their topic comes up |
+| `failure-outdated` | A documented behaviour change is recognised as such: `test-outdated`, AC quoted verbatim, proposal made, no bug filed, no transition |
+| `failure-undocumented-change` | The same failure **without** a ticket explaining it is **not** called outdated — an undocumented change is a defect until proven otherwise |
 
-The last one is the safety net for the context-budget split: if it fails, the split
-went too far and detail has to move back into `.claude/rules/core/`.
+`rule-reachability` is the safety net for the context-budget split: if it fails, the
+split went too far and detail has to move back into `.claude/rules/core/`. The last
+two are a **pair** and only mean something together — the inputs are identical except
+for one ticket. Passing the first alone proves the agent can produce a fluent
+"the test is outdated" story; passing the second proves it does not produce one when
+the evidence is missing. Never add one without the other.
 
 ## Running them
 
@@ -61,7 +67,7 @@ and grading it revealed that the criteria file was slightly too strict about
 **Or fully by hand:** open a **fresh** session in this repo (not one that
 just edited the rules — it would answer from its own context, which proves nothing),
 paste a `prompt.md`, and compare the answer against the matching `criteria.md`. Ten
-minutes for all six.
+minutes for all eight.
 
 ## Adding a case
 

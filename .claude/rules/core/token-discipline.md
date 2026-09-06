@@ -34,6 +34,8 @@ transcript into the main context:
 - `test-executor` — every Playwright MCP exploratory session (browser snapshots,
   console logs, network dumps stay inside the subagent; only a verdict returns).
 - `test-automator` — spec authoring/execution via the CLI runner.
+- `failure-analyst` — failure triage on a FAIL (run history, JIRA change window,
+  log greps) before a bug is filed; only a class plus its basis comes back.
 - `bug-reporter` — bug report composition against the project's template.
 - `qa-manager` — overall ticket orchestration when the flow spans multiple of the
   above.

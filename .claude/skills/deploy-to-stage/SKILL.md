@@ -36,8 +36,11 @@ description: Execute the active project's stage-deploy runbook, with safety chec
    version, AND a smoke probe passes (homepage/login as the project's standard
    test user). Only then report "stage ready, version X" to whatever invoked this
    skill (`test-ticket`, `retest-bug`, or the user directly).
-8. Record the deploy (from→to version, pipeline run id) in the run's
-   `execution_summary.json` and in the eventual JIRA comment.
+8. Record the deploy in the run's `execution_summary.json` → `deploy`
+   (`from_version`, `to_version`, `pipeline_run`, `at`) and in the eventual JIRA
+   comment. `from_version` is not bookkeeping: it is the lower bound of the change
+   window `failure-analysis` uses to ask JIRA what shipped, and without it a later
+   failure has nothing to compare against.
 9. Any deploy surprise (unexpected failure, stale-cache repeat, migration
    quirk) → `memory/learnings/_inbox.md` via `retro-learn`.
 
