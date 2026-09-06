@@ -699,9 +699,34 @@ except Exception as e:
     print(f"WARN|.mcp.json|invalid JSON in target ({e}) — left untouched"); sys.exit(0)
 servers = tgt.setdefault("mcpServers", {})
 changed = False
+
+# The playwright config is part of the security model: --secrets masks passwords
+# in tool responses, --isolated prevents state leaking between runs, --output-dir
+# keeps raw artifacts out of the way. "Existing wins" would silently drop those
+# protections, so for THIS server the blueprint config wins when flags are missing.
+REQUIRED_FLAGS = ("--secrets", "--isolated", "--headless", "--output-dir")
+
+def has_flag(cfg, flag):
+    args = cfg.get("args") or []
+    return any(a == flag or a.startswith(flag + "=") for a in args)
+
 for name, cfg in bp.get("mcpServers", {}).items():
     if name in servers:
-        print(f"WARN|.mcp.json|kept existing '{name}' server config (name already defined)")
+        existing = servers[name]
+        if existing == cfg:
+            print(f"SKIPPED|.mcp.json|server '{name}' already configured (identical)")
+        elif name == "playwright":
+            missing = [f for f in REQUIRED_FLAGS if not has_flag(existing, f)]
+            if not missing:
+                print(f"SKIPPED|.mcp.json|kept existing 'playwright' — it already carries the blueprint security flags")
+            elif dry:
+                print(f"DRY-RUN|.mcp.json|would upgrade 'playwright' to the blueprint config (missing security flags: {', '.join(missing)})")
+            else:
+                servers[name] = cfg
+                changed = True
+                print(f"MERGED|.mcp.json|upgraded 'playwright' to the blueprint config — added {', '.join(missing)} (password masking / session isolation are part of the security model; your previous config is in the backup)")
+        else:
+            print(f"WARN|.mcp.json|kept existing '{name}' server config (name already defined)")
     else:
         if dry:
             print(f"DRY-RUN|.mcp.json|would add server '{name}'")
@@ -725,7 +750,11 @@ PY
     local name backed_up=""
     for name in $(jq -r '.mcpServers | keys[]' "$REPO_ROOT/.mcp.json"); do
       if jq -e --arg n "$name" '.mcpServers[$n]' "$t" >/dev/null 2>&1; then
-        report WARN ".mcp.json" "kept existing '$name' server config (name already defined)"
+        if [ "$name" = "playwright" ]; then
+          report WARN ".mcp.json" "kept existing 'playwright' — VERIFY it carries the security flags: --secrets .env.playwright-secrets --isolated --headless --output-dir evidence/.mcp-out (unmasked passwords otherwise)"
+        else
+          report WARN ".mcp.json" "kept existing '$name' server config (name already defined)"
+        fi
       elif [ "$DRY_RUN" -eq 1 ]; then
         report DRY-RUN ".mcp.json" "would add server '$name'"
       else
@@ -1298,6 +1327,37 @@ PY
   rm -f "$_py"
 }
 
+# The plugin brings its own playwright + atlassian servers. A target that already
+# defines them locally would run duplicates (two processes, two tool namespaces),
+# and a local playwright without --secrets would bypass password masking. Plugin
+# mode's contract is "change only the two settings keys", so this REPORTS, with
+# the session-start hook repeating the finding on every first run.
+plugin_check_mcp_dupes() {
+  local t="$TARGET/.mcp.json"
+  [ -f "$t" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  local _py2
+  _py2="$(mktemp)"
+  cat > "$_py2" <<'PY'
+import json, os
+try:
+    servers = json.load(open(os.environ["QA_TARGET_MCP"])).get("mcpServers", {}) or {}
+except Exception:
+    raise SystemExit(0)
+dupes = [n for n in ("playwright", "atlassian") if n in servers]
+if dupes:
+    print("WARN|.mcp.json|'" + "' and '".join(dupes) + "' configured locally AND provided by the plugin — "
+          "remove the local entr" + ("y" if len(dupes) == 1 else "ies") + " to dedupe "
+          "(the plugin's playwright carries --secrets/--isolated; yours likely does not)")
+pw = servers.get("playwright") or {}
+args = pw.get("args") or []
+if pw and "--secrets" not in args and not any(a.startswith("--secrets=") for a in args):
+    print("WARN|.mcp.json|local 'playwright' has no --secrets flag — passwords would appear unmasked in tool responses while it stays registered")
+PY
+  consume_report_lines < <(QA_TARGET_MCP="$t" python3 "$_py2")
+  rm -f "$_py2"
+}
+
 run_plugin_mode() {
   info "Plugin mode: this repo ships .claude-plugin/marketplace.json — nothing is copied."
   cat <<'EOF'
@@ -1354,6 +1414,7 @@ EOF
       *)   plugin_wire_settings ;;
     esac
   fi
+  plugin_check_mcp_dupes
   next_step "Restart Claude Code in $TARGET and accept the trust dialog for the marketplace"
   next_step "Then run /qa-agent-blueprint:onboard-project"
 }

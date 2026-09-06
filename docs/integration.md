@@ -152,11 +152,11 @@ snippet above and copies nothing.
 | 3 | Playwright browsers (`npx playwright --version` + `chromium-*` under `~/.cache/ms-playwright` resp. `~/Library/Caches/ms-playwright`) | **SKIP** browser download, noted in report | `npx playwright install chromium` |
 | 4 | `CLAUDE.md` in target | managed router block is **appended**, your content kept; block present → SKIPPED ("already integrated") | blueprint router `CLAUDE.md` is copied |
 | 5 | `.claude/` in target | namespaced merge, per-file collision checks (below) | blueprint `.claude/` content is copied (namespaced) |
-| 6 | `.mcp.json` in target | JSON merge: add `playwright`/`atlassian` only if the **name** is free; existing server wins → WARN "kept existing … server config" | blueprint `.mcp.json` is copied |
+| 6 | `.mcp.json` in target | JSON merge by server **name**, with one deliberate exception: an existing `playwright` without the security flags (`--secrets`/`--isolated`/`--headless`/`--output-dir`) is **upgraded to the blueprint config** — those flags are the password-masking/isolation model, "existing wins" would silently drop them (your old config lands in the backup). Identical entries → SKIPPED. Other names: existing wins → WARN | blueprint `.mcp.json` is copied |
 | 7 | `.claude/settings.json` in target | merge: `permissions.deny/allow` deduplicated union; blueprint hooks appended to `SessionStart`/`Stop`/`PreToolUse`/`PostToolUse`, duplicates detected by command string | created with blueprint permissions + namespaced hooks |
 | 8 | `.gitignore` in target | only **missing** entries appended, as a marked managed block; block present → SKIPPED | blueprint `.gitignore` is copied |
 | 9 | `evidence/`, `memory/`, `projects/` | left untouched (SKIPPED) | created from the blueprint scaffold |
-| 10 | plugin mode | instructions printed, nothing copied | — |
+| 10 | plugin mode | two settings keys written (with your OK), nothing copied; local `playwright`/`atlassian` duplicates in `.mcp.json` are **reported** (WARN) since the plugin provides both | — |
 
 ## Collision policy
 
@@ -169,7 +169,7 @@ Blueprint content is **namespaced** so it can never clobber your files:
 | `.claude/skills/<name>/` | `.claude/skills/<name>/` | name exists with different content → **SKIPPED + WARN** |
 | `.claude/agents/<name>.md` | `.claude/agents/<name>.md` | name exists with different content → **SKIPPED + WARN** |
 | hooks in `settings.json` | appended, command points at the `qa-blueprint/` namespace | same command string already present → SKIPPED |
-| MCP servers in `.mcp.json` | added by name | name taken → kept yours + WARN |
+| MCP servers in `.mcp.json` | added by name | name taken → kept yours + WARN, **except** `playwright` missing the security flags → upgraded to the blueprint config (backup kept) |
 
 Identical files (e.g. from a previous run) are reported as
 "already integrated" and skipped.
@@ -197,7 +197,9 @@ Removes exactly what the integration added, and nothing else:
 - permission entries that the blueprint added (attributed via the install-time
   backup — entries you already had are kept);
 - MCP servers from `.mcp.json` **only if they exactly match** the blueprint
-  config (your own `playwright` server stays);
+  config (your own `playwright` server stays — note that one we upgraded for the
+  security flags *does* match afterwards and is removed; your pre-merge config is
+  in the `.bak-*` backup);
 - scaffold dirs (`evidence/`, `memory/`, `projects/`), `.claudeignore`, `.env`,
   `.env.playwright-secrets` — only if unmodified.
 

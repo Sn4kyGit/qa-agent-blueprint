@@ -20,7 +20,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | Atlassian Cloud (JIRA + Confluence), remote MCP server, OAuth 2.1 |
-| **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 100 fixtures · 8 eval cases |
+| **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 108 fixtures · 8 eval cases |
 | **Two ways in** | Merged into your repo (integrate), or as a plugin |
 | **License** | MIT |
 
@@ -238,7 +238,7 @@ Rules are advisory. These are not:
 | `stop-evidence-check` | No verdict without `execution_summary.json` — **and** without a `learnings` declaration | 17 |
 | `session-start` | Orientation: projects and their products, ungroomed learnings, missing secrets file, MCP config scan (dedupe, unmasked secrets, first-run hint); plugin mode injects `CLAUDE.md` verbatim | 17 |
 | `post-jira-audit` | Every JIRA write lands in an append-only audit log, headless runs included | — |
-| `install.sh` (not a hook, same standard) | Namespacing, path rewriting, idempotency, uninstall, plugin wiring, self-setup | 43 |
+| `install.sh` (not a hook, same standard) | Namespacing, path rewriting, idempotency, uninstall, plugin wiring, self-setup, MCP adoption | 51 |
 | `context-budget` | The always-loaded layer stays inside its budget | measured, not asserted |
 
 > **Why the fixtures exist.** The PreToolUse guard silently blocked *nothing* for

@@ -140,6 +140,39 @@ BEFORE="$(cat "$SET")"
   || fail "plugin re-run changes nothing" "settings.json was rewritten on the second run"
 
 echo
+echo "== MCP merge: playwright security flags are adopted, not left to chance =="
+MTARGET="$WORK/mcp-host"
+mkdir -p "$MTARGET"
+git -C "$MTARGET" init -q . 2>/dev/null
+# Existing .mcp.json: playwright WITHOUT the security flags, an identical
+# atlassian, and an own server that must survive untouched.
+printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]},' '    "atlassian": {"type": "sse", "url": "https://mcp.atlassian.com/v1/sse"},' '    "mine": {"command": "my-server"}' '  }' '}' > "$MTARGET/.mcp.json"
+OUTM="$("$INSTALL" --mode integrate --target "$MTARGET" --yes 2>&1)"
+printf '%s' "$OUTM" | grep -q "upgraded 'playwright'" \
+  && pass "playwright upgraded to the blueprint config" \
+  || fail "playwright upgraded to the blueprint config" "$(printf '%s' "$OUTM" | grep mcp)"
+assert_grep "secrets flag present after merge" "$MTARGET/.mcp.json" '"--secrets"'
+assert_grep "isolated flag present after merge" "$MTARGET/.mcp.json" '"--isolated"'
+assert_grep  "own server untouched"             "$MTARGET/.mcp.json" '"my-server"'
+printf '%s' "$OUTM" | grep -q "atlassian' already configured (identical)" \
+  && pass "identical atlassian is SKIPPED, not WARN" \
+  || fail "identical atlassian is SKIPPED, not WARN" "$(printf '%s' "$OUTM" | grep atlassian)"
+
+echo
+echo "== plugin mode reports local MCP duplicates instead of silently doubling =="
+PDUP="$WORK/plugin-dupe"
+mkdir -p "$PDUP"
+printf '%s\n' '{"mcpServers": {' '  "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]},' '  "atlassian": {"type": "sse", "url": "https://mcp.atlassian.com/v1/sse"}' '}}' > "$PDUP/.mcp.json"
+OUTP="$("$INSTALL" --mode plugin --target "$PDUP" --yes 2>&1)"
+printf '%s' "$OUTP" | grep -q "dedupe" \
+  && pass "plugin mode warns about duplicates" \
+  || fail "plugin mode warns about duplicates" "$(printf '%s' "$OUTP" | tail -5)"
+printf '%s' "$OUTP" | grep -q "no --secrets flag" \
+  && pass "plugin mode flags unmasked playwright" \
+  || fail "plugin mode flags unmasked playwright" "$(printf '%s' "$OUTP" | tail -5)"
+assert_grep "local entries left in place (report only)" "$PDUP/.mcp.json" '"@playwright/mcp@latest"'
+
+echo
 echo "== self-setup: the blueprint repo as its own target (integrate special case) =="
 # Dry-run only — this fixture runs against the REAL blueprint repo, so it must
 # never write. The assertions check the routing decision, not the side effects.
