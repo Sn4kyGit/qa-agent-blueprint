@@ -83,10 +83,10 @@ into `.env.playwright-secrets` for the Playwright MCP `--secrets` masking.
 ## Reporting
 
 - **Report format**: `jira-cloud` | `plain-text`  ← pick one
-- **Shadow mode**: `off` | `on` — `on` means the agent tests and composes the report
-  but posts nothing to JIRA (proposals land in the evidence dir). Recommended for
-  the first weeks in a new project: it produces a reviewable record before the agent
-  gets write access.
+- **Shadow mode**: `on` ← default; the agent tests and composes the report
+  but posts nothing to JIRA (proposals land in the evidence dir). Set to `off`
+  only when the team grants write access — typically after two weeks of
+  reviewed proposals.
 - **Bug template**: `projects/<KEY>/templates/bug-report.md`
 - **Severity → priority field mapping**: P0=<...>, P1=<...>, P2=<...>, P3/P4=<...>
 - **Transition on PASS**: `<exact workflow transition name, e.g. Verify>`

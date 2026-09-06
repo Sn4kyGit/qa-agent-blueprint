@@ -53,11 +53,14 @@ after any change to a hook, and add a fixture for every new rule.
 
 ## Shadow mode — why it exists and how to run it
 
-`QA_AGENT_SHADOW=1` in the environment, or `Shadow mode: on` under `PROJECT.md` →
-"Reporting", suppresses every JIRA **write** while leaving the rest of the run
-untouched. It exists because the largest adoption risk is not technical: an agent
-that transitions real tickets from day one gets switched off after the first wrong
-`Reopen`, and then the blueprint is dead regardless of how good it is.
+Shadow mode is **on by default** and stays on until someone explicitly grants
+write access: `QA_AGENT_SHADOW=0` in the environment, or `Shadow mode: off`
+under `PROJECT.md` → "Reporting". While on, it suppresses every JIRA **write**
+while leaving the rest of the run untouched. It is the default because the
+largest adoption risk is not technical: an agent that transitions real tickets
+from day one gets switched off after the first wrong `Reopen`, and then the
+blueprint is dead regardless of how good it is. Write access is therefore
+something a project earns with evidence, not something it starts with.
 
 In shadow mode the agent still: reads tickets, routes, deploys if allowed, tests,
 produces evidence, composes the exact comment and names the exact transition. It

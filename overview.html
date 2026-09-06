@@ -573,12 +573,13 @@ projects/SHOP/
 </section>
 
 <section>
-  <h2>Shadow-Modus</h2>
+  <h2>Shadow-Modus — standardmäßig an</h2>
   <p class="sub">
-    <code>QA_AGENT_SHADOW=1</code> oder <code>Shadow mode: on</code> im Projektfile: der Agent
-    testet vollständig, erzeugt Evidence, komponiert Kommentar und Transition — und legt sie als
-    Vorschlag ab, statt sie zu posten. Prüfbar am bestehenden Audit-Log: ein Shadow-Lauf mit
-    einem Eintrag darin ist ein Bug, keine Ermessensfrage.
+    Shadow-Modus ist <strong>Default</strong>: der Agent testet vollständig, erzeugt Evidence,
+    komponiert Kommentar und Transition — und legt sie als Vorschlag ab, statt sie zu posten.
+    Schreibzugriff wird explizit erteilt: <code>QA_AGENT_SHADOW=0</code> oder
+    <code>Shadow mode: off</code> im Projektfile. Prüfbar am bestehenden Audit-Log: ein
+    Shadow-Lauf mit einem Eintrag darin ist ein Bug, keine Ermessensfrage.
   </p>
   <div class="callout">
     Das größte Adoptionsrisiko ist nicht Technik, sondern Vertrauen. Ein Agent, der ab Tag eins
@@ -657,7 +658,7 @@ projects/SHOP/
   <p>
     QA Agent Blueprint · MIT · Stand: 6. September 2026 —
     aktualisiert auf Repo-Stand (23 Skills, 5 Subagents, 96 Fixtures, 5 Verdikte,
-    Verbatim-Router-Injektion, zwei Installationsmodi + Self-Setup).
+    Verbatim-Router-Injektion, zwei Installationsmodi + Self-Setup, Shadow-Modus als Default).
     Quelle der Wahrheit ist das Repo: <code>CLAUDE.md</code>, <code>memory/INDEX.md</code>, <code>README.md</code>.
   </p>
 </footer>

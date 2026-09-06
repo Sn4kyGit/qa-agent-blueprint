@@ -31,8 +31,9 @@ the ticket done.
    fields a product may *not* override: `.claude/rules/core/product-layer.md`.
    Carry the resolved scope into everything downstream, and re-derive it per ticket
    — product context never carries over from the previous ticket in this session.
-2b. **Shadow mode?** If `QA_AGENT_SHADOW=1` or the project file says `Shadow mode:
-    on`, run everything normally but post nothing to JIRA — compose the report and
+2b. **Shadow mode?** On by default: only `QA_AGENT_SHADOW=0` or `Shadow mode:
+    off` in the project file grants JIRA write access. While on, run everything
+    normally but post nothing to JIRA — compose the report and
     leave it as a proposal in the evidence dir
     (`.claude/rules/core/security.md` → Shadow mode). Say so in your summary.
 3. **Check stage**: is the fix actually deployed? Use the project's version-check

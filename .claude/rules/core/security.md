@@ -15,16 +15,16 @@ No secrets in context, ever. This is enforced by rule AND by hooks — see below
 - `.env`, `.env.playwright-secrets`, and any `*.auth`/storage-state file are
   gitignored and must never be committed, pasted into chat, or attached to a ticket.
 
-## Shadow mode — testing fully, writing nothing
+## Shadow mode — testing fully, writing nothing (default: on)
 
-`QA_AGENT_SHADOW=1`, or `Shadow mode: on` in `PROJECT.md` → "Reporting", suppresses
-every JIRA **write**: the agent reads, routes, tests, produces evidence and composes
-the exact comment and transition, then writes them to
+Shadow mode is **on by default** — `QA_AGENT_SHADOW=0` or `Shadow mode: off`
+(`PROJECT.md` → "Reporting") grants JIRA write access. While on, every JIRA
+**write** is suppressed: the agent reads, routes, tests, produces evidence,
+composes the exact comment and transition, then writes them to
 `evidence/<KEY>/<TICKET>/<ts>/proposed-report.md` instead of posting, sets
-`"reported_to_jira": false` and `"shadow": true`, and says so. No comment, no
-transition, no attachment. A shadow run that produced a line in
-`evidence/.audit/jira-writes.log` is a bug. Rationale and rollout:
-`docs/rules/core/security.md`.
+`"reported_to_jira": false` and `"shadow": true`, and says so. A line in
+`evidence/.audit/jira-writes.log` from a shadow run is a bug.
+Rationale: `docs/rules/core/security.md`.
 
 ## Forbidden actions
 

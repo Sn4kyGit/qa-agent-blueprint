@@ -28,23 +28,21 @@ in advance: **workflow transition names** and the **priority scheme**. If the
 Atlassian MCP is not authorized yet, it will ask instead — authorize it first
 (`/mcp`) and you get the real lists.
 
-## Run it in shadow mode
+## Shadow mode is already on
 
-Put this in the project file's Reporting section, or set `QA_AGENT_SHADOW=1`:
-
-```
-- **Shadow mode**: on
-```
-
-The agent then tests fully, produces evidence, and composes the exact JIRA comment
-and transition — but **posts nothing**. Proposals land in
+Nothing to configure: shadow mode is the blueprint's default. The agent tests
+fully, produces evidence, and composes the exact JIRA comment and transition —
+but **posts nothing**. Proposals land in
 `evidence/<KEY>/<TICKET>/<ts>/proposed-report.md` for you to read.
 
-Do this for the first two weeks. Not because the agent is expected to be wrong, but
-because the failure that kills adoption is a wrong `Reopen` on a real ticket in week
-one. Two weeks of proposals is the evidence you need to grant write access — and
-everything else keeps running meanwhile: routing learns, learnings get captured and
-promoted.
+Keep it that way for the first two weeks. Not because the agent is expected to be
+wrong, but because the failure that kills adoption is a wrong `Reopen` on a real
+ticket in week one. Two weeks of proposals is the evidence you need to grant
+write access — and everything else keeps running meanwhile: routing learns,
+learnings get captured and promoted.
+
+Only then, deliberately: `Shadow mode: off` in the project file's Reporting
+section, or `QA_AGENT_SHADOW=0` in the environment.
 
 Check it is actually holding: `evidence/.audit/jira-writes.log` must stay empty
 during a shadow run. An entry there is a bug — report it.

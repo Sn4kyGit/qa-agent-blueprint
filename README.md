@@ -282,7 +282,7 @@ Capture  →  Groom  →  Promote
 | Quality gates | `PROJECT.md` → gate overrides | Defaults: pass rate ≥ 80%, P0 = 0, P1 ≤ 5 |
 | Report format & transitions | `PROJECT.md` → Reporting | `jira-cloud` or `plain-text`; fetched from JIRA during onboarding, never guessed |
 | Deploy trigger | `PROJECT.md` → "How a deploy is triggered" | The exact command (`gh workflow run …`) or "manual". `/deploy-to-stage` preflights it and reports BLOCKED if it is missing |
-| Shadow mode | `PROJECT.md` → Reporting, or `QA_AGENT_SHADOW=1` | Tests fully, posts nothing — recommended for the first weeks |
+| Shadow mode | **On by default** — off via `QA_AGENT_SHADOW=0` or `PROJECT.md` → Reporting | Tests fully, posts nothing; grant write access after the first weeks of reviewed proposals |
 | MCP servers | `.mcp.json` + register in `docs/rules/core/token-discipline.md` | Declared set, not a fixed number — see below. A CI CLI is a Bash command, not a server |
 | Context budget | `.claude/hooks/tests/context-budget.sh` | What every session pays before a skill loads; the check fails when it grows |
 | Evidence retention | `docs/artifact-strategy.md` | Documented, **not implemented** — nothing prunes `evidence/` yet |

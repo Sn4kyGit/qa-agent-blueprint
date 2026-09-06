@@ -7,9 +7,10 @@ description: Report a test verdict back to JIRA as a comment, with attachments a
 
 ## Before anything: is this a shadow run?
 
-If `QA_AGENT_SHADOW=1` is set, or `PROJECT.md` → "Reporting" says `Shadow mode: on`,
-compose everything exactly as below but **post nothing**: write the finished comment
-and the transition you would have applied to
+Shadow mode is **on by default**. Only when `QA_AGENT_SHADOW=0` is set or
+`PROJECT.md` → "Reporting" explicitly says `Shadow mode: off` may you post.
+Otherwise compose everything exactly as below but **post nothing**: write the
+finished comment and the transition you would have applied to
 `evidence/<KEY>/<TICKET>/<ts>/proposed-report.md`, set `"reported_to_jira": false`
 and `"shadow": true` in the summary, and tell the user it is waiting for review.
 No comment, no transition, no attachment — see `.claude/rules/core/security.md` →
