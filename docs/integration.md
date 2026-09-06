@@ -75,7 +75,7 @@ plugin, and only your project-specific data lives in your repo.
    {
      "extraKnownMarketplaces": {
        "qa-agent-blueprint": {
-         "source": { "source": "github", "repo": "<you>/qa-agent-blueprint" }
+         "source": { "source": "github", "repo": "Sn4kyGit/claude_blueprint" }
        }
      },
      "enabledPlugins": {

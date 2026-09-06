@@ -1281,7 +1281,7 @@ plugins = cfg.setdefault("enabledPlugins", {})
 changed = []
 if "qa-agent-blueprint" not in market:
     # Local path: reliable from a checkout, and honest about where the code is.
-    # Swap for {"source": "github", "repo": "<you>/qa-agent-blueprint"} to track a
+    # Swap for {"source": "github", "repo": "Sn4kyGit/claude_blueprint"} to track a
     # remote instead.
     market["qa-agent-blueprint"] = {"source": {"source": "local", "path": source}}
     changed.append("extraKnownMarketplaces")
@@ -1311,7 +1311,7 @@ To consume the blueprint as a Claude Code plugin inside your project:
    {
      "extraKnownMarketplaces": {
        "qa-agent-blueprint": {
-         "source": { "source": "github", "repo": "<you>/qa-agent-blueprint" }
+         "source": { "source": "github", "repo": "Sn4kyGit/claude_blueprint" }
        }
      },
      "enabledPlugins": {

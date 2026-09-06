@@ -68,8 +68,8 @@ prompt. All of it came from files the agent read because the ticket key told it 
 ## Quickstart
 
 ```bash
-git clone https://github.com/<you>/qa-agent-blueprint.git
-cd qa-agent-blueprint
+git clone https://github.com/Sn4kyGit/claude_blueprint.git
+cd claude_blueprint
 ./install.sh            # asks how you want it, then sets that up
 ```
 
@@ -271,10 +271,10 @@ Already have your own `CLAUDE.md`, skills, and `.mcp.json`? Two supported paths:
 **A — integrate.** Preview first, it changes nothing:
 
 ```bash
-git clone https://github.com/<you>/qa-agent-blueprint.git ~/tools/qa-agent-blueprint
+git clone https://github.com/Sn4kyGit/claude_blueprint.git ~/tools/claude_blueprint
 cd ~/work/your-project
-~/tools/qa-agent-blueprint/install.sh --dry-run   # prints the full plan
-~/tools/qa-agent-blueprint/install.sh             # or --yes for non-interactive
+~/tools/claude_blueprint/install.sh --dry-run   # prints the full plan
+~/tools/claude_blueprint/install.sh             # or --yes for non-interactive
 ```
 
 Every step is reported as `ADDED` / `MERGED` / `SKIPPED` / `WARN`. Merges are
@@ -289,15 +289,17 @@ your `.claude/settings.json` (with a backup, keeping everything else, and doing
 nothing on a re-run):
 
 ```bash
-~/tools/qa-agent-blueprint/install.sh --mode plugin --target .
+~/tools/claude_blueprint/install.sh --mode plugin --target .
 ```
 
 It registers the marketplace against your **local checkout**, which is the honest
 default: the code you enabled is the code you can read. To track a remote instead,
-change the source afterwards:
+change the source afterwards — note that the repository is `claude_blueprint` while
+the plugin and its marketplace are named `qa-agent-blueprint`, so the enabled-plugin
+key does not change:
 
 ```json
-"source": { "source": "github", "repo": "<you>/qa-agent-blueprint" }
+"source": { "source": "github", "repo": "Sn4kyGit/claude_blueprint" }
 ```
 
 Restart Claude Code and accept the trust dialog. Since plugins don't load
