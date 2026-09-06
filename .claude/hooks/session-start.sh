@@ -130,9 +130,43 @@ inbox_status() {
   printf '\n- %s ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).' "$n"
 }
 
-# The two most likely day-one failures are not detectable from here (a hook cannot
-# ask an MCP server whether it started), so say what to check instead of pretending
-# to know: this is a one-line hint, only while no project has been onboarded yet.
+# A hook cannot ask an MCP server whether it started — but it CAN see what is
+# configured, read-only: ~/.claude.json (user scope) and .mcp.json (project
+# scope). Prints space-separated flags: HAS_PW, HAS_AT, PW_UNMASKED (a playwright
+# config without --secrets — passwords would appear unmasked in tool responses).
+mcp_scan() {
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 - "$CWD" "$HOME" <<'PY'
+import json, os, sys
+cwd, home = sys.argv[1], sys.argv[2]
+
+def load(path):
+    try:
+        with open(path) as fh:
+            return json.load(fh).get("mcpServers", {}) or {}
+    except Exception:
+        return {}
+
+servers = {}
+for path in (os.path.join(home, ".claude.json"), os.path.join(cwd, ".mcp.json")):
+    for name, cfg in load(path).items():
+        servers.setdefault(name, []).append(cfg if isinstance(cfg, dict) else {})
+
+pw = servers.get("playwright", [])
+flags = []
+if pw:
+    flags.append("HAS_PW")
+    if not any("--secrets" in (c.get("args") or []) for c in pw):
+        flags.append("PW_UNMASKED")
+if servers.get("atlassian"):
+    flags.append("HAS_AT")
+print(" ".join(flags))
+PY
+}
+
+# The two most likely day-one failures are not detectable from here (liveness),
+# so turn the configured-state scan into a concrete hint instead of pretending to
+# know more: this is only printed while no project has been onboarded yet.
 mcp_hint() {
   [ -d "$CWD/projects" ] || return 0
   local d
@@ -141,7 +175,29 @@ mcp_hint() {
     case "$(basename "$d")" in _template|EXAMPLE) continue ;; esac
     return 0   # a real project exists — the user is past first-run setup
   done
-  printf '\n- First run: confirm both MCP servers are live before testing — `claude mcp list` should show playwright and atlassian, and /mcp must show atlassian as authorized (OAuth). A dead playwright server and an unauthorized atlassian are the two failures that look like a broken blueprint.'
+  local scan=""
+  scan="$(mcp_scan 2>/dev/null || true)"
+  # Security first: an unmasked playwright config is a finding in any mode.
+  case "$scan" in
+    *PW_UNMASKED*)
+      printf '\n- WARNING: an existing playwright MCP config has no --secrets flag — passwords would appear unmasked in tool responses. Align it with the blueprint config (--isolated --headless --secrets .env.playwright-secrets --output-dir evidence/.mcp-out) or remove it and use the blueprint-provided one.' ;;
+  esac
+  if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
+    # The plugin always provides both servers; local duplicates mean two server
+    # processes and two tool namespaces.
+    case "$scan" in
+      *HAS_PW*|*HAS_AT*)
+        printf '\n- NOTE: playwright/atlassian are configured locally AND ship with the plugin — dedupe to one source (keep the plugin one: it carries the secrets/isolation flags).' ;;
+      *) printf '\n- MCP servers come from the plugin (playwright, atlassian) — confirm both are live: `claude mcp list`; atlassian needs /mcp OAuth once.' ;;
+    esac
+    return 0
+  fi
+  case "$scan" in
+    *HAS_PW*HAS_AT*|*HAS_AT*HAS_PW*)
+      printf '\n- MCP config for playwright + atlassian found — confirm both are live (`claude mcp list`; atlassian needs /mcp OAuth once).' ;;
+    *)
+      printf '\n- First run: confirm both MCP servers are live before testing — `claude mcp list` should show playwright and atlassian, and /mcp must show atlassian as authorized (OAuth). A dead playwright server and an unauthorized atlassian are the two failures that look like a broken blueprint.' ;;
+  esac
 }
 
 # A missing secrets file breaks the playwright MCP server in every mode, and the

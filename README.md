@@ -403,6 +403,7 @@ runs it.
 | Document | Contents |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | The five layers and why they are token-efficient |
+| [docs/quickstart-plugin.md](docs/quickstart-plugin.md) | Plugin on a fresh machine: JIRA + stage URL only, no app repo — with or without a clone |
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |

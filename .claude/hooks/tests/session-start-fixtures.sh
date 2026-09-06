@@ -115,6 +115,42 @@ NPCTX="$(context_for "$CONSUMER")"
 check_absent "no injection without CLAUDE_PLUGIN_ROOT" "$NPCTX" "FIXTURE_ROUTER_MARKER_7f3a"
 
 echo
+echo "== MCP config scan: concrete hints instead of a generic one =="
+# Both servers configured (project scope), playwright WITH --secrets → confirm-live hint.
+M1="$WORK/mcp-ok"; mkdir -p "$M1/projects"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets"]},"atlassian":{"type":"sse","url":"https://mcp.atlassian.com/v1/sse"}}}' > "$M1/.mcp.json"
+check_contains "both servers configured → confirm-live hint" "$(context_for "$M1")" "MCP config for playwright + atlassian found"
+
+# A playwright config WITHOUT --secrets → passwords would be unmasked: warning.
+M2="$WORK/mcp-unmasked"; mkdir -p "$M2/projects"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest"]}}}' > "$M2/.mcp.json"
+check_contains "unmasked playwright config → warning" "$(context_for "$M2")" "no --secrets flag"
+
+# Plugin mode + a local duplicate → dedupe note.
+M3="$WORK/mcp-dupe"; mkdir -p "$M3/projects"
+printf '%s' '{"mcpServers":{"atlassian":{"type":"sse","url":"https://mcp.atlassian.com/v1/sse"}}}' > "$M3/.mcp.json"
+PCTX3="$(printf '{"cwd":"%s"}' "$M3" | CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_contains "plugin + local duplicate → dedupe note" "$PCTX3" "dedupe to one source"
+
+# User scope (~/.claude.json) must be found too — via a fake HOME.
+M4="$WORK/mcp-userscope"; FAKEHOME="$WORK/fakehome"; mkdir -p "$M4/projects" "$FAKEHOME"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets"]},"atlassian":{"type":"sse","url":"https://mcp.atlassian.com/v1/sse"}}}' > "$FAKEHOME/.claude.json"
+CTX4="$(printf '{"cwd":"%s"}' "$M4" | HOME="$FAKEHOME" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_contains "user-scope servers detected via HOME" "$CTX4" "MCP config for playwright + atlassian found"
+
+echo
 if [ "$fails" -eq 0 ]; then
   echo "all fixtures passed"
 else
