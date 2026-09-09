@@ -17,8 +17,15 @@ Append to `memory/learnings/_inbox.md` in the fixed format:
 - Problem: <what happened, 1 sentence>
 - Cause: <why, if known — otherwise "unknown">
 - Working solution: <what actually worked>
+- Pattern: <error-resolution | user-correction | workaround | environment | routing>
 - Candidate target: <rule | skill | PROJECT.md <KEY> | PRODUCT.md <KEY>/<PRODUCT> | learnings file>
 ```
+
+The `Pattern` line is one word and pays off twice: it gives grooming a dedupe
+axis (same pattern + overlapping keywords = duplicate candidate), and it
+pre-routes the entry — a `user-correction` always gets the 5-Whys below, a
+`routing` entry feeds the registry upkeep under Promote. If none of the five
+fits, the entry is probably not a learning.
 
 If the surprise was a mistake **the agent itself made** (not an environment
 quirk), do a compact 5-Whys first — target the system gap (a rule that was
@@ -40,7 +47,10 @@ still goes into `_inbox.md` in the capture format above.
 
 1. Read `_inbox.md` top to bottom.
 2. For each entry, `grep` the relevant `memory/learnings/*.md` or
-   `projects/<KEY>/learnings.md` for a similar existing entry:
+   `projects/<KEY>/learnings.md` for a similar existing entry — same `Pattern`
+   class plus an overlapping keyword is the dedupe candidate; different pattern
+   classes solving the same symptom still merge, under the class of the older
+   entry:
    - Duplicate found → bump its `seen:` counter, append the new date, delete the
      inbox entry (don't keep both).
    - Genuinely new → classify with three questions, first hit wins: true for a
