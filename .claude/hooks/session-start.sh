@@ -188,15 +188,15 @@ mcp_hint() {
     case "$scan" in
       *HAS_PW*|*HAS_AT*)
         printf '\n- NOTE: playwright/atlassian are configured locally AND ship with the plugin — dedupe to one source (keep the plugin one: it carries the secrets/isolation flags).' ;;
-      *) printf '\n- MCP servers come from the plugin (playwright, atlassian) — confirm both are live: `claude mcp list`; atlassian needs /mcp OAuth once.' ;;
+      *) printf '\n- MCP servers come from the plugin (playwright, atlassian) — confirm both are live: `claude mcp list`; atlassian auth: Cloud = /mcp OAuth once, Data Center = JIRA_URL/JIRA_PERSONAL_TOKEN env vars.' ;;
     esac
     return 0
   fi
   case "$scan" in
     *HAS_PW*HAS_AT*|*HAS_AT*HAS_PW*)
-      printf '\n- MCP config for playwright + atlassian found — confirm both are live (`claude mcp list`; atlassian needs /mcp OAuth once).' ;;
+      printf '\n- MCP config for playwright + atlassian found — confirm both are live (`claude mcp list`; atlassian auth: Cloud = /mcp OAuth once, Data Center = PAT env vars).';;
     *)
-      printf '\n- First run: confirm both MCP servers are live before testing — `claude mcp list` should show playwright and atlassian, and /mcp must show atlassian as authorized (OAuth). A dead playwright server and an unauthorized atlassian are the two failures that look like a broken blueprint.' ;;
+      printf '\n- First run: confirm both MCP servers are live before testing — `claude mcp list` should show playwright and atlassian, and atlassian must be authorized (Cloud: /mcp OAuth; Data Center: JIRA_URL/JIRA_PERSONAL_TOKEN in the environment). A dead playwright server and an unauthorized atlassian are the two failures that look like a broken blueprint.' ;;
   esac
 }
 

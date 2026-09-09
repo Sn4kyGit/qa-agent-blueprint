@@ -1,10 +1,36 @@
 # JIRA / Confluence Formatting & Transitions
 
+The right format depends on the project's **JIRA deployment**
+(`projects/<KEY>/PROJECT.md` → "JIRA deployment"): `cloud` or `datacenter`.
+Everything below is split by it.
+
+## Deployments: Cloud vs. Data Center
+
+| | Cloud | Data Center (self-hosted) |
+|---|---|---|
+| MCP backend | official remote server (`mcp.atlassian.com`) | community server [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian) (Jira DC v8.14+), run via `uvx` |
+| Auth | OAuth 2.1 (`/mcp` browser flow, once) | Personal Access Token: `JIRA_PERSONAL_TOKEN` + `JIRA_URL` as **environment variables** (exported in the shell, inherited by `uvx` — never written into `.mcp.json`, the repo, or chat) |
+| API / content format | REST v3, **ADF** | REST v2, **wiki markup** — the community server converts plain Markdown input to the right storage format, so keep input simple and let it convert |
+| Server name in `.mcp.json` | `atlassian` | `atlassian` — **same name regardless of backend**: the audit/evidence hooks match on it |
+
+DC consumer `.mcp.json` variant (no secrets in the file):
+
+```json
+"atlassian": {
+  "command": "uvx",
+  "args": ["mcp-atlassian"],
+  "env": { "JIRA_URL": "https://jira.example.local" }
+}
+```
+
+The blueprint's shipped default stays Cloud; a Data Center consumer replaces
+the `atlassian` entry with the variant above (name unchanged).
+
+## Cloud: ADF constraints — the ones that actually bite
+
 JIRA Cloud stores comment/description content as **ADF (Atlassian Document
 Format)**, written via REST API v3 — not Markdown, not wiki markup. This has real
 consequences for how reports are structured.
-
-## ADF constraints — the ones that actually bite
 
 - **No pipe tables.** ADF has a table node, but hand-rolled Markdown pipe syntax
   (`| a | b |`) does not convert and renders as literal text. Use ADF table nodes

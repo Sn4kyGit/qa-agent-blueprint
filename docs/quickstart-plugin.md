@@ -77,7 +77,22 @@ checkout you can inspect.
 1. Open `~/qa-workspace` in VS Code, start Claude Code, **accept the trust dialog**.
 2. The plugin's SessionStart hook bootstraps `projects/`, `memory/`, `evidence/`
    and a `.env.playwright-secrets` placeholder, and injects the router.
-3. `/mcp` → authorize **atlassian** (OAuth, opens the browser).
+3. **JIRA auth — depends on the deployment:**
+   - **Cloud**: `/mcp` → authorize **atlassian** (OAuth, opens the browser).
+   - **Data Center (self-hosted)**: no OAuth. Replace the plugin's `atlassian`
+     entry in `~/qa-workspace/.mcp.json` (name stays `atlassian`):
+     ```json
+     "atlassian": {
+       "command": "uvx",
+       "args": ["mcp-atlassian"],
+       "env": { "JIRA_URL": "https://jira.<firma>.tld" }
+     }
+     ```
+     and create a Personal Access Token in JIRA, exported in your shell
+     (`export JIRA_PERSONAL_TOKEN=...`, e.g. in `~/.zshrc`) — never into
+     `.mcp.json`, the repo, or chat. Requires `uv` (`brew install uv`; pulls
+     [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian),
+     Jira DC v8.14+).
 4. Verify: `claude mcp list` shows `playwright` and `atlassian`.
 5. Fill `.env.playwright-secrets` with the test-user passwords (`KEY=value`).
    Values are masked in every tool response; the file is gitignored.

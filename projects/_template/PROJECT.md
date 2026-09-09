@@ -8,6 +8,9 @@
 ## Basics
 
 - **JIRA project key**: `<KEY>` (must equal this directory's name)
+- **JIRA deployment**: `cloud` | `datacenter` ← pick one; drives the report
+  content format (ADF/REST v3 vs. wiki markup/REST v2) and the MCP backend —
+  details: `docs/rules/testing/jira-confluence.md` → "Deployments"
 - **Product**: <one line — what is this application>
 - **Issue types**: Bug = `<Bug>`, Story = `<Story>`; bugs are filed in: <this project / other>
 

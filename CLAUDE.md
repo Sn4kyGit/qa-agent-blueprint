@@ -69,7 +69,8 @@ project recognized → project knowledge applied → tested → evidence produce
   vault/env references only. Details: `.claude/rules/core/security.md`.
 - **No full project scans.** Start from `memory/INDEX.md` and `PROJECT.md`; use targeted
   Grep, not exploration. Details: `.claude/rules/core/token-discipline.md`.
-- **JIRA Cloud = ADF / REST v3.** No pipe tables in JIRA content; keep structures simple.
+- **JIRA format per deployment** (`PROJECT.md`): Cloud = ADF/v3, DC = wiki markup/v2.
+  No pipe tables.
   Details: `docs/rules/testing/jira-confluence.md`.
 - **MCP servers are a declared set**, currently `playwright` + `atlassian`, kept small
   on purpose. Never add one on your own initiative — propose, the user decides, and an

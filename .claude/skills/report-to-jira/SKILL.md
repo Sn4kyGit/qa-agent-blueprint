@@ -49,7 +49,10 @@ not comment, do not transition, do not attach. The summary itself is the record
      `evidence/<KEY>/<TICKET>/<ts>/failure-analysis.md` — including its "do not
      apply" line and its "if you rule the other way" branch — and say plainly that
      a person has to decide. Never post a proposal without both branches.
-3. If `jira-cloud`: build the comment as ADF (headings/lists, no pipe tables —
+3. If `jira-cloud`: build the comment as ADF on a **Cloud** deployment, or as
+   simple Markdown on a **Data Center** deployment (the community server converts
+   to wiki markup) — deployment comes from `PROJECT.md` → "JIRA deployment";
+   headings/lists, no pipe tables —
    `docs/rules/testing/jira-confluence.md`) via the Atlassian MCP server.
    Attach evidence files (screenshots, not full logs unless the project asks for
    them) via the attachment call.

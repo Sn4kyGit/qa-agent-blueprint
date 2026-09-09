@@ -229,6 +229,15 @@ args roughly match the blueprint's expectations (`--isolated`, `--output-dir`
 into `evidence/`, `--secrets`) — or rename yours and let the blueprint add its
 own.
 
+**"Our JIRA is self-hosted (Data Center), not Cloud."**
+Supported: replace the `atlassian` entry with the community server
+(`sooperset/mcp-atlassian` via `uvx`, `JIRA_URL` in `env`, PAT via the
+`JIRA_PERSONAL_TOKEN` environment variable — never in the file). Keep the
+server **name** `atlassian`: the audit and evidence hooks match on it. Full
+comparison table (auth, API version, content format):
+`docs/rules/testing/jira-confluence.md` → "Deployments", and each project
+declares its deployment in `PROJECT.md` → "JIRA deployment".
+
 **"I already have my own hooks / settings.json."**
 Hooks are additive: your `Stop` hook keeps running, ours is appended to the
 same event array. Duplicates are detected by command string, so re-runs never

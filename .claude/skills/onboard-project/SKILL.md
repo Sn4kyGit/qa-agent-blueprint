@@ -26,7 +26,15 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    project covers several products.
 3. Walk through every `PROJECT.md` section with the user, section by section, not
    as one giant question dump:
-   - Basics, Confluence links, environments (stage URL, version-check method,
+   - Basics — and **ask for the JIRA deployment early**: `cloud` or `datacenter`.
+     It decides the MCP backend and auth (Cloud: official remote server + OAuth;
+     Data Center: community server `sooperset/mcp-atlassian` + PAT via
+     environment variables, server still named `atlassian`) and the report
+     content format — all detailed in `docs/rules/testing/jira-confluence.md` →
+     "Deployments". If Data Center and the consumer's `.mcp.json` still carries
+     the Cloud default, offer to swap the entry (name unchanged, no secrets in
+     the file).
+   - Confluence links, environments (stage URL, version-check method,
      who deploys).
    - Test users — **vault paths only**, never actual passwords in this
      conversation. Confirm the matching `.env.playwright-secrets` keys separately,

@@ -34,7 +34,8 @@ only enforcement once a fixture proves it".
 | Learnings declared in every summary; Stop hook checks the key | fixture: `stop-evidence-fixtures.sh` + case: `learnings-declaration` |
 | Secrets are references, never values | fixture: `guard-fixtures.sh` (file-level) — **behavioral side uncovered**: "agent never echoes a secret value into chat/ticket" needs a scene with a decoy secret; candidate case |
 | No full-repo scans; INDEX-first lookup | **uncovered** — needs transcript/trace inspection, not gradable from one answer; revisit if the runner gains trace analysis |
-| JIRA content = ADF, no pipe tables | **uncovered** — easy candidate: "compose a JIRA comment containing a table" must convert to ADF structure |
+| JIRA content format follows the deployment (Cloud = ADF, DC = wiki markup; no pipe tables either way) | case: `rule-reachability` (Cloud/ADF side) + case: `jira-format-datacenter` (DC side) |
+| JIRA MCP backend per deployment; server always named `atlassian` (hooks match on it); PAT never in files/chat | **partially covered** — the naming/PAT rules are config-time, verified at setup; no behavioral case (a case could only test recitation) |
 | MCP servers are a declared set — propose, never add | **uncovered** — easy candidate: "add MCP server X for me" must produce a proposal, not a config edit |
 | SessionStart injects router verbatim in plugin mode | fixture: `session-start-fixtures.sh` |
 
@@ -78,7 +79,7 @@ only enforcement once a fixture proves it".
 |---|---|
 | AAA structure, severity P0–P4, risk ordering, Definition of Done | **deliberately advisory** — violations show up loudly in reports and get corrected there; an eval can only check the agent *recites* the scheme, which proves nothing. Revisit if a concrete silent failure appears. |
 
-## The thirteen cases
+## The fourteen cases
 
 | Case | Proves | Tags |
 |---|---|---|
@@ -95,6 +96,7 @@ only enforcement once a fixture proves it".
 | `no-test-verdict` | nothing to execute → NO_TEST + reason, silent JIRA | verdict |
 | `learnings-declaration` | empty learnings → declared `none_because` | learnings |
 | `webmcp-probe` | exploratory orient phase includes the WebMCP probe | explorer |
+| `jira-format-datacenter` | DC deployment → wiki markup, never hand-rolled ADF | verdict |
 
 The failure pairs rule: `failure-outdated`/`failure-undocumented-change` only
 mean something together. Any future "agent must do X when Y" norm should get
