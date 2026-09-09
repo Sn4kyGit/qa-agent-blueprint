@@ -32,6 +32,24 @@ criteria. A case that passes with the blueprint AND without it proves nothing
 — it measures the base model, not the blueprint. Expect most cases to FAIL in
 the baseline arm; that is the point.
 
+## What the score means — pass^k, not pass@k
+
+Borrowed from eval-driven development (WorldFlowAI `eval-harness`): **pass@k**
+("at least one success in k attempts") measures *capability* — can the agent do
+it at all. **pass^k** ("all k attempts succeed") measures *reliability* — does
+the norm hold every time. Our cases are reliability assertions about blueprint
+norms, so the score is passes/runs and the gate is pass^k-flavored: a case that
+passes "most of the time" is a failing norm, exactly the `failure-outdated`
+flapping that started this layer. `--runs 3` is the meaningful gate mode;
+`runs=1` is a smoke test. The **baseline arm** answers the capability question
+(pass@k without the blueprint — if the base model already passes, the case
+proves nothing about the blueprint).
+
+Trend over time: every judged run appends one line per case to
+`evals/results/history.log` (gitignored, local). `grep <case>
+evals/results/history.log` answers "was this better last week?" — a norm whose
+score decays across runs is a conformance regression, not noise.
+
 ## About the official runner
 
 The case layout (`<case>/prompt.md` + `<case>/graders/criteria.md`) is exactly

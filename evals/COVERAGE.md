@@ -12,6 +12,9 @@ gets a row and one of three states:
 
 The boundary rule: loud failures belong to fixtures, silent failures belong to
 evals. A norm covered by neither is a bug in this matrix, not a gap to ignore.
+Cases are **reliability assertions** (pass^k — the norm must hold every run);
+the **capability** question (can the base model do this at all) belongs to the
+`--baseline` arm, not to a case's score.
 
 **When you change a rule, you change this file.** A normative edit without a
 matrix row update is an incomplete change — the same discipline as "a hook is

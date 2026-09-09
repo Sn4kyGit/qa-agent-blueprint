@@ -136,6 +136,9 @@ for name in "${CASES[@]}"; do
     below="$(awk -v p="$passes" -v s="$scored" -v t="$THRESHOLD" 'BEGIN{print ((p/s < t) ? 1 : 0)}')"
     [ "$below" = "1" ] && GATE_FAILURES+=("$name ($score < $THRESHOLD)")
     scorestr="$score ($passes/$scored)"
+    # pass^k trend history: one line per case per run, local and gitignored.
+    # `grep <case> evals/results/history.log` answers "was this better last week?"
+    printf '%s %s %s/%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" "$passes" "$scored" >> "$HERE/results/history.log"
   else
     scorestr="unscored"
   fi
