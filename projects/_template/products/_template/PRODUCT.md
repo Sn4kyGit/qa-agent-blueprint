@@ -105,6 +105,9 @@ strategy input instead of guessing which test types a ticket needs.
 <!-- Omit unless this product has its own suite or TC namespace. -->
 
 - **Playwright suite**: <repo path/location, config file> — or "none yet"
+- **App repo (optional, read-only)**: <local checkout, e.g. `../skp/` — when each
+  product has its own repo, state it here and leave the project-level field
+  "none">. Lets `failure-analysis` diff this product's version window.
 - **TC categories**: <CAT, CAT — product-specific namespace>
 - **Test data**: <seed/reset mechanism for this product>
 
