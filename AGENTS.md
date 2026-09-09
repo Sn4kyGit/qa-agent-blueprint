@@ -134,6 +134,18 @@ Full walkthrough incl. a no-clone `settings.json` variant:
   user request: `install.sh --mode integrate`).
 - Do not add MCP servers beyond the declared two; the register is deliberate.
 
+## Updating an existing install
+
+```bash
+claude plugin marketplace update qa-agent-blueprint-marketplace
+claude plugin update --scope project qa-agent-blueprint
+```
+
+Restart Claude Code afterwards. `CHANGELOG.md` lists what changed; releases
+are SemVer git tags (`qa-agent-blueprint--v*`). If an update misbehaves,
+`claude plugin uninstall` + reinstall pins you back, and the project's own
+data (`projects/`, `memory/`, `evidence/`) is never touched by updates.
+
 ## Rollback
 
 ```bash
@@ -154,3 +166,8 @@ for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 4x "
 claude plugin validate .
 bash evals/run.sh                                        # behavioral gate: exit 1 below 0.9
 ```
+
+Releasing: bump `version` in BOTH `.claude-plugin/plugin.json` and
+`.claude-plugin/marketplace.json` (they must agree), add the `CHANGELOG.md`
+entry, commit, then `claude plugin tag --push -m "%s"`. The tag command
+validates manifest agreement and refuses a dirty tree.

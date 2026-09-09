@@ -74,6 +74,10 @@ checkout you can inspect.
 
 ## First session (~10 min)
 
+*(Updating an existing install instead? `claude plugin marketplace update
+qa-agent-blueprint-marketplace && claude plugin update --scope project
+qa-agent-blueprint`, then restart — see `CHANGELOG.md` for what changed.)*
+
 1. Open `~/qa-workspace` in VS Code, start Claude Code, **accept the trust dialog**.
 2. The plugin's SessionStart hook bootstraps `projects/`, `memory/`, `evidence/`
    and a `.env.playwright-secrets` placeholder, and injects the router.
