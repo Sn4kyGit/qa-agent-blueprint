@@ -45,6 +45,33 @@ You are an agent — act like one. Check and, with the user's OK, install:
 - **GitHub auth** (private repo) → `brew install gh`, then `gh auth login` is
   the ONE step you cannot do: it opens a browser. Hand it to the human, wait,
   then verify with the `git ls-remote` check above.
+- **`uv`** (`uv --version`) → `brew install uv` — only needed when the user's
+  JIRA is self-hosted (see below).
+
+### JIRA deployment: ask BEFORE the restart
+
+Ask the user: **is your JIRA Atlassian Cloud or self-hosted (Data Center)?**
+
+- **Cloud** — nothing to do; the plugin's `atlassian` entry fits. Auth happens
+  later via `/mcp` OAuth (a human step).
+- **Data Center** — the plugin's default `atlassian` entry (Cloud remote
+  server) will not reach their JIRA. Replace it in the consumer's
+  `.mcp.json` yourself — keep the **name** `atlassian` (the audit and
+  evidence hooks match on it):
+
+  ```json
+  "atlassian": {
+    "command": "uvx",
+    "args": ["mcp-atlassian"],
+    "env": { "JIRA_URL": "https://jira.<their-company>.tld" }
+  }
+  ```
+
+  Uses [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian)
+  (Jira DC v8.14+). Auth is a **Personal Access Token** the human creates in
+  their JIRA profile and exports as `JIRA_PERSONAL_TOKEN` in their shell
+  (`~/.zshrc`) — the token goes **never** into `.mcp.json`, the repo, or the
+  chat. Tell them this explicitly.
 
 ### If the target folder holds its own git repos (e.g. `S/skp/`, `S/wdio/` …)
 
@@ -89,10 +116,13 @@ Full walkthrough incl. a no-clone `settings.json` variant:
 
 ## Steps that need the human — say so explicitly
 
-1. `/mcp` → authorize **atlassian** (OAuth browser flow). An agent cannot do this.
+1. **JIRA auth** — Cloud: `/mcp` → authorize **atlassian** (OAuth browser flow).
+   Data Center: create a Personal Access Token in JIRA and export
+   `JIRA_PERSONAL_TOKEN` in the shell. An agent cannot do either.
 2. Fill `.env.playwright-secrets` with test-user credentials (created as a
    placeholder on first session start; values are masked in transcripts).
-3. Run `/onboard-project` — needs the JIRA project key and the stage URL.
+3. Run `/onboard-project` — needs the JIRA project key, the deployment kind
+   (cloud/datacenter), and the stage URL.
 4. **Shadow mode is ON by default**: the agent composes JIRA comments but posts
    nothing until the user writes `Shadow mode: off` in the project file or sets
    `QA_AGENT_SHADOW=0`. Mention this before the first `/test-ticket`.
