@@ -36,6 +36,33 @@ Then tell the user to **restart Claude Code** and accept the trust dialog.
   hood. Check first: `git ls-remote https://github.com/Sn4kyGit/claude_blueprint.git`
   must not prompt.
 
+### Missing prerequisites? Install them yourself.
+
+You are an agent — act like one. Check and, with the user's OK, install:
+
+- **Node.js ≥ 18** (`node --version`) → `brew install node`
+- **Claude Code** (`claude --version`) → `npm install -g @anthropic-ai/claude-code`
+- **GitHub auth** (private repo) → `brew install gh`, then `gh auth login` is
+  the ONE step you cannot do: it opens a browser. Hand it to the human, wait,
+  then verify with the `git ls-remote` check above.
+
+### If the target folder holds its own git repos (e.g. `S/skp/`, `S/wdio/` …)
+
+The consumer folder becomes the QA home (`projects/`, `memory/`, `evidence/`
+live there) and should itself be a git repo — but the product repos inside it
+must stay independent. Before the first commit:
+
+```bash
+git init
+printf '<subrepo1>/\n<subrepo2>/\n' >> .gitignore   # every subfolder that is its own repo
+git add . && git commit -m "QA home: blueprint data"
+```
+
+Never `git add` a nested repo without the ignore entry — embedded repos become
+gitlinks and the QA data turns unrecoverable noise. The products' repos are
+referenced read-only from each product's `PRODUCT.md` (`App repo` field) during
+`/onboard-product`.
+
 ### Verify
 
 ```bash
