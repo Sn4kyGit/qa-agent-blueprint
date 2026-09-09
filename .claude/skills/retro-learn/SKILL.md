@@ -81,6 +81,17 @@ permanent knowledge — move it into whichever candidate target it named:
 - `projects/<KEY>/products/<PRODUCT>/PRODUCT.md` (the same, but true for one product
   only — a deviating environment, an extra test user, a product-specific trap).
 
+**No fitting target?** If a captured pattern reaches `seen: 2` and fits no
+existing rule, skill, or project file, it is a **new-skill candidate** — propose
+one (name, trigger, scope) instead of force-fitting it into the nearest file.
+A candidate can also be consciously deferred with a reason (like
+`webmcp-testing`); a deferred candidate stays in the learnings file, dated, so
+the decision survives context. (Idea adapted from
+[rebelytics/task-observer](https://github.com/rebelytics/one-skill-to-rule-them-all);
+their always-on observer model is deliberately not adopted — enforced capture
+plus the eval gate covers the same ground at our scale, per the author's own
+sizing note.)
+
 **Routing upkeep — the cheapest repetition to eliminate.** A ticket the agent could
 not route on its own, and a human answered: promote it per
 `.claude/rules/core/product-layer.md` → "Routing learns from being corrected". A
