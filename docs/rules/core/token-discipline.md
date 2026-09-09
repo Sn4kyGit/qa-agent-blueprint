@@ -19,7 +19,25 @@ added without a decision, or a decision was never wired up.
 | Server | Why it is in the budget | Notes |
 |---|---|---|
 | `playwright` | The agent cannot test a web UI without a browser | Launched `--isolated --headless --secrets` |
-| `atlassian` | Tickets in, results out — the entire premise is ticket-driven | Remote server, OAuth 2.1 |
+| `atlassian` | Tickets in, results out — the entire premise is ticket-driven | Cloud: remote server, OAuth 2.1. Data Center: community server + PAT |
+
+## Scope: servers are per QA home, not per project
+
+MCP servers are wired at the **consumer-folder level** (the QA home's
+`.mcp.json`, or the plugin's), never per `projects/<KEY>/`. Every project in
+one QA home shares the declared set — a project that does not need a server
+simply never calls it: an API-only product never touches `playwright`, and
+nothing breaks. `atlassian` is the one non-optional server (the flow is
+ticket-driven); `playwright` is effectively required for any UI-testing
+project but inert when unused.
+
+One hard constraint follows: **one JIRA instance per QA home.** The
+`atlassian` server binds to exactly one site (the Cloud OAuth site, or one
+`JIRA_URL` on Data Center). Two JIRA instances are not a reason to register a
+second server — the audit and evidence hooks match on the name `atlassian`,
+and a second name would bypass them silently. Two JIRA instances = **two QA
+homes** (two folders, project-scoped plugin in each — that is what
+`--scope project` is for).
 
 **A CLI is not a server.** Triggering a pipeline (`gh`, `glab`, `curl`) is a Bash
 command declared in the project file under "How a deploy is triggered", not a reason
