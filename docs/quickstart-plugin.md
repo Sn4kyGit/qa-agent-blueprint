@@ -5,14 +5,17 @@ test — no application code on this machine. The plugin gives you the whole
 blueprint; an empty folder becomes your QA home (`projects/`, `memory/`,
 `evidence/` live there).
 
-Two ways to wire the plugin. Pick **A** if you can clone the repo, **B** if you
-cannot or do not want to.
+Three ways to wire the plugin. **A** is two CLI commands, **B** gives you a
+local checkout you can read, **C** is fully manual. Or skip all of them: open
+Claude Code in `~/qa-workspace` and paste *"Set up
+https://github.com/Sn4kyGit/claude_blueprint as a plugin in this project —
+read its AGENTS.md and follow the runbook."*
 
 ## Prerequisites (~10 min)
 
 1. **Node.js LTS (≥ 18)** — nodejs.org or `brew install node`
 2. **Claude Code** — the VS Code extension, or `npm install -g @anthropic-ai/claude-code`
-3. **GitHub auth** — required while the repository is private, for both variants
+3. **GitHub auth** — required while the repository is private, for all variants
    (the marketplace fetch uses git under the hood):
    ```bash
    brew install gh && gh auth login   # browser login with an account that has access
@@ -21,7 +24,19 @@ cannot or do not want to.
    must not ask for credentials.
 4. An **empty working folder** — this guide uses `~/qa-workspace`.
 
-## Variant A — with clone, installer does the wiring
+## Variant A — marketplace CLI, no clone
+
+```bash
+mkdir -p ~/qa-workspace && cd ~/qa-workspace
+claude plugin marketplace add Sn4kyGit/claude_blueprint
+claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
+```
+
+`--scope project` enables the plugin only in `~/qa-workspace` (writes one key
+into `.claude/settings.json` there). Restart Claude Code and accept the trust
+dialog.
+
+## Variant B — with clone, installer does the wiring
 
 ```bash
 git clone https://github.com/Sn4kyGit/claude_blueprint.git ~/qa-blueprint
@@ -33,7 +48,7 @@ The installer writes the two settings keys for you, with the **local checkout as
 source** — the code you enabled is the code you can read, and updates are a
 `git pull` away.
 
-## Variant B — manual, no clone
+## Variant C — manual, no clone
 
 ```bash
 mkdir -p ~/qa-workspace/.claude

@@ -266,6 +266,17 @@
 </header>
 
 <section>
+  <h2>Installation</h2>
+  <p class="sub">Am einfachsten: dem Agenten sagen. In Claude Code (im Projekt, das getestet werden soll) einfügen:</p>
+  <pre><code>Set up https://github.com/Sn4kyGit/claude_blueprint as a Claude Code
+plugin in this project. Read its AGENTS.md first and follow the runbook.</code></pre>
+  <p>Oder selbst zwei Befehle — <code>--scope project</code> aktiviert nur hier, ohne Flag überall:</p>
+  <pre><code>claude plugin marketplace add Sn4kyGit/claude_blueprint
+claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace</code></pre>
+  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 23 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
+</section>
+
+<section>
   <h2>Der Ablauf</h2>
   <div class="flow">
     <span class="step">Ticket</span><span class="arrow">→</span>
@@ -614,7 +625,7 @@ projects/SHOP/
   <table>
     <tr><th>Bereich</th><th>Absicherung</th></tr>
     <tr><td>Hooks (Guard, Stop, SessionStart)</td><td>53 Fixtures — jede Regel mit eigenem Fall</td></tr>
-    <tr><td>Installer (Integrate, Plugin, Self-Setup, Uninstall)</td><td>43 Fixtures — end-to-end gegen ein Wegwerf-Repo</td></tr>
+    <tr><td>Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption)</td><td>51 Fixtures — end-to-end gegen ein Wegwerf-Repo</td></tr>
     <tr><td>Kontextkosten</td><td>gemessen — Budget-Check, 7.491 von 7.500 Token belegt</td></tr>
     <tr><td>Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen)</td><td>8 Eval-Cases — ein eigenes Skript fährt sie über <code>claude -p</code></td></tr>
     <tr><td>Ein echtes Projekt, ein echtes Ticket</td><td><strong>nie</strong> — genau das ist der Pilot</td></tr>

@@ -3,6 +3,7 @@
   "owner": {
     "name": "qa-agent-blueprint"
   },
+  "description": "Self-hosted marketplace for the QA Agent Blueprint — ticket-driven QA testing (JIRA in, tested ticket out) with mandatory evidence and a learning loop.",
   "plugins": [
     {
       "name": "qa-agent-blueprint",

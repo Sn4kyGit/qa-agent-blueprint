@@ -7,7 +7,6 @@
   },
   "license": "MIT",
   "skills": "./.claude/skills",
-  "agents": "./.claude/agents",
   "hooks": "./hooks/hooks.json",
   "mcpServers": "./.mcp.json"
 }

@@ -75,7 +75,30 @@ prompt. All of it came from files the agent read because the ticket key told it 
 skills, agents and hooks load from the plugin; only your own data
 (`projects/`, `memory/`, `evidence/`) lives in your repo.
 
-### The standard way: clone + installer
+### The easiest way: tell your agent
+
+Paste this into Claude Code (or any coding agent) inside the project you want
+tested:
+
+> Set up <https://github.com/Sn4kyGit/claude_blueprint> as a Claude Code plugin
+> in this project. Read its **AGENTS.md** first and follow the runbook there —
+> then tell me which steps need me (OAuth, secrets, onboarding).
+
+### Or two commands yourself
+
+```bash
+claude plugin marketplace add Sn4kyGit/claude_blueprint
+claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
+```
+
+Restart Claude Code and accept the trust dialog. `--scope project` enables the
+plugin only here; drop the flag to enable it everywhere. While the repository
+is private, the fetch needs GitHub auth on the machine (`gh auth login`) — it
+is git under the hood. On first session start the plugin's SessionStart hook
+bootstraps `projects/`, `memory/`, `evidence/` and a `.env.playwright-secrets`
+placeholder in your repo, and injects the router.
+
+### The classic way: clone + installer
 
 ```bash
 git clone https://github.com/Sn4kyGit/claude_blueprint.git
@@ -88,11 +111,11 @@ your own project** and it asks which of the two ways in you want — integrate o
 plugin — and explains the trade-off before you pick. Pick **plugin** for the
 recommended mode.
 
-### Plugin-only, without a clone
+### Plugin-only via settings.json
 
-If you only want the plugin and trust the GitHub source, you can skip the clone
-and wire the marketplace yourself. Add these two keys to your project's
-`.claude/settings.json`:
+The two CLI commands above write exactly two keys into settings. If you prefer
+to wire them by hand (e.g. committing the enablement for your team), add these
+to your project's `.claude/settings.json`:
 
 ```json
 {
@@ -107,9 +130,7 @@ and wire the marketplace yourself. Add these two keys to your project's
 }
 ```
 
-Restart Claude Code and accept the trust dialog. On first session start the
-plugin's SessionStart hook bootstraps `projects/`, `memory/`, `evidence/` and a
-`.env.playwright-secrets` placeholder in your repo, and injects the router.
+Restart Claude Code and accept the trust dialog — same bootstrap as above.
 
 For more details — detection matrix, per-file collision policy, plugin
 mechanics, FAQ — have a look at [docs/integration.md](docs/integration.md).
@@ -403,7 +424,7 @@ runs it.
 | Document | Contents |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | The five layers and why they are token-efficient |
-| [docs/quickstart-plugin.md](docs/quickstart-plugin.md) | Plugin on a fresh machine: JIRA + stage URL only, no app repo — with or without a clone |
+| [docs/quickstart-plugin.md](docs/quickstart-plugin.md) | Plugin on a fresh machine: JIRA + stage URL only, no app repo — CLI, clone, or manual wiring |
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |

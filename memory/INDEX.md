@@ -92,7 +92,7 @@ Filled-in examples: `projects/EXAMPLE/qa-project-context.md` (project scope) and
 |---|---|
 | `evals/README.md` | Semantic test cases + a runner that works today (`bash evals/run.sh`) |
 | `docs/pilot-briefing.md` | What to have ready for the first real onboarding, and what is known unfinished |
-| `docs/quickstart-plugin.md` | Plugin on a fresh machine (JIRA + stage URL, no app repo) — both wiring variants |
+| `docs/quickstart-plugin.md` | Plugin on a fresh machine (JIRA + stage URL, no app repo) — all three wiring variants |
 | `docs/architecture.md` | The five-layer concept and why it is token-efficient |
 | `docs/artifact-strategy.md` | Evidence capture defaults, retention, PII, access |
 | `docs/memory-layers.md` | Repo learnings vs auto memory; why no memory server is wired in |
