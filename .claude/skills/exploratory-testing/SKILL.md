@@ -50,6 +50,21 @@ exploration, and a debrief — not "click around and see what happens."
    see `references/heuristics-and-automation.md`. For the session flow (orient →
    explore → wrap-up timing), a session-log template with BUG/QUESTION/IDEA/RISK/NOTE
    tags, and worked charter examples, see `references/session-templates.md`.
+
+   Plus one **capability probe** at session start (orient phase), a single
+   `browser_evaluate` call:
+
+   ```js
+   typeof document.modelContext !== 'undefined'
+     ? await document.modelContext.getTools()
+     : null
+   ```
+
+   If the page registers WebMCP tools, tag them as NOTE/RISK in the session log and
+   name them in the debrief as candidates for deeper coverage (schema validity,
+   `readOnlyHint` honesty, `exposedTo`/permissions audit). Never use these tools to
+   *drive* the session — the UI stays the test target and is driven via Playwright;
+   WebMCP tools are extra surface, not a shortcut past it.
 5. **Debrief, always** — even a solo session. Tag every observation
    (BUG/QUESTION/IDEA/RISK/NOTE) with a timestamp as it happens, not from memory
    afterward. Mark each charter area covered, partial, or unexplored — an honest

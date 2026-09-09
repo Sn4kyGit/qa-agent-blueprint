@@ -30,6 +30,12 @@ project-wide or product-specific is decided at groom time, not capture time.
 
 <!-- new captures below, newest on top -->
 
+## 2026-09-07 — blueprint self-review (no ticket)
+- Problem: Should the blueprint adopt WebMCP (`document.modelContext`, Chrome origin trial, Chrome-only, API in flux — `navigator.modelContext` already deprecated) as a way to drive tested websites?
+- Cause: Websites register structured tools for AI agents in-page; tempting as a stable alternative to brittle selectors.
+- Working solution: No — WebMCP is a new **test surface**, not a test driver. We verify what the user experiences (the UI), so Playwright stays the driver; tools a page registers get probed once per exploratory session via `browser_evaluate` (`document.modelContext?.getTools()`) and flagged for deeper coverage (schema validity, `readOnlyHint` honesty, `exposedTo`/permissions audit). No new MCP server needed — it is in-page JS, reachable through the existing playwright MCP. A full `webmcp-testing` skill is deferred until a tested product actually ships WebMCP tools.
+- Candidate target: skill `exploratory-testing` (probe added to step 4) + later a vendored-style skill `webmcp-testing` when real demand appears.
+
 ## 2026-09-05 — blueprint self-review (no ticket)
 - Problem: `pre-tool-guard.sh` never blocked anything (rm -rf, force push, .env writes all passed), and `post-jira-audit.sh` logged `tool=unknown result=unknown`. Both looked correct and were reported as "mechanical enforcement" in README and security rule.
 - Cause: the python expressions were passed as `'print(d.get(\"tool_name\") ...)'` — inside single quotes the backslashes survive, and parameter expansion into the double-quoted `python3 -c "..."` does not remove them, so python got `\"` and raised SyntaxError. `2>/dev/null` swallowed it, empty output meant every check was skipped, and the raw-JSON fallback only triggered when python3 was ABSENT — not when parsing failed.
