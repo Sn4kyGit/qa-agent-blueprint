@@ -86,9 +86,12 @@ claude plugin marketplace remove qa-agent-blueprint-marketplace
 
 ## If you are developing on this repo
 
-After any change, run the fixture battery and the manifest validator:
+After any change, run the fixture battery and the manifest validator. After any
+change to **rules, skills, or the router**, also run the behavioral evals and
+update the norm→test matrix (`evals/COVERAGE.md`) if you touched a norm:
 
 ```bash
 for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 4x "all fixtures passed"
 claude plugin validate .
+bash evals/run.sh                                        # behavioral gate: exit 1 below 0.9
 ```

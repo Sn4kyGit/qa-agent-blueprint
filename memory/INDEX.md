@@ -90,7 +90,7 @@ Filled-in examples: `projects/EXAMPLE/qa-project-context.md` (project scope) and
 
 | File | Contents |
 |---|---|
-| `evals/README.md` | Semantic test cases + a runner that works today (`bash evals/run.sh`) |
+| `evals/README.md` | Behavioral conformance runner (`bash evals/run.sh`); the norm→test matrix is `evals/COVERAGE.md` |
 | `docs/pilot-briefing.md` | What to have ready for the first real onboarding, and what is known unfinished |
 | `docs/quickstart-plugin.md` | Plugin on a fresh machine (JIRA + stage URL, no app repo) — all three wiring variants |
 | `docs/architecture.md` | The five-layer concept and why it is token-efficient |

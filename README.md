@@ -20,7 +20,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | Atlassian Cloud (JIRA + Confluence), remote MCP server, OAuth 2.1 |
-| **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 108 fixtures · 8 eval cases |
+| **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 108 fixtures · 13 eval cases |
 | **Two ways in** | Merged into your repo (integrate), or as a plugin |
 | **License** | MIT |
 
@@ -428,7 +428,7 @@ runs it.
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |
-| [evals/README.md](evals/README.md) | Semantic test cases — routing, merge, sealed fields, rule reachability — plus a runner that works today |
+| [evals/README.md](evals/README.md) | Behavioral conformance — 13 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
 | [docs/pilot-briefing.md](docs/pilot-briefing.md) | **Read before the first real onboarding**: what to collect, shadow mode, what is known unfinished |
 | [docs/rules/](docs/rules/) | The detail behind each always-loaded rule, read on demand |
 | [docs/runbooks/stage-deploy-general.md](docs/runbooks/stage-deploy-general.md) | Generic stage-deploy scaffold |
