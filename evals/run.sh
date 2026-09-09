@@ -132,8 +132,8 @@ for name in "${CASES[@]}"; do
     esac
   done
   if [ "$JUDGE" -eq 1 ] && [ "$scored" -gt 0 ]; then
-    score="$(awk "BEGIN{printf \"%.2f\", $passes/$scored}")"
-    below="$(awk "BEGIN{print ($passes/$scored) < $THRESHOLD ? 1 : 0}")"
+    score="$(awk -v p="$passes" -v s="$scored" 'BEGIN{printf "%.2f", p/s}')"
+    below="$(awk -v p="$passes" -v s="$scored" -v t="$THRESHOLD" 'BEGIN{print ((p/s < t) ? 1 : 0)}')"
     [ "$below" = "1" ] && GATE_FAILURES+=("$name ($score < $THRESHOLD)")
     scorestr="$score ($passes/$scored)"
   else

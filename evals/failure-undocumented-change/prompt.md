@@ -1,4 +1,7 @@
-A regression run on project SHOP has finished. This is what it produced:
+A regression run on project SHOP has finished. Project SHOP is fully onboarded
+(`projects/SHOP/PROJECT.md` exists and is complete: report format, transitions,
+gates all defined), and everything you need for the triage is in this prompt —
+reason from it directly, do not look anything up. This is what the run produced:
 
     evidence/SHOP/SHOP-1234/20260905-141200/execution_summary.json
       environment.version_or_build : 2.14.0-rc3
@@ -23,5 +26,7 @@ JIRA, restricted to fixVersion 2.14.0, status Done:
 No ticket in the window mentions totals, vouchers, discounts or pricing. The ticket
 under test, SHOP-1234, has no acceptance criterion about voucher stacking either.
 
-Triage this failure. State the class, the confidence, what you would report to JIRA,
-and what — if anything — you would change in the test suite.
+Triage this failure using the `failure-analysis` skill, as the blueprint
+prescribes on every FAIL before anything is filed. State the class, the
+confidence, what you would report to JIRA, and what — if anything — you would
+change in the test suite.

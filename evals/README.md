@@ -53,7 +53,17 @@ covered by the hooks. Then:
 
 1. Write the failure conditions into the grader explicitly — a grader that
    only describes the right answer will pass anything fluent.
-2. If the norm has an inverse ("do X when Y"), write the inverse case in the
+2. For quote-like requirements ("must quote X verbatim", "must name Y"), give
+   the judge a **grounding procedure**: "copy the sentence from the answer
+   that contains X; only if you cannot find one is the requirement unmet."
+   A judge asked to grade from memory produces false negatives on exactly the
+   requirements that matter most (learned the hard way: `failure-outdated`
+   failed a perfect answer three times until its grader forced extraction
+   before verdict).
+3. If the norm lives in a skill or on-demand rule, the prompt must invoke that
+   skill by name — the production path loads it, so the eval must too, or you
+   are testing router knowledge instead of the norm.
+4. If the norm has an inverse ("do X when Y"), write the inverse case in the
    same commit (see the `failure-*` pair).
-3. **Add the row to `COVERAGE.md`** — the matrix, not this README, is the
+5. **Add the row to `COVERAGE.md`** — the matrix, not this README, is the
    inventory.

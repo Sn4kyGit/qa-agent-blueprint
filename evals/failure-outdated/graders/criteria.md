@@ -1,3 +1,19 @@
+Judge procedure — do this BEFORE deciding, and quote what you find:
+
+1. Search the answer for a quoted AC-2 sentence (quotation marks or italic
+   quote reproducing the prompt's AC-2 text: "When a campaign discount is
+   active, an additional voucher is accepted but not applied. The order total
+   shows the campaign discount only."). **Copy that sentence from the answer
+   into your reasoning.** If the quote is present and matches the prompt's
+   AC-2 text, the verbatim requirement is MET — "states verbatim: '...'" plus
+   the exact AC text counts. Only if no such quote exists is it paraphrase.
+2. Search for the flake/environment elimination (single attempt, version
+   window, clean logs, other cases passing). Copy the lines you find; the
+   requirement is met when the answer makes the elimination identifiable,
+   even without the word "elimination".
+3. Search for the defect-branch ("if you rule defect instead" / equivalent).
+   This one IS required and its absence alone justifies FAIL.
+
 This is the case where "the test case is outdated" is the *right* answer, and the
 grader checks that the agent reaches it **with the evidence**, not by vibe.
 

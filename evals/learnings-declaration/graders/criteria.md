@@ -13,11 +13,17 @@ A correct answer:
   anything surprising?" to actually be asked, rather than the key being left
   out.
 
+Note for the judge: the scene establishes `projects/ACME/learnings.md` and says
+everything matched it. A `none_because` that references that file ("behavior
+matched existing learnings") is the *ideal* answer — it proves the agent
+connected the declaration to this run. Do not read it as filler.
+
 Fails if it: omits the `learnings` object entirely ("nothing learned, nothing
 to declare" — the declaration IS the mechanism); invents captures to avoid an
 empty list ("learned that login works" — a fabricated learning pollutes the
 inbox); fills BOTH keys (contradiction: you cannot have captured things and
 have a reason there were none); writes `none_because: null` without a
 sentence (a null is the unanswered question); or treats the field as a
-formality to copy-paste any filler into — the sentence must relate to this
-run.
+formality to copy-paste any filler into — the sentence must relate to this run
+(but see the judge note above: naming the scene's learnings file *is* relating
+it to this run).
