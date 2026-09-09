@@ -49,8 +49,10 @@ You are an agent — act like one. Check and, with the user's OK, install:
 ### If the target folder holds its own git repos (e.g. `S/skp/`, `S/wdio/` …)
 
 The consumer folder becomes the QA home (`projects/`, `memory/`, `evidence/`
-live there) and should itself be a git repo — but the product repos inside it
-must stay independent. Before the first commit:
+live there). Nothing in the blueprint requires that folder to be a git repo —
+if the user does not want it versioned (or wants no remote), **skip this
+section entirely** and leave the folder untracked. If versioning IS wanted,
+the product repos inside must stay independent — before the first commit:
 
 ```bash
 git init
