@@ -51,8 +51,21 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
   criteria updated (breaking for muscle memory only, pre-1.0)
 
 ### Fixed
+- **Eval scenario footers forbade reading the ground truth**: every case's
+  overlay line said "never verify on disk" — newer models apply that to the
+  blueprint files themselves and *guess* the project registry instead of reading
+  it (routing-component 0/3 with an invented CHECKOUT product). The footer now
+  names the blueprint as real ground truth to READ and only the scenario state
+  (tickets, JIRA, stages) as fictional. Recovery verified live: routing-component,
+  webmcp-probe, merge-inheritance back to 3/3 (all 17 footers rewritten)
+- **`failure-analysis` phantom norm made real**: the failure-outdated case always
+  required an "if you rule defect instead" branch that the skill never stated —
+  NEEDS_REVIEW reports now name the other branch (→ bug-reporter with the
+  analysis attached), so the human ruling never has to ask "and if I disagree?"
+- **Eval runner crashed on default-model runs**: empty `--model` arrays under
+  `set -u` on macOS bash 3.2 (found by the first live run)
 - Stale stats corrected across `README.md`, `AGENTS.md` and `overview.html`:
-  25 skills, 127 fixtures, 16 eval cases, 7.8k always-loaded token budget
+  25 skills, 127 fixtures, 17 eval cases, 7.8k always-loaded token budget
 
 ### Changed
 - **Eval runner slimmed**: eval sessions strip MCP servers by default

@@ -30,6 +30,15 @@ run only the cases whose norms you touched (`COVERAGE.md` maps norm → case),
 full gate pre-release. A full gate burning straight through an account's
 session limit is what motivated this paragraph.
 
+**Model choice (learned from the first live runs, 2026-09-10):** the gate belongs
+to the production model class — answers AND judge. `--model haiku` fails cases on
+capability, not on the blueprint (it guesses instead of reading the ground-truth
+files), and `--judge-model haiku` both grades over-literally and intermittently
+ignores the required `RUN i: PASS|FAIL` verdict format (→ UNSCORED, gate fails).
+Slim models are for mechanics checks of the runner itself; for a gate whose
+result means something, pin the class explicitly:
+`bash evals/run.sh --runs 3 --model sonnet --judge-model sonnet`.
+
 Each case runs through `claude -p` in a **fresh process** from the repo root
 (so the agent sees the blueprint exactly as a user would). Every answer is then
 graded by a fresh model against the case's `graders/criteria.md`; a case's

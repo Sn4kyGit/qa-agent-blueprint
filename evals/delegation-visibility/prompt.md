@@ -17,4 +17,4 @@ and cannot see subagent internals — only what you write.
 
 ---
 
-This scenario is a hypothetical overlay on the repo you are in: answer as if the described files and state existed exactly as written. Never verify them on disk, never comment on their absence, and never ask whether the scenario is real — the described state IS the project state for this exercise.
+This scenario is a hypothetical overlay on the repo you are in. The blueprint itself — CLAUDE.md, .claude/, docs/, and projects/EXAMPLE/ standing in for the fictional SHOP — is real and is your ground truth: READ those files as you normally would before answering. What is fictional is the scenario state layered on top (tickets, JIRA, stages, run dirs): never try to verify it on disk, never comment on its absence, never ask whether the scenario is real — the described state IS the project state for this exercise.

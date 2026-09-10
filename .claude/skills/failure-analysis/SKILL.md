@@ -67,6 +67,10 @@ it reads have no business in the orchestrator's context.
 | `test-brittle` | NEEDS_REVIEW | proposal (locator/wait mechanics only) |
 | `undetermined` | FAIL | comment the analysis and name the one missing artifact |
 
+A NEEDS_REVIEW report always names the **other branch**: what follows if the human
+rules `product-defect` instead (→ `bug-reporter` with this analysis attached) — the
+person ruling should never have to ask "and if I disagree?".
+
 `NEEDS_REVIEW` is **interactive only**. Headless — `claude -p`, CI — the same failure
 stays FAIL with the analysis attached: a proposal with no human in the room is not a
 proposal, and a pipeline that goes green on "the test was probably outdated" is worse
