@@ -89,6 +89,12 @@ EMPTY_CTX="$(context_for "$WORK/empty")"
 check_contains "empty projects/ prompts onboarding" "$EMPTY_CTX" "(none yet — run /onboard-project)"
 
 echo
+echo "== the preamble points at the command overview =="
+# Discoverability is a mechanism too: the qa-help skill is only findable on
+# day one if the preamble names it in every session, in every mode.
+check_contains "preamble names the qa-help skill" "$CTX" "qa-help"
+
+echo
 echo "== plugin mode injects the plugin's CLAUDE.md verbatim =="
 # The plugin router used to be a hand-maintained summary inside session-start.sh
 # — a second source of truth that drifted from CLAUDE.md. The hook now cats the

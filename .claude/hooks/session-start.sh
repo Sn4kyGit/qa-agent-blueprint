@@ -352,7 +352,9 @@ CONTEXT="QA Agent Blueprint — session start
 $(list_projects)
 - Playwright CLI: $(playwright_version)$BROWSER_LINE
 - Read memory/INDEX.md before anything else; then only the active project's
-  PROJECT.md + learnings.md. No full-repo scans.$(mcp_hint)$(inbox_status)$(secrets_status)$BROWSER_SEED_NOTE$(update_notice)"
+  PROJECT.md + learnings.md. No full-repo scans.
+- Lost? The qa-help skill lists every command (in plugin mode:
+  /qa-agent-blueprint:qa-help) — plain language works too.$(mcp_hint)$(inbox_status)$(secrets_status)$BROWSER_SEED_NOTE$(update_notice)"
 
 if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
   # The router is the plugin's own CLAUDE.md, injected VERBATIM. If the file is
