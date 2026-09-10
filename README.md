@@ -316,6 +316,18 @@ on its own initiative; it proposes, you decide. A credential server may resolve 
 *reference* for the tool that needs it and must never surface a value into the
 transcript, a file, a ticket, or an artifact.
 
+**The MCP contract: name is contract, source and taste are free.** Hooks and
+skills match on the server *names* (`playwright`, `atlassian`), and the
+playwright server must carry `--secrets` (password masking) and `--output-dir`
+(evidence policy). Everything else — headless vs. headful, isolated vs.
+persistent profile, viewport, browser channel — is your preference, dialed in
+the consumer-owned `.playwright-mcp.config.json` (seeded with safe defaults on
+first run; the server reads it at launch, so edits apply after a restart).
+Bringing your own same-named server is legitimate when it honors the contract —
+but note a project `.mcp.json` entry does **not** override the plugin's server;
+Claude Code runs both, so pick one source per name. Details:
+`docs/rules/testing/playwright-mcp.md`.
+
 ---
 
 ## Bringing it into an existing repo
@@ -344,7 +356,9 @@ cd ~/work/your-project
 Every step is reported as `ADDED` / `MERGED` / `SKIPPED` / `WARN`. Merges are
 non-destructive by design: your `CLAUDE.md` gets a marked block appended (with a
 backup), rules and hooks are namespaced under `qa-blueprint/` so they cannot
-collide, `.mcp.json` merges by server name with yours winning, and a name collision
+collide, `.mcp.json` merges by server name with yours winning **as long as your
+playwright entry carries the contract flags** (`--secrets`, `--output-dir` —
+missing ones get upgraded, with a backup), and a name collision
 in skills or agents is skipped with a warning rather than overwritten. Running it
 twice changes nothing. `--uninstall` removes only what it added.
 
@@ -383,7 +397,9 @@ Full detection matrix, per-file collision policy, plugin mechanics and an FAQ:
 - **No secrets in this repo, and none in context.** Credentials are vault paths or
   env keys — never values, not in chat, code, tickets, or screenshots.
 - Playwright MCP runs with `--secrets .env.playwright-secrets`, so passwords are
-  masked in every tool response, and `--isolated`, so no state leaks between runs.
+  masked in every tool response, and defaults to an isolated browser profile, so
+  no state leaks between runs (both preferences aside from `--secrets`/
+  `--output-dir` — see the MCP contract above).
 - Hook-level enforcement blocks `rm -rf`, force pushes, and writes to `.env*`
   files; a permissions denylist prevents reads of known secret patterns.
 - Stage only. Never production — regardless of who asks or how it is framed.
@@ -408,7 +424,7 @@ Details: `.claude/rules/core/security.md` · `docs/artifact-strategy.md`.
 
 ### Not built yet, and honest about it
 
-Web only (Chromium, headless) — no mobile, cross-browser or native testing. One
+Web only (Chromium; headless or headful) — no mobile, cross-browser or native testing. One
 ticket at a time — epics and releases have no rollup. No test-data lifecycle and no
 stage leases, so parallel testing on a shared stage will confuse itself. No
 write-back into a test-management system. `evidence/` grows forever. And no project

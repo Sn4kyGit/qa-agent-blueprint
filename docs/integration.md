@@ -152,7 +152,7 @@ snippet above and copies nothing.
 | 3 | Playwright browsers (`npx playwright --version` + `chromium-*` under `~/.cache/ms-playwright` resp. `~/Library/Caches/ms-playwright`) | **SKIP** browser download, noted in report | `npx playwright install chromium` |
 | 4 | `CLAUDE.md` in target | managed router block is **appended**, your content kept; block present → SKIPPED ("already integrated") | blueprint router `CLAUDE.md` is copied |
 | 5 | `.claude/` in target | namespaced merge, per-file collision checks (below) | blueprint `.claude/` content is copied (namespaced) |
-| 6 | `.mcp.json` in target | JSON merge by server **name**, with one deliberate exception: an existing `playwright` without the security flags (`--secrets`/`--isolated`/`--headless`/`--output-dir`) is **upgraded to the blueprint config** — those flags are the password-masking/isolation model, "existing wins" would silently drop them (your old config lands in the backup). Identical entries → SKIPPED. Other names: existing wins → WARN | blueprint `.mcp.json` is copied |
+| 6 | `.mcp.json` in target | JSON merge by server **name**, with one deliberate exception: an existing `playwright` without the contract flags (`--secrets`/`--output-dir`) is **upgraded to the blueprint config** — those flags are the password-masking/evidence model, "existing wins" would silently drop them (your old config lands in the backup). A config missing only preference flags (`--headless`/`--isolated`) is KEPT with a note — taste is not a reason to overwrite. Identical entries → SKIPPED. Other names: existing wins → WARN | blueprint `.mcp.json` is copied |
 | 7 | `.claude/settings.json` in target | merge: `permissions.deny/allow` deduplicated union; blueprint hooks appended to `SessionStart`/`Stop`/`PreToolUse`/`PostToolUse`, duplicates detected by command string | created with blueprint permissions + namespaced hooks |
 | 8 | `.gitignore` in target | only **missing** entries appended, as a marked managed block; block present → SKIPPED | blueprint `.gitignore` is copied |
 | 9 | `evidence/`, `memory/`, `projects/` | left untouched (SKIPPED) | created from the blueprint scaffold |
@@ -222,12 +222,13 @@ The installer detects the Chromium cache (`~/.cache/ms-playwright` on Linux,
 says SKIPPED.
 
 **"I already run my own playwright MCP server."**
-MCP merge is by server **name**. Your `playwright` entry stays untouched
-(WARN "kept existing playwright server config"); only missing names (e.g.
-`atlassian`) are added. If you keep your own playwright server, make sure its
-args roughly match the blueprint's expectations (`--isolated`, `--output-dir`
-into `evidence/`, `--secrets`) — or rename yours and let the blueprint add its
-own.
+MCP merge is by server **name**. Your `playwright` entry stays untouched as long
+as it carries the contract flags `--secrets` and `--output-dir` (into
+`evidence/`); a missing contract flag upgrades it to the blueprint config (old
+config in the backup). Headless/headful and isolation are preferences — yours
+are respected, and the blueprint's own defaults live in the consumer-owned
+`.playwright-mcp.config.json`, not in forced CLI flags. Only missing names (e.g.
+`atlassian`) are added.
 
 **"Our JIRA is self-hosted (Data Center), not Cloud."**
 Supported: replace the `atlassian` entry with the community server

@@ -33,7 +33,7 @@ admin backoffice for products and orders. JIRA project key `SHOP`.
 
 - E2E: Playwright (spec suite in a separate checkout at `../shop-web-tests/`,
   config `playwright.config.ts`, stage base URL via `STAGE_BASE_URL`)
-- Exploratory: Playwright MCP, isolated/headless
+- Exploratory: Playwright MCP; headless/isolated per .playwright-mcp.config.json
 - TC categories: `AUTH`, `NAV`, `CART`, `CHK`, `ACCT`, `ADM`, `SEC`
 - Test data: seeded via the test-only endpoint `POST /api/testdata/seed` on stage;
   reset between runs when orders were created

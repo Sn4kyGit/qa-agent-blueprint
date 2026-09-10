@@ -3,16 +3,55 @@
 For exploratory testing and bug reproduction, run inside the `test-executor`
 subagent (see `.claude/rules/core/token-discipline.md` for why).
 
-## Launch flags (from `.mcp.json`)
+## Configuration: contract vs. preference
 
-`--isolated --headless --secrets .env.playwright-secrets --output-dir evidence/.mcp-out`
+The playwright MCP server is governed by two layers with different owners:
 
-- `--isolated`: fresh browser context per session — no cookies/storage leak between
-  runs or tickets. Never test two unrelated tickets in one session.
-- `--secrets`: login forms are filled by referencing the secret key from
-  `projects/<KEY>/PROJECT.md`; the actual value never appears in a tool response.
-- `--output-dir`: raw MCP artifacts land in `evidence/.mcp-out/`; copy only the
-  curated, relevant ones into the run's `evidence/<KEY>/<TICKET>/<ts>/` directory.
+**Contract (the blueprint's, non-negotiable — wired in the MCP server entry):**
+
+- server name `playwright` — skills and hooks match on it.
+- `--secrets .env.playwright-secrets`: login forms are filled by referencing
+  the secret key from `projects/<KEY>/PROJECT.md`; the actual value never
+  appears in a tool response.
+- `--output-dir evidence/.mcp-out`: raw MCP artifacts land in
+  `evidence/.mcp-out/`; copy only the curated, relevant ones into the run's
+  `evidence/<KEY>/<TICKET>/<ts>/` directory.
+
+**Preference (yours — `.playwright-mcp.config.json` in the QA home, referenced
+via `--config`):**
+
+```json
+{
+  "browser": {
+    "isolated": true,
+    "launchOptions": { "headless": true }
+  }
+}
+```
+
+- `launchOptions.headless`: `true` (default) is CI-safe; `false` runs **headful**
+  — a visible browser you can watch while the agent works. Evidence capture
+  (screenshots, traces, console logs) is identical either way. Never choose
+  headful for unattended/headless `claude -p` runs — there is no display.
+- `isolated`: `true` (default) gives a fresh browser context per session — no
+  cookies/storage leak between runs or tickets. Never test two unrelated
+  tickets in one session. Set `false` for a persistent profile (e.g. to stay
+  logged in across sessions) — a deliberate trade-off: state can leak between
+  runs, so say so in the evidence when a result depends on it.
+- Everything else Playwright MCP's config schema offers (viewport, browser
+  channel, device emulation, timeouts) is fair game here too.
+
+The file is seeded with defaults on first session start / by `install.sh`, and
+**the server reads it at launch: edits apply after a restart of Claude Code**
+(`/reload-plugins` keeps the live connection while the server args are
+unchanged, so it does not pick up file edits). Seeding never overwrites — once
+the file exists, it is yours.
+
+Your own playwright server instead of the blueprint's? A same-named entry in
+the project `.mcp.json` does **not** override the plugin's server — Claude Code
+runs both (verified). So: one source per server name; if you bring your own,
+it must carry the contract above, and in plugin mode the plugin's entry stays
+unless the plugin itself is disabled.
 
 ## Snapshot mode over screenshots for navigation
 

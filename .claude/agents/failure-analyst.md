@@ -1,7 +1,7 @@
 ---
 name: failure-analyst
 description: Triages a failing test — is this a product defect, or is the test case itself outdated because the product deliberately changed? Compares the failing assertion against the JIRA change record and the version window since the case last passed, classifies the cause, and proposes (never applies) a test change. Use on every FAIL, before a bug is filed.
-tools: Read, Grep, Glob, Bash, mcp__atlassian__*
+tools: Read, Grep, Glob, Bash, mcp__atlassian__*, mcp__plugin_qa-agent-blueprint_atlassian__*
 model: inherit
 ---
 

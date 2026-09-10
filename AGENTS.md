@@ -71,7 +71,28 @@ Ask the user: **is your JIRA Atlassian Cloud or self-hosted (Data Center)?**
   (Jira DC v8.14+). Auth is a **Personal Access Token** the human creates in
   their JIRA profile and exports as `JIRA_PERSONAL_TOKEN` in their shell
   (`~/.zshrc`) — the token goes **never** into `.mcp.json`, the repo, or the
-  chat. Tell them this explicitly.
+  chat. Tell them this explicitly. Note: the plugin's own (Cloud) `atlassian`
+  entry stays configured alongside — Claude Code does not override same-named
+  plugin servers, it runs both; the dead Cloud entry is harmless, and the
+  audit hook's matcher covers both namespaces.
+
+### Browser mode: ask together with the JIRA question
+
+Ask the user: **browser visible (headful) or headless?** Headful lets them
+watch the agent work; headless is the safe default (and mandatory for
+unattended `claude -p`/CI runs — no display). The answer is *not* an MCP edit:
+the plugin's playwright entry hard-references the consumer-owned preference
+file `.playwright-mcp.config.json` (seeded on first session start). Write the
+answer into it yourself:
+
+- headful → set `"launchOptions": { "headless": false }`
+- headless / no answer → keep the seeded default (`"headless": true`)
+
+The server reads the file at launch, so edits apply after a restart. Anything
+else Playwright MCP can configure (persistent profile via `"isolated": false`,
+viewport, browser channel) lives in the same file — preferences belong there,
+never in a second same-named MCP server entry. Contract vs. preference:
+`docs/rules/testing/playwright-mcp.md`.
 
 ### If the target folder holds its own git repos (e.g. `S/skp/`, `S/wdio/` …)
 
@@ -121,9 +142,11 @@ Full walkthrough incl. a no-clone `settings.json` variant:
    `JIRA_PERSONAL_TOKEN` in the shell. An agent cannot do either.
 2. Fill `.env.playwright-secrets` with test-user credentials (created as a
    placeholder on first session start; values are masked in transcripts).
-3. Run `/onboard-project` — needs the JIRA project key, the deployment kind
+3. **Browser mode** (headful/headless) — answer the question from setup, or
+   accept the headless default (see "Browser mode" above).
+4. Run `/onboard-project` — needs the JIRA project key, the deployment kind
    (cloud/datacenter), and the stage URL.
-4. **Shadow mode is ON by default**: the agent composes JIRA comments but posts
+5. **Shadow mode is ON by default**: the agent composes JIRA comments but posts
    nothing until the user writes `Shadow mode: off` in the project file or sets
    `QA_AGENT_SHADOW=0`. Mention this before the first `/test-ticket`.
 
@@ -162,12 +185,18 @@ change to **rules, skills, or the router**, also run the behavioral evals and
 update the norm→test matrix (`evals/COVERAGE.md`) if you touched a norm:
 
 ```bash
-for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 4x "all fixtures passed"
+for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 5x "all fixtures passed"
 claude plugin validate .
 bash evals/run.sh                                        # behavioral gate: exit 1 below 0.9
 ```
 
 Releasing: bump `version` in BOTH `.claude-plugin/plugin.json` and
-`.claude-plugin/marketplace.json` (they must agree), add the `CHANGELOG.md`
-entry, commit, then `claude plugin tag --push -m "%s"`. The tag command
+`.claude-plugin/marketplace.json` (they must agree — `manifest-conventions.sh`
+checks this early), add the `CHANGELOG.md` entry, commit, then **update
+smoke-test before tagging**: in a scratch consumer, install the *previous*
+release, run `claude plugin marketplace update qa-agent-blueprint-marketplace`
++ `claude plugin update --scope project qa-agent-blueprint`, and verify
+`claude plugin details` shows the new version with the full inventory (the
+0.2.0 duplicate-hooks bug only ever appeared on update+restart, never in
+`validate`). Then `claude plugin tag --push -m "%s"`. The tag command
 validates manifest agreement and refuses a dirty tree.

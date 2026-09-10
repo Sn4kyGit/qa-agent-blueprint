@@ -32,7 +32,8 @@ exploration, and a debrief — not "click around and see what happens."
    drops sharply past 90 minutes — split a bigger area into multiple chartered
    sessions rather than one long unfocused one.
 4. Delegate the session to subagent `test-executor` with the charter. It drives
-   the isolated, headless browser per `docs/rules/testing/playwright-mcp.md`
+   the configured playwright MCP browser (headless/headful and isolation per the
+   user's `.playwright-mcp.config.json`) per `docs/rules/testing/playwright-mcp.md`
    and produces evidence per `.claude/rules/core/evidence-policy.md`. Instruct it
    to explore through the **HICCUPS** lenses, not just the happy path:
 

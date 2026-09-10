@@ -140,11 +140,11 @@ BEFORE="$(cat "$SET")"
   || fail "plugin re-run changes nothing" "settings.json was rewritten on the second run"
 
 echo
-echo "== MCP merge: playwright security flags are adopted, not left to chance =="
+echo "== MCP merge: playwright contract flags are adopted, preferences are not forced =="
 MTARGET="$WORK/mcp-host"
 mkdir -p "$MTARGET"
 git -C "$MTARGET" init -q . 2>/dev/null
-# Existing .mcp.json: playwright WITHOUT the security flags, an identical
+# Existing .mcp.json: playwright WITHOUT the contract flags, an identical
 # atlassian, and an own server that must survive untouched.
 printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]},' '    "atlassian": {"type": "sse", "url": "https://mcp.atlassian.com/v1/sse"},' '    "mine": {"command": "my-server"}' '  }' '}' > "$MTARGET/.mcp.json"
 OUTM="$("$INSTALL" --mode integrate --target "$MTARGET" --yes 2>&1)"
@@ -152,11 +152,37 @@ printf '%s' "$OUTM" | grep -q "upgraded 'playwright'" \
   && pass "playwright upgraded to the blueprint config" \
   || fail "playwright upgraded to the blueprint config" "$(printf '%s' "$OUTM" | grep mcp)"
 assert_grep "secrets flag present after merge" "$MTARGET/.mcp.json" '"--secrets"'
-assert_grep "isolated flag present after merge" "$MTARGET/.mcp.json" '"--isolated"'
+assert_grep "output-dir present after merge" "$MTARGET/.mcp.json" '"--output-dir"'
+assert_grep "config file wired after merge" "$MTARGET/.mcp.json" '".playwright-mcp.config.json"'
+# --isolated/--headless moved out of the CLI args into the consumer-owned
+# preference file — the merged server must not carry them anymore.
+if grep -q '"--isolated"' "$MTARGET/.mcp.json"; then
+  fail "isolated moved to the preference file" '"--isolated" still in .mcp.json args'
+else
+  pass "isolated moved to the preference file"
+fi
+assert_file "browser preference file seeded" "$MTARGET/.playwright-mcp.config.json"
 assert_grep  "own server untouched"             "$MTARGET/.mcp.json" '"my-server"'
 printf '%s' "$OUTM" | grep -q "atlassian' already configured (identical)" \
   && pass "identical atlassian is SKIPPED, not WARN" \
   || fail "identical atlassian is SKIPPED, not WARN" "$(printf '%s' "$OUTM" | grep atlassian)"
+
+# A headful user config that carries the CONTRACT flags (secrets + output-dir)
+# but no --headless/--isolated must be KEPT — preferences are not a reason to
+# overwrite someone's setup (this was the v0.2.0 behavior: we clobbered it).
+KEEP="$WORK/mcp-headful"
+mkdir -p "$KEEP"
+git -C "$KEEP" init -q . 2>/dev/null
+printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out"]}' '  }' '}' > "$KEEP/.mcp.json"
+OUTK="$("$INSTALL" --mode integrate --target "$KEEP" --yes 2>&1)"
+printf '%s' "$OUTK" | grep -q "kept existing 'playwright'" \
+  && pass "headful config with contract flags is kept" \
+  || fail "headful config with contract flags is kept" "$(printf '%s' "$OUTK" | grep mcp)"
+if grep -q '"--headless"' "$KEEP/.mcp.json"; then
+  fail "kept config not rewritten" '"--headless" was forced into the kept config'
+else
+  pass "kept config not rewritten"
+fi
 
 echo
 echo "== plugin mode reports local MCP duplicates instead of silently doubling =="

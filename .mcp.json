@@ -4,8 +4,8 @@
       "command": "npx",
       "args": [
         "@playwright/mcp@latest",
-        "--isolated",
-        "--headless",
+        "--config",
+        ".playwright-mcp.config.json",
         "--secrets",
         ".env.playwright-secrets",
         "--output-dir",

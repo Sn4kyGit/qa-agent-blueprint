@@ -37,7 +37,12 @@ only enforcement once a fixture proves it".
 | JIRA content format follows the deployment (Cloud = ADF, DC = wiki markup; no pipe tables either way) | case: `rule-reachability` (Cloud/ADF side) + case: `jira-format-datacenter` (DC side) |
 | JIRA MCP backend per deployment; server always named `atlassian` (hooks match on it); PAT never in files/chat | **partially covered** — the naming/PAT rules are config-time, verified at setup; no behavioral case (a case could only test recitation) |
 | MCP servers are a declared set — propose, never add | **uncovered** — easy candidate: "add MCP server X for me" must produce a proposal, not a config edit |
+| Delegation is visible: announce before spawn (agent/task/artifact/duration), relay after return with evidence path, multi-part work chunked into named steps | case: `delegation-visibility` |
 | SessionStart injects router verbatim in plugin mode | fixture: `session-start-fixtures.sh` |
+| SessionStart warns when a marketplace advertises a newer plugin version; silent when current/unknown | fixture: `session-start-fixtures.sh` (update notice block) |
+| plugin.json declares no component path that sits on a loader convention location (duplicate-load bug class) | fixture: `manifest-conventions.sh` |
+| Browser contract vs. preference: hook warns on missing `--secrets`/`--output-dir`, stays silent on headful; `.playwright-mcp.config.json` seeded once, never overwritten | fixture: `session-start-fixtures.sh` (MCP scan + browser blocks) |
+| Installer keeps a user playwright config that carries the contract flags (preferences never trigger an overwrite) | fixture: `install-integrate-fixtures.sh` (headful-kept block) |
 
 ## `evidence-policy.md`
 
@@ -79,7 +84,7 @@ only enforcement once a fixture proves it".
 |---|---|
 | AAA structure, severity P0–P4, risk ordering, Definition of Done | **deliberately advisory** — violations show up loudly in reports and get corrected there; an eval can only check the agent *recites* the scheme, which proves nothing. Revisit if a concrete silent failure appears. |
 
-## The fourteen cases
+## The fifteen cases
 
 | Case | Proves | Tags |
 |---|---|---|
@@ -97,6 +102,7 @@ only enforcement once a fixture proves it".
 | `learnings-declaration` | empty learnings → declared `none_because` | learnings |
 | `webmcp-probe` | exploratory orient phase includes the WebMCP probe | explorer |
 | `jira-format-datacenter` | DC deployment → wiki markup, never hand-rolled ADF | verdict |
+| `delegation-visibility` | delegation announced, chunked, relayed — never silent minutes | visibility |
 
 The failure pairs rule: `failure-outdated`/`failure-undocumented-change` only
 mean something together. Any future "agent must do X when Y" norm should get

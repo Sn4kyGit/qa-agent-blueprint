@@ -28,13 +28,18 @@
 #               instead, which is what kept this to 7427. Budget 7500. The schema is
 #               the one thing that genuinely must bind before any skill loads: a run
 #               written to the old shape is unreadable by every reader downstream.
+#   2026-09-10  "Delegation is visible" hard rule + progress.md artifact (~150 tok).
+#               The norm must bind before any skill runs — it governs every Task
+#               spawn, including direct skill runs without qa-manager; the how-to
+#               detail (chunk granularity, progress line format) lives in
+#               qa-manager.md / the executor agents, not here. Budget 7800.
 #
 # Usage:  bash .claude/hooks/tests/context-budget.sh
 # Exit:   0 within budget, 1 over.
 #
 set -uo pipefail
 
-BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-7500}"
+BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-7800}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"

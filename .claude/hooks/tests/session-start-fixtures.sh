@@ -126,7 +126,8 @@ M2="$WORK/mcp-unmasked"; mkdir -p "$M2/projects"
 printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest"]}}}' > "$M2/.mcp.json"
 check_contains "unmasked playwright config → warning" "$(context_for "$M2")" "no --secrets flag"
 
-# Plugin mode + a local duplicate → dedupe note.
+# Plugin mode + a local duplicate → duplicate warning (verified behavior: a
+# project .mcp.json does NOT override a plugin server of the same name).
 M3="$WORK/mcp-dupe"; mkdir -p "$M3/projects"
 printf '%s' '{"mcpServers":{"atlassian":{"type":"sse","url":"https://mcp.atlassian.com/v1/sse"}}}' > "$M3/.mcp.json"
 PCTX3="$(printf '{"cwd":"%s"}' "$M3" | CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$HOOK" 2>/dev/null | python3 -c '
@@ -136,7 +137,16 @@ try:
 except Exception:
     print("")
 ')"
-check_contains "plugin + local duplicate → dedupe note" "$PCTX3" "dedupe to one source"
+check_contains "plugin + local duplicate → no-override note" "$PCTX3" "no override"
+
+# Contract check, not taste check: a playwright config WITHOUT --output-dir
+# breaks the evidence policy → warning. Headful (no --headless) must stay
+# silent — it is a preference, not a violation.
+M5="$WORK/mcp-no-outdir"; mkdir -p "$M5/projects"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets"]}}}' > "$M5/.mcp.json"
+M5CTX="$(context_for "$M5")"
+check_contains "playwright without --output-dir → warning" "$M5CTX" "no --output-dir flag"
+check_absent   "headful is a preference, not a warning" "$M5CTX" "--headless"
 
 # User scope (~/.claude.json) must be found too — via a fake HOME.
 M4="$WORK/mcp-userscope"; FAKEHOME="$WORK/fakehome"; mkdir -p "$M4/projects" "$FAKEHOME"
@@ -149,6 +159,64 @@ except Exception:
     print("")
 ')"
 check_contains "user-scope servers detected via HOME" "$CTX4" "MCP config for playwright + atlassian found"
+
+echo
+echo "== browser preference file: seeded once, mode rendered, never overwritten =="
+# Plugin bootstrap already seeded it into $CONSUMER above (secrets fixture block).
+[ -f "$CONSUMER/.playwright-mcp.config.json" ] \
+  && printf 'ok    %s\n' "plugin bootstrap seeds .playwright-mcp.config.json" \
+  || { printf 'FAIL  %s\n' "plugin bootstrap seeds .playwright-mcp.config.json"; fails=$((fails + 1)); }
+check_contains "browser mode rendered in preamble" "$PCTX" "Browser: headless, isolated"
+check_contains "freshly seeded → transparent note" "$PCTX" "Created .playwright-mcp.config.json"
+# A user-edited file (headful) must survive the next session start untouched,
+# and the mode line must follow the user's choice.
+printf '%s' '{"browser":{"isolated":true,"launchOptions":{"headless":false}}}' > "$CONSUMER/.playwright-mcp.config.json"
+PCTX2="$(printf '{"cwd":"%s"}' "$CONSUMER" | CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_contains "headful choice rendered" "$PCTX2" "Browser: headful (visible)"
+check_absent   "existing config not re-seeded" "$PCTX2" "Created .playwright-mcp.config.json"
+check_contains "user file content untouched" "$(cat "$CONSUMER/.playwright-mcp.config.json")" '"headless":false'
+
+echo
+echo "== plugin update notice: offline, newer-only, silent on doubt =="
+# Fake plugin install (version 0.3.0) + fake marketplace advertising 0.4.0.
+UP_PLUG="$WORK/up-plugin"; UP_MP="$WORK/up-marketplace"; UP_HOME="$WORK/up-home"
+mkdir -p "$UP_PLUG/.claude-plugin" "$UP_MP/.claude-plugin" "$UP_HOME/.claude/plugins" "$WORK/up-consumer"
+printf '%s' '{"name":"qa-agent-blueprint","version":"0.3.0"}' > "$UP_PLUG/.claude-plugin/plugin.json"
+printf '%s' '{"name":"mp","plugins":[{"name":"qa-agent-blueprint","version":"0.4.0"}]}' > "$UP_MP/.claude-plugin/marketplace.json"
+printf '%s' "{\"mp\":{\"installLocation\":\"$UP_MP\"}}" > "$UP_HOME/.claude/plugins/known_marketplaces.json"
+UPCTX="$(printf '{"cwd":"%s"}' "$WORK/up-consumer" | HOME="$UP_HOME" CLAUDE_PLUGIN_ROOT="$UP_PLUG" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_contains "newer marketplace version → update hint" "$UPCTX" "UPDATE: qa-agent-blueprint 0.4.0 is available (running 0.3.0)"
+# Same version → silent.
+printf '%s' '{"name":"mp","plugins":[{"name":"qa-agent-blueprint","version":"0.3.0"}]}' > "$UP_MP/.claude-plugin/marketplace.json"
+UPCTX2="$(printf '{"cwd":"%s"}' "$WORK/up-consumer" | HOME="$UP_HOME" CLAUDE_PLUGIN_ROOT="$UP_PLUG" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_absent "same version → no hint" "$UPCTX2" "UPDATE:"
+# No marketplace knowledge at all → silent (never block a session on a hint).
+UPCTX3="$(printf '{"cwd":"%s"}' "$WORK/up-consumer" | HOME="$WORK/no-such-home" CLAUDE_PLUGIN_ROOT="$UP_PLUG" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_absent "unknown marketplace state → no hint" "$UPCTX3" "UPDATE:"
 
 echo
 if [ "$fails" -eq 0 ]; then

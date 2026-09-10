@@ -58,6 +58,10 @@ project recognized → project knowledge applied → tested → evidence produce
 
 ## Hard rules
 
+- **Delegation is visible.** A running subagent blocks the main thread: the user
+  sees nothing, and the subagent's output never reaches them unless you relay it.
+  Announce every spawn (agent, task, artifact, rough duration), chunk multi-part
+  work into named steps, relay each result with its evidence path.
 - **Evidence is mandatory.** No test result without artifacts in
   `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` incl. `execution_summary.json`.
   Details: `.claude/rules/core/evidence-policy.md`. A Stop hook enforces this.

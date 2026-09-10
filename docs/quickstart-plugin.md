@@ -104,13 +104,18 @@ qa-agent-blueprint`, then restart — see `CHANGELOG.md` for what changed.)*
 ### If Playwright/Atlassian MCP are already configured on this machine
 
 The blueprint uses whatever is configured — but avoid **duplicates** (your own
-entry *and* the plugin's = two server processes), and check one security detail:
+entry *and* the plugin's = two server processes; a project `.mcp.json` does not
+override a plugin-provided server), and check one security detail:
 the blueprint's playwright server runs with `--secrets .env.playwright-secrets`
-(passwords masked) and `--isolated` (no state leaking between runs). An older
+(passwords masked) and `--output-dir evidence/.mcp-out` (artifacts land in
+evidence). An older
 hand-rolled playwright config almost certainly lacks these flags, which means
 **passwords would appear unmasked in the transcript**. The SessionStart hook
 scans for exactly this and prints a WARNING — if you see it, either remove your
-own entry (the plugin provides both servers) or add the flags.
+own entry (the plugin provides both servers) or add the flags. Headless vs.
+headful and profile isolation are NOT part of that check — they are your
+preference, set in `.playwright-mcp.config.json` (seeded on first session
+start; applies after a restart).
 
 ## Onboarding (~30–60 min)
 

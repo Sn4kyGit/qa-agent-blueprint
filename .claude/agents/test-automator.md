@@ -42,6 +42,11 @@ Copy the relevant run artifacts (report, trace on failure, screenshots on failur
 into `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` per
 `.claude/rules/core/evidence-policy.md`, including `execution_summary.json`.
 
+Keep a live `progress.md` in the run dir — one line per meaningful step
+(`HH:MM:SS START specs: …`, `HH:MM:SS STEP <suite/case + outcome>`,
+`HH:MM:SS VERDICT …`). While you run, the chat shows the user nothing; this
+file is the follow-along surface for humans and the manager's relay source.
+
 **Write `test_cases[]` — you are the only producer of it.** One entry per case the
 runner reported: `id` (the TC-ID), `outcome`, `attempts`, `spec` (file:line) and, on
 a failure, the `assertion` text. Playwright's `json` reporter already carries all

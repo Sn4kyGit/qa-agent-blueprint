@@ -34,7 +34,7 @@ and CSV imports. Part of JIRA project `SHOP`, which also contains the customer-f
 
 - E2E: Playwright, suite in a separate checkout at `../shop-web-tests/`, config
   `playwright.config.ts`, stage base URL via `STAGE_BASE_URL` *[project]*
-- Exploratory: Playwright MCP, isolated/headless *[project]*
+- Exploratory: Playwright MCP; headless/isolated per .playwright-mcp.config.json *[project]*
 - TC categories: `ADM`, `RBAC`, `IMP`, `SEC`
 - Test data: seeded via `POST /api/testdata/seed` on stage; reset between runs when
   orders are created *[project]*

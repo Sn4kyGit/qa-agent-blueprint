@@ -12,12 +12,16 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 ├── logs/network.log
 ├── logs/playwright.log
 ├── traces/trace.zip
+├── progress.md
 └── execution_summary.json
 ```
 
 - One directory per run, timestamp at start of run, never reused or overwritten.
 - `<step>` is a short slug for what was being checked (`login`, `checkout`,
   `admin-orders`); `<kind>` is `pass` or `fail` (or a specific defect name on FAIL).
+- `progress.md` — live one-line status entries (`HH:MM:SS START/STEP/VERDICT …`)
+  appended by the executing subagent: the follow-along surface while the chat is
+  silent, and the manager's relay source. Default on; not a verdict artifact.
 - Raw Playwright MCP output goes to `evidence/.mcp-out/` (the `--output-dir` in
   `.mcp.json`); curated, reportable artifacts are copied into the run dir above.
 - `evidence/.audit/jira-writes.log` — append-only, one line per JIRA write, written

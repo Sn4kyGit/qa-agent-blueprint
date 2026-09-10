@@ -76,6 +76,106 @@ list_projects() {
   [ "$found" -eq 1 ] || echo "  (none yet — run /onboard-project)"
 }
 
+# The playwright MCP server is launched with `--config .playwright-mcp.config.json`
+# and that flag is a hard fail on a missing file (ENOENT), exactly like --secrets.
+# The file is the consumer's OWN preference dial: headless/headful, isolated or
+# persistent profile, viewport, browser channel. Seed the defaults if missing,
+# never overwrite — the file belongs to the user. Returns via stdout a note when
+# it created the file (transparency, and a restart hint: the server reads the
+# file at launch).
+seed_browser_config() {
+  local f="$CWD/.playwright-mcp.config.json"
+  [ -f "$f" ] && return 0
+  cat > "$f" <<'BROWSER_CONFIG' 2>/dev/null || return 0
+{
+  "browser": {
+    "isolated": true,
+    "launchOptions": { "headless": true }
+  }
+}
+BROWSER_CONFIG
+  SEEDED_BROWSER_CONFIG=1
+  # Gitignore is NOT touched: unlike .env.playwright-secrets this file holds no
+  # secrets — it is a preference file and may be committed if the user wants.
+}
+
+# Render the effective browser mode for the preamble, e.g. "headless, isolated".
+# Silent when the config is unreadable — the server failing at launch is the
+# loud failure; a hook should not editorialize on a file it cannot parse.
+browser_mode() {
+  local f="$CWD/.playwright-mcp.config.json"
+  [ -f "$f" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  python3 - "$f" <<'PY' 2>/dev/null
+import json, sys
+try:
+    cfg = json.load(open(sys.argv[1])).get("browser", {})
+except Exception:
+    sys.exit(0)
+headless = cfg.get("launchOptions", {}).get("headless")
+mode = {True: "headless", False: "headful (visible)"}.get(headless)
+iso = {True: "isolated", False: "persistent profile"}.get(cfg.get("isolated"))
+parts = [p for p in (mode, iso) if p]
+if parts:
+    print(", ".join(parts) + " (your .playwright-mcp.config.json)")
+PY
+}
+
+# Plugin-mode update notice: compare the RUNNING plugin version against the
+# version the known marketplaces currently advertise — offline, reading only
+# ~/.claude/plugins/known_marketplaces.json and each marketplace's local
+# marketplace.json. A git-sourced marketplace reflects its last
+# `claude plugin marketplace update`, which is exactly the semantics wanted:
+# "your checkout knows a newer version than the one running". Silent on any
+# error — a hook must never hang on network or fail the session over a hint.
+update_notice() {
+  [ -n "$PLUGIN_ROOT" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  python3 - "$PLUGIN_ROOT" "$HOME" <<'PY' 2>/dev/null
+import json, os, sys
+
+plugin_root, home = sys.argv[1], sys.argv[2]
+
+def version_tuple(v):
+    try:
+        return tuple(int(x) for x in str(v).split("."))
+    except Exception:
+        return None
+
+try:
+    running = json.load(open(os.path.join(plugin_root, ".claude-plugin", "plugin.json")))
+except Exception:
+    sys.exit(0)
+name, rv = running.get("name"), version_tuple(running.get("version"))
+if not name or rv is None:
+    sys.exit(0)
+
+try:
+    known = json.load(open(os.path.join(home, ".claude", "plugins", "known_marketplaces.json")))
+except Exception:
+    sys.exit(0)
+
+best = None
+for mp in known.values():
+    loc = mp.get("installLocation")
+    if not loc:
+        continue
+    try:
+        mpm = json.load(open(os.path.join(loc, ".claude-plugin", "marketplace.json")))
+    except Exception:
+        continue
+    for entry in mpm.get("plugins", []):
+        if entry.get("name") == name:
+            ev = version_tuple(entry.get("version"))
+            if ev and (best is None or ev > best):
+                best = ev
+
+if best and best > rv:
+    print("\n- UPDATE: %s %s is available (running %s) — run `claude plugin marketplace update` + `claude plugin update %s`, then restart."
+          % (name, ".".join(map(str, best)), ".".join(map(str, rv)), name))
+PY
+}
+
 bootstrap_dirs() {
   local d
   for d in memory evidence; do
@@ -133,7 +233,10 @@ inbox_status() {
 # A hook cannot ask an MCP server whether it started — but it CAN see what is
 # configured, read-only: ~/.claude.json (user scope) and .mcp.json (project
 # scope). Prints space-separated flags: HAS_PW, HAS_AT, PW_UNMASKED (a playwright
-# config without --secrets — passwords would appear unmasked in tool responses).
+# config without --secrets — passwords would appear unmasked in tool responses),
+# PW_NO_OUTDIR (no --output-dir — raw artifacts would not land in evidence/).
+# Headless/headful and --isolated are deliberately NOT flagged: they are user
+# preferences, not contract (see docs/rules/testing/playwright-mcp.md).
 mcp_scan() {
   command -v python3 >/dev/null 2>&1 || return 1
   python3 - "$CWD" "$HOME" <<'PY'
@@ -158,6 +261,8 @@ if pw:
     flags.append("HAS_PW")
     if not any("--secrets" in (c.get("args") or []) for c in pw):
         flags.append("PW_UNMASKED")
+    if not any("--output-dir" in (c.get("args") or []) for c in pw):
+        flags.append("PW_NO_OUTDIR")
 if servers.get("atlassian"):
     flags.append("HAS_AT")
 print(" ".join(flags))
@@ -167,6 +272,10 @@ PY
 # The two most likely day-one failures are not detectable from here (liveness),
 # so turn the configured-state scan into a concrete hint instead of pretending to
 # know more: this is only printed while no project has been onboarded yet.
+# The MCP contract is: NAME (playwright/atlassian — hooks and skills match on
+# them) + --secrets + --output-dir. Everything else (headless/headful, isolated,
+# viewport, browser channel) is the user's preference, exercised via
+# .playwright-mcp.config.json or their own flags — never a warning here.
 mcp_hint() {
   [ -d "$CWD/projects" ] || return 0
   local d
@@ -177,18 +286,23 @@ mcp_hint() {
   done
   local scan=""
   scan="$(mcp_scan 2>/dev/null || true)"
-  # Security first: an unmasked playwright config is a finding in any mode.
+  # Contract violations are findings in any mode. Order: security, then evidence.
   case "$scan" in
     *PW_UNMASKED*)
-      printf '\n- WARNING: an existing playwright MCP config has no --secrets flag — passwords would appear unmasked in tool responses. Align it with the blueprint config (--isolated --headless --secrets .env.playwright-secrets --output-dir evidence/.mcp-out) or remove it and use the blueprint-provided one.' ;;
+      printf '\n- WARNING: an existing playwright MCP config has no --secrets flag — passwords would appear unmasked in tool responses. Add `--secrets .env.playwright-secrets` (and fill that file) or remove the entry and use the blueprint-provided server.' ;;
+  esac
+  case "$scan" in
+    *PW_NO_OUTDIR*)
+      printf '\n- WARNING: an existing playwright MCP config has no --output-dir flag — raw browser artifacts would not land in evidence/, breaking the evidence policy. Add `--output-dir evidence/.mcp-out` or use the blueprint-provided server.' ;;
   esac
   if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
-    # The plugin always provides both servers; local duplicates mean two server
-    # processes and two tool namespaces.
+    # Verified behavior: a project .mcp.json does NOT override a plugin-provided
+    # server of the same name — it duplicates it (two processes, two tool
+    # namespaces), and a plugin's MCP servers cannot be disabled individually.
     case "$scan" in
       *HAS_PW*|*HAS_AT*)
-        printf '\n- NOTE: playwright/atlassian are configured locally AND ship with the plugin — dedupe to one source (keep the plugin one: it carries the secrets/isolation flags).' ;;
-      *) printf '\n- MCP servers come from the plugin (playwright, atlassian) — confirm both are live: `claude mcp list`; atlassian auth: Cloud = /mcp OAuth once, Data Center = JIRA_URL/JIRA_PERSONAL_TOKEN env vars.' ;;
+        printf '\n- NOTE: playwright/atlassian are configured locally AND ship with the plugin — Claude Code runs BOTH (no override). Remove the local entry unless it is a deliberate replacement (e.g. JIRA Data Center); browser preferences (headful, viewport, profile) belong in .playwright-mcp.config.json, not in a second server.' ;;
+      *) printf '\n- MCP servers come from the plugin (playwright, atlassian) — confirm both are live: `claude mcp list`; atlassian auth: Cloud = /mcp OAuth once, Data Center = JIRA_URL/JIRA_PERSONAL_TOKEN env vars. Browser mode: .playwright-mcp.config.json (headful = launchOptions.headless false).' ;;
     esac
     return 0
   fi
@@ -216,12 +330,29 @@ if is_plugin_bootstrap; then
   bootstrap_dirs
 fi
 
+# The browser preference file is needed in EVERY mode (the plugin's .mcp.json
+# hard-references it via --config; integrate mode and this repo use the same
+# flags). Seed-if-missing, never overwrite, and say so when freshly created so
+# the user knows a restart applies their future edits.
+SEEDED_BROWSER_CONFIG=0
+seed_browser_config
+BROWSER_SEED_NOTE=""
+if [ "$SEEDED_BROWSER_CONFIG" -eq 1 ]; then
+  BROWSER_SEED_NOTE="
+- Created .playwright-mcp.config.json with defaults (headless, isolated) — this is YOUR browser preference dial: headful = launchOptions.headless false. The server reads it at launch, so edits apply after a restart."
+fi
+
+BROWSER_MODE="$(browser_mode)"
+BROWSER_LINE=""
+[ -n "$BROWSER_MODE" ] && BROWSER_LINE="
+- Browser: $BROWSER_MODE"
+
 CONTEXT="QA Agent Blueprint — session start
 - Onboarded projects:
 $(list_projects)
-- Playwright CLI: $(playwright_version)
+- Playwright CLI: $(playwright_version)$BROWSER_LINE
 - Read memory/INDEX.md before anything else; then only the active project's
-  PROJECT.md + learnings.md. No full-repo scans.$(mcp_hint)$(inbox_status)$(secrets_status)"
+  PROJECT.md + learnings.md. No full-repo scans.$(mcp_hint)$(inbox_status)$(secrets_status)$BROWSER_SEED_NOTE$(update_notice)"
 
 if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
   # The router is the plugin's own CLAUDE.md, injected VERBATIM. If the file is

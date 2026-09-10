@@ -18,7 +18,7 @@ added without a decision, or a decision was never wired up.
 
 | Server | Why it is in the budget | Notes |
 |---|---|---|
-| `playwright` | The agent cannot test a web UI without a browser | Launched `--isolated --headless --secrets` |
+| `playwright` | The agent cannot test a web UI without a browser | Contract: name + `--secrets` + `--output-dir`; the rest is preference (`.playwright-mcp.config.json`) |
 | `atlassian` | Tickets in, results out — the entire premise is ticket-driven | Cloud: remote server, OAuth 2.1. Data Center: community server + PAT |
 
 ## Scope: servers are per QA home, not per project

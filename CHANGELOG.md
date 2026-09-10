@@ -8,6 +8,54 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.3.0] — 2026-09-10
+
+### Fixed
+- **Plugin failed to load after restart** ("Duplicate hooks file detected"):
+  `plugin.json` declared `hooks`/`mcpServers` pointing at the loader's
+  convention paths, registering both components twice. Keys removed —
+  convention loading covers them. `claude plugin validate` never caught this;
+  new fixture `manifest-conventions.sh` guards the bug class (fails on the old
+  manifest, passes on the fixed one)
+- **Subagent tool grants now cover plugin-scoped MCP namespaces**
+  (`mcp__plugin_qa-agent-blueprint_<server>__*`) alongside bare server names —
+  tools of a plugin-bundled server are no longer at risk of being invisible to
+  `qa-manager`, `test-executor`, `failure-analyst`, `bug-reporter`
+- **install.sh no longer clobbers a user's headful playwright config**:
+  contract flags (`--secrets`, `--output-dir`) vs. preferences (`--headless`,
+  `--isolated`) are now distinguished — a config missing only preferences is
+  kept with a note instead of overwritten
+
+### Added
+- **Browser mode is the user's preference**: consumer-owned
+  `.playwright-mcp.config.json` (seeded once with safe defaults, never
+  overwritten) drives headless/headful, profile isolation, viewport, browser
+  channel; `.mcp.json` carries only the contract. Headful = watch the agent
+  work; evidence capture is identical. Setup asks the question alongside the
+  JIRA deployment question
+- **Visible delegation** (hard rule + `qa-manager` section): announce before
+  every spawn (agent, task, expected artifact, rough duration), chunk
+  multi-part work into named steps, relay results with evidence paths —
+  subagent output otherwise never reaches the user. `test-executor` and
+  `test-automator` keep a live `progress.md` in the run's evidence dir as the
+  follow-along surface
+- **SessionStart update notice**: offline version check against the known
+  marketplaces (`~/.claude/plugins/known_marketplaces.json` → each local
+  `marketplace.json`); prints the update commands when newer, silent when
+  current or undeterminable
+- Eval case `delegation-visibility` (15 cases total); session-start fixtures
+  for browser-config seeding and the update notice; install fixtures for the
+  headful-kept path
+
+### Changed
+- **MCP contract documented** ("name is contract, source and taste are free")
+  across README, AGENTS.md, quickstart, integration, token-discipline —
+  verified platform behavior: a project `.mcp.json` does NOT override a
+  plugin-provided server of the same name, it duplicates it
+- Release process: update smoke test from the previous release in a scratch
+  consumer is a required step before tagging (the 0.2.0 bug only ever
+  appeared on update+restart)
+
 ## [0.2.0] — 2026-09-10
 
 ### Added

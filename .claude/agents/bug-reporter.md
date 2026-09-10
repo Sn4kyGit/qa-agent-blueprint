@@ -1,7 +1,7 @@
 ---
 name: bug-reporter
 description: Composes a bug report strictly per the active project's template (projects/<KEY>/templates/bug-report.md), with correct severity/priority mapping and evidence references. Use whenever a test run produces a FAIL verdict and the finding needs to become (or update) a JIRA bug ticket.
-tools: Read, Write, Grep, Glob, mcp__atlassian__*
+tools: Read, Write, Grep, Glob, mcp__atlassian__*, mcp__plugin_qa-agent-blueprint_atlassian__*
 model: inherit
 ---
 
