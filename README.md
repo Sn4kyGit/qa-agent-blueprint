@@ -20,7 +20,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 23 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 108 fixtures · 14 eval cases |
+| **Contents** | 25 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 127 fixtures · 17 eval cases |
 | **Two ways in** | Merged into your repo (integrate), or as a plugin |
 | **License** | MIT |
 
@@ -205,7 +205,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 | `/test-ticket` | Full workflow: read → route → stage-check → test → evidence → report |
 | `/retest-bug` | Focused re-test of a fixed bug + a tight regression sweep |
 | `/exploratory-testing` | Chartered SBTM session via Playwright MCP |
-| `/playwright-regression` | Write/run deterministic specs via the CLI runner |
+| `/test-automation` | Write/run deterministic specs via the CLI runner |
 | `/failure-analysis` | A failing test triaged: real defect, or is the test case itself outdated? Proposes, never applies |
 | `/bug-report` | A bug report exactly per the project's (or product's) template |
 | `/report-to-jira` | Comment + attachments + the correct workflow transition |

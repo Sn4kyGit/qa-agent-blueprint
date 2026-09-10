@@ -84,7 +84,20 @@ only enforcement once a fixture proves it".
 |---|---|
 | AAA structure, severity P0–P4, risk ordering, Definition of Done | **deliberately advisory** — violations show up loudly in reports and get corrected there; an eval can only check the agent *recites* the scheme, which proves nothing. Revisit if a concrete silent failure appears. |
 
-## The fifteen cases
+## Skills
+
+| Norm | Coverage |
+|---|---|
+| `qa-help` renders the command overview and starts no work | **uncovered** — static content; a case could only grade recitation, which proves nothing. The discovery half (preamble names `qa-help` in every session and mode) is fixture-covered in `session-start-fixtures.sh`. |
+| Entry-point skills trigger on natural language (German + English), not only on slash commands — the descriptions carry the surface forms users actually type | case: `nl-routing` — a bare German "Teste SHOP-1412" must take the same path as `/test-ticket`; the silent failure is a generic chat reply or a pointer back at slash commands |
+
+## Agents
+
+| Norm | Coverage |
+|---|---|
+| `test-automator` framework dispatch: loads the suite's **declared** framework conventions (webdriverio-testing when "Test assets" says so), never the Playwright default | case: `framework-routing` — the base model's Playwright prior is the exact silent failure |
+
+## The seventeen cases
 
 | Case | Proves | Tags |
 |---|---|---|
@@ -103,6 +116,8 @@ only enforcement once a fixture proves it".
 | `webmcp-probe` | exploratory orient phase includes the WebMCP probe | explorer |
 | `jira-format-datacenter` | DC deployment → wiki markup, never hand-rolled ADF | verdict |
 | `delegation-visibility` | delegation announced, chunked, relayed — never silent minutes | visibility |
+| `framework-routing` | WDIO-declared suite → WDIO conventions and spec, no Playwright prior | routing |
+| `nl-routing` | bare German request triggers the same skill path as the slash command | routing |
 
 The failure pairs rule: `failure-outdated`/`failure-undocumented-change` only
 mean something together. Any future "agent must do X when Y" norm should get

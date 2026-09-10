@@ -10,6 +10,50 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 
 ## [Unreleased]
 
+### Added
+- **Framework support beyond Playwright**: "Test assets" in PROJECT.md/PRODUCT.md
+  now declares a **Framework** field (`playwright` | `webdriverio`), asked for
+  during `/onboard-project`. `test-automator` reads it in a new framework
+  dispatch step and loads the matching conventions — Playwright via the existing
+  `docs/rules/testing/playwright-cli.md`, WebdriverIO via the new
+  **`webdriverio-testing` skill** (WDIO 9 spec conventions, with
+  `references/selenium-grid.md` for remote-hub runs and
+  `references/appium-mobile.md` for mobile-via-WDIO: contexts, gestures, deep
+  links). Selenium Grid and Appium are covered as WDIO operating modes, not
+  separate frameworks
+- **New eval case `framework-routing`** (16th): a WDIO-declared suite must yield
+  WDIO conventions and a WDIO spec — the base model's Playwright prior is the
+  exact silent failure it guards
+- **New eval case `nl-routing`** (17th): a bare German "Teste SHOP-1412" must take
+  the same path as `/test-ticket` — guards against the model answering with
+  generic chat or a pointer back at slash commands
+- **`qa-help` skill (24th)**: renders the full command overview in the user's
+  language — every slash command, what it does, the natural-language
+  equivalent, plus the three orientation facts (shadow mode default-on,
+  specialists pulled by qa-manager, evidence mandatory). Invocable as
+  `/qa-agent-blueprint:qa-help` or by just asking ("welche Befehle gibt es").
+  The session-start preamble points at it in every mode (fixture-covered)
+- **Command overview in `overview.html`**: new "Befehle im Überblick" section
+  grouped by workflow (test / react / set up / knowledge), each command with
+  its typical plain-language phrasing
+
+### Changed
+- **Bilingual natural-language routing**: the descriptions of all ten entry-point
+  skills (test-ticket, retest-bug, exploratory-testing, qa-report, report-to-jira,
+  deploy-to-stage, failure-analysis, bug-report, onboard-project, onboard-product)
+  and the qa-manager subagent now carry the German and colloquial surface forms
+  users actually type ("teste SHOP-123", "der Fix ist auf Stage", "wie läuft's mit
+  dem Testing") plus negative boundaries for confusable pairs — descriptions are
+  the only auto-invocation signal, so this is the routing lever
+- **Renamed skill `playwright-regression` → `test-automation`**: the name
+  undersold the authoring half and hard-coded one framework. Same behavior,
+  framework-neutral description; slash commands, docs, templates and eval
+  criteria updated (breaking for muscle memory only, pre-1.0)
+
+### Fixed
+- Stale stats corrected across `README.md`, `AGENTS.md` and `overview.html`:
+  25 skills, 127 fixtures, 16 eval cases, 7.8k always-loaded token budget
+
 ### Changed
 - **Eval runner slimmed**: eval sessions strip MCP servers by default
   (`--with-mcp` opts back in) — per-call latency drops from minutes (an

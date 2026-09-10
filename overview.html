@@ -192,6 +192,7 @@
   td { border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0.6rem 0.7rem 0.6rem 0; vertical-align: top; color: #c9cedd; }
   td:first-child { font-family: var(--mono); font-size: 0.79rem; color: #cdbcff; }
   tr:hover td { background: rgba(139,92,246,0.05); }
+  .cmds td:first-child { white-space: nowrap; }
 
   .callout {
     position: relative;
@@ -255,13 +256,13 @@
     und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
   </p>
   <div class="stats">
-    <div class="stat"><div class="n">23</div><div class="l">Skills</div></div>
+    <div class="stat"><div class="n">25</div><div class="l">Skills</div></div>
     <div class="stat"><div class="n">5</div><div class="l">Subagents</div></div>
     <div class="stat"><div class="n">5+9</div><div class="l">Regeln (immer / on demand)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
-    <div class="stat"><div class="n">108</div><div class="l">Fixtures</div></div>
-    <div class="stat"><div class="n">8</div><div class="l">Eval-Cases</div></div>
-    <div class="stat"><div class="n">7,5k</div><div class="l">Token immer geladen</div></div>
+    <div class="stat"><div class="n">127</div><div class="l">Fixtures</div></div>
+    <div class="stat"><div class="n">17</div><div class="l">Eval-Cases</div></div>
+    <div class="stat"><div class="n">7,8k</div><div class="l">Token immer geladen</div></div>
   </div>
 </header>
 
@@ -289,6 +290,58 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <span class="step">gelernt</span>
   </div>
   <p class="note">Jede Stufe hat eine Datei als Quelle und, wo es zählt, einen Hook als Durchsetzung.</p>
+</section>
+
+<section class="cmds">
+  <h2>Befehle im Überblick</h2>
+  <p class="sub">
+    Kein Auswendiglernen nötig: „Teste SHOP-1234" oder „wie läuft's mit dem Testing?" routet
+    genauso wie der Slash-Befehl — Deutsch oder Englisch, die Befehle sind nur die explizite,
+    garantierte Form. Im Plugin-Modus heißen sie <code>/qa-agent-blueprint:&lt;name&gt;</code>. Die komplette Liste
+    zeigt jederzeit <code>/qa-agent-blueprint:qa-help</code> — auch direkt in der Session.
+  </p>
+
+  <h3>Ticket testen</h3>
+  <table>
+    <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
+    <tr><td>/test-ticket</td><td>Der Haupteinstieg: Ticket lesen, routen, Stage prüfen, Strategie wählen, Evidence erzeugen, Verdikt zurückmelden</td><td>„Teste SHOP-1234"</td></tr>
+    <tr><td>/retest-bug</td><td>Spielt die Repro-Schritte eines gefixten Bugs nach, dann enger Regressions-Sweep um die Fundstelle</td><td>„Der Fix für WEB-456 ist auf Stage — prüf das"</td></tr>
+    <tr><td>/exploratory-testing</td><td>Gecharterte, zeitboxte Session im Browser — für neue Features und unklares Verhalten ohne Spec</td><td>„Schau dir die neue Checkout-Seite mal an"</td></tr>
+    <tr><td>/test-automation</td><td>Schreibt oder fährt deterministische Specs im Framework der Suite (Playwright oder WebdriverIO), sobald ein Ablauf verstanden und wiederholungswürdig ist</td><td>„Automatisiere den Login-Flow"</td></tr>
+  </table>
+
+  <h3>Auf ein Ergebnis reagieren</h3>
+  <table>
+    <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
+    <tr><td>/failure-analysis</td><td>Triagiert jeden FAIL vor dem Bug-Ticket: echtes Defizit oder veralteter Testfall? Läuft automatisch</td><td>„Warum ist der Test rot?"</td></tr>
+    <tr><td>/bug-report</td><td>Gießt eine Fundstelle in die Bug-Vorlage des Projekts — mit Duplikat-Check</td><td>„Mach ein Ticket aus dem Fund"</td></tr>
+    <tr><td>/report-to-jira</td><td>Kommentar, Anhänge und Workflow-Transition zurück nach JIRA — im Shadow-Modus nur als Vorschlag</td><td>„Melde das Ergebnis zurück"</td></tr>
+    <tr><td>/deploy-to-stage</td><td>Fährt das Deploy-Runbook des Projekts mit Sicherheitschecks, wenn der Fix fehlt</td><td>„Bring den Fix auf Stage"</td></tr>
+  </table>
+
+  <h3>Einrichten</h3>
+  <table>
+    <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
+    <tr><td>/onboard-project</td><td>Das einmalige Interview pro JIRA-Projekt (~30–60 min): Umgebungen, Testuser, Runbook, Gates</td><td>„Richte das Projekt SHOP ein"</td></tr>
+    <tr><td>/onboard-product</td><td>Die kurze Variante (5–15 min) für ein Produkt im Projekt — nur Abweichungen</td><td>„Das Projekt hat jetzt auch eine Admin-App"</td></tr>
+    <tr><td>/scaffold-suite</td><td>Erzeugt das Playwright-Projekt samt erster Smoke-Spec, wenn es noch keine Test-Assets gibt</td><td>„Leg eine Test-Suite an"</td></tr>
+  </table>
+
+  <h3>Wissen &amp; Meta</h3>
+  <table>
+    <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
+    <tr><td>/qa-report</td><td>Aggregiert alle Evidence-Läufe: Pass-Rate, P0/P1, BLOCKED-Gründe — pro Projekt und Produkt</td><td>„Wie läuft's mit dem Testing?"</td></tr>
+    <tr><td>/retro-learn</td><td>Hält Learnings fest, verdichtet sie und befördert Bewährtes in Regeln und Projektdateien</td><td>„Session abschließen"</td></tr>
+    <tr><td>/qa-help</td><td>Diese Übersicht, direkt in der Session — antwortet in der Sprache, in der man fragt</td><td>„Welche Befehle gibt es?"</td></tr>
+  </table>
+
+  <div class="callout">
+    Drei Dinge zum Einordnen: <strong>Shadow-Modus ist standardmäßig an</strong> — JIRA-Kommentare
+    werden komponiert, aber erst nach Freigabe gepostet. Die <strong>zehn Spezialisten-Skills</strong>
+    (API, Accessibility, Security, Visual …) zieht qa-manager selbständig, wenn die Feature-Matrix
+    des Produkts es vorgibt — kein Direktaufruf nötig. Und <strong>Evidence ist Pflicht</strong>:
+    Jeder Lauf endet mit einem Verdikt und Artefakten unter <code>evidence/</code>.
+  </div>
 </section>
 
 <section>
@@ -338,7 +391,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptkontext nicht fluten.
   </p>
 
-  <h3>Die 13 eigenen Skills — der Ticket-Ablauf</h3>
+  <h3>Die 14 eigenen Skills — der Ticket-Ablauf</h3>
   <table>
     <tr><th>Skill</th><th>Was er tut</th><th>Wann er greift</th></tr>
     <tr>
@@ -361,10 +414,18 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
       <td>Kein wiederholbarer Spec vorhanden</td>
     </tr>
     <tr>
-      <td>/playwright-regression</td>
-      <td>Schreibt oder fährt deterministische Specs über den CLI-Runner — TC-ID im Titel,
-      Web-First-Assertions, Retries nur in CI (und dort, um den Trace des Flakes einzufangen).</td>
+      <td>/test-automation</td>
+      <td>Schreibt oder fährt deterministische Specs über den CLI-Runner — im Framework der
+      Suite (Playwright oder WebdriverIO). TC-ID im Titel, Retries nur in CI (und dort, um
+      den Trace des Flakes einzufangen).</td>
       <td>Ein Ablauf ist verstanden und wiederholungswürdig</td>
+    </tr>
+    <tr>
+      <td>webdriverio-testing</td>
+      <td>Die WDIO-Entsprechung der Playwright-Konventionen: deterministische Specs in
+      WebdriverIO 9, Selenium Grid als Remote-Backend und Appium-Mobile als Betriebsmodus
+      (Referenzen, kein eigenes Framework). Wird von test-automator geladen, nie direkt.</td>
+      <td>„Test assets" des Produkts sagen <code>Framework: webdriverio</code></td>
     </tr>
     <tr>
       <td>/failure-analysis</td>
@@ -475,7 +536,9 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <tr>
       <td>test-automator</td>
       <td>Schreibt und fährt Specs über den CLI-Runner — rund 4× günstiger als derselbe Ablauf
-      turn-by-turn über MCP. Kennt den Unterschied zwischen einem Flake und einem Pass.</td>
+      turn-by-turn über MCP. Arbeitet im Framework der Suite (Playwright oder WebdriverIO,
+      inkl. Selenium Grid und Appium-Mobile über WDIO) und kennt den Unterschied zwischen
+      einem Flake und einem Pass.</td>
       <td>Bash, Read, Write, Edit, Grep, Glob</td>
     </tr>
     <tr>
