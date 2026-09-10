@@ -1,6 +1,6 @@
 ---
 name: retest-bug
-description: Focused re-test of a fixed bug plus a tight regression sweep around it. Use for "/retest-bug <KEY-123>" or "re-test <KEY-123>" once a fix has landed on stage.
+description: Focused re-test of a fixed bug plus a tight regression sweep around it. Use for "/retest-bug <KEY-123>", "re-test <KEY-123>", "teste <KEY-123> nochmal", "gegentesten", or whenever a fix has landed on stage ("der Fix ist auf Stage", "fix is deployed — verify it"). Not for the first-time test of a ticket — use test-ticket.
 ---
 
 # /retest-bug — verify a fix + surrounding regression

@@ -1,6 +1,6 @@
 ---
 name: bug-report
-description: Produce a bug report exactly per the active project's template (projects/<KEY>/templates/bug-report.md). Use whenever a test finding needs to become a bug ticket, or "/bug-report" is invoked directly with a finding already in hand.
+description: Produce a bug report exactly per the active project's template (projects/<KEY>/templates/bug-report.md). Use whenever a test finding needs to become a bug ticket, "/bug-report" is invoked directly with a finding already in hand, or for "Bug melden", "Ticket aus dem Fund machen", "mach ein Bug-Ticket draus".
 ---
 
 # /bug-report — project-conformant bug report
@@ -26,4 +26,4 @@ format — see `.claude/agents/bug-reporter.md` for its full process.
 
 It does not decide the test strategy or run the test — it packages an already-made
 finding. If no finding exists yet, run `exploratory-testing` or
-`playwright-regression` first.
+`test-automation` first.

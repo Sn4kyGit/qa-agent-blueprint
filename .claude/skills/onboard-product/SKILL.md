@@ -1,6 +1,6 @@
 ---
 name: onboard-product
-description: Onboard a single product inside an existing project into projects/<KEY>/products/<PRODUCT>/ — fills PRODUCT.md with what differs from the project, records the routing (JIRA component/label → product) in PROJECT.md, and fills the feature/test-method matrix. Use for "/onboard-product" or whenever a JIRA project covers several products with different test methods, features, or test users.
+description: Onboard a single product inside an existing project into projects/<KEY>/products/<PRODUCT>/ — fills PRODUCT.md with what differs from the project, records the routing (JIRA component/label → product) in PROJECT.md, and fills the feature/test-method matrix. Use for "/onboard-product", "Produkt einrichten", "das Projekt hat jetzt auch <ein Produkt>", or whenever a JIRA project covers several products with different test methods, features, or test users.
 ---
 
 # /onboard-product — teach the agent one product of a project

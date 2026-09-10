@@ -1,6 +1,6 @@
 ---
 name: exploratory-testing
-description: Run a chartered, SBTM-style exploratory testing session via Playwright MCP — for new features, unclear behavior, or bug reproduction where no repeatable spec exists yet. Use for "/exploratory-testing" or when a ticket needs first-look investigation.
+description: Run a chartered, SBTM-style exploratory testing session via Playwright MCP — for new features, unclear behavior, or bug reproduction where no repeatable spec exists yet. Use for "/exploratory-testing", when a ticket needs first-look investigation, "schau dich um", "erkunde das neue Feature", "explorativ testen", or "reproduzier den Bug". Not for flows that are understood and worth repeating — use test-automation.
 ---
 
 # /exploratory-testing — chartered session via Playwright MCP
@@ -74,7 +74,7 @@ exploration, and a debrief — not "click around and see what happens."
 6. **Exploration-to-automation pipeline**: every reproducible bug found here should
    graduate into an automated regression test, so the *next* session explores new
    ground instead of re-checking this one. If the flow itself (not just the bug)
-   is worth repeating going forward, hand it to `playwright-regression` — see the
+   is worth repeating going forward, hand it to `test-automation` — see the
    worked example in `references/heuristics-and-automation.md`.
 7. Any finding of severity P0–P2 → hand off to `bug-report`. Anything unexpected
    about the environment or tooling itself → capture via `retro-learn`.
@@ -82,7 +82,7 @@ exploration, and a debrief — not "click around and see what happens."
 ## When NOT to use this
 
 If a spec already exists for the exact flow, or the check is meant to run
-repeatedly (nightly, every retest), use `playwright-regression` instead —
+repeatedly (nightly, every retest), use `test-automation` instead —
 exploratory sessions are for understanding and bug-hunting, not for repeatable
 verification. For risk scoring of *which* areas deserve a chartered session, see
 `risk-based-testing`. For turning a vague, already-reported bug into a minimal,

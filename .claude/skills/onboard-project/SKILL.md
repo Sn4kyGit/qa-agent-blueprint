@@ -1,6 +1,6 @@
 ---
 name: onboard-project
-description: Onboard a new project into projects/<KEY>/ — interactively fills PROJECT.md from the template, seeds learnings.md and the bug-report template, and adds it to memory/INDEX.md. Use for "/onboard-project" or whenever a ticket's project prefix has no existing projects/<KEY>/PROJECT.md.
+description: Onboard a new project into projects/<KEY>/ — interactively fills PROJECT.md from the template, seeds learnings.md and the bug-report template, and adds it to memory/INDEX.md. Use for "/onboard-project", "Projekt einrichten", "neues Projekt onboarden", or whenever a ticket's project prefix has no existing projects/<KEY>/PROJECT.md.
 ---
 
 # /onboard-project — teach the agent a new project
@@ -68,6 +68,11 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
      one (`gh workflow run …`, `glab ci run …`, a curl, or "manual — ask X") and
      record it; `/deploy-to-stage` preflights it and reports BLOCKED when it is
      missing.
+   - **Test assets — framework first.** Ask which framework the suite uses
+     (`playwright` or `webdriverio`) before asking where it lives;
+     `test-automator` reads the framework field to pick its conventions. A suite
+     that doesn't exist yet is "none yet" — do not guess a framework for a
+     hypothetical future suite.
 4. Leave any field the user can't answer yet as `TODO:` — never fill a guess.
    Flag TODOs clearly at the end so they get resolved before the first real test.
 5. Seed `projects/<KEY>/learnings.md` from the template (empty, ready for
