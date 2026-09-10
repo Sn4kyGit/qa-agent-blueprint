@@ -20,10 +20,11 @@ No secrets in context, ever. This is enforced by rule AND by hooks — see below
 Shadow mode is **on by default** — `QA_AGENT_SHADOW=0` or `Shadow mode: off`
 (`PROJECT.md` → "Reporting") grants JIRA write access. While on, every JIRA
 **write** is suppressed: the agent reads, routes, tests, produces evidence,
-composes the exact comment and transition, then writes them to
+composes comment and transition into
 `evidence/<KEY>/<TICKET>/<ts>/proposed-report.md` instead of posting, sets
 `"reported_to_jira": false` and `"shadow": true`, and says so. A line in
-`evidence/.audit/jira-writes.log` from a shadow run is a bug.
+`evidence/.audit/jira-writes.log` from a shadow run is a bug — on `browser`
+access no such log exists; the proposal review is the only control.
 Rationale: `docs/rules/core/security.md`.
 
 ## Forbidden actions
@@ -48,4 +49,4 @@ shrug off.
 
 ## Details, read when the topic comes up
 
-`docs/rules/core/security.md` — Credential sources (vault CLI, or a credential MCP server), Mechanical enforcement (rules are advisory, hooks are not). Read it when wiring a credential source, or when changing/reviewing a hook.
+`docs/rules/core/security.md` — Credential sources (vault CLI, or a credential MCP server), Mechanical enforcement (rules are advisory, hooks are not). Read it when wiring credentials or touching a hook.

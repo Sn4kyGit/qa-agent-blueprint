@@ -14,7 +14,10 @@ subagent, which follows `docs/architecture.md` → "End-to-end ticket flow".
    An explicit product (`--product=ADMIN`, or "test this in the admin") overrides
    automatic product routing — pass it through to `qa-manager` verbatim.
 2. Invoke subagent `qa-manager` with the ticket key and this instruction: read the
-   ticket via Atlassian MCP, route to `projects/<KEY>/PROJECT.md` +
+   ticket via Atlassian MCP — or, when the routed `PROJECT.md` says **JIRA access:
+   `browser`**, via the playwright-driven JIRA UI per
+   `docs/rules/testing/jira-browser.md` (that doc then governs every JIRA
+   interaction of this run) — route to `projects/<KEY>/PROJECT.md` +
    `learnings.md` (and, if that project has a `## Products` section, on to the
    ticket's product per `.claude/rules/core/product-layer.md`),
    verify stage has the fix (deploy via `deploy-to-stage` if

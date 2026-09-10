@@ -56,6 +56,9 @@ not comment, do not transition, do not attach. The summary itself is the record
    `docs/rules/testing/jira-confluence.md`) via the Atlassian MCP server.
    Attach evidence files (screenshots, not full logs unless the project asks for
    them) via the attachment call.
+   On a project with **JIRA access: `browser`**, skip ADF/Markup entirely and post
+   through the playwright-driven UI instead — comment, attachments and transition
+   per `docs/rules/testing/jira-browser.md` → "Writing".
 4. Apply the transition from step 1 — exact name, never guessed. If the named
    transition doesn't exist in the ticket's current workflow state, stop and
    report that mismatch rather than trying nearby transition names.

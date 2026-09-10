@@ -26,14 +26,22 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    project covers several products.
 3. Walk through every `PROJECT.md` section with the user, section by section, not
    as one giant question dump:
-   - Basics — and **ask for the JIRA deployment early**: `cloud` or `datacenter`.
-     It decides the MCP backend and auth (Cloud: official remote server + OAuth;
-     Data Center: community server `sooperset/mcp-atlassian` + PAT via
-     environment variables, server still named `atlassian`) and the report
-     content format — all detailed in `docs/rules/testing/jira-confluence.md` →
-     "Deployments". If Data Center and the consumer's `.mcp.json` still carries
-     the Cloud default, offer to swap the entry (name unchanged, no secrets in
-     the file).
+    - Basics — and **ask for the JIRA deployment early**: `cloud` or `datacenter`.
+      It decides the MCP backend and auth (Cloud: official remote server + OAuth;
+      Data Center: community server `sooperset/mcp-atlassian` + PAT via
+      environment variables, server still named `atlassian`) and the report
+      content format — all detailed in `docs/rules/testing/jira-confluence.md` →
+      "Deployments". If Data Center and the consumer's `.mcp.json` still carries
+      the Cloud default, offer to swap the entry (name unchanged, no secrets in
+      the file).
+      Then ask for the **JIRA access mode**: `mcp` (default, everything above
+      applies) or `browser` — for environments where no API path exists at all
+      (policy forbids tokens, REST blocked, only a web login). On `browser`:
+      record the **JIRA base URL** and the **secret keys** holding the JIRA login
+      in PROJECT.md, skip the MCP-swap offer entirely, and read
+      `docs/rules/testing/jira-browser.md` — it governs every JIRA interaction
+      from then on. The `atlassian` MCP entry may be left out of `.mcp.json`
+      altogether in a browser-only QA home.
    - Confluence links, environments (stage URL, version-check method,
      who deploys).
    - Test users — **vault paths only**, never actual passwords in this
@@ -51,9 +59,11 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
      that a guessed transition fails loudly in some workflows and silently no-ops in
      others. So: pull the issue type's workflow transitions and the project's
      priority names via the Atlassian MCP and let the user pick from the real list,
-     the same way `onboard-product` fetches the real component list. Only fall back
-     to asking if the MCP is unavailable — and then mark the fields `TODO:` rather
-     than writing down what the user thinks the transition is probably called.
+      the same way `onboard-product` fetches the real component list. Only fall back
+      to asking if the MCP is unavailable — and then mark the fields `TODO:` rather
+      than writing down what the user thinks the transition is probably called. On
+      `browser` access the same rule holds: read the workflow buttons off a real
+      ticket's UI if possible, otherwise `TODO:`.
    - **Deploy trigger.** "Trigger the pipeline" is not a command. Ask for the exact
      one (`gh workflow run …`, `glab ci run …`, a curl, or "manual — ask X") and
      record it; `/deploy-to-stage` preflights it and reports BLOCKED when it is
@@ -64,7 +74,8 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    `retro-learn` to populate). Then **replace the placeholder**
    `projects/<KEY>/templates/bug-report.md` with the base template matching the
    report format chosen above — `.claude/skills/bug-report/templates/jira-cloud.md`
-   or `plain-text.md`, in plugin mode under `$CLAUDE_PLUGIN_ROOT/` — and adjust
+   or `plain-text.md` (always the latter on `browser` access — the DC editor takes
+   rich text, no ADF needed), in plugin mode under `$CLAUDE_PLUGIN_ROOT/` — and adjust
    section names, order and extra fields to the
    project's conventions. This is not optional polish: `bug-reporter` reads that
    file as the template, so a project that keeps the placeholder stalls on its

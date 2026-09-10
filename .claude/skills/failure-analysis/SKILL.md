@@ -38,7 +38,9 @@ it reads have no business in the orchestrator's context.
 5. **Ask JIRA what changed in that window.** One JQL — `project = <KEY> AND
    fixVersion in (<window>) AND statusCategory = Done`, or `resolutiondate` between
    the last pass and now where the project does not use fix versions — plus the
-   ticket under test and its links. Rank candidates, strongest signal first: the
+   ticket under test and its links. On a project with **JIRA access: `browser`**,
+   run the same JQL through the issue-search URL instead of the MCP tool —
+   `docs/rules/testing/jira-browser.md` → "Reading a ticket". Rank candidates, strongest signal first: the
    ticket itself → a linked issue → the linked MR's **changed file paths** (paths
    only, never diff content) → JIRA component → label → a feature-matrix row name →
    keyword overlap. Read **at most 3** in full and say that the ranking is a

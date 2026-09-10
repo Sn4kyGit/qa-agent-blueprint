@@ -11,6 +11,14 @@
 - **JIRA deployment**: `cloud` | `datacenter` ← pick one; drives the report
   content format (ADF/REST v3 vs. wiki markup/REST v2) and the MCP backend —
   details: `docs/rules/testing/jira-confluence.md` → "Deployments"
+- **JIRA access**: `mcp` | `browser` — `mcp` is the default (deployment above).
+  `browser` = no API path exists (policy/REST blocked): every JIRA interaction
+  goes through the playwright-driven UI per `docs/rules/testing/jira-browser.md`;
+  the `atlassian` MCP entry may then be omitted from `.mcp.json`.
+- **JIRA base URL**: `TODO:` — required on `browser` access; link target for
+  evidence references either way.
+- **JIRA login**: secret keys `TODO:` / `TODO:` — only on `browser` access;
+  references into `.env.playwright-secrets`, never values.
 - **Product**: <one line — what is this application>
 - **Issue types**: Bug = `<Bug>`, Story = `<Story>`; bugs are filed in: <this project / other>
 
