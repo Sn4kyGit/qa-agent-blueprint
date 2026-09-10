@@ -8,6 +8,16 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [Unreleased]
+
+### Changed
+- **Eval runner slimmed**: eval sessions strip MCP servers by default
+  (`--with-mcp` opts back in) — per-call latency drops from minutes (an
+  atlassian SSE auth probe could hang every call) to seconds; the judge grades
+  all runs of a case in one call; `--model`/`--judge-model` flags. A full
+  `--runs 3` gate is ~60 cheap calls instead of 90 heavy ones. Dev loop
+  documented: affected cases during development, full gate pre-release
+
 ## [0.3.0] — 2026-09-10
 
 ### Fixed
