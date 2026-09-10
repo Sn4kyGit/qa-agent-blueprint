@@ -15,8 +15,20 @@ bash evals/run.sh --runs 3         # three runs per case — one pass is a smoke
 bash evals/run.sh --baseline       # also run each prompt WITHOUT the blueprint,
                                    # report the with/without delta
 bash evals/run.sh --no-judge       # answers only (cheap, no gate)
+bash evals/run.sh --model sonnet   # pin the answer model (--judge-model for the judge)
 bash evals/run.sh --list           # list cases
 ```
+
+**Cost discipline.** The scenarios reason about JIRA/Playwright but never call
+them, so eval sessions run with MCP servers stripped (`--mcp-config {}` +
+`--strict-mcp-config`) — that alone cut per-call latency from minutes (an
+atlassian SSE auth probe can hang) to seconds, and drops the MCP tool schemas
+from every call's context. `--with-mcp` opts back in for MCP-specific work.
+The judge grades all runs of a case in one call. Net: a full `--runs 3` gate
+is ~60 cheap calls — still noticeable on a session limit, so the dev loop is:
+run only the cases whose norms you touched (`COVERAGE.md` maps norm → case),
+full gate pre-release. A full gate burning straight through an account's
+session limit is what motivated this paragraph.
 
 Each case runs through `claude -p` in a **fresh process** from the repo root
 (so the agent sees the blueprint exactly as a user would). Every answer is then

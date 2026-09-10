@@ -190,6 +190,11 @@ claude plugin validate .
 bash evals/run.sh                                        # behavioral gate: exit 1 below 0.9
 ```
 
+Eval cost discipline: during development run only the cases whose norms you
+touched (`evals/COVERAGE.md` maps norm → case); the full gate is a pre-release
+step. Eval sessions strip MCP servers by default (`--with-mcp` opts back in) —
+see `evals/README.md` → "Cost discipline".
+
 Releasing: bump `version` in BOTH `.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` (they must agree — `manifest-conventions.sh`
 checks this early), add the `CHANGELOG.md` entry, commit, then **update
