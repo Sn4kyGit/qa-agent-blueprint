@@ -110,7 +110,7 @@ echo
 # $1=cwd  $2=output file  $3=prompt text  -> 0 ok, 1 execution error
 gen_answer() {
   local cwd="$1" outfile="$2" prompt="$3" answer
-  answer="$(cd "$cwd" && "$CLAUDE" -p "${MCP_ARGS[@]}" "${MODEL_ARGS[@]}" "$prompt" 2>&1)"
+  answer="$(cd "$cwd" && "$CLAUDE" -p ${MCP_ARGS[@]+"${MCP_ARGS[@]}"} ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} "$prompt" 2>&1)"
   local rc=$?
   printf '%s\n' "$answer" > "$outfile"
   return $rc
@@ -146,7 +146,7 @@ $(cat "$criteria")
 $(cat "${files[$i]}")"
   done
   local verdict
-  verdict="$("$CLAUDE" -p "${MCP_ARGS[@]}" "${JUDGE_MODEL_ARGS[@]}" "$prompt" 2>&1)"
+  verdict="$("$CLAUDE" -p ${MCP_ARGS[@]+"${MCP_ARGS[@]}"} ${JUDGE_MODEL_ARGS[@]+"${JUDGE_MODEL_ARGS[@]}"} "$prompt" 2>&1)"
   printf '%s\n' "$verdict" > "$outfile"
   # The verdicts are the RUN lines — a judge that reasons its way from an
   # initial PASS to a grounded FAIL must be scored by its conclusion. Missing
