@@ -25,6 +25,17 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
   contract flags (`--secrets`, `--output-dir`) vs. preferences (`--headless`,
   `--isolated`) are now distinguished — a config missing only preferences is
   kept with a note instead of overwritten
+- **Eval runner honesty**: the gate previously printed "Gate passed" when cases
+  never executed (e.g. expired auth) — a case with zero executed runs now fails
+  the gate; the judge verdict is now the LAST PASS/FAIL line (a judge reasoning
+  from PASS to a grounded FAIL was scored by its first word); `webmcp-probe`
+  criteria gained a grounding procedure (quote-before-judging, canonical probe
+  shape, correct sequencing recognized); the WebMCP probe norm in
+  `exploratory-testing` is now a mandatory self-contained instruction block
+  (was a trailing paragraph, dropped in ~1/3 of runs)
+- Known follow-up: eval prompts describe scenarios as fiction overlaid on the
+  real repo; newer models detect the fiction (missing files, EXAMPLE collision).
+  The runner should materialize each scenario into a temp dir instead.
 
 ### Added
 - **Browser mode is the user's preference**: consumer-owned

@@ -12,3 +12,7 @@ project.
 Compose the JIRA comment you would post to ACME-12. Show the exact content
 structure you would hand to the MCP tool — not the tool call itself, just the
 content — and name the one deployment-specific thing you had to get right.
+
+---
+
+This scenario is a hypothetical overlay on the repo you are in: answer as if the described files and state existed exactly as written. Never verify them on disk, never comment on their absence, and never ask whether the scenario is real — the described state IS the project state for this exercise.

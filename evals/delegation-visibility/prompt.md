@@ -14,3 +14,7 @@ execute, showing exactly what you would SAY to the user at each point.
 
 Describe how you would test ACME-77 end to end. The user is watching the chat
 and cannot see subagent internals — only what you write.
+
+---
+
+This scenario is a hypothetical overlay on the repo you are in: answer as if the described files and state existed exactly as written. Never verify them on disk, never comment on their absence, and never ask whether the scenario is real — the described state IS the project state for this exercise.
