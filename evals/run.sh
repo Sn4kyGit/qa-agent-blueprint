@@ -139,6 +139,12 @@ for name in "${CASES[@]}"; do
     # pass^k trend history: one line per case per run, local and gitignored.
     # `grep <case> evals/results/history.log` answers "was this better last week?"
     printf '%s %s %s/%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" "$passes" "$scored" >> "$HERE/results/history.log"
+  elif [ "$JUDGE" -eq 1 ]; then
+    # Every run errored out (harness broken — e.g. expired auth). A case that
+    # never executed is not a pass: without this branch the gate printed
+    # "passed" on a run where NOTHING ran (seen live on 0.3.0's release run).
+    scorestr="unscored"
+    GATE_FAILURES+=("$name (0/$RUNS executed — harness error, not a pass)")
   else
     scorestr="unscored"
   fi
