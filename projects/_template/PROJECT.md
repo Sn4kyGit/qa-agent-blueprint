@@ -106,7 +106,10 @@ into `.env.playwright-secrets` for the Playwright MCP `--secrets` masking.
 
 ## Test assets
 
-- **Playwright suite**: <repo path/location, config file> — or "none yet"
+- **Framework**: <playwright | webdriverio — or "none yet">. `test-automator`
+  reads this and loads the matching conventions; a product may override it in
+  its `PRODUCT.md` when its suite uses a different stack.
+- **Suite**: <repo path/location, config file — e.g. `../<key>-web-tests/`, `playwright.config.ts` / `wdio.conf.ts`> — or "none yet"
 - **TC categories**: <AUTH, CHK, ... — for TC-<CAT>-<NNN> IDs>
 - **Test data**: <seed scripts / fixtures / reset mechanism>
 - **App repo (optional, read-only)**: <local checkout, e.g. `../shop-web/`, or

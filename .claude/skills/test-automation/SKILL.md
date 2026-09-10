@@ -1,23 +1,25 @@
 ---
-name: playwright-regression
-description: Write or run deterministic Playwright specs via the CLI runner for regression and repeatable checks. Use for "/playwright-regression" or when a flow is understood and worth automating rather than re-exploring by hand each time.
+name: test-automation
+description: Write or run deterministic automated test specs in the project's framework (Playwright or WebdriverIO) via the CLI runner — for regression, repeatable checks, and nightly-style suites. Use for "/test-automation", "automate this flow", "automatisiere diesen Ablauf", "write autotests", "Autotest schreiben", "run the regression suite", or when a flow is understood and worth repeating rather than re-exploring by hand each time.
 ---
 
-# /playwright-regression — CLI-driven specs
+# /test-automation — CLI-driven specs
 
 ## Steps
 
 0. Resolve scope first: a suite run started from a ticket inherits that ticket's
    product; a scheduled/headless run must be told
-   (`/playwright-regression --project SHOP --product ADMIN`), because there is no
+   (`/test-automation --project SHOP --product ADMIN`), because there is no
    ticket to route from and the TC namespace is product-specific.
 1. Check `projects/<KEY>/PROJECT.md` → "Test assets" (overridden by the product's
-   `PRODUCT.md` when one was routed) for the suite's location
+   `PRODUCT.md` when one was routed) for the suite's **framework** and location
    (often a separate repo checkout) and whether a spec for this flow already
    exists.
-2. Delegate to subagent `test-automator`: write/extend the spec per
-   `docs/rules/testing/playwright-cli.md` (TC-ID title, AAA structure,
-   web-first assertions), or run the existing suite/subset relevant to the ticket.
+2. Delegate to subagent `test-automator`: write/extend the spec per the
+   framework's conventions — Playwright: `docs/rules/testing/playwright-cli.md`
+   (TC-ID title, AAA structure, web-first assertions); WebdriverIO: the
+   `webdriverio-testing` skill — or run the existing suite/subset relevant to
+   the ticket.
 3. Check `memory/learnings/flaky-tests.md` and `selector-failures.md` first —
    don't rediscover a known flake or a known-bad selector pattern.
 4. Produce evidence (report, trace-on-failure, `execution_summary.json`) per

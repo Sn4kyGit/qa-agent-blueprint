@@ -35,7 +35,7 @@ process, bug template, and the project's shared `qa-readonly` user.)
 | File upload | yes | CSV type/size validation, malformed-row handling, malicious filename | `security-testing` |
 | Public / partner API | yes | contract + schema validation, auth, error shapes | `api-testing` |
 | Email / notifications | yes | order-status mails trigger, content correct | `test-executor` |
-| Search / filtering | yes | order search boundaries, empty-result state | `playwright-regression` |
+| Search / filtering | yes | order search boundaries, empty-result state | `test-automation` |
 | i18n / multi-language | no | — | — |
 | Accessibility-critical UI (external users) | no | — | internal tool, no external users — revisit if that changes |
 | Visual / branding-critical | no | — | — |

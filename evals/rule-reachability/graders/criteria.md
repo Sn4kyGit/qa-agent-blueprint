@@ -5,7 +5,7 @@ requires actually reading them — that is what this case measures.
    table nodes via the Atlassian MCP tools, or flatten into headings and bullet
    lists. Source: `docs/rules/testing/jira-confluence.md`.
 2. The product must be named explicitly on the invocation (e.g.
-   `/playwright-regression --project SHOP --product ADMIN`), because a suite run has
+   `/test-automation --project SHOP --product ADMIN`), because a suite run has
    no ticket to route from; without it the routing table is asked to resolve from
    nothing and quietly falls back to a default. Source: `docs/rules/core/cicd.md`
    plus the product-layer rule.

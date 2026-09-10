@@ -19,7 +19,7 @@ template; if they ever disagree, the rule is right and the config is a bug.
 
 1. **Resolve scope and location.** Which project, and which product if it has any.
    Read "Test assets" from the effective project file: if a suite already exists,
-   **stop** — extend it via `playwright-regression` instead. Scaffolding over a
+   **stop** — extend it via `test-automation` instead. Scaffolding over a
    working suite is how two competing configs appear in one repo.
 2. **Ask where it belongs.** A suite usually lives in its own checkout next to the
    app (`../<key>-web-tests/`), not inside this blueprint repo — the blueprint holds

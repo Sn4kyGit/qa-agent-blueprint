@@ -24,7 +24,7 @@ stated explicitly, not a judgment call.
 ## Headless CI runs (`claude -p`)
 
 When this blueprint runs unattended (e.g. a nightly-regression pipeline invoking
-`claude -p "/playwright-regression ..."`):
+`claude -p "/test-automation ..."`):
 
 - No interactive prompts are possible — `deploy-to-stage` and any action requiring
   a yes/no must be pre-authorized in `PROJECT.md` or skipped with a BLOCKED verdict.
@@ -39,7 +39,7 @@ When this blueprint runs unattended (e.g. a nightly-regression pipeline invoking
   `execution_summary.json` with `verdict: BLOCKED` and post the `report-to-jira`
   BLOCKED comment **before** any tool call, exactly as for an unreachable stage.
 - **A suite run has no ticket to route from.** Nightly regression names its scope
-  explicitly: `claude -p "/playwright-regression --project SHOP --product ADMIN"`.
+  explicitly: `claude -p "/test-automation --project SHOP --product ADMIN"`.
   Without it the routing table is asked to resolve from nothing and quietly falls to
   the default.
 - Evidence and the Stop-hook requirement still apply unchanged.

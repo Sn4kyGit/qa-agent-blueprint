@@ -127,7 +127,8 @@ in the product files — note that they carry a product segment in the key, so t
 
 ## Test assets
 
-- **Playwright suite**: separate repo checkout at `../shop-web-tests/`,
+- **Framework**: playwright
+- **Suite**: separate repo checkout at `../shop-web-tests/`,
   config `playwright.config.ts` (stage base URL via `STAGE_BASE_URL`)
 - **TC categories**: per product — `STOREFRONT` and `ADMIN` each own their namespace
   (see their product files). Only `SEC` is shared across both.

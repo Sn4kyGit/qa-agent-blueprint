@@ -41,11 +41,11 @@ strategy input instead of guessing which test types a ticket needs.
 |---|---|---|---|
 | Login / authentication | <yes/no> | login happy + negative, session persists, logout invalidates | `test-executor`; flagged → `security-testing` |
 | Roles / permissions (RBAC) | <yes/no> | per-role access matrix, IDOR spot-check | `security-testing` |
-| Payment / checkout | <yes/no> | E2E happy path, PSP sandbox failure paths | `test-executor` + `playwright-regression` |
+| Payment / checkout | <yes/no> | E2E happy path, PSP sandbox failure paths | `test-executor` + `test-automation` |
 | File upload | <yes/no> | type/size validation, malicious-name handling | `security-testing` |
 | Public / partner API | <yes/no> | contract + schema validation, auth, error shapes | `api-testing` |
 | Email / notifications | <yes/no> | trigger fires, content correct | `test-executor` |
-| Search / filtering | <yes/no> | boundary values, empty-result state | `playwright-regression` |
+| Search / filtering | <yes/no> | boundary values, empty-result state | `test-automation` |
 | i18n / multi-language | <yes/no> | locale switch, no hardcoded strings | `test-executor` |
 | Accessibility-critical UI (external users) | <yes/no> | axe scan on changed pages, keyboard path | `accessibility-testing` |
 | Visual / branding-critical | <yes/no> | screenshot baseline on changed views | `visual-testing` |
@@ -104,7 +104,8 @@ strategy input instead of guessing which test types a ticket needs.
 
 <!-- Omit unless this product has its own suite or TC namespace. -->
 
-- **Playwright suite**: <repo path/location, config file> — or "none yet"
+- **Framework**: <playwright | webdriverio — omit to inherit the project's>
+- **Suite**: <repo path/location, config file> — or "none yet"
 - **App repo (optional, read-only)**: <local checkout, e.g. `../skp/` — when each
   product has its own repo, state it here and leave the project-level field
   "none">. Lets `failure-analysis` diff this product's version window.

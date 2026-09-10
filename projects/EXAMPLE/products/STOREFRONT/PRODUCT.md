@@ -28,11 +28,11 @@ MR process, reporting and the bug template all come from `PROJECT.md`.)
 |---|---|---|---|
 | Login / authentication | yes | login happy + negative, session persists, logout invalidates | `test-executor`; flagged → `security-testing` |
 | Roles / permissions (RBAC) | no | — | — |
-| Payment / checkout | yes | E2E happy path, PSP sandbox decline + timeout paths | `test-executor` + `playwright-regression` |
+| Payment / checkout | yes | E2E happy path, PSP sandbox decline + timeout paths | `test-executor` + `test-automation` |
 | File upload | no | — | — |
 | Public / partner API | no | — | — |
 | Email / notifications | yes | order confirmation fires, content correct | `test-executor` |
-| Search / filtering | yes | boundary values, empty-result state, facet combinations | `playwright-regression` |
+| Search / filtering | yes | boundary values, empty-result state, facet combinations | `test-automation` |
 | i18n / multi-language | yes | DE/EN switch, no hardcoded strings on changed views | `test-executor` |
 | Accessibility-critical UI (external users) | yes | axe scan on changed pages, keyboard path through checkout | `accessibility-testing` |
 | Visual / branding-critical | yes | screenshot baseline for PDP and cart | `visual-testing` |
