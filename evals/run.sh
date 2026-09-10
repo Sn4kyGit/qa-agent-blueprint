@@ -75,11 +75,14 @@ mkdir -p "$OUT"
 echo "Answers → $OUT  (runs per case: $RUNS, judge: $([ $JUDGE -eq 1 ] && echo on || echo off), baseline: $([ $BASELINE -eq 1 ] && echo on || echo off), threshold: $THRESHOLD)"
 echo
 
-judge_answer() { # $1=criteria file  $2=answer text  -> prints verdict, first line PASS|FAIL
-  "$CLAUDE" -p "You are grading one answer against fixed criteria. Reply with PASS
-or FAIL on the first line, then at most three lines saying why. Do not be generous:
-the criteria list explicit failure conditions, and a fluent answer that misses a
-required element is a FAIL.
+judge_answer() { # $1=criteria file  $2=answer text  -> verdict text, LAST line PASS|FAIL
+  "$CLAUDE" -p "You are grading one answer against fixed criteria. Work through the
+criteria FIRST (quote the answer per requirement when the criteria ask for it),
+in at most six lines. Then, as the LAST line of your reply, write the final
+verdict: PASS or FAIL — nothing after it. The last line is the verdict; any
+PASS/FAIL word earlier in your reasoning is scratch work and will be ignored.
+Do not be generous: the criteria list explicit failure conditions, and a fluent
+answer that misses a required element is a FAIL.
 
 === CRITERIA ===
 $(cat "$1")
@@ -91,7 +94,7 @@ $2" 2>&1
 run_one() { # $1=case name  $2=cwd  $3=output prefix
   local name="$1" cwd="$2" prefix="$3"
   local prompt="$HERE/$name/prompt.md" criteria="$HERE/$name/graders/criteria.md"
-  local answer verdict first
+  local answer verdict last
   answer="$(cd "$cwd" && "$CLAUDE" -p "$(cat "$prompt")" 2>&1)"
   if [ $? -ne 0 ]; then
     printf '%s\n' "$answer" > "$OUT/$prefix.answer.md"
@@ -102,8 +105,12 @@ run_one() { # $1=case name  $2=cwd  $3=output prefix
   if [ "$JUDGE" -eq 1 ] && [ -f "$criteria" ]; then
     verdict="$(cd "$cwd" && judge_answer "$criteria" "$answer")"
     printf '%s\n' "$verdict" > "$OUT/$prefix.verdict.md"
-    first="$(printf '%s' "$verdict" | head -1)"
-    case "$first" in PASS*) echo "PASS" ;; FAIL*) echo "FAIL" ;; *) echo "UNSCORED" ;; esac
+    # The verdict is the LAST PASS/FAIL line — a judge that reasons its way from
+    # an initial PASS to a grounded FAIL (observed live: verdict file opened with
+    # PASS, concluded FAIL after the grounding check) must be scored by its
+    # conclusion, not its first word.
+    last="$(printf '%s' "$verdict" | grep -E '^(PASS|FAIL)\b' | tail -1)"
+    case "$last" in PASS*) echo "PASS" ;; FAIL*) echo "FAIL" ;; *) echo "UNSCORED" ;; esac
   else
     echo "answered"
   fi
