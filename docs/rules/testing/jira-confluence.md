@@ -10,7 +10,7 @@ Everything below is split by it.
 |---|---|---|
 | MCP backend | official remote server (`mcp.atlassian.com`) | community server [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian) (Jira DC v8.14+), run via `uvx` |
 | Auth | OAuth 2.1 (`/mcp` browser flow, once) | Personal Access Token: `JIRA_PERSONAL_TOKEN` + `JIRA_URL` as **environment variables** (exported in the shell, inherited by `uvx` — never written into `.mcp.json`, the repo, or chat) |
-| API / content format | REST v3, **ADF** | REST v2, **wiki markup** — the community server converts plain Markdown input to the right storage format, so keep input simple and let it convert |
+| API / content format | REST v3, **ADF** | REST v2, **wiki markup** — the community server converts plain Markdown input to the right storage format. Write plain Markdown only — **never hand-write wiki syntax** (`h2.`, `*bold*`, `{code}`); converting is the server's job, hand-rolled markup double-escapes |
 | Server name in `.mcp.json` | `atlassian` | `atlassian` — **same name regardless of backend**: the audit/evidence hooks match on it |
 
 DC consumer `.mcp.json` variant (no secrets in the file):

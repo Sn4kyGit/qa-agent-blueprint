@@ -61,7 +61,12 @@ project recognized → project knowledge applied → tested → evidence produce
 - **Delegation is visible.** A running subagent blocks the main thread: the user
   sees nothing, and the subagent's output never reaches them unless you relay it.
   Announce every spawn (agent, task, artifact, rough duration), chunk multi-part
-  work into named steps, relay each result with its evidence path.
+  work into named steps, relay each result with its evidence path. Long-running
+  delegations keep a live `progress.md` in the evidence run dir — the follow-along
+  surface while the chat is silent.
+- **Shadow mode is on by default.** JIRA reports are composed into the evidence
+  dir (`proposed-report.md`), never posted, never a permission question. The
+  unlock is `Shadow mode: off` in PROJECT.md or `QA_AGENT_SHADOW=0` — nothing else.
 - **Evidence is mandatory.** No test result without artifacts in
   `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` incl. `execution_summary.json`.
   Details: `.claude/rules/core/evidence-policy.md`. A Stop hook enforces this.

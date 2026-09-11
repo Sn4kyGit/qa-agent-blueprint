@@ -38,6 +38,17 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
   its typical plain-language phrasing
 
 ### Changed
+- **Hard rules completed from eval evidence**: the delegation rule now names
+  `progress.md` as the follow-along surface (was subagent-body-only, so invisible
+  to the orchestrating context), and shadow mode got its own hard-rule line with
+  the exact unlock (`Shadow mode: off` / `QA_AGENT_SHADOW=0`) — eval answers
+  without it treated shadow as a permission obstacle to negotiate
+- **jira-confluence.md louder on DC**: write plain Markdown only, never hand-write
+  wiki syntax (`h2.`, `*bold*`) — the first live gate caught answers doing
+  exactly that despite the rule file
+- **delegation-visibility criteria**: one chartered exploratory session spanning
+  several ACs is legitimate (a charter can span ACs) — the fail condition is now
+  sequential phases merged into one silent block, not "didn't decompose per AC"
 - **Bilingual natural-language routing**: the descriptions of all ten entry-point
   skills (test-ticket, retest-bug, exploratory-testing, qa-report, report-to-jira,
   deploy-to-stage, failure-analysis, bug-report, onboard-project, onboard-product)
