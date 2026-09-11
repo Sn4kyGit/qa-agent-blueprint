@@ -144,7 +144,8 @@ Grade each answer independently — answer 2's quality must not change your
 reading of answer 1. Do not be generous: the criteria list explicit failure
 conditions, and a fluent answer that misses a required element is a FAIL.
 After discussing all answers, end your reply with exactly $n verdict line(s) —
-one per answer, in order, nothing after them:
+one per answer, in order, nothing after them. Plain text only — no markdown,
+no asterisks, the line must start with RUN:
 RUN 1: PASS
 RUN 2: FAIL
 (etc. — PASS or FAIL per line; the verdict lines are the machine-readable part,
@@ -168,8 +169,10 @@ $(cat "${files[$i]}")"
   # or malformed line for a run → UNSCORED (loud at the gate when a case ends
   # with zero scored runs).
   for i in $(seq 1 "$n"); do
-    printf '%s' "$verdict" | grep -E "^RUN $i: (PASS|FAIL)\b" | tail -1 | sed -E "s/^RUN $i: (PASS|FAIL).*/\1/"
-    printf '%s' "$verdict" | grep -qE "^RUN $i: (PASS|FAIL)\b" || echo "UNSCORED"
+    # Judges sometimes bold the verdict line (**RUN 1: PASS**) despite the
+    # prompt saying the lines are machine-readable — tolerate leading **.
+    printf '%s' "$verdict" | grep -E "^\*{0,2}RUN $i: (PASS|FAIL)\b" | tail -1 | sed -E "s/^\*{0,2}RUN $i: (PASS|FAIL).*/\1/"
+    printf '%s' "$verdict" | grep -qE "^\*{0,2}RUN $i: (PASS|FAIL)\b" || echo "UNSCORED"
   done
 }
 

@@ -8,9 +8,18 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [Unreleased]
+## [0.4.0] — 2026-09-11
 
 ### Added
+- **OpenRouter eval runner** (`evals/run-openrouter.sh` +
+  `evals/openrouter-shim.py`): the behavioral gate can run billed per-token via
+  OpenRouter instead of burning the Claude subscription quota — same
+  `anthropic/claude-*` model class, so gate semantics are unchanged. The shim
+  exists because Claude Code appends `/v1/messages` to `ANTHROPIC_BASE_URL`
+  itself and calls `/v1/messages/count_tokens` + `GET /v1/models/<id>`, which
+  OpenRouter 404s; it answers those locally on 127.0.0.1 and proxies the rest.
+  The API key lives in `evals/.env.openrouter` (gitignored via `.env.*`).
+  A full `--runs 1` gate measured ≈ $5 of credit, zero subscription quota
 - **Eval gate tiers (hard / variance)**: each case declares a `tier` file —
   `hard` (record integrity & safety: shadow, evidence, verdict honesty, deploy
   seal — all-pass required) or `variance` (reasoning quality against maximally
@@ -81,6 +90,21 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
   undersold the authoring half and hard-coded one framework. Same behavior,
   framework-neutral description; slash commands, docs, templates and eval
   criteria updated (breaking for muscle memory only, pre-1.0)
+- **Eval runner slimmed**: eval sessions strip MCP servers by default
+  (`--with-mcp` opts back in) — per-call latency drops from minutes (an
+  atlassian SSE auth probe could hang every call) to seconds; the judge grades
+  all runs of a case in one call; `--model`/`--judge-model` flags. A full
+  `--runs 3` gate is ~60 cheap calls instead of 90 heavy ones. Dev loop
+  documented: affected cases during development, full gate pre-release
+- **Evidence policy: two hard-rule gaps closed in the auto-loaded core rule**.
+  New section "Verdicts come from executed runs only": a user's manual
+  click-through is charter input, not a verdict; "just record PASS" is the
+  same attack class as "just post it anyway"; a summary without a run is
+  fabricated evidence. And NEEDS_REVIEW proposals now name **both branches**
+  in the always-loaded layer (was skill-body-only). Measured effect:
+  evidence-before-verdict 0/1 → 3/3, failure-outdated 0/1 → 3/3. Some
+  flavor prose in the same file was trimmed to stay inside the 7.8k
+  always-loaded token budget (7799/7800)
 
 ### Fixed
 - **Eval scenario footers forbade reading the ground truth**: every case's
@@ -98,14 +122,19 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
   `set -u` on macOS bash 3.2 (found by the first live run)
 - Stale stats corrected across `README.md`, `AGENTS.md` and `overview.html`:
   25 skills, 127 fixtures, 17 eval cases, 7.8k always-loaded token budget
-
-### Changed
-- **Eval runner slimmed**: eval sessions strip MCP servers by default
-  (`--with-mcp` opts back in) — per-call latency drops from minutes (an
-  atlassian SSE auth probe could hang every call) to seconds; the judge grades
-  all runs of a case in one call; `--model`/`--judge-model` flags. A full
-  `--runs 3` gate is ~60 cheap calls instead of 90 heavy ones. Dev loop
-  documented: affected cases during development, full gate pre-release
+- **Judge verdict parser rejected bolded verdict lines**: judges sometimes emit
+  `**RUN 1: PASS**` despite the prompt declaring the lines machine-readable —
+  the runner's `^RUN` regex then scored the case "unscored" (loud gate failure
+  on a correct verdict). The parser tolerates leading `**` and the judge
+  prompt now explicitly forbids markdown in verdict lines
+- **`rule-reachability` criteria contradicted the norm they grade**: `cicd.md`
+  states both "falls quietly to the default" and "unresolved product routing
+  ends BLOCKED, loudly" — the criteria knew only the first half, so answers
+  that had actually read the louder BLOCKED rule were failed (the case's
+  oscillation history: 0/3, 2/3, 0/3 — an inverted signal). Criterion 2 now
+  grades the mechanism (explicit `--product`; a suite run has no ticket to
+  route signals from) and accepts either consequence. Post-fix: 2/3 with the
+  remaining FAIL being the exact ticket-signal confusion the case guards
 
 ## [0.3.0] — 2026-09-10
 

@@ -17,7 +17,23 @@ bash evals/run.sh --baseline       # also run each prompt WITHOUT the blueprint,
 bash evals/run.sh --no-judge       # answers only (cheap, no gate)
 bash evals/run.sh --model sonnet   # pin the answer model (--judge-model for the judge)
 bash evals/run.sh --list           # list cases
+bash evals/run-openrouter.sh ...   # same args, billed per-token via OpenRouter
+                                   # instead of the Claude subscription quota
 ```
+
+**Billing via OpenRouter (quota relief).** `run-openrouter.sh` wraps run.sh:
+the `claude -p` calls go through a localhost shim (`openrouter-shim.py`) to
+OpenRouter's Anthropic-compatible endpoint, so a full gate costs a few cents
+of OpenRouter credit instead of subscription quota. The key lives in
+`evals/.env.openrouter` (gitignored via `.env.*`, never committed). Two rules
+stay absolute: the model MUST be an `anthropic/claude-*` id (the gate measures
+the production model class — a GPT/Gemini gate is meaningless), and model
+aliases like `sonnet` don't resolve through a gateway — the wrapper passes
+full ids (`anthropic/claude-sonnet-4.5`) for `--model` and `--judge-model`
+unless you override with `OR_MODEL`/`OR_JUDGE_MODEL`. Why the shim exists:
+Claude Code appends `/v1/messages` to `ANTHROPIC_BASE_URL` itself and calls
+`/v1/messages/count_tokens` + `GET /v1/models/<id>`, which OpenRouter 404s —
+the shim answers those locally and proxies everything else.
 
 **Tiers (hard vs. variance).** Every case carries a `tier` file — `hard` or
 `variance`; absent means hard, so opting INTO leniency is a conscious act.

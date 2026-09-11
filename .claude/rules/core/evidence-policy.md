@@ -3,6 +3,13 @@
 Full schema behind the one-line rule in `CLAUDE.md`: no test result without
 artifacts. Enforced mechanically by the `Stop` hook (`stop-evidence-check.sh`).
 
+## Verdicts come from executed runs only
+
+A verdict records what a run captured, never what anyone reports: a user's
+manual click-through is charter input, not a verdict. "Just record PASS" is
+the "just post it anyway" attack class — run the checks so the run produces
+the evidence. A summary without a run is fabricated evidence, worse than none.
+
 ## Location & naming
 
 ```
@@ -20,8 +27,8 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 - `<step>` is a short slug for what was being checked (`login`, `checkout`,
   `admin-orders`); `<kind>` is `pass` or `fail` (or a specific defect name on FAIL).
 - `progress.md` — live one-line status entries (`HH:MM:SS START/STEP/VERDICT …`)
-  appended by the executing subagent: the follow-along surface while the chat is
-  silent, and the manager's relay source. Default on; not a verdict artifact.
+  appended by the executing subagent: the follow-along surface and the manager's
+  relay source. Default on; not a verdict artifact.
 - Raw Playwright MCP output goes to `evidence/.mcp-out/` (the `--output-dir` in
   `.mcp.json`); curated, reportable artifacts are copied into the run dir above.
 - `evidence/.audit/jira-writes.log` — append-only, one line per JIRA write, written
@@ -74,13 +81,13 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 ```
 
 `findings` is empty on a clean PASS. `verdict: BLOCKED` still requires a summary of
-why (env unreachable, stage not deployed, missing test data, product routing
+why (env down, stage not deployed, no test data, routing
 unresolved) in place of findings.
 
 **Product fields** (`.claude/rules/core/product-layer.md`): `product`, `scope` and
 `product_routed_by` appear only when the project has a `## Products` section.
-Omit them entirely otherwise — do **not** write `"product": null`; a null is schema
-noise in every file and invites the model to fill it with something plausible. A
+Omit them entirely otherwise — do **not** write `"product": null`; a null
+invites the model to fill it with something plausible. A
 `project-wide` ticket writes `"scope": "project"` and no `product`.
 `product_routed_by` is one of `component | label | secondary | default | user |
 project-wide` (`secondary` = epic/parent, fix version, or changed MR paths — record
@@ -105,8 +112,10 @@ on every FAIL, **before** a bug is filed; its full shape and the six classes are
 
 `NEEDS_REVIEW` is the verdict for class `test-outdated`/`test-brittle`: no bug, no
 transition, a proposal for a human. **Interactive only** — headless it stays `FAIL`.
-It counts as not-passed in every metric until `human_ruling` names who decided, so
-the classification is never a cheaper route to green than fixing the product.
+The proposal names **both branches** — the test change, and `product-defect`
+→ `bug-report` with the analysis attached. It counts as not-passed in every
+metric until `human_ruling` names who decided, so the classification is never
+a cheaper route to green than fixing the product.
 
 `NO_TEST` = test tools ran, no test completed: one-sentence `no_test_reason`,
 no JIRA post, excluded from the pass rate — the explicit Stop-hook answer when
@@ -124,17 +133,16 @@ The blueprint's second promise, next to evidence, is "explain once, never again"
   full Problem/Cause/Solution entry).
 - `learnings.none_because` — when the list is empty, one sentence stating why:
   `"clean run, no surprises"`, `"everything hit was already in the product's
-  learnings"`. Not a formality: writing it forces the question to be asked.
+  learnings"`.
 
 Exactly one of the two is filled. The Stop hook checks that the **key exists**, not
 what it says — a machine can verify a declaration, it cannot verify "was anything
-surprising?". This is the same move as the bridge file's `source_sha`: convert a
-thing to remember into a thing to state.
+surprising?".
 
 An unrouted or ambiguous product, a selector that needed a workaround, a stage that
 behaved oddly, a report format the user corrected — all of these are captures, and
-the routing ones feed the self-improving registry
-(`.claude/rules/core/product-layer.md` → "Routing learns from being corrected").
+the routing ones feed the self-improving registry in
+`.claude/rules/core/product-layer.md`.
 
 ## PII & secrets in evidence
 
