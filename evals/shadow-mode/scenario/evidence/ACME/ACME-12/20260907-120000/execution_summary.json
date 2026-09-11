@@ -1,0 +1,13 @@
+{
+  "ticket": "ACME-12",
+  "project": "ACME",
+  "verdict": "PASS",
+  "started": "2026-09-07T11:47:00Z",
+  "finished": "2026-09-07T12:00:00Z",
+  "test_cases": [
+    { "id": "TC-AUTH-001", "outcome": "passed", "attempts": 1, "spec": "specs/auth/login.spec.ts:12" },
+    { "id": "TC-AUTH-002", "outcome": "passed", "attempts": 1, "spec": "specs/auth/login.spec.ts:31" }
+  ],
+  "artifacts": ["report.html", "screenshots/login-success.png"],
+  "learnings": { "none_because": "run matched existing patterns exactly" }
+}

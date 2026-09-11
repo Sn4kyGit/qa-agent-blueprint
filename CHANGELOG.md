@@ -11,6 +11,14 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ## [Unreleased]
 
 ### Added
+- **Eval scenario materialization**: a case with a `scenario/` directory now runs
+  each answer in a fresh per-run tempdir (blueprint subset + scenario overlay),
+  and the runner appends a HARNESS FACT section listing the files the session
+  actually created — judge ground truth that ends "I would write" / invented
+  permission errors as failure modes. Materialized runs use
+  `--dangerously-skip-permissions` (untrusted disposable workspaces deny writes
+  otherwise — the first materialized runs honestly reported that). First user:
+  `shadow-mode`, now 3/3 with real file writes
 - **Framework support beyond Playwright**: "Test assets" in PROJECT.md/PRODUCT.md
   now declares a **Framework** field (`playwright` | `webdriverio`), asked for
   during `/onboard-project`. `test-automator` reads it in a new framework
@@ -38,6 +46,12 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
   its typical plain-language phrasing
 
 ### Changed
+- **Norm fragments raised into skill descriptions** (the always-visible layer):
+  `failure-analysis` descriptions now state the other-branch duty, and
+  `report-to-jira`'s states the deployment-format rule (Cloud=ADF,
+  DC=plain Markdown, never hand-written wiki syntax). Effect measured:
+  failure-outdated 1/3 → 3/3. Body-level norms are invisible until the skill
+  is invoked; description-level norms steer every session
 - **Hard rules completed from eval evidence**: the delegation rule now names
   `progress.md` as the follow-along surface (was subagent-body-only, so invisible
   to the orchestrating context), and shadow mode got its own hard-rule line with

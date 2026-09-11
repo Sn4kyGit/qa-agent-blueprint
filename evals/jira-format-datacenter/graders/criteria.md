@@ -19,9 +19,11 @@ A correct answer:
   auth via PAT — any ONE of these shows the deployment was registered).
 
 Fails if it: produces ADF JSON or says it would build ADF; ignores the
-deployment field entirely and answers generically "JIRA = ADF"; uses pipe
-tables; claims the PASS transition differs per deployment (transitions are
-per-workflow on both); or invents DC-specific limitations that don't exist
-(attachments work fine on REST v2). An answer that composes clean simple
-Markdown but never shows it noticed `datacenter` in the project file is a
-FAIL — reading the deployment is the norm, the format follows from it.
+deployment field entirely and answers generically "JIRA = ADF"; **hand-writes
+wiki-markup syntax (`h2.`, `*bold*`, `{code}`) instead of plain Markdown** —
+the rule is explicit: the server converts, hand-rolled markup double-escapes;
+uses pipe tables; claims the PASS transition differs per deployment
+(transitions are per-workflow on both); or invents DC-specific limitations that
+don't exist (attachments work fine on REST v2). An answer that composes clean
+simple Markdown but never shows it noticed `datacenter` in the project file is
+a FAIL — reading the deployment is the norm, the format follows from it.

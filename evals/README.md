@@ -71,6 +71,20 @@ Trend over time: every judged run appends one line per case to
 evals/results/history.log` answers "was this better last week?" — a norm whose
 score decays across runs is a conformance regression, not noise.
 
+**Scenario materialization.** A case with a `scenario/` directory gets each
+answer run in a fresh per-run tempdir: the blueprint subset (`CLAUDE.md`,
+`.claude/`, `docs/`, `projects/`, `memory/`) plus the scenario files copied on
+top. Use it when the norm involves *writing* (shadow-mode's
+`proposed-report.md` is the reference) — fiction made models say "I would
+write" or invent permission errors; a real writable filesystem makes the
+behavior observable. The runner appends a HARNESS FACT section to each answer
+listing the files actually created — cite it in the criteria as judge ground
+truth. Materialized runs pass `--dangerously-skip-permissions` (fresh tempdirs
+are untrusted workspaces where `-p` denies writes); the tempdir is disposable
+and carries no secrets. Cases that only reason about *reading* the blueprint
+don't need this — the prompt footer already declares the blueprint files real
+ground truth.
+
 ## About the official runner
 
 The case layout (`<case>/prompt.md` + `<case>/graders/criteria.md`) is exactly

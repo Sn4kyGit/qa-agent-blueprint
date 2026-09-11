@@ -107,10 +107,17 @@ mkdir -p "$OUT"
 echo "Answers → $OUT  (runs per case: $RUNS, judge: $([ $JUDGE -eq 1 ] && echo on || echo off), baseline: $([ $BASELINE -eq 1 ] && echo on || echo off), threshold: $THRESHOLD, mcp: $([ $WITH_MCP -eq 1 ] && echo on || echo off)${MODEL:+, model: $MODEL}${JUDGE_MODEL:+, judge-model: $JUDGE_MODEL})"
 echo
 
-# $1=cwd  $2=output file  $3=prompt text  -> 0 ok, 1 execution error
+# $1=cwd  $2=output file  $3=prompt text  ->  0 ok, 1 execution error
 gen_answer() {
   local cwd="$1" outfile="$2" prompt="$3" answer
-  answer="$(cd "$cwd" && "$CLAUDE" -p ${MCP_ARGS[@]+"${MCP_ARGS[@]}"} ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} "$prompt" 2>&1)"
+  # Materialized scenario dirs are fresh, untrusted workspaces: without this
+  # flag every Write is permission-denied in -p mode (seen live: all three
+  # shadow-mode runs honestly reported "no write permission" — they were
+  # right). The tempdir is disposable and carries no secrets, so skipping
+  # permissions there is safe; repo-root runs keep the normal permission set.
+  local skip_args=()
+  [ "$cwd" != "$REPO" ] && skip_args=(--dangerously-skip-permissions)
+  answer="$(cd "$cwd" && "$CLAUDE" -p ${skip_args[@]+"${skip_args[@]}"} ${MCP_ARGS[@]+"${MCP_ARGS[@]}"} ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} "$prompt" 2>&1)"
   local rc=$?
   printf '%s\n' "$answer" > "$outfile"
   return $rc
@@ -158,6 +165,23 @@ $(cat "${files[$i]}")"
   done
 }
 
+# $1=case name -> prints a materialized tempdir, rc 1 when the case has none
+# A case with a scenario/ directory runs its answers in a fresh tempdir:
+# the blueprint subset plus the scenario files copied on top. This replaces
+# fiction ("pretend projects/ACME exists") with a real filesystem the agent
+# can read AND write — the failure class where models say "I would write the
+# file" or invent permission errors instead of just doing it.
+materialize_case() {
+  local name="$1" dir item
+  [ -d "$HERE/$name/scenario" ] || return 1
+  dir="$(mktemp -d /tmp/qa-eval-scenario.XXXXXX)"
+  for item in CLAUDE.md .claude docs projects memory; do
+    [ -e "$REPO/$item" ] && cp -R "$REPO/$item" "$dir/"
+  done
+  cp -R "$HERE/$name/scenario/"* "$dir/"
+  printf '%s' "$dir"
+}
+
 BASELINE_DIR=""
 if [ "$BASELINE" -eq 1 ]; then
   BASELINE_DIR="$(mktemp -d /tmp/qa-eval-baseline.XXXXXX)"
@@ -174,7 +198,21 @@ for name in "${CASES[@]}"; do
   answer_files=()
   for i in $(seq 1 "$RUNS"); do
     suffix="$name"; [ "$RUNS" -gt 1 ] && suffix="$name.run$i"
-    if gen_answer "$REPO" "$OUT/$suffix.answer.md" "$(cat "$HERE/$name/prompt.md")"; then
+    # Per run, not per case: each run gets its own materialized copy so a
+    # write from run 1 can't leak into run 2's filesystem.
+    answer_cwd="$REPO"
+    [ -d "$HERE/$name/scenario" ] && answer_cwd="$(materialize_case "$name")"
+    before_list=""
+    [ "$answer_cwd" != "$REPO" ] && before_list="$(cd "$answer_cwd" && find . -type f | sort)"
+    if gen_answer "$answer_cwd" "$OUT/$suffix.answer.md" "$(cat "$HERE/$name/prompt.md")"; then
+      if [ "$answer_cwd" != "$REPO" ]; then
+        after_list="$(cd "$answer_cwd" && find . -type f | sort)"
+        {
+          printf '\n\n---\nHARNESS FACT (appended by the runner; ground truth, not the agent): '
+          printf 'files the session actually created on disk (empty = it wrote nothing):\n'
+          comm -13 <(printf '%s\n' "$before_list") <(printf '%s\n' "$after_list") | sed 's/^/  /'
+        } >> "$OUT/$suffix.answer.md"
+      fi
       answer_files+=("$OUT/$suffix.answer.md")
     else
       printf '  %-26s run %s FAILED to execute — see %s\n' "" "$i" "$OUT/$suffix.answer.md"

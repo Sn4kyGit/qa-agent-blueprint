@@ -1,6 +1,6 @@
 ---
 name: report-to-jira
-description: Report a test verdict back to JIRA as a comment, with attachments and the correct workflow transition, per the active project's PROJECT.md format. Use after a test run completes, on PASS, FAIL, BLOCKED, or NEEDS_REVIEW — also for "/report-to-jira", "melde das Ergebnis zurück", "kommentier das Ticket", or "post the verdict to JIRA".
+description: Report a test verdict back to JIRA as a comment, with attachments and the correct workflow transition, per the active project's PROJECT.md format. Comment format follows the project's deployment — Cloud = ADF via MCP tools, Data Center = plain Markdown (never hand-written wiki syntax, never hand-rolled ADF). Use after a test run completes, on PASS, FAIL, BLOCKED, or NEEDS_REVIEW — also for "/report-to-jira", "melde das Ergebnis zurück", "kommentier das Ticket", or "post the verdict to JIRA".
 ---
 
 # /report-to-jira — comment + attachments + transition
