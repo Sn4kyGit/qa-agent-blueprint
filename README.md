@@ -132,6 +132,18 @@ to your project's `.claude/settings.json`:
 
 Restart Claude Code and accept the trust dialog — same bootstrap as above.
 
+### Updating
+
+```bash
+claude plugin marketplace update qa-agent-blueprint-marketplace
+claude plugin update --scope project qa-agent-blueprint   # restart afterwards
+```
+
+Updates touch only the plugin cache — your own data (`projects/`, `memory/`,
+`evidence/`) is never modified. What changed is in
+[CHANGELOG.md](CHANGELOG.md); releases are SemVer git tags, and pinning back
+is `claude plugin uninstall` + reinstall.
+
 For more details — detection matrix, per-file collision policy, plugin
 mechanics, FAQ — have a look at [docs/integration.md](docs/integration.md).
 
