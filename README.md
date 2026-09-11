@@ -20,7 +20,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 25 skills · 5 subagents · 5 always-loaded rules + 9 on demand · 4 hooks · 127 fixtures · 17 eval cases |
+| **Contents** | 25 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 127 fixtures · 17 eval cases |
 | **Two ways in** | Merged into your repo (integrate), or as a plugin |
 | **License** | MIT |
 

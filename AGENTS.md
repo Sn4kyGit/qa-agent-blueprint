@@ -188,6 +188,9 @@ update the norm→test matrix (`evals/COVERAGE.md`) if you touched a norm:
 for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 5x "all fixtures passed"
 claude plugin validate .
 bash evals/run.sh                                        # behavioral gate: exit 1 below 0.9
+# or billed per-token via OpenRouter instead of subscription quota (key in
+# gitignored evals/.env.openrouter; see evals/README.md → "Billing via OpenRouter"):
+bash evals/run-openrouter.sh
 ```
 
 Eval cost discipline: during development run only the cases whose norms you
