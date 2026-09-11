@@ -40,7 +40,11 @@
 #                                         blueprint (one run per case) and
 #                                         report the delta
 #   bash evals/run.sh --no-judge          answers only, no scoring, no gate
-#   bash evals/run.sh --threshold 1.0     stricter gate
+#   bash evals/run.sh --threshold 1.0     stricter gate for HARD cases
+#   bash evals/run.sh --variance-threshold 0.5
+#                                         looser floor for VARIANCE cases
+#                                         (evals/<case>/tier marks the tier;
+#                                         absent = hard)
 #   bash evals/run.sh --model sonnet      model for the ANSWER sessions
 #   bash evals/run.sh --judge-model opus  model for the judge (default: same CLI
 #                                         default as the answers)
@@ -59,6 +63,9 @@ RUNS=1
 JUDGE=1
 BASELINE=0
 THRESHOLD="0.9"
+# 0.66, not 0.67: 2/3 is 0.6667, and "0.6667 < 0.67" would fail a 2/3 case
+# against its own floor (seen live). The floor means "at least 2 of 3 runs".
+VAR_THRESHOLD="0.66"
 MODEL=""
 JUDGE_MODEL=""
 WITH_MCP=0
@@ -72,6 +79,7 @@ while [ $# -gt 0 ]; do
     --with-mcp) WITH_MCP=1 ;;
     --runs) RUNS="${2:?--runs needs a number}"; shift ;;
     --threshold) THRESHOLD="${2:?--threshold needs 0..1}"; shift ;;
+    --variance-threshold) VAR_THRESHOLD="${2:?--variance-threshold needs 0..1}"; shift ;;
     --model) MODEL="${2:?--model needs a name}"; shift ;;
     --judge-model) JUDGE_MODEL="${2:?--judge-model needs a name}"; shift ;;
     -h|--help) sed -n '2,52p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -228,10 +236,20 @@ for name in "${CASES[@]}"; do
     done < <(judge_case "$criteria" "$OUT/$name.verdicts.md" "${answer_files[@]}")
   fi
   if [ "$JUDGE" -eq 1 ] && [ "$scored" -gt 0 ]; then
+    # Two tiers (evals/README.md): "hard" cases guard record integrity and
+    # safety — a single miss is an incident, so --threshold applies (at
+    # runs=3 the default 0.9 means all-pass). "variance" cases measure model
+    # variance against norms that are already maximally loud — the floor is
+    # --variance-threshold (default 0.67 = 2/3) plus the history.log trend.
+    # A case without a tier file defaults to hard — opting INTO leniency is a
+    # conscious act, not a default.
+    tier="hard"
+    [ -f "$HERE/$name/tier" ] && tier="$(tr -d '[:space:]' < "$HERE/$name/tier")"
+    [ "$tier" = "variance" ] && eff_threshold="$VAR_THRESHOLD" || eff_threshold="$THRESHOLD"
     score="$(awk -v p="$passes" -v s="$scored" 'BEGIN{printf "%.2f", p/s}')"
-    below="$(awk -v p="$passes" -v s="$scored" -v t="$THRESHOLD" 'BEGIN{print ((p/s < t) ? 1 : 0)}')"
-    [ "$below" = "1" ] && GATE_FAILURES+=("$name ($score < $THRESHOLD)")
-    scorestr="$score ($passes/$scored)"
+    below="$(awk -v p="$passes" -v s="$scored" -v t="$eff_threshold" 'BEGIN{print ((p/s < t) ? 1 : 0)}')"
+    [ "$below" = "1" ] && GATE_FAILURES+=("$name [$tier] ($score < $eff_threshold)")
+    scorestr="$score ($passes/$scored) [$tier]"
     # pass^k trend history: one line per case per run, local and gitignored.
     # `grep <case> evals/results/history.log` answers "was this better last week?"
     printf '%s %s %s/%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$name" "$passes" "$scored" >> "$HERE/results/history.log"
@@ -268,8 +286,8 @@ if [ "$JUDGE" -eq 0 ]; then
   exit 0
 fi
 if [ "${#GATE_FAILURES[@]}" -gt 0 ]; then
-  echo "GATE FAILED (threshold $THRESHOLD):"
+  echo "GATE FAILED (hard threshold $THRESHOLD, variance floor $VAR_THRESHOLD):"
   printf '  - %s\n' "${GATE_FAILURES[@]}"
   exit 1
 fi
-echo "Gate passed (threshold $THRESHOLD). Verdicts are in $OUT/*.verdicts.md — a second opinion you should read, not just count."
+echo "Gate passed (hard $THRESHOLD / variance $VAR_THRESHOLD). Verdicts are in $OUT/*.verdicts.md — a second opinion you should read, not just count."

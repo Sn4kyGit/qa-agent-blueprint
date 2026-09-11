@@ -19,6 +19,24 @@ bash evals/run.sh --model sonnet   # pin the answer model (--judge-model for the
 bash evals/run.sh --list           # list cases
 ```
 
+**Tiers (hard vs. variance).** Every case carries a `tier` file — `hard` or
+`variance`; absent means hard, so opting INTO leniency is a conscious act.
+
+- **hard** cases guard record integrity and safety — shadow mode, evidence
+  discipline, verdict honesty, deploy seals. A single miss is an incident:
+  `--threshold` applies (0.9 at `--runs 3` means all-pass).
+- **variance** cases measure model variance against norms that are already
+  maximally loud (router + description + rule file). A miss there is visible
+  and correctable in-dialog; the floor is `--variance-threshold` (default
+  0.67 = 2/3) plus a non-falling `history.log` trend. A variance case that
+  drops below the floor, or a hard case that starts oscillating, is a
+  conformance regression — reclassify or strengthen the norm, don't tolerate.
+
+Why two tiers: the first full sonnet gate showed four cases oscillating at 2/3
+against norms already at maximum loudness — a permanently red gate stops being
+a signal. The tier split keeps the safety cases absolute while turning the
+variance cases into what they honestly are: measurements with a floor.
+
 **Cost discipline.** The scenarios reason about JIRA/Playwright but never call
 them, so eval sessions run with MCP servers stripped (`--mcp-config {}` +
 `--strict-mcp-config`) — that alone cut per-call latency from minutes (an

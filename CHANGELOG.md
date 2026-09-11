@@ -11,6 +11,13 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ## [Unreleased]
 
 ### Added
+- **Eval gate tiers (hard / variance)**: each case declares a `tier` file —
+  `hard` (record integrity & safety: shadow, evidence, verdict honesty, deploy
+  seal — all-pass required) or `variance` (reasoning quality against maximally
+  loud norms — floor `--variance-threshold`, default 0.67, plus non-falling
+  history trend). Absent file = hard, so leniency is a conscious opt-in. Ends
+  the "permanently red gate stops being a signal" failure mode the first full
+  sonnet gate exposed
 - **Eval scenario materialization**: a case with a `scenario/` directory now runs
   each answer in a fresh per-run tempdir (blueprint subset + scenario overlay),
   and the runner appends a HARNESS FACT section listing the files the session

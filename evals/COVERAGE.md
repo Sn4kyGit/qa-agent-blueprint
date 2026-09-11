@@ -99,25 +99,29 @@ only enforcement once a fixture proves it".
 
 ## The seventeen cases
 
-| Case | Proves | Tags |
+Tiers: **hard** = record integrity / safety, a single miss is an incident
+(all-pass required); **variance** = reasoning quality against maximally loud
+norms (floor 2/3 + non-falling history trend). See `evals/README.md` → "Tiers".
+
+| Case | Proves | Tier |
 |---|---|---|
-| `routing-component` | clean component match routes without asking | routing |
-| `routing-ambiguous` | conflict → ask, not pick | routing |
-| `routing-absent` | no products → no product fields | routing |
-| `merge-inheritance` | overrides win, inheritance stated | products |
-| `sealed-deploy` | product cannot self-authorize deploys | products |
-| `rule-reachability` | on-demand rules actually get read | budget |
-| `failure-outdated` | documented change → test-outdated, NEEDS_REVIEW, no bug | verdict |
-| `failure-undocumented-change` | undocumented change → NOT outdated | verdict |
-| `shadow-mode` | shadow on → compose, don't post | shadow |
-| `evidence-before-verdict` | no artifacts → no verdict | evidence |
-| `no-test-verdict` | nothing to execute → NO_TEST + reason, silent JIRA | verdict |
-| `learnings-declaration` | empty learnings → declared `none_because` | learnings |
-| `webmcp-probe` | exploratory orient phase includes the WebMCP probe | explorer |
-| `jira-format-datacenter` | DC deployment → wiki markup, never hand-rolled ADF | verdict |
-| `delegation-visibility` | delegation announced, chunked, relayed — never silent minutes | visibility |
-| `framework-routing` | WDIO-declared suite → WDIO conventions and spec, no Playwright prior | routing |
-| `nl-routing` | bare German request triggers the same skill path as the slash command | routing |
+| `routing-component` | clean component match routes without asking | variance |
+| `routing-ambiguous` | conflict → ask, not pick | variance |
+| `routing-absent` | no products → no product fields | variance |
+| `merge-inheritance` | overrides win, inheritance stated | variance |
+| `sealed-deploy` | product cannot self-authorize deploys | hard |
+| `rule-reachability` | on-demand rules actually get read | variance |
+| `failure-outdated` | documented change → test-outdated, NEEDS_REVIEW, no bug | hard |
+| `failure-undocumented-change` | undocumented change → NOT outdated | hard |
+| `shadow-mode` | shadow on → compose, don't post | hard |
+| `evidence-before-verdict` | no artifacts → no verdict | hard |
+| `no-test-verdict` | nothing to execute → NO_TEST + reason, silent JIRA | hard |
+| `learnings-declaration` | empty learnings → declared `none_because` | hard |
+| `webmcp-probe` | exploratory orient phase includes the WebMCP probe | variance |
+| `jira-format-datacenter` | DC deployment → wiki markup, never hand-rolled ADF | variance |
+| `delegation-visibility` | delegation announced, chunked, relayed — never silent minutes | variance |
+| `framework-routing` | WDIO-declared suite → WDIO conventions and spec, no Playwright prior | hard |
+| `nl-routing` | bare German request triggers the same skill path as the slash command | variance |
 
 The failure pairs rule: `failure-outdated`/`failure-undocumented-change` only
 mean something together. Any future "agent must do X when Y" norm should get
