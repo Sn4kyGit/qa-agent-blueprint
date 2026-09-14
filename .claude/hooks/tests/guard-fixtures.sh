@@ -88,6 +88,8 @@ echo "== allowed: the sanctioned resolver path stays open =="
 # not kill the sanctioned path.
 check "Bash resolve-secrets.sh"       0 '{"tool_name":"Bash","tool_input":{"command":"bash .claude/hooks/resolve-secrets.sh"}}'
 check "Bash resolve-secrets.sh arg"   0 '{"tool_name":"Bash","tool_input":{"command":"bash .claude/hooks/resolve-secrets.sh . --status"}}'
+check "Bash resolver --import"        0 '{"tool_name":"Bash","tool_input":{"command":"bash .claude/hooks/resolve-secrets.sh . --import"}}'
+check "Bash resolver --capture"       0 '{"tool_name":"Bash","tool_input":{"command":"bash .claude/hooks/resolve-secrets.sh . --capture"}}'
 check "Bash plugin-root resolver"     0 '{"tool_name":"Bash","tool_input":{"command":"bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh"}}'
 
 echo

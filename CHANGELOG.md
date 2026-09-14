@@ -8,6 +8,20 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [Unreleased]
+
+### Added
+- **Assisted secret storage** (`resolve-secrets.sh --import` / `--capture`):
+  the agent can now do the one-time keychain setup for the human, without a
+  password ever entering the chat. `--import` migrates values already
+  hand-filled into `.env.playwright-secrets` into the keychain (declared keys
+  only, values via stdin, existing items kept unless `--force`);
+  `--capture` asks for each missing key through a native macOS hidden-answer
+  dialog and stores it directly (headless: falls back to printing the manual
+  commands). Offered by `/onboard-project` and `/re-board`. Fixtures:
+  `resolve-secrets-fixtures.sh` (mocked `security`/`osascript`; asserts no
+  value ever reaches stdout and undeclared keys are never swept)
+
 ## [0.5.0] — 2026-09-14
 
 ### Added

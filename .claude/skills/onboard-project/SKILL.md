@@ -103,9 +103,14 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    `resolve-secrets.sh` once (plugin mode:
    `bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh`, integrate mode:
    the namespaced copy under `.claude/hooks/qa-blueprint/`). It prints only key
-   names; for every MISSING line hand the user the printed one-time
-   `security add-generic-password` command — they run it, then you re-run the
-   resolver. On `env-file` remind the user once to fill
+   names. Offer the two assisted storage paths before handing over manual
+   commands: `--import` migrates values the user already hand-filled into
+   `.env.playwright-secrets` into the keychain (declared keys only, values
+   never surface); `--capture` asks the user for each missing key through a
+   native macOS hidden-answer dialog — they type into a GUI box, never into
+   the chat. The manual one-time command
+   (`security add-generic-password -s <SECRET_KEY> -a qa -w`) remains the
+   fallback for headless setups. On `env-file` remind the user once to fill
    `.env.playwright-secrets` directly.
 9. **Bridge file for vendored skills — one per project, never shared**: write
    `.agents/qa-project-context/<KEY>.md` (note: a *directory* keyed by project,

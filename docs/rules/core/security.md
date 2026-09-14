@@ -62,6 +62,23 @@ preamble shows a pure file-based status (`n/m keys present`, missing keys by
 name) so the agent knows what it has instead of inventing credentials — that
 visibility is the point of the mechanism, and it never touches the keychain.
 
+The same script owns the two **assisted storage** paths, so the human never
+has to type `security` commands by hand — and never pastes a password into
+the chat to hand it over:
+
+- `--import` migrates values a user already hand-filled into
+  `.env.playwright-secrets` (env-file history) into the keychain — declared
+  keys only, values travel via stdin, existing keychain items are kept unless
+  `--force`;
+- `--capture` asks for each missing key through a native macOS hidden-answer
+  dialog (`osascript`) and stores it straight into the keychain — the value
+  passes through a GUI box and a pipe, never through the transcript. Headless
+  (CI, SSH) it degrades to printing the manual one-time commands.
+
+If a user pastes a password into the chat anyway, that is a leak under "If a
+secret or PII leaks into an artifact" — offer `--capture` for the next one
+instead of repeating it anywhere.
+
 **JIRA Data Center PAT** follows the same principle one level up: service
 `JIRA_PAT_<jira-host>` (host from the atlassian entry's `JIRA_URL`), resolved by
 the session-start hook into `$CLAUDE_ENV_FILE` — the token exists only in the

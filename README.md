@@ -438,6 +438,13 @@ file filled for you. One-time setup, per secret key:
    credentials. Values are never printed anywhere: not in chat, not in
    tickets, not in evidence.
 
+**Or let the agent do the storing** (it offers this during onboarding and
+`/re-board`): `--import` migrates values you already hand-filled into
+`.env.playwright-secrets` into the keychain; `--capture` asks you for each
+missing key via a native macOS dialog with hidden input — you type into a GUI
+box, never into the chat. Both live in the blueprint's `resolve-secrets.sh`
+and never print a value.
+
 Useful later:
 
 ```bash

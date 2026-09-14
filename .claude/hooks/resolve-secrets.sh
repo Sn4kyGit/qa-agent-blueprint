@@ -23,6 +23,22 @@
 #                                      declared keys are present in the file
 #                                      (one compact line; silent when no project
 #                                      declares keychain)
+#   resolve-secrets.sh [CWD] --import  migrate values the file ALREADY holds (e.g.
+#                                      hand-filled env-file mode) into the keychain.
+#                                      Declared keys only — the script never sweeps
+#                                      arbitrary file lines into the vault. Values
+#                                      travel via stdin (never argv, never stdout).
+#                                      Existing keychain items are kept; --force
+#                                      overwrites (-U).
+#   resolve-secrets.sh [CWD] --capture ask the human for each missing key through a
+#                                      native macOS hidden-answer dialog and store
+#                                      it straight into the keychain — the user
+#                                      types into a GUI box, never into the chat,
+#                                      so the value never enters the transcript.
+#                                      Headless (no GUI): prints the manual
+#                                      one-time commands instead. Ends by resolving
+#                                      so the file reflects the new state.
+#   Any mode accepts --force as 2nd/3rd argument where meaningful.
 #
 # Merge semantics: everything between the managed-block markers is regenerated
 # from the current declarations; user lines outside the block are preserved
@@ -37,8 +53,13 @@
 set -uo pipefail
 
 CWD="${1:-$PWD}"
-MODE="${2:-resolve}"
-[ "$MODE" = "--status" ] && MODE="status" || MODE="resolve"
+MODE="resolve"; FORCE=0
+for arg in "${@:2}"; do
+  case "$arg" in
+    --status|--import|--capture) MODE="${arg#--}" ;;
+    --force) FORCE=1 ;;
+  esac
+done
 
 if ! command -v python3 >/dev/null 2>&1; then
   # Declaration parsing is python-based (same dependency as the other hooks).
@@ -48,10 +69,10 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 0
 fi
 
-python3 - "$CWD" "$MODE" <<'PY'
+python3 - "$CWD" "$MODE" "$FORCE" <<'PY'
 import os, re, subprocess, sys
 
-cwd, mode = sys.argv[1], sys.argv[2]
+cwd, mode, force = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
 SECRETS_FILE = os.path.join(cwd, ".env.playwright-secrets")
 BLOCK_START = "# --- qa-blueprint managed block (resolve-secrets.sh) ---"
 BLOCK_END = "# --- end qa-blueprint managed block ---"
@@ -157,9 +178,99 @@ if mode == "status":
               % (len(keychain_keys), len(keychain_keys)))
     sys.exit(0)
 
-# --- resolve mode ------------------------------------------------------------
-if subprocess.call(["which", "security"],
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
+# --- shared keychain helpers (import/capture/resolve) -------------------------
+def have_security():
+    return subprocess.call(["which", "security"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+
+def keychain_has(k):
+    return subprocess.run(["security", "find-generic-password", "-s", k, "-w"],
+                          capture_output=True).returncode == 0
+
+def keychain_store(k, v):
+    # -w as the LAST argument (no value after it) reads the password from stdin
+    # (twice: confirmation) — anything following -w is taken AS the password,
+    # so -U must come before it. The value travels via stdin: never argv
+    # (visible in ps), never stdout (captured into the transcript).
+    args = ["security", "add-generic-password", "-s", k, "-a", "qa", "-U", "-w"]
+    r = subprocess.run(args, input=v + "\n" + v + "\n", text=True, capture_output=True)
+    return r.returncode == 0
+
+def file_values(text):
+    vals = {}
+    if text:
+        for line in text.splitlines():
+            m = re.match(r'^([A-Z][A-Z0-9_]+)=(.*)$', line)
+            if m and m.group(1) not in vals:
+                vals[m.group(1)] = m.group(2)
+    return vals
+
+def manual_hint(k):
+    return "  store manually: security add-generic-password -s %s -a qa -w" % k
+
+# --- import mode: file -> keychain, declared keys only ------------------------
+if mode == "import":
+    if not have_security():
+        print("resolve-secrets --import: the macOS `security` CLI is unavailable here.")
+        sys.exit(0)
+    values = file_values(read_file())
+    imported, skipped, not_in_file, failed = [], [], [], []
+    for k in keychain_keys:
+        if k not in values:
+            not_in_file.append(k)
+            continue
+        if keychain_has(k) and not force:
+            skipped.append(k)
+            continue
+        (imported if keychain_store(k, values[k]) else failed).append(k)
+    print("resolve-secrets --import: %d stored in keychain%s%s%s"
+          % (len(imported),
+             ", %d already present (skipped — --force overwrites)" % len(skipped) if skipped else "",
+             ", %d declared but not in the file" % len(not_in_file) if not_in_file else "",
+             ", %d FAILED" % len(failed) if failed else ""))
+    for k in imported:
+        print("  stored %s" % k)
+    for k in not_in_file + failed:
+        print(manual_hint(k))
+    sys.exit(0)
+
+# --- capture mode: GUI hidden-answer dialog -> keychain, then resolve ---------
+if mode == "capture":
+    if not have_security() or subprocess.call(
+            ["which", "osascript"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
+        print("resolve-secrets --capture: needs macOS (`security` + `osascript`); "
+              "store the keys manually instead:")
+        for k in keychain_keys:
+            print(manual_hint(k))
+        sys.exit(0)
+    targets = [k for k in keychain_keys if force or not keychain_has(k)]
+    if not targets:
+        print("resolve-secrets --capture: all declared keys are already in the keychain.")
+    stored, skipped = [], []
+    for k in targets:
+        dialog = ('display dialog "Password for %s (account: qa) — stored directly into '
+                  'the macOS Keychain, never into the chat." default answer "" '
+                  'with hidden answer with title "QA Blueprint Keychain" '
+                  'buttons {"Cancel", "Store"} default button "Store"') % k
+        r = subprocess.run(["osascript", "-e", dialog], capture_output=True, text=True)
+        if r.returncode != 0:
+            skipped.append(k)  # Cancel or no GUI (headless)
+            continue
+        m = re.search(r'text returned:(.*)$', r.stdout)
+        v = (m.group(1) if m else "").strip()
+        if not v:
+            skipped.append(k)
+            continue
+        (stored if keychain_store(k, v) else skipped).append(k)
+        v = None
+    if stored:
+        print("resolve-secrets --capture: stored %s" % ", ".join(stored))
+    for k in skipped:
+        print(manual_hint(k))
+    # fall through into resolve so the file reflects the new keychain state
+
+# --- resolve mode -------------------------------------------------------------
+if not have_security():
     print("resolve-secrets: projects declare `Secrets source: keychain` but the macOS "
           "`security` CLI is unavailable here — fill .env.playwright-secrets by hand "
           "or switch the project's source to env-file.")

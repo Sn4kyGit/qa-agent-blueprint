@@ -42,10 +42,14 @@ offer only the delta, confirm each change individually, and re-stamp. Expect
 4. If a **Secrets source** was set or changed to `keychain`: run the
    blueprint's `resolve-secrets.sh` (plugin mode:
    `bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh`; integrate
-   mode: the namespaced copy under `.claude/hooks/qa-blueprint/`). For every
-   MISSING line, hand the user the printed one-time
-   `security add-generic-password` command, then re-run the resolver after
-   they stored the key. Values never appear in chat.
+   mode: the namespaced copy under `.claude/hooks/qa-blueprint/`). Then offer
+   the assisted storage paths before manual commands: `--import` when the
+   user already hand-filled values into `.env.playwright-secrets` (migrates
+   declared keys into the keychain, values never surface), `--capture` for
+   the rest (native macOS hidden-answer dialog per key — the user types into
+   a GUI box, never into the chat). The manual one-time
+   `security add-generic-password` command is the fallback for headless
+   setups. Values never appear in chat, on any path.
 5. Refresh what depends on the changed fields:
    - Regenerate the bridge file `.agents/qa-project-context/<KEY>.md` (and
      each product's) from the updated `PROJECT.md` — with refreshed
