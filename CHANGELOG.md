@@ -8,7 +8,7 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [Unreleased]
+## [0.5.1] — 2026-09-14
 
 ### Added
 - **Assisted secret storage** (`resolve-secrets.sh --import` / `--capture`):
