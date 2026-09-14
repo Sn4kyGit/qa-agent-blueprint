@@ -23,7 +23,11 @@ exploration, and a debrief — not "click around and see what happens."
    user and three coupon states (valid/expired/exhausted), to discover requirement
    gaps against SHOP-1234's acceptance criteria." Not "test the app." Check
    `memory/learnings/*.md` and `projects/<KEY>/learnings.md` for known risk areas
-   or past bug clusters in this area before finalizing the target.
+   or past bug clusters in this area before finalizing the target. When a flow
+   map exists (`projects/<KEY>/[products/<PRODUCT>/]flow-map.md`, or the bridge's
+   `## Flow map`): areas whose `last confirmed` is oldest are charter candidates —
+   an unconfirmed flow is a hypothesis, not a truth — and the map names the
+   target area precisely.
 2. Confirm project context is loaded: test users, stage URL, environment gotchas
    — from the effective project file, i.e. `PROJECT.md` plus the routed product's
    `PRODUCT.md` if the project has products. Name the product in the charter.

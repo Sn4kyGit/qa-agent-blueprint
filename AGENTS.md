@@ -12,7 +12,7 @@ task. Humans start at `README.md`.
 
 `qa-agent-blueprint`: a ticket-driven QA Manager + Tester for Claude Code
 (JIRA ticket in → tested ticket out, mandatory evidence, learning loop).
-Ships 25 skills, 5 subagents, 4 hooks, and 2 MCP servers (`playwright`,
+Ships 27 skills, 5 subagents, 4 hooks, and 2 MCP servers (`playwright`,
 `atlassian`). Installs into any project as a Claude Code plugin — nothing is
 copied into the consumer repo; only the user's own data (`projects/`,
 `memory/`, `evidence/`) lives there.
@@ -69,9 +69,19 @@ Ask the user: **is your JIRA Atlassian Cloud or self-hosted (Data Center)?**
 
   Uses [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian)
   (Jira DC v8.14+). Auth is a **Personal Access Token** the human creates in
-  their JIRA profile and exports as `JIRA_PERSONAL_TOKEN` in their shell
-  (`~/.zshrc`) — the token goes **never** into `.mcp.json`, the repo, or the
-  chat. Tell them this explicitly. Note: the plugin's own (Cloud) `atlassian`
+  their JIRA profile. Preferred storage (≥ 0.5.0): the macOS login keychain,
+  service `JIRA_PAT_<jira-host>` — the session-start hook resolves it into the
+  session via `$CLAUDE_ENV_FILE`, so the token lives in **no** file and no
+  global shell export:
+
+  ```bash
+  security add-generic-password -s JIRA_PAT_jira.<their-company>.tld -a jira -w
+  ```
+
+  Fallback (non-macOS, CI): export `JIRA_PERSONAL_TOKEN` in the environment —
+  the hook skips keychain resolution whenever the variable is already set.
+  Either way the token goes **never** into `.mcp.json`, the repo, or the chat.
+  Tell them this explicitly. Note: the plugin's own (Cloud) `atlassian`
   entry stays configured alongside — Claude Code does not override same-named
   plugin servers, it runs both; the dead Cloud entry is harmless, and the
   audit hook's matcher covers both namespaces.
@@ -119,7 +129,7 @@ referenced read-only from each product's `PRODUCT.md` (`App repo` field) during
 claude plugin details qa-agent-blueprint
 ```
 
-Expected inventory: `Skills (25)`, `Agents (5)`, `Hooks (4)`
+Expected inventory: `Skills (27)`, `Agents (5)`, `Hooks (4)`
 (SessionStart/Stop/PreToolUse/PostToolUse), `MCP servers (2)`.
 
 ## Alternative: clone + installer

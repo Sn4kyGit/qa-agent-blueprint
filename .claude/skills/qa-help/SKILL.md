@@ -37,6 +37,7 @@ mode they are namespaced: `/qa-agent-blueprint:<name>`.
 |---|---|
 | `/onboard-project` | One-time interview per JIRA project — run this first for a new project key. |
 | `/onboard-product` | Short onboarding for a product inside an existing project. |
+| `/re-board <KEY>` | Delta-onboarding: brings an existing project up to the current blueprint schema (new fields, missing files, open TODOs) without repeating the full interview — the upgrade path after a blueprint update. |
 | `/scaffold-suite` | Creates the Playwright test project when a product has no test assets yet. |
 
 ## Knowledge & meta
@@ -45,6 +46,7 @@ mode they are namespaced: `/qa-agent-blueprint:<name>`.
 |---|---|
 | `/qa-report` | Aggregates all evidence runs into QA metrics: pass rate, P0/P1, BLOCKED reasons, per project and product. |
 | `/retro-learn` | Captures and promotes learnings — runs at session end, or explicitly to groom. |
+| `/whats-new` | What changed in the blueprint since your projects were onboarded — and which changes call for `/re-board`. |
 | `/qa-help` | This overview. |
 
 ## Three things worth knowing

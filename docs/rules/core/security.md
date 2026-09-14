@@ -18,7 +18,8 @@ never:
 - print, echo, or summarize a secret value into the transcript, a report, a ticket
   comment, an artifact, or a commit — including "just to confirm it was fetched";
 - write a value into a file, `.env*` included (the PreToolUse guard blocks that
-  path regardless of where the value came from);
+  path regardless of where the value came from) — with one deliberate exception:
+  the blueprint's `resolve-secrets.sh`, documented below;
 - fetch credentials for a system the current ticket does not require, or for
   production, ever;
 - become the way login happens in a browser test. That path stays
@@ -30,6 +31,43 @@ The safe pattern is unchanged: `projects/<KEY>/PROJECT.md` names the vault path 
 the secret key, the agent references the key, and the value never enters context.
 If a credential server makes a value visible anyway, that is an incident under "If
 a secret or PII leaks into an artifact" below — delete, redo, capture the gap.
+
+## Declared sources: `env-file` and `keychain`
+
+Each project declares in `PROJECT.md` → "Test users" how its secret keys reach
+`.env.playwright-secrets` (`Secrets source`, products may override):
+
+- **`env-file`** (default, also when the field is absent): the user fills the
+  gitignored file by hand. Nothing automated — the original behavior.
+- **`keychain`** (macOS): each secret key is a login-keychain service of the
+  same name, stored once by the human
+  (`security add-generic-password -s <SECRET_KEY> -a qa -w`). The blueprint's
+  `.claude/hooks/resolve-secrets.sh` regenerates the managed block of
+  `.env.playwright-secrets` from those services.
+
+`resolve-secrets.sh` is the **only sanctioned writer** of the secrets file, and
+it is built so the agent may run it directly:
+
+- it never prints a value — stdout is key names and status only (fixture-tested:
+  no fixture value ever reaches the hook's context output);
+- it preserves user lines outside its managed block, and a key that fails to
+  resolve (locked keychain) keeps its previously resolved value — a locked
+  keychain never downgrades the file;
+- the file keeps its existing threat model: gitignored, `chmod 600`, and the
+  guard still blocks the agent from writing or reading it directly.
+
+Resolution is triggered deliberately, not continuously: at onboarding, on
+`/re-board`, and at session start only when the file is missing. The session
+preamble shows a pure file-based status (`n/m keys present`, missing keys by
+name) so the agent knows what it has instead of inventing credentials — that
+visibility is the point of the mechanism, and it never touches the keychain.
+
+**JIRA Data Center PAT** follows the same principle one level up: service
+`JIRA_PAT_<jira-host>` (host from the atlassian entry's `JIRA_URL`), resolved by
+the session-start hook into `$CLAUDE_ENV_FILE` — the token exists only in the
+session's environment, in no file and no global shell export. An already-set
+`JIRA_PERSONAL_TOKEN` always wins (CI, non-macOS). Store once:
+`security add-generic-password -s JIRA_PAT_<jira-host> -a jira -w`.
 
 ## Mechanical enforcement (rules are advisory, hooks are not)
 

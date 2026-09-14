@@ -1,6 +1,6 @@
 ---
 name: retest-bug
-description: Focused re-test of a fixed bug plus a tight regression sweep around it. Use for "/retest-bug <KEY-123>", "re-test <KEY-123>", "teste <KEY-123> nochmal", "gegentesten", or whenever a fix has landed on stage ("der Fix ist auf Stage", "fix is deployed — verify it"). Not for the first-time test of a ticket — use test-ticket.
+description: Focused re-test of a fixed bug plus a tight regression sweep around it — scoped from the product's `flow-map.md` (the area's Neighbors) when one exists, risk-based otherwise. Use for "/retest-bug <KEY-123>", "re-test <KEY-123>", "teste <KEY-123> nochmal", "gegentesten", or whenever a fix has landed on stage ("der Fix ist auf Stage", "fix is deployed — verify it"). Not for the first-time test of a ticket — use test-ticket.
 ---
 
 # /retest-bug — verify a fix + surrounding regression
@@ -34,7 +34,14 @@ repro from the original report.
    fix alone.
 4. Regression sweep: check 2–4 adjacent flows the fix could plausibly have
    affected (same component, same code path, same feature area) — not the whole
-   application. Risk-based, per `.claude/rules/core/qa-principles.md`.
+   application. **When a flow map exists** (`projects/<KEY>/flow-map.md`, or
+   `projects/<KEY>/products/<PRODUCT>/flow-map.md` for a routed product — the
+   bridge file carries it as `## Flow map` when present): take the sweep from
+   the **Neighbors** of the fixed flow's area instead of improvising, and say so
+   in the evidence ("sweep scoped from flow map, area Checkout"). No flow map →
+   risk-based as before, per `.claude/rules/core/qa-principles.md`. A flow map
+   whose `last confirmed` dates are old narrows nothing — then prefer fresh
+   judgment over stale neighbors.
 5. **If anything fails, analyse before concluding "not fixed".** Run
    `failure-analysis` (subagent `failure-analyst`) on the failing cases. A re-test is
    where the two cheap wrong answers live: the fix was never deployed (class

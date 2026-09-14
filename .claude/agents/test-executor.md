@@ -22,6 +22,11 @@ acceptance criteria or repro steps, project context). Full usage rules:
   inherited (`.claude/rules/core/product-layer.md`). Secret keys are read literally
   from the Test users table; never assemble one from the project key and role name.
 - Never touch production. Stage only, per the project file.
+- When the effective project file (or the bridge's `## Flow map` section) names
+  **anchors** for a flow you'll touch (selectors, test data that survived past
+  runs): start from them instead of re-discovering. An anchor that no longer
+  matches is a finding, not a blocker — note it for `retro-learn`, then explore
+  as usual.
 
 ## While testing
 

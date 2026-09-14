@@ -81,6 +81,16 @@ check "pipeline + unrelated echo naming it"  0 '{"tool_name":"Bash","tool_input"
 check "grep is not a reader we block"        0 '{"tool_name":"Bash","tool_input":{"command":"grep -c KEY README.md"}}'
 
 echo
+echo "== allowed: the sanctioned resolver path stays open =="
+# resolve-secrets.sh (re)generates .env.playwright-secrets from the keychain
+# without ever printing a value — the agent may run it. Its name contains
+# "secrets", so this fixture is the contract that future guard tightening must
+# not kill the sanctioned path.
+check "Bash resolve-secrets.sh"       0 '{"tool_name":"Bash","tool_input":{"command":"bash .claude/hooks/resolve-secrets.sh"}}'
+check "Bash resolve-secrets.sh arg"   0 '{"tool_name":"Bash","tool_input":{"command":"bash .claude/hooks/resolve-secrets.sh . --status"}}'
+check "Bash plugin-root resolver"     0 '{"tool_name":"Bash","tool_input":{"command":"bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh"}}'
+
+echo
 echo "== blocked: destructive commands =="
 check "Bash rm -rf"                   2 '{"tool_name":"Bash","tool_input":{"command":"rm -rf build/"}}'
 check "Bash git push --force"         2 '{"tool_name":"Bash","tool_input":{"command":"git push --force origin main"}}'

@@ -71,6 +71,9 @@ strategy input instead of guessing which test types a ticket needs.
      never assembles one. A role that does not exist for this product:
      write `N/A — does not apply to this product` in the Purpose column. -->
 
+- **Secrets source**: <`keychain` | `env-file` — omit to inherit the project's.
+  Overrides where THIS product's keys are resolved from.>
+
 | Role | Purpose | Vault path (relative) | Env/secret key |
 |---|---|---|---|
 | `<role>` | <purpose> | `<key>/<product>/<role>` | `<KEY>_<PRODUCT>_<ROLE>_PASSWORD` |

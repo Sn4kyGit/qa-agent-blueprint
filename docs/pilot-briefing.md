@@ -18,6 +18,7 @@ later, so it is worth collecting these first. Some need someone outside QA.
 | Stage URL, and how to read the deployed version (`/api/version`, a footer stamp, a header) | Platform / DevOps |
 | Who deploys to stage, and **the exact trigger command** (`gh workflow run …`, `glab ci run …`, a curl, or "manual — ask X") | DevOps. "Trigger the pipeline" is not a command |
 | Test users: role, purpose, vault path, and the secret key name | QA + whoever owns the vault |
+| Secrets source: `keychain` (macOS — each key stored once via `security add-generic-password`, the blueprint resolves the rest) or `env-file` (fill the gitignored file by hand) | QA — one decision per project, asked during onboarding |
 | Quality gates, if they differ from pass rate ≥ 80 %, P0 = 0, P1 ≤ 5, coverage ≥ 80 % | QA lead |
 | Test-suite location and its TC categories, or "none yet" | QA. "None yet" is a fine answer — `/scaffold-suite` creates one |
 | Test data: how it is seeded, and how it is reset between runs | QA / backend |

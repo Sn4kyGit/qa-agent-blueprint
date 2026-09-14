@@ -49,7 +49,11 @@ it reads have no business in the orchestrator's context.
    what the run observed, and what the candidate ticket says should now happen —
    **quoted verbatim, never paraphrased**. Then apply
    `references/classification.md`. Paraphrase is where an agent smuggles in what it
-   wants to be true.
+   wants to be true. When a flow map exists (bridge file section `## Flow map`, or
+   `projects/<KEY>/[products/<PRODUCT>/]flow-map.md`): check the affected area's
+   other flows for sibling cases asserting the same now-changed contract — a
+   deliberate change rarely stales exactly one assertion. Name those siblings in
+   the analysis; they are the human's ruling scope, not an automatic FAIL.
 7. **Return ≤ 60 lines.** Class, confidence, basis, per-case mapping, and for
    `test-outdated`/`test-brittle` the proposal per
    `references/proposal-template.md`. `qa-manager` writes `failure-analysis.md` into
@@ -62,7 +66,7 @@ it reads have no business in the orchestrator's context.
 |---|---|---|
 | `environment` | BLOCKED | fix the environment and re-run; no bug, `blocked_reason` set |
 | `flake` | FAIL | no product bug — `test-reliability` for quarantine/root cause |
-| `product-defect` | FAIL | `bug-reporter` as before, analysis attached |
+| `product-defect` | FAIL | `bug-reporter` as before, analysis attached, **FAIL transition on the original ticket** per PROJECT.md |
 | `test-outdated` | NEEDS_REVIEW | proposal, no bug, **no transition** — a human rules |
 | `test-brittle` | NEEDS_REVIEW | proposal (locator/wait mechanics only) |
 | `undetermined` | FAIL | comment the analysis and name the one missing artifact |

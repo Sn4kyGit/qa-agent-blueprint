@@ -256,13 +256,13 @@
     und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
   </p>
   <div class="stats">
-    <div class="stat"><div class="n">25</div><div class="l">Skills</div></div>
+    <div class="stat"><div class="n">27</div><div class="l">Skills</div></div>
     <div class="stat"><div class="n">5</div><div class="l">Subagents</div></div>
     <div class="stat"><div class="n">5+10</div><div class="l">Regeln (immer / on demand)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
-    <div class="stat"><div class="n">127</div><div class="l">Fixtures</div></div>
-    <div class="stat"><div class="n">17</div><div class="l">Eval-Cases</div></div>
-    <div class="stat"><div class="n">7,8k</div><div class="l">Token immer geladen</div></div>
+    <div class="stat"><div class="n">147</div><div class="l">Fixtures</div></div>
+    <div class="stat"><div class="n">20</div><div class="l">Eval-Cases</div></div>
+    <div class="stat"><div class="n">7,9k</div><div class="l">Token immer geladen</div></div>
   </div>
 </header>
 
@@ -324,6 +324,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
     <tr><td>/onboard-project</td><td>Das einmalige Interview pro JIRA-Projekt (~30–60 min): Umgebungen, Testuser, Runbook, Gates</td><td>„Richte das Projekt SHOP ein"</td></tr>
     <tr><td>/onboard-product</td><td>Die kurze Variante (5–15 min) für ein Produkt im Projekt — nur Abweichungen</td><td>„Das Projekt hat jetzt auch eine Admin-App"</td></tr>
+    <tr><td>/re-board</td><td>Delta-Onboarding: bringt ein Bestandsprojekt auf den aktuellen Blueprint-Stand — der Upgrade-Pfad nach einem Update</td><td>„Hol das Onboarding für SHOP nach"</td></tr>
     <tr><td>/scaffold-suite</td><td>Erzeugt das Playwright-Projekt samt erster Smoke-Spec, wenn es noch keine Test-Assets gibt</td><td>„Leg eine Test-Suite an"</td></tr>
   </table>
 
@@ -332,6 +333,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
     <tr><td>/qa-report</td><td>Aggregiert alle Evidence-Läufe: Pass-Rate, P0/P1, BLOCKED-Gründe — pro Projekt und Produkt</td><td>„Wie läuft's mit dem Testing?"</td></tr>
     <tr><td>/retro-learn</td><td>Hält Learnings fest, verdichtet sie und befördert Bewährtes in Regeln und Projektdateien</td><td>„Session abschließen"</td></tr>
+    <tr><td>/whats-new</td><td>Zeigt, was sich am Blueprint seit dem Onboarding geändert hat — und was ein /re-board lohnt</td><td>„Was ist neu?"</td></tr>
     <tr><td>/qa-help</td><td>Diese Übersicht, direkt in der Session — antwortet in der Sprache, in der man fragt</td><td>„Welche Befehle gibt es?"</td></tr>
   </table>
 
@@ -472,6 +474,21 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
       <td>„Test assets: none yet"</td>
     </tr>
     <tr>
+      <td>/re-board</td>
+      <td>Delta-Onboarding: vergleicht ein Bestandsprojekt mit dem aktuellen Template und bietet
+      nur die Lücke an — neue Felder (Secrets-Quelle, Versionsstempel), fehlende Dateien
+      (Flow-Map-Seed aus bisheriger Evidence), offene TODOs. Jede Änderung einzeln bestätigt,
+      danach Bridge-Refresh und neuer Stempel. Der Upgrade-Pfad für jedes Schema-Wachstum.</td>
+      <td>Nach einem Blueprint-Update; „Projekt aktualisieren"</td>
+    </tr>
+    <tr>
+      <td>/whats-new</td>
+      <td>Liest den Versionsstempel im PROJECT.md gegen die installierte Plugin-Version und rendert
+      die CHANGELOG-Abschnitte dazwischen — in der Sprache der Frage, mit dem Hinweis, welche
+      Änderung ein /re-board lohnt. Reine Orientierung, startet keine Arbeit.</td>
+      <td>„Was hat sich geändert?", nach einem Update</td>
+    </tr>
+    <tr>
       <td>/qa-report</td>
       <td>Liest alle <code>execution_summary.json</code> zurück: Pass-Rate pro Produkt, P0/P1,
       BLOCKED- und NO_TEST-Gründe, Routing-Qualität, Learning-Durchsatz. Nennt ausdrücklich,
@@ -569,6 +586,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
 projects/SHOP/
 ├── PROJECT.md              <span class="c">← gilt für ALLE Produkte, enthält die Routing-Registry</span>
 ├── learnings.md
+├── flow-map.md             <span class="c">← kuratiert durch /retro-learn: Flows, Anker, Nachbarn</span>
 ├── templates/bug-report.md
 └── products/               <span class="c">← fehlt bei Ein-Produkt-Projekten komplett</span>
     ├── STOREFRONT/           <span class="c">← nennt NUR, was abweicht (~60 Zeilen)</span>

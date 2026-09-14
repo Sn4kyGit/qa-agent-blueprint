@@ -18,7 +18,7 @@ Append to `memory/learnings/_inbox.md` in the fixed format:
 - Cause: <why, if known — otherwise "unknown">
 - Working solution: <what actually worked>
 - Pattern: <error-resolution | user-correction | workaround | environment | routing>
-- Candidate target: <rule | skill | PROJECT.md <KEY> | PRODUCT.md <KEY>/<PRODUCT> | learnings file>
+- Candidate target: <rule | skill | PROJECT.md <KEY> | PRODUCT.md <KEY>/<PRODUCT> | flow-map.md | learnings file>
 ```
 
 The `Pattern` line is one word and pays off twice: it gives grooming a dedupe
@@ -80,6 +80,19 @@ permanent knowledge — move it into whichever candidate target it named:
   corrected assumption).
 - `projects/<KEY>/products/<PRODUCT>/PRODUCT.md` (the same, but true for one product
   only — a deviating environment, an extra test user, a product-specific trap).
+- `projects/<KEY>/flow-map.md` or `projects/<KEY>/products/<PRODUCT>/flow-map.md`
+  (**flow knowledge**: a flow that exists, the path it takes, the selectors or
+  test data that anchor it, which neighboring flows a change in its area makes
+  worth retesting). This is the only writer a flow map has — runs never append
+  directly, so the map stays curated like `learnings.md`, not a raw dump of
+  `steps_executed`. Flow knowledge does not need the `seen: 2` gate when a run
+  just *executed* the flow — that run IS the confirmation; stamp it
+  `last confirmed: <date> (<ticket>)`.
+
+**Projects without a flow map** (onboarded before flow maps existed) get their
+initial seed from `/re-board`, which drafts areas/flows from existing
+`evidence/` + `learnings.md` the same way and lets the human confirm. This
+skill stays the only writer afterwards.
 
 **No fitting target?** If a captured pattern reaches `seen: 2` and fits no
 existing rule, skill, or project file, it is a **new-skill candidate** — propose

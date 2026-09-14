@@ -8,6 +8,71 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.5.0] — 2026-09-14
+
+### Added
+- **Declared secrets sources** (`Secrets source: keychain | env-file` in
+  PROJECT.md → "Test users", overridable per product): how a project's secret
+  keys reach `.env.playwright-secrets` is now a project fact instead of a
+  manual chore. `keychain` (macOS) resolves each key from the login keychain —
+  service name = secret key, stored once per key — via the new
+  `.claude/hooks/resolve-secrets.sh`: it regenerates a managed block in the
+  file (user lines outside preserved, unresolvable keys keep their previous
+  values), is the only sanctioned writer of the file, and never prints a
+  value, so the agent may run it directly (guard fixture pins that path open).
+  Resolution triggers: onboarding, `/re-board`, and session start when the
+  file is missing. The session preamble shows a file-based status
+  (`n/m keys present`, missing keys by name) — the agent sees which
+  credentials it has instead of inventing them. Absent field = `env-file` =
+  unchanged pre-0.5.0 behavior. Fixture-tested with a mocked `security` CLI
+  (`session-start-fixtures.sh`)
+- **JIRA Data Center PAT from the keychain, never from a global export**: the
+  session-start hook detects a DC atlassian entry (`env.JIRA_URL`), resolves
+  the PAT from service `JIRA_PAT_<jira-host>` and exports it into the session
+  via `$CLAUDE_ENV_FILE` — the token lives in no file and no `~/.zshrc`. An
+  already-set `JIRA_PERSONAL_TOKEN` always wins (CI, non-macOS). Setup
+  instructions in AGENTS.md updated accordingly
+- **`/re-board <KEY>`** (new skill): delta onboarding — brings an existing
+  project to the current blueprint schema without repeating the full
+  interview. Diffs PROJECT.md/PRODUCT.md against the current template, offers
+  only what is missing (new fields, `flow-map.md` seeded from existing
+  evidence, open TODOs), confirms every change individually, then refreshes
+  the bridge file and the version stamp. This is the upgrade path for every
+  future schema change. Eval case: `re-board-delta` (variance)
+- **`/whats-new`** (new skill): renders what changed in the blueprint since a
+  project was onboarded — diffs the project's `Blueprint version` stamp
+  (written by `/onboard-project`, refreshed by `/re-board`; absent = pre-0.5.0)
+  against the installed plugin version and summarizes the relevant CHANGELOG
+  sections in the user's language, naming which changes call for `/re-board`.
+  Read-only: never edits, never stamps. The session-start update notice now
+  points at it
+- **Flow maps** (`projects/<KEY>/flow-map.md`,
+  `projects/<KEY>/products/<PRODUCT>/flow-map.md`): a curated map of the
+  application under test — areas, flows, the selectors/test data that anchor
+  them, and each area's neighbors. `retest-bug` scopes its regression sweep
+  from the map's Neighbors instead of improvising (fallback without a map:
+  risk-based, as before); `failure-analysis` checks an area's sibling flows
+  for assertions staled by the same change; `test-executor` starts from the
+  map's anchors (selectors/test data that survived past runs) instead of
+  re-discovering them; `exploratory-testing` finds charter candidates in the
+  areas longest unconfirmed. The only writer is `retro-learn` promote — runs
+  never append directly, so the map stays curated like `learnings.md`.
+  Bridge files materialize a `## Flow map` section
+  (`generated_from`/`source_sha` include it). Seeded empty by
+  `/onboard-project` and `/onboard-product`; projects onboarded before this
+  release get theirs seeded by `/re-board` (drafted from existing evidence +
+  learnings, confirmed by the human). Eval case pair:
+  `flow-map-scoping` + `flow-map-absent`
+
+### Known issues
+- `shadow-mode` eval case is flaky at hard tier (1/3–3/3 across runs, since
+  2026-09-11 — pre-0.5.0): the safety core (never post in shadow mode) holds
+  in 100% of runs; what oscillates is one-shot execution discipline ("claims
+  `proposed-report.md` written, no file on disk"). Tracked follow-up: a
+  Stop-hook check that blocks a session ending with a claimed-but-missing
+  shadow proposal — mechanical enforcement instead of prose discipline. See
+  `evals/COVERAGE.md` → shadow-mode row
+
 ## [0.4.0] — 2026-09-11
 
 ### Added

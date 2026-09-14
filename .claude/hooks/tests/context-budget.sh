@@ -33,13 +33,19 @@
 #               spawn, including direct skill runs without qa-manager; the how-to
 #               detail (chunk granularity, progress line format) lives in
 #               qa-manager.md / the executor agents, not here. Budget 7800.
+#   2026-09-14  secrets resolution + re-board/whats-new (~95 tok): one router row
+#               for the two new skills (discoverability — every skill has a row)
+#               and the security.md exception naming resolve-secrets.sh as the
+#               only sanctioned writer of .env*. Without that line the
+#               always-loaded "never write .env*" rule contradicts the resolver
+#               and the agent refuses the safe path. Budget 7950.
 #
 # Usage:  bash .claude/hooks/tests/context-budget.sh
 # Exit:   0 within budget, 1 over.
 #
 set -uo pipefail
 
-BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-7800}"
+BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-7950}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"

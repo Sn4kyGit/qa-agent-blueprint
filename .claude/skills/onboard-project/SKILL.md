@@ -45,9 +45,13 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    - Confluence links, environments (stage URL, version-check method,
      who deploys).
    - Test users — **vault paths only**, never actual passwords in this
-     conversation. Confirm the matching `.env.playwright-secrets` keys separately,
-     out of chat if the vault has no CLI (tell the user to fill it directly in the
-     file, which is gitignored). If the setup has a credential MCP server, it may
+     conversation. Then ask once how the secret keys should reach
+     `.env.playwright-secrets` and record it as **Secrets source**:
+     `keychain` (macOS — each key is a login-keychain service of the same name;
+     give the user the one-time command per key:
+     `security add-generic-password -s <SECRET_KEY> -a qa -w`) or `env-file`
+     (the user fills the gitignored file by hand — tell them to do it directly
+     in the file, out of chat). If the setup has a credential MCP server, it may
      resolve references — it still never surfaces a value, and browser logins keep
      going through `--secrets` masking (`.claude/rules/core/security.md` →
      "Credential sources").
@@ -76,7 +80,10 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
 4. Leave any field the user can't answer yet as `TODO:` — never fill a guess.
    Flag TODOs clearly at the end so they get resolved before the first real test.
 5. Seed `projects/<KEY>/learnings.md` from the template (empty, ready for
-   `retro-learn` to populate). Then **replace the placeholder**
+   `retro-learn` to populate), and `projects/<KEY>/flow-map.md` from its
+   template (empty area skeleton — `retest-bug` scopes regression sweeps from
+   it once `retro-learn` has promoted the first flows; absent map = risk-based
+   fallback, so an empty skeleton is fine). Then **replace the placeholder**
    `projects/<KEY>/templates/bug-report.md` with the base template matching the
    report format chosen above — `.claude/skills/bug-report/templates/jira-cloud.md`
    or `plain-text.md` (always the latter on `browser` access — the DC editor takes
@@ -87,7 +94,20 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    first FAIL. `projects/EXAMPLE/templates/bug-report.md` shows a finished one.
 6. Add one line for the new project to `memory/INDEX.md` under "Projects" —
    this is what keeps lookups fast later.
-7. **Bridge file for vendored skills — one per project, never shared**: write
+7. **Stamp the blueprint version** into `PROJECT.md` → Basics: read `version`
+   from the installed plugin manifest (`.claude-plugin/plugin.json`, in plugin
+   mode under `$CLAUDE_PLUGIN_ROOT/`; integrate mode: this repo's copy) and
+   write it as `Blueprint version: <version>`. `/whats-new` and `/re-board`
+   key off this stamp later — never leave it `TODO:`.
+8. **Resolve secrets if the source is keychain**: run the blueprint's
+   `resolve-secrets.sh` once (plugin mode:
+   `bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh`, integrate mode:
+   the namespaced copy under `.claude/hooks/qa-blueprint/`). It prints only key
+   names; for every MISSING line hand the user the printed one-time
+   `security add-generic-password` command — they run it, then you re-run the
+   resolver. On `env-file` remind the user once to fill
+   `.env.playwright-secrets` directly.
+9. **Bridge file for vendored skills — one per project, never shared**: write
    `.agents/qa-project-context/<KEY>.md` (note: a *directory* keyed by project,
    not the single flat `.agents/qa-project-context.md` the vendored skills'
    own text describes) as a projection of the `PROJECT.md` you just filled —
@@ -119,9 +139,9 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    has products, this file serves `project-wide` tickets and each product gets its
    own merged projection at `.agents/qa-project-context/<KEY>/<PRODUCT>.md`,
    written by `onboard-product`.
-8. Confirm with the user: read the completed `PROJECT.md` back as a summary and
-   ask them to correct anything before considering onboarding done.
-9. **Mention products exactly once**, in the closing next-steps — not as a question
+10. Confirm with the user: read the completed `PROJECT.md` back as a summary and
+    ask them to correct anything before considering onboarding done.
+11. **Mention products exactly once**, in the closing next-steps — not as a question
    during the interview, which would cost every user time to serve a minority:
    "Does this JIRA project cover several products with different test methods,
    features, or test users? Then run `/onboard-product` — this file stays the shared

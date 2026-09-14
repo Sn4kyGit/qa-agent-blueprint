@@ -167,7 +167,10 @@ this prevents.
 **Check the bridge file is current before delegating, don't remember to.** Its
 frontmatter names `generated_from:` (the source files) and `source_sha:`. Hash the
 sources and compare — one `shasum` call, no judgment involved. Mismatch, or file
-missing → regenerate it from `PROJECT.md` (+ `PRODUCT.md`) first. The product file
+missing → regenerate it from `PROJECT.md` (+ `PRODUCT.md`) first. When a
+`flow-map.md` exists at the same level (project or product), it is one of the
+sources: include it in `generated_from:`/`source_sha:` and append its content as
+a `## Flow map` section — `retest-bug` scopes regression sweeps from it. The product file
 must be **fully merged and self-contained**: the vendored skills read one flat file
 and never inherit, so every field they need is materialized even when its value
 came from the project.

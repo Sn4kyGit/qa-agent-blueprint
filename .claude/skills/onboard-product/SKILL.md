@@ -53,18 +53,28 @@ differs from the project. Every question defaults to "same as the project", and 
    that pays `qa-manager` back on every later ticket.
 8. **Test users**: vault paths only, never a password in this conversation. Secret
    keys per `.claude/rules/core/product-layer.md` → Naming
-   (`<KEY>_<PRODUCT>_<ROLE>_PASSWORD`). Tell the user to add the keys to
-   `.env.playwright-secrets` themselves — it is gitignored, and the PreToolUse guard
-   blocks any write to it, so do not attempt it.
+   (`<KEY>_<PRODUCT>_<ROLE>_PASSWORD`). The product inherits the project's
+   **Secrets source** unless it declares its own — only ask when this product
+   genuinely differs. On `keychain`: hand the user the one-time command per key
+   (`security add-generic-password -s <SECRET_KEY> -a qa -w`), then run the
+   blueprint's `resolve-secrets.sh`. On `env-file`: tell the user to add the
+   keys to `.env.playwright-secrets` themselves — it is gitignored, and the
+   PreToolUse guard blocks any write to it, so do not attempt it.
 9. **Generate the "Differences from the project" index** at the top of `PRODUCT.md`
    from what was actually written. Derived last, never hand-maintained.
 10. **Seed `products/<PRODUCT>/learnings.md`** from the scaffold. Move any gotcha
     that is really product-specific out of the project's `learnings.md` into it.
+    Also seed `products/<PRODUCT>/flow-map.md` from the scaffold (empty area
+    skeleton — `retest-bug` scopes regression sweeps from it once `retro-learn`
+    has promoted the first flows).
 11. **Bridge file**: write `.agents/qa-project-context/<KEY>/<PRODUCT>.md` as the
     **merged** projection — project base with the product's deltas already resolved,
     self-contained, because the vendored skills read one flat file and never inherit.
     Include the frontmatter `generated_from:` (both source paths) and `source_sha:`
-    so staleness is checkable instead of remembered.
+    so staleness is checkable instead of remembered. When
+    `products/<PRODUCT>/flow-map.md` exists, append it as a `## Flow map` section
+    and add it to `generated_from:`/`source_sha:` — same rule for the project-level
+    `flow-map.md` in `.agents/qa-project-context/<KEY>.md`.
 12. **`memory/INDEX.md`**: extend the project's existing row with the product list.
     One row per project, never one row per product.
 13. **Final checks**: every registry row has a directory and every directory has a

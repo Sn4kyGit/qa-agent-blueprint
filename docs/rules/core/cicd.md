@@ -38,10 +38,13 @@ When this blueprint runs unattended (e.g. a nightly-regression pipeline invoking
   hook does not fire either, so the run would vanish silently. Therefore write
   `execution_summary.json` with `verdict: BLOCKED` and post the `report-to-jira`
   BLOCKED comment **before** any tool call, exactly as for an unreachable stage.
-- **A suite run has no ticket to route from.** Nightly regression names its scope
-  explicitly: `claude -p "/test-automation --project SHOP --product ADMIN"`.
-  Without it the routing table is asked to resolve from nothing and quietly falls to
-  the default.
+- **A suite run has no ticket to route from — so no component, label, or other
+  ticket signal exists for it either; explicit scope is the ONLY routing input.**
+  Nightly regression names its scope on the invocation:
+  `claude -p "/test-automation --project SHOP --product ADMIN"`. "The product
+  must be explicit *when routing is ambiguous*" is wrong here: without a ticket
+  there is no routing at all, ambiguous or not. Unnamed scope is asked to
+  resolve from nothing and quietly falls to the default.
 - Evidence and the Stop-hook requirement still apply unchanged.
 - **A Stop-hook block is not a crash.** When the hook blocks a headless run, the
   run exits non-zero with a machine-readable first line on stderr:

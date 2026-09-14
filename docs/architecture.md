@@ -17,9 +17,9 @@ Layer 2 – Skills & subagents (loaded on demand)
   Test types, bug reporting, deploy, retro, onboarding
 
 Layer 3 – Project context (loaded per project only)
-  projects/<KEY>/PROJECT.md + learnings.md + templates/
-  Test users, environments, pipelines, report format, gotchas
-  ↳ optional sub-layer: products/<PRODUCT>/PRODUCT.md + learnings.md
+  projects/<KEY>/PROJECT.md + learnings.md + flow-map.md + templates/
+  Test users, environments, pipelines, report format, gotchas, flow map
+  ↳ optional sub-layer: products/<PRODUCT>/PRODUCT.md + learnings.md + flow-map.md
     for projects covering several products — inherits the project file,
     states only differences (.claude/rules/core/product-layer.md)
 
@@ -74,7 +74,10 @@ Capture → Groom → Promote, run by the `retro-learn` skill:
 - **Groom** (weekly/on demand): dedupe via Grep, bump `seen:` counters, delete stale
   entries.
 - **Promote** (gate: ≥ 2 sessions): into rules, skills, or `projects/<KEY>/` — from
-  then on it is loaded automatically and never explained again.
+  then on it is loaded automatically and never explained again. Flow knowledge
+  (which flows exist, their selectors, their neighbors) promotes into
+  `flow-map.md` — curated, never appended to by runs directly; `retest-bug`
+  scopes regression sweeps from it.
 
 Failures of the agent itself get a compact 5-Whys RCA before capture, so learnings
 target system gaps, not symptoms. See `docs/memory-layers.md` for how repo learnings

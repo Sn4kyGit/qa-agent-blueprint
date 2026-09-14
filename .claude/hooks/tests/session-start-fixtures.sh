@@ -225,6 +225,146 @@ except Exception:
 check_absent "unknown marketplace state → no hint" "$UPCTX3" "UPDATE:"
 
 echo
+echo "== keychain secrets: the agent sees what it has, never a value =="
+# A mock `security` CLI: fixture values for known services, error otherwise —
+# the same contract as macOS find-generic-password -w, without touching a real
+# keychain.
+MOCKBIN="$WORK/mockbin"; mkdir -p "$MOCKBIN"
+cat > "$MOCKBIN/security" <<'MOCK'
+#!/usr/bin/env bash
+svc=""
+while [ $# -gt 0 ]; do [ "$1" = "-s" ] && svc="$2"; shift; done
+case "$svc" in
+  KC_A_PASSWORD) echo "fixture-value-AAA" ;;
+  KC_B_PASSWORD) echo "fixture-value-BBB" ;;
+  JIRA_PAT_jira.fixture.invalid) echo "fixture-pat-999" ;;
+  *) echo "could not be found" >&2; exit 44 ;;
+esac
+MOCK
+chmod +x "$MOCKBIN/security"
+
+mk_kc_project() {  # mk_kc_project <dir> — one keychain project, three declared keys
+  mkdir -p "$1/projects/KC"
+  cat > "$1/projects/KC/PROJECT.md" <<'EOF'
+# Project File: KC
+- **Secrets source**: `keychain`
+## Test users
+| Role | Purpose | Vault path (relative) | Env/secret key |
+|---|---|---|---|
+| `a` | x | `<key>/a` | `KC_A_PASSWORD` |
+| `b` | x | `<key>/b` | `KC_B_PASSWORD` |
+| `c` | x | `<key>/c` | `KC_C_PASSWORD` |
+EOF
+}
+
+# Status line: 2 of 3 keys present in the file → agent sees the count AND the
+# missing key's NAME (that visibility is the fix for "the agent invents
+# credentials"). No security call involved — pure file inspection.
+KC1="$WORK/kc-status"; mk_kc_project "$KC1"
+cat > "$KC1/.env.playwright-secrets" <<'EOF'
+# --- qa-blueprint managed block (resolve-secrets.sh) ---
+KC_A_PASSWORD=fixture-value-AAA
+KC_B_PASSWORD=fixture-value-BBB
+# --- end qa-blueprint managed block ---
+EOF
+KC1CTX="$(context_for "$KC1")"
+check_contains "status line counts present keys" "$KC1CTX" "keychain secrets: 2/3 present"
+check_contains "missing key is NAMED" "$KC1CTX" "KC_C_PASSWORD"
+check_absent   "resolved values never reach context" "$KC1CTX" "fixture-value-AAA"
+check_absent   "resolved values never reach context (2)" "$KC1CTX" "fixture-value-BBB"
+
+# No declaration → no keychain line at all (env-file projects stay silent).
+check_absent "env-file projects get no keychain line" "$CTX" "keychain secrets"
+
+# Auto-resolve on missing file: hook must create the file via the resolver,
+# context names keys, values stay out of context but land in the file.
+KC2="$WORK/kc-resolve"; mk_kc_project "$KC2"
+KC2CTX="$(printf '{"cwd":"%s"}' "$KC2" | PATH="$MOCKBIN:$PATH" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+if [ -f "$KC2/.env.playwright-secrets" ] \
+   && grep -q "KC_A_PASSWORD=fixture-value-AAA" "$KC2/.env.playwright-secrets" \
+   && grep -q "KC_B_PASSWORD=fixture-value-BBB" "$KC2/.env.playwright-secrets"; then
+  printf 'ok    %s\n' "auto-resolve writes the file when it was missing"
+else
+  printf 'FAIL  %s\n' "auto-resolve writes the file when it was missing"; fails=$((fails + 1))
+fi
+check_contains "auto-resolve reports key names" "$KC2CTX" "resolve-secrets: 2/3 keychain keys resolved"
+check_contains "auto-resolve names the missing key + one-time command" "$KC2CTX" "security add-generic-password -s KC_C_PASSWORD -a qa -w"
+check_absent   "auto-resolve leaks no value into context" "$KC2CTX" "fixture-value-AAA"
+check_absent   "auto-resolve leaks no value into context (2)" "$KC2CTX" "fixture-value-BBB"
+
+echo
+echo "== JIRA Data Center PAT: keychain → session env, never a file =="
+DC1="$WORK/dc-pat"; mkdir -p "$DC1/projects"
+printf '%s' '{"mcpServers":{"atlassian":{"command":"uvx","args":["mcp-atlassian"],"env":{"JIRA_URL":"https://jira.fixture.invalid"}}}}' > "$DC1/.mcp.json"
+ENVFILE="$WORK/dc-envfile"; : > "$ENVFILE"
+DC1CTX="$(printf '{"cwd":"%s"}' "$DC1" | PATH="$MOCKBIN:$PATH" CLAUDE_ENV_FILE="$ENVFILE" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+if grep -q "export JIRA_PERSONAL_TOKEN=fixture-pat-999" "$ENVFILE"; then
+  printf 'ok    %s\n' "PAT exported into CLAUDE_ENV_FILE"
+else
+  printf 'FAIL  %s\n' "PAT exported into CLAUDE_ENV_FILE"; fails=$((fails + 1))
+fi
+check_contains "PAT resolution announced by service name" "$DC1CTX" "service JIRA_PAT_jira.fixture.invalid"
+check_absent   "PAT value never reaches context" "$DC1CTX" "fixture-pat-999"
+
+# PAT already in the environment → no keychain access, no env write.
+ENVFILE2="$WORK/dc-envfile2"; : > "$ENVFILE2"
+DC2CTX="$(printf '{"cwd":"%s"}' "$DC1" | PATH="$MOCKBIN:$PATH" CLAUDE_ENV_FILE="$ENVFILE2" JIRA_PERSONAL_TOKEN="already-set" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+[ -s "$ENVFILE2" ] \
+  && { printf 'FAIL  %s\n' "existing PAT env var is left alone"; fails=$((fails + 1)); } \
+  || printf 'ok    %s\n' "existing PAT env var is left alone"
+check_absent "no resolution note when PAT already set" "$DC2CTX" "JIRA PAT"
+
+# DC configured but nothing resolvable → the one-time store command is named.
+DC3="$WORK/dc-missing"; mkdir -p "$DC3/projects"
+printf '%s' '{"mcpServers":{"atlassian":{"command":"uvx","args":["mcp-atlassian"],"env":{"JIRA_URL":"https://other.fixture.invalid"}}}}' > "$DC3/.mcp.json"
+DC3CTX="$(printf '{"cwd":"%s"}' "$DC3" | PATH="$MOCKBIN:$PATH" CLAUDE_ENV_FILE="$WORK/dc-envfile3" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_contains "unresolvable PAT names the one-time command" "$DC3CTX" "security add-generic-password -s JIRA_PAT_other.fixture.invalid -a jira -w"
+
+# Cloud entries (no env.JIRA_URL) never trigger the DC path — covered by the
+# existing MCP fixtures above, which assert no JIRA lines appear.
+
+echo
+echo "== degraded machine: no security CLI → note, never a crash =="
+NOSEC="$WORK/nosec-bin"; mkdir -p "$NOSEC"
+for t in python3 python bash sh sed grep cat dirname basename tr uname mkdir npx git head; do
+  p="$(command -v "$t" 2>/dev/null)" && ln -sf "$p" "$NOSEC/$t" 2>/dev/null
+done
+DC4="$WORK/dc-nosec"; mkdir -p "$DC4/projects"
+printf '%s' '{"mcpServers":{"atlassian":{"command":"uvx","args":["mcp-atlassian"],"env":{"JIRA_URL":"https://jira.fixture.invalid"}}}}' > "$DC4/.mcp.json"
+DC4CTX="$(printf '{"cwd":"%s"}' "$DC4" | PATH="$NOSEC" CLAUDE_ENV_FILE="$WORK/dc-envfile4" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_contains "missing security CLI is a note, not a crash" "$DC4CTX" "security CLI is unavailable"
+
+echo
 if [ "$fails" -eq 0 ]; then
   echo "all fixtures passed"
 else

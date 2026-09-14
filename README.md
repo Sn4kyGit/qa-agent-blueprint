@@ -10,7 +10,7 @@ about *your* projects lives in plain Markdown files in your repo — reviewable,
 diffable, and shared with your team through Git.
 
 > **👉 [Check out the detailed overview](https://sn4kygit.github.io/claude_blueprint/overview.html)** —
-> the whole architecture rendered as a one-pager: five layers, 13 core skills,
+> the whole architecture rendered as a one-pager: five layers, 15 core skills,
 > five verdicts, and what is enforced rather than merely written down.
 
 > **This is a public blueprint.** It contains no credentials, no internal URLs, no
@@ -20,7 +20,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 25 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 127 fixtures · 17 eval cases |
+| **Contents** | 27 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 147 fixtures · 20 eval cases |
 | **Two ways in** | Merged into your repo (integrate), or as a plugin |
 | **License** | MIT |
 
@@ -210,7 +210,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>13 core skills</b> — the ticket workflow</summary>
+<summary><b>15 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
@@ -224,9 +224,11 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 | `/deploy-to-stage` | The project's deploy runbook, with safety checks |
 | `/onboard-project` | Teach the agent a new project |
 | `/onboard-product` | Teach it one product of a project (5–15 min, differences only) |
+| `/re-board` | Delta-onboarding: bring an existing project up to the current blueprint schema — the upgrade path after an update |
 | `/scaffold-suite` | Create the Playwright project the evidence policy needs — config *is* the capture matrix |
 | `/qa-report` | Aggregate the evidence into metrics: pass rate, P0/P1, BLOCKED reasons, routing quality |
 | `/retro-learn` | Capture, groom and promote learnings |
+| `/whats-new` | What changed in the blueprint since a project was onboarded — and what calls for `/re-board` |
 
 </details>
 
@@ -299,7 +301,9 @@ Capture  →  Groom  →  Promote
 - **Groom** — `/retro-learn` dedupes, bumps `seen:` counters, deletes what no
   longer holds. SessionStart reports the backlog so it cannot grow quietly.
 - **Promote** — seen twice, it moves into a rule, a `PROJECT.md` or a `PRODUCT.md`,
-  where it is loaded automatically and never explained again.
+  where it is loaded automatically and never explained again. Flow knowledge
+  (which flows exist, their anchors, their neighbors) moves into `flow-map.md` —
+  and `retest-bug` scopes its regression sweeps from it instead of improvising.
 - **Routing improves itself** — a rule a human states once lands in the product
   registry immediately; a single case answered twice is promoted into it. An
   exception never becomes a rule.

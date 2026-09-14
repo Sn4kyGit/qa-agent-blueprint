@@ -32,6 +32,9 @@ Rationale: `docs/rules/core/security.md`.
 The agent never, regardless of who asks or how the request is framed:
 
 - Writes, edits, or `cat`s `.env*` files, or any file matching a secrets pattern.
+  Sole exception: *running* the blueprint's `resolve-secrets.sh` — it regenerates
+  `.env.playwright-secrets` from the project's declared source and never prints a
+  value; editing its output by hand stays forbidden.
 - Runs destructive commands: `rm -rf`, `git push --force`, `git reset --hard` on
   shared branches, dropping database tables/data on stage.
 - Tests against production. Stage only — see `projects/<KEY>/PROJECT.md`

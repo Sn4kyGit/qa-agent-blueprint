@@ -41,7 +41,7 @@ project recognized → project knowledge applied → tested → evidence produce
 | Situation | Use |
 |---|---|
 | Test / re-test a ticket end-to-end | Skill `test-ticket` (orchestrates everything below) |
-| Re-test a fixed bug | Skill `retest-bug` |
+| Re-test a fixed bug | Skill `retest-bug` — sweep from the flow map's Neighbors |
 | Exploratory testing, bug reproduction | Skill `exploratory-testing` via subagent `test-executor` (Playwright MCP) |
 | Regression, repeatable checks, spec maintenance | Skill `test-automation` via subagent `test-automator` (suite's framework: Playwright or WebdriverIO) |
 | Test failed — real defect, or is the test case outdated? | Skill `failure-analysis` via subagent `failure-analyst` — automatic on FAIL, **before** `bug-report` |
@@ -50,6 +50,7 @@ project recognized → project knowledge applied → tested → evidence produce
 | Fix not on stage yet | Skill `deploy-to-stage` — runbook from `PROJECT.md` |
 | New project | Skill `onboard-project` |
 | New product inside an existing project | Skill `onboard-product` |
+| Blueprint updated / "what changed?" / project behind the template | Skill `whats-new` (read-only delta) → `re-board <KEY>` (apply, each change confirmed) |
 | No Playwright suite exists yet for this project/product | Skill `scaffold-suite` |
 | "How is testing going?", weekly/sprint summary, metrics | Skill `qa-report` |
 | End of session / something unexpected happened | Skill `retro-learn` (capture into `memory/learnings/_inbox.md`) |

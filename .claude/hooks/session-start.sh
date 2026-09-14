@@ -24,6 +24,9 @@ if command -v python3 >/dev/null 2>&1; then
 fi
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+# Own directory: resolve-secrets.sh ships next to this script in every mode
+# (plugin root, integrate-mode namespace copy, this repo).
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 is_plugin_bootstrap() {
   [ -n "$PLUGIN_ROOT" ] || return 1
@@ -171,7 +174,7 @@ for mp in known.values():
                 best = ev
 
 if best and best > rv:
-    print("\n- UPDATE: %s %s is available (running %s) — run `claude plugin marketplace update` + `claude plugin update %s`, then restart."
+    print("\n- UPDATE: %s %s is available (running %s) — run `claude plugin marketplace update` + `claude plugin update %s`, then restart; /whats-new afterwards shows what changed since your projects were onboarded."
           % (name, ".".join(map(str, best)), ".".join(map(str, rv)), name))
 PY
 }
@@ -263,8 +266,20 @@ if pw:
         flags.append("PW_UNMASKED")
     if not any("--output-dir" in (c.get("args") or []) for c in pw):
         flags.append("PW_NO_OUTDIR")
-if servers.get("atlassian"):
+at = servers.get("atlassian", [])
+if at:
     flags.append("HAS_AT")
+# JIRA Data Center entries carry their instance URL in env.JIRA_URL (the Cloud
+# remote server does not). The host names the Keychain service the session's
+# PAT is resolved from: JIRA_PAT_<host>. First host wins — one JIRA per QA
+# home is the architecture (docs/rules/core/token-discipline.md).
+import re as _re
+for c in at:
+    url = (c.get("env") or {}).get("JIRA_URL") or ""
+    host = _re.sub(r"^https?://", "", url).split("/")[0] if url else ""
+    if host:
+        flags.append("AT_DC_HOST:" + host)
+        break
 print(" ".join(flags))
 PY
 }
@@ -284,8 +299,7 @@ mcp_hint() {
     case "$(basename "$d")" in _template|EXAMPLE) continue ;; esac
     return 0   # a real project exists — the user is past first-run setup
   done
-  local scan=""
-  scan="$(mcp_scan 2>/dev/null || true)"
+  local scan="$MCP_SCAN"
   # Contract violations are findings in any mode. Order: security, then evidence.
   case "$scan" in
     *PW_UNMASKED*)
@@ -322,12 +336,71 @@ secrets_status() {
   printf '\n- WARNING: .env.playwright-secrets is missing — the playwright MCP server exits at startup (--secrets ENOENT). Create it (install.sh writes a template) before any browser test.'
 }
 
+# Keychain-backed secrets ("Secrets source: keychain" in PROJECT.md/PRODUCT.md):
+# the agent must SEE which declared keys it actually has — that visibility is
+# what ends "the agent invents credentials because it does not know it has
+# them". Pure file inspection via resolve-secrets.sh --status: no keychain
+# access at session start (a locked keychain would otherwise prompt every
+# session), silent when no project declares keychain.
+secrets_keys_line() {
+  [ -f "$HERE/resolve-secrets.sh" ] || return 0
+  local line
+  line="$(bash "$HERE/resolve-secrets.sh" "$CWD" --status 2>/dev/null)" || return 0
+  [ -n "$line" ] && printf '\n- Secrets: %s' "$line"
+}
+
+# JIRA Data Center PAT: never a global shell export, never a file. When a DC
+# atlassian entry exists (env.JIRA_URL) and no JIRA_PERSONAL_TOKEN is already
+# in the environment, resolve it from the login keychain (service
+# JIRA_PAT_<host>) straight into THIS session via $CLAUDE_ENV_FILE. The value
+# is quoted with shlex and never printed. A locked keychain costs one dismiss
+# per session start — if that annoys, exporting the PAT in the shell profile
+# skips this path entirely (the env check comes first).
+jira_pat_resolve() {
+  [ -n "${CLAUDE_ENV_FILE:-}" ] || return 0
+  [ -z "${JIRA_PERSONAL_TOKEN:-}" ] || return 0
+  case "$MCP_SCAN" in *AT_DC_HOST:*) ;; *) return 0 ;; esac
+  local host tok q
+  host="$(printf '%s' "$MCP_SCAN" | tr ' ' '\n' | sed -n 's/^AT_DC_HOST://p' | head -1)"
+  [ -n "$host" ] || return 0
+  if ! command -v security >/dev/null 2>&1; then
+    printf '\n- JIRA Data Center (%s): JIRA_PERSONAL_TOKEN is not set and the macOS security CLI is unavailable — export the PAT in the environment.' "$host"
+    return 0
+  fi
+  tok="$(security find-generic-password -s "JIRA_PAT_$host" -w 2>/dev/null)"
+  if [ -n "$tok" ]; then
+    q="$(printf '%s' "$tok" | python3 -c 'import shlex,sys; print(shlex.quote(sys.stdin.read().strip()))' 2>/dev/null)"
+    [ -n "$q" ] || return 0
+    printf 'export JIRA_PERSONAL_TOKEN=%s\n' "$q" >> "$CLAUDE_ENV_FILE" 2>/dev/null || return 0
+    printf '\n- JIRA PAT for %s resolved from Keychain (service JIRA_PAT_%s) — exported to this session only, never written to a project file.' "$host" "$host"
+  else
+    printf '\n- JIRA Data Center (%s): no JIRA_PERSONAL_TOKEN in env and none in Keychain — store it once: security add-generic-password -s JIRA_PAT_%s -a jira -w' "$host" "$host"
+  fi
+}
+
 # Bootstrap first, then build the context — otherwise the secrets warning below
-# would fire on the very run that just seeded the file.
+# would fire on the very run that just seeded the file. MCP_SCAN is computed
+# once for both the hints and the JIRA Data Center PAT resolution (the scan is
+# read-only config parsing, no liveness checks).
+SECRETS_EXISTED=0
+[ -f "$CWD/.env.playwright-secrets" ] && SECRETS_EXISTED=1
 PLUGIN_BOOTSTRAP=0
 if is_plugin_bootstrap; then
   PLUGIN_BOOTSTRAP=1
   bootstrap_dirs
+fi
+MCP_SCAN="$(mcp_scan 2>/dev/null || true)"
+
+# Auto-resolve keychain-backed secrets only when the file did not exist before
+# bootstrap (the seed above may have just created the placeholder — that still
+# counts as missing). Resolution touches the keychain, so it must NOT run on
+# every session: missing file = setup moment, which is exactly when the user
+# is present to unlock. Silent when no project declares keychain.
+AUTO_SECRETS=""
+if [ "$SECRETS_EXISTED" -eq 0 ] && [ -f "$HERE/resolve-secrets.sh" ]; then
+  AUTO_SECRETS="$(bash "$HERE/resolve-secrets.sh" "$CWD" 2>/dev/null)"
+  [ -n "$AUTO_SECRETS" ] && AUTO_SECRETS="
+- $AUTO_SECRETS"
 fi
 
 # The browser preference file is needed in EVERY mode (the plugin's .mcp.json
@@ -354,7 +427,7 @@ $(list_projects)
 - Read memory/INDEX.md before anything else; then only the active project's
   PROJECT.md + learnings.md. No full-repo scans.
 - Lost? The qa-help skill lists every command (in plugin mode:
-  /qa-agent-blueprint:qa-help) — plain language works too.$(mcp_hint)$(inbox_status)$(secrets_status)$BROWSER_SEED_NOTE$(update_notice)"
+  /qa-agent-blueprint:qa-help) — plain language works too.$(mcp_hint)$(inbox_status)$(secrets_status)$(secrets_keys_line)$(jira_pat_resolve)$AUTO_SECRETS$BROWSER_SEED_NOTE$(update_notice)"
 
 if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
   # The router is the plugin's own CLAUDE.md, injected VERBATIM. If the file is

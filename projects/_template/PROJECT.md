@@ -8,6 +8,9 @@
 ## Basics
 
 - **JIRA project key**: `<KEY>` (must equal this directory's name)
+- **Blueprint version**: `<version>` ← stamped by `/onboard-project` from the
+  installed plugin, refreshed by `/re-board`. `/whats-new` diffs it against the
+  running blueprint — never edit by hand.
 - **JIRA deployment**: `cloud` | `datacenter` ← pick one; drives the report
   content format (ADF/REST v3 vs. wiki markup/REST v2) and the MCP backend —
   details: `docs/rules/testing/jira-confluence.md` → "Deployments"
@@ -52,6 +55,14 @@ Credentials live in the vault — here are only references. Combine
 the vault prefix below with the relative path. Matching secret keys go
 into `.env.playwright-secrets` for the Playwright MCP `--secrets` masking.
 
+- **Secrets source**: `env-file` | `keychain` ← how the secret keys below reach
+  `.env.playwright-secrets`. `env-file` = you fill the file by hand (default,
+  also when this field is absent). `keychain` (macOS) = the blueprint's
+  `resolve-secrets.sh` resolves each key from the login keychain — service name
+  = secret key, stored once per key:
+  `security add-generic-password -s <SECRET_KEY> -a qa -w`.
+  Resolution runs at onboarding, on `/re-board`, and when the file is missing;
+  values are never printed anywhere.
 - **Vault prefix**: `<e.g. vault://qa/ or op://QA/>` — combined with the relative
   paths below. Stated here because this is where the agent reads it.
 

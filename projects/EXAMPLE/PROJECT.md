@@ -16,6 +16,8 @@
 ## Basics
 
 - **JIRA project key**: `SHOP`
+- **Blueprint version**: `0.5.0` ← stamped by `/onboard-project`, refreshed by
+  `/re-board`; `/whats-new` diffs it against the running blueprint.
 - **Products**: two — a customer-facing storefront and an internal back-office (see
   the Products section below)
 - **Issue types**: Bug = `Bug`, Story = `Story`; new bugs are filed in the same project (SHOP)
@@ -73,6 +75,12 @@ Credentials live in the vault — here are only references. Vault prefix
 `vault://qa/` + the relative path below. Password values for
 browser login go into `.env.playwright-secrets` under the secret key (masked by
 Playwright MCP `--secrets`).
+
+- **Secrets source**: `keychain` — every key below is a macOS login-keychain
+  service of the same name (stored once:
+  `security add-generic-password -s SHOP_QA_READONLY_PASSWORD -a qa -w`);
+  the blueprint's `resolve-secrets.sh` keeps `.env.playwright-secrets` filled.
+  `env-file` would mean: fill that file by hand.
 
 Only users that work across **both** products live here. Product-specific roles are
 in the product files — note that they carry a product segment in the key, so two
