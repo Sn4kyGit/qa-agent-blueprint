@@ -408,6 +408,53 @@ Full detection matrix, per-file collision policy, plugin mechanics and an FAQ:
 
 ---
 
+## Test user passwords: one-time Keychain setup (macOS)
+
+Filling `.env.playwright-secrets` by hand still works exactly as before
+(`Secrets source: env-file` — the default). But if a project declares
+`Secrets source: keychain` (asked during `/onboard-project`, or added to an
+existing project in two minutes via `/re-board`), the blueprint keeps that
+file filled for you. One-time setup, per secret key:
+
+1. **Find the key names.** Open `projects/<PROJECT-KEY>/PROJECT.md` →
+   **Test users** and look at the **Env/secret key** column. Those are the
+   *full* key names, e.g. `SHOP_QA_STANDARD_PASSWORD`. (Confusingly close to
+   the project key `SHOP` — but the placeholder here is always the complete
+   secret-key name from that column.)
+2. **Store each key once** in the macOS Keychain. The service name must be
+   the secret key, exactly as written in the table:
+
+   ```bash
+   security add-generic-password -s SHOP_QA_STANDARD_PASSWORD -a qa -w
+   ```
+
+   `-w` with no value after it makes macOS prompt for the password (typed
+   invisibly, never echoed). Prefer clicking? *Keychain Access* → new
+   password item: **Name** = the secret key, **Account** = `qa` — same thing.
+3. **Done.** The blueprint's resolver writes `.env.playwright-secrets` from
+   there — at onboarding, on `/re-board`, and whenever the file is missing.
+   Every session start shows a status line (`n/m keys present`, missing ones
+   by name), so the agent knows which logins it *has* instead of inventing
+   credentials. Values are never printed anywhere: not in chat, not in
+   tickets, not in evidence.
+
+Useful later:
+
+```bash
+# rotate a password (updates the existing item)
+security add-generic-password -s SHOP_QA_STANDARD_PASSWORD -a qa -w -U
+# remove one
+security delete-generic-password -s SHOP_QA_STANDARD_PASSWORD -a qa
+```
+
+**JIRA Data Center PAT** works the same way, one level up: service
+`JIRA_PAT_<jira-host>` (e.g. `JIRA_PAT_jira.example.com`), account `jira`.
+The session-start hook exports it into each session via the official
+`$CLAUDE_ENV_FILE` mechanism — the token lives in no file and no `~/.zshrc`
+export. CI/non-macOS: keep exporting `JIRA_PERSONAL_TOKEN`, that always wins.
+
+---
+
 ## Security & privacy
 
 - **No secrets in this repo, and none in context.** Credentials are vault paths or
