@@ -274,7 +274,7 @@ plugin in this project. Read its AGENTS.md first and follow the runbook.</code><
   <p>Oder selbst zwei Befehle — <code>--scope project</code> aktiviert nur hier, ohne Flag überall:</p>
   <pre><code>claude plugin marketplace add Sn4kyGit/claude_blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace</code></pre>
-  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 23 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
+  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 27 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
 </section>
 
 <section>
@@ -305,7 +305,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
   <table>
     <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
     <tr><td>/test-ticket</td><td>Der Haupteinstieg: Ticket lesen, routen, Stage prüfen, Strategie wählen, Evidence erzeugen, Verdikt zurückmelden</td><td>„Teste SHOP-1234"</td></tr>
-    <tr><td>/retest-bug</td><td>Spielt die Repro-Schritte eines gefixten Bugs nach, dann enger Regressions-Sweep um die Fundstelle</td><td>„Der Fix für WEB-456 ist auf Stage — prüf das"</td></tr>
+    <tr><td>/retest-bug</td><td>Spielt die Repro-Schritte eines gefixten Bugs nach, dann enger Regressions-Sweep um die Fundstelle — aus der Flow-Map des Produkts abgeleitet, wenn eine existiert</td><td>„Der Fix für WEB-456 ist auf Stage — prüf das"</td></tr>
     <tr><td>/exploratory-testing</td><td>Gecharterte, zeitboxte Session im Browser — für neue Features und unklares Verhalten ohne Spec</td><td>„Schau dir die neue Checkout-Seite mal an"</td></tr>
     <tr><td>/test-automation</td><td>Schreibt oder fährt deterministische Specs im Framework der Suite (Playwright oder WebdriverIO), sobald ein Ablauf verstanden und wiederholungswürdig ist</td><td>„Automatisiere den Login-Flow"</td></tr>
   </table>
@@ -393,7 +393,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptkontext nicht fluten.
   </p>
 
-  <h3>Die 14 eigenen Skills — der Ticket-Ablauf</h3>
+  <h3>Die 16 eigenen Skills — der Ticket-Ablauf</h3>
   <table>
     <tr><th>Skill</th><th>Was er tut</th><th>Wann er greift</th></tr>
     <tr>
@@ -405,8 +405,9 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <tr>
       <td>/retest-bug</td>
       <td>Schmalere Variante: spielt exakt die ursprünglichen Repro-Schritte nach und macht danach
-      einen engen Regressions-Sweep um die Fundstelle. Ist der Report dünn, wird erst eine
-      verifizierte Repro erzeugt.</td>
+      einen engen Regressions-Sweep um die Fundstelle — aus der <code>flow-map.md</code> des
+      Produkts abgeleitet (Nachbar-Flows), risikobasiert, wenn keine existiert. Ist der Report
+      dünn, wird erst eine verifizierte Repro erzeugt.</td>
       <td>Ein Fix ist auf Stage gelandet</td>
     </tr>
     <tr>
@@ -637,7 +638,7 @@ projects/SHOP/
     <tr><th>Mechanik</th><th>Erzwingt</th><th>Fixtures</th></tr>
     <tr><td>pre-tool-guard</td><td>Keine Schreibzugriffe auf <code>.env*</code> oder secret-benannte Pfade, kein <code>rm -rf</code>, kein Force-Push</td><td>23</td></tr>
     <tr><td>stop-evidence-check</td><td>Kein Verdikt ohne <code>execution_summary.json</code> — und ohne deklarierte <code>learnings</code>. Block-Meldungen tragen maschinenlesbare Marker (<code>QA_EVIDENCE_MISSING:</code> / <code>QA_LEARNINGS_MISSING:</code>), damit eine Pipeline eine Policy-Verletzung von einem Crash unterscheiden kann</td><td>17</td></tr>
-    <tr><td>session-start</td><td>Orientierung: Projekte samt Produkten, ungegroomte Learnings, fehlende Secrets-Datei, MCP-Config-Scan (Dedupe, unmaskierte Secrets, Erstlauf-Hinweis). Im Plugin-Modus injiziert er die <code>CLAUDE.md</code> des Plugins <strong>wortwörtlich</strong> — ein Router-Text, keine Drift zwischen Installationsarten</td><td>17</td></tr>
+    <tr><td>session-start</td><td>Orientierung: Projekte samt Produkten, ungegroomte Learnings, Secrets-Status — Env-Datei fehlt, oder Keychain-Statuszeile (<code>n/m keys present</code>, Fehlende namentlich), plus JIRA-PAT aus der Keychain in die Session exportiert. MCP-Config-Scan (Dedupe, unmaskierte Secrets, Erstlauf-Hinweis). Im Plugin-Modus injiziert er die <code>CLAUDE.md</code> des Plugins <strong>wortwörtlich</strong> — ein Router-Text, keine Drift zwischen Installationsarten</td><td>17</td></tr>
     <tr><td>post-jira-audit</td><td>Jeder JIRA-Schreibzugriff landet im Audit-Log, auch headless</td><td>—</td></tr>
     <tr><td>install.sh</td><td>Kein Hook, gleicher Anspruch: Namespacing, Pfad-Rewriting, Idempotenz, Uninstall, Plugin-Verdrahtung, Self-Setup, MCP-Adoption</td><td>51</td></tr>
     <tr><td>context-budget</td><td>Die immer geladene Ebene bleibt im Budget — gemessen statt behauptet</td><td>Check</td></tr>
@@ -682,6 +683,44 @@ projects/SHOP/
 </section>
 
 <section>
+  <h2>Secrets: einmal in die Keychain, nie wieder im Chat</h2>
+  <p class="sub">
+    Schluss mit Passwort-Chaos: der Agent sieht, welche Logins er <em>hat</em> — statt zu fragen
+    („du hast die Daten doch") oder sich welche auszudenken. Deklariert ein Projekt
+    <code>Secrets source: keychain</code>, kommen alle Werte aus der macOS Schlüsselbundverwaltung:
+    nie im Chat, nie in Dateien im Repo, nie auf GitHub.
+  </p>
+  <div class="card">
+    <h4>🔑 Testuser-Logins</h4>
+    <p>Der Resolver (<code>resolve-secrets.sh</code>) schreibt <code>.env.playwright-secrets</code>
+    aus der Keychain — beim Onboarding, bei <code>/re-board</code> und wann immer die Datei fehlt.
+    Der Session-Start zeigt eine Statuszeile (<code>6/6 Logins vorhanden</code>, Fehlende namentlich).
+    Das Einrichten macht der Agent selbst: <strong>Import</strong> räumt früher handgetippte Werte
+    aus der Env-Datei in die Keychain um, <strong>Capture</strong> fragt jedes fehlende Passwort über
+    einen nativen macOS-Dialog ab — Eingabe verdeckt, ins Fenster getippt, nie in den Chat. Der Agent
+    sieht zu keinem Zeitpunkt einen Wert, er meldet nur: „3 gespeichert, 1 fehlt noch."</p>
+  </div>
+  <div class="card">
+    <h4>☁️ JIRA-PAT (Data Center)</h4>
+    <p>Dieselbe Mechanik eine Ebene höher: Service <code>JIRA_PAT_&lt;jira-host&gt;</code>, Account
+    <code>jira</code>. Der Session-Start-Hook exportiert den Token pro Projekt in die Session
+    (<code>$CLAUDE_ENV_FILE</code>) — er liegt in <strong>keiner</strong> Datei und braucht keinen
+    globalen Export in der <code>~/.zshrc</code>. CI/Nicht-macOS: <code>JIRA_PERSONAL_TOKEN</code>
+    wie gehabt, der gewinnt immer.</p>
+  </div>
+  <pre><code><span class="c"># einmalig pro Passwort — der Service-Name ist der KOMPLETTE</span>
+<span class="c"># Secret-Key aus PROJECT.md → „Test users" → Spalte „Env/secret key",</span>
+<span class="c"># nicht nur das Projekt-Kürzel:</span>
+security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span> -a qa -w</code></pre>
+  <p class="note">
+    Rotation oder neuer Testuser? Der Agent meldet den fehlenden Key namentlich und fragt per
+    Dialog nach. <code>Secrets source: env-file</code> (Handpflege) bleibt der Default — Keychain
+    ist eine Projektentscheidung, gefragt beim Onboarding, in zwei Minuten nachgerüstet via
+    <code>/re-board</code>.
+  </p>
+</section>
+
+<section>
   <h2>Der Lernkreislauf</h2>
   <div class="card">
     <h4><span class="num">→</span>Capture wird erzwungen</h4>
@@ -696,7 +735,10 @@ projects/SHOP/
     <h4><span class="num">→</span>Promotion ist das Ziel</h4>
     <p>Zweimal gesehen heißt: rein in eine Regel, eine Projekt- oder Produktdatei — dort wird es
     automatisch geladen und nie wieder erklärt. Die Feature-Matrix wird nachgezogen: eine
-    veraltete Matrix ist schlechter als keine, weil sie belegt aussieht.</p>
+    veraltete Matrix ist schlechter als keine, weil sie belegt aussieht. Flow-Wissen — welche
+    Bereiche der App wie zusammenhängen — wandert in die <strong>Flow-Map</strong>
+    (<code>flow-map.md</code>): <code>/retest-bug</code> zielt seine Regressions-Sweeps aus den
+    dort kuratierten Nachbar-Flows, statt zu raten.</p>
   </div>
 </section>
 
@@ -741,16 +783,18 @@ projects/SHOP/
   <p class="note">
     <strong>Credential-Server sind erlaubt, aber mit Auflage.</strong> Ein Vault-MCP darf eine
     Referenz für das Tool auflösen, das sie braucht — und nie einen Wert ins Transkript, in eine
-    Datei, ein Ticket oder ein Artefakt bringen. Browser-Logins laufen weiterhin über die
-    <code>--secrets</code>-Maskierung.
+    Datei, ein Ticket oder ein Artefakt bringen. Auf macOS ist dafür meist gar kein Server nötig:
+    die Keychain-Integration (siehe oben) liefert Testuser-Logins und den JIRA-PAT, und
+    Browser-Logins laufen weiterhin über die <code>--secrets</code>-Maskierung.
   </p>
 </section>
 
 <footer>
   <p>
-    QA Agent Blueprint · MIT · Stand: 6. September 2026 —
-    aktualisiert auf Repo-Stand (23 Skills, 5 Subagents, 108 Fixtures, 5 Verdikte,
-    Verbatim-Router-Injektion, zwei Installationsmodi + Self-Setup, Shadow-Modus als Default).
+    QA Agent Blueprint · MIT · Stand: 14. September 2026 (0.5.1) —
+    aktualisiert auf Repo-Stand (27 Skills, 5 Subagents, 147 Fixtures, 20 Eval-Cases,
+    5 Verdikte, Keychain-Secrets für Testuser-Logins und JIRA-PAT, Flow-Maps,
+    /re-board und /whats-new als Upgrade-Pfad, Shadow-Modus als Default).
     Quelle der Wahrheit ist das Repo: <code>CLAUDE.md</code>, <code>memory/INDEX.md</code>, <code>README.md</code>.
   </p>
 </footer>

@@ -28,6 +28,10 @@ evals/results/
 # Installer backups
 *.bak-*
 
+# Spickzettel — lokale, druckfertige Team-Handouts, kein Repo-Inhalt
+spickzettel-*.html
+spickzettel-*.pdf
+
 # Node
 node_modules/
 
