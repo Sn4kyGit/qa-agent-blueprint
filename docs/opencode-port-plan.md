@@ -339,7 +339,10 @@ the template; template validity is only fully verifiable against a live
    (`bun test opencode/tests`, `evals/run-opencode.sh`); `README.md` and
    `CHANGELOG.md` updated.
 
-### Phase 7 — Release — ~0.5 day
+### Phase 7 — Release — ~0.5 day — **DONE 2026-09-16** (v0.6.0, tag pushed;
+release rehearsal from GitHub HEAD: clone → install --mode opencode → live
+opencode session sees skills + /test-ticket — the agent-link path now works
+from the public repo)
 
 Version bump in both `.claude-plugin/*` manifests + template stamp (check 1),
 update-path smoke test in a scratch consumer for **both** harnesses
