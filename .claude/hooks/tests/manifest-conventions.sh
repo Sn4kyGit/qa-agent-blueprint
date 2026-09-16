@@ -330,6 +330,29 @@ for a in agents:
     else:
         ok(f"agent {name} frontmatter clean")
 
+# (5b) delegation hardening: qa-manager may spawn ONLY the four leaf agents
+#     (permission.task glob map, last match wins — "*" deny first), and the
+#     leaf agents never delegate (task: deny). Raw-text check: the mini YAML
+#     parser deliberately skips nested blocks.
+LEAVES = ["test-executor", "test-automator", "failure-analyst", "bug-reporter"]
+qm_path = os.path.join(oc, "agents", "qa-manager.md")
+qm = open(qm_path).read() if os.path.exists(qm_path) else ""
+task_block = re.search(r"(?ms)^  task:\n((?:^    .*\n)+)", qm)
+if task_block and '"*": deny' in task_block.group(1) and all(
+    re.search(rf"^    {leaf}: allow$", task_block.group(1), re.M) for leaf in LEAVES
+):
+    ok("qa-manager task permission whitelists exactly the 4 leaf agents")
+else:
+    fail("qa-manager task permission whitelists exactly the 4 leaf agents",
+         "expected permission.task with '*' deny + allow per leaf agent")
+for leaf in LEAVES:
+    p = os.path.join(oc, "agents", f"{leaf}.md")
+    text = open(p).read() if os.path.exists(p) else ""
+    if re.search(r"(?m)^  task: deny$", text):
+        ok(f"{leaf} never delegates (task: deny)")
+    else:
+        fail(f"{leaf} never delegates (task: deny)", "leaf agents must not spawn subagents")
+
 # (6) every skill satisfies opencode's constraints (S1): name regex + name ==
 #     directory, description 1..1024 chars, only recognized frontmatter fields.
 fails_before_skills = fails

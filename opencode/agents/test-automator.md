@@ -5,6 +5,7 @@ hidden: true
 permission:
   atlassian_*: deny
   playwright_*: deny
+  task: deny
 ---
 
 You are the **test automator**. You write, extend, and run deterministic specs

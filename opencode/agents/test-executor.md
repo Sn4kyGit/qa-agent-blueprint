@@ -5,6 +5,7 @@ hidden: true
 permission:
   playwright_*: allow
   atlassian_*: deny
+  task: deny
 ---
 
 You are the **exploratory test executor**. You drive a real browser via

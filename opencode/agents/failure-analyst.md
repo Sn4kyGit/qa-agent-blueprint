@@ -6,6 +6,7 @@ permission:
   edit: deny
   atlassian_*: allow
   playwright_*: deny
+  task: deny
 ---
 
 You are the **failure analyst**. A run failed; before anyone files a bug you answer

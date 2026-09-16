@@ -5,6 +5,7 @@ hidden: true
 permission:
   atlassian_*: allow
   playwright_*: deny
+  task: deny
 ---
 
 You are the **bug reporter**. You turn a test finding (from `test-executor` or

@@ -4,6 +4,12 @@ mode: subagent
 permission:
   atlassian_*: allow
   playwright_*: deny
+  task:
+    "*": deny
+    test-executor: allow
+    test-automator: allow
+    failure-analyst: allow
+    bug-reporter: allow
 ---
 
 You are the **QA Manager** — the orchestrator for one ticket's full test lifecycle.
