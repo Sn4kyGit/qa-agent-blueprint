@@ -9,6 +9,8 @@
 //   Stop evidence check          →  write-gate on atlassian_* + session.idle
 //                                   reminder (no "block stop" in opencode)
 //   SessionStart bootstrap       →  plugin init (scaffolding, never overwrites)
+//   SessionStart orientation     →  session.created → session.prompt noReply
+//                                   (projects, inbox count, MCP contract hints)
 //   $CLAUDE_ENV_FILE PAT export  →  shell.env (keychain → env, never a file)
 //
 // Policy is ported, not reinvented: same blocklists, same regexes, same
@@ -297,31 +299,229 @@ async function bootstrap(directory: string) {
 }
 
 // --------------------------------------------------------------------------
-// 5. Secrets via shell.env (replaces the $CLAUDE_ENV_FILE PAT export)
+// 5. Consumer config scan + session-start orientation
+//    (ports of session-start.sh's mcp_scan/mcp_hint/inbox_status/browser_mode;
+//    secrets_status is dead here on purpose — bootstrap above always seeds the
+//    placeholder, so the file can only be MISSING if the user deleted it
+//    mid-session, which the MCP server's own ENOENT error names loudly.
+//    update_notice is deliberately NOT ported: the opencode install is
+//    symlink-based, so a `git pull` updates the running code immediately —
+//    there is no plugin-cache version skew to warn about; /whats-new covers
+//    the project-side diff.)
+// --------------------------------------------------------------------------
+
+// Same comment-stripping algorithm as install.sh's parse_jsonc (never inside
+// quoted strings — the template carries URLs and globs containing /* */).
+function stripJsonComments(text: string): string {
+  let out = ""
+  let inStr = false
+  let i = 0
+  const n = text.length
+  while (i < n) {
+    const c = text[i]
+    if (inStr) {
+      out += c
+      if (c === '"') inStr = false
+      i++
+    } else if (c === '"') {
+      inStr = true
+      out += c
+      i++
+    } else if (c === "/" && i + 1 < n && text[i + 1] === "/") {
+      while (i < n && text[i] !== "\n") i++
+    } else if (c === "/" && i + 1 < n && text[i + 1] === "*") {
+      const end = text.indexOf("*/", i + 2)
+      i = end === -1 ? n : end + 2
+    } else {
+      out += c
+      i++
+    }
+  }
+  return out
+}
+
+async function readJsonc(path: string): Promise<Record<string, unknown> | undefined> {
+  try {
+    return JSON.parse(stripJsonComments(await readFile(path, "utf8"))) as Record<string, unknown>
+  } catch {
+    return undefined // missing or malformed — a hint must never break a session
+  }
+}
+
+// opencode merges the global config (~/.config/opencode) with the project
+// config — scan both, project winning per server name (same read-only spirit
+// as the bash mcp_scan over ~/.claude.json + .mcp.json).
+async function readOpencodeMcp(directory: string): Promise<Record<string, Record<string, unknown>>> {
+  const servers: Record<string, Record<string, unknown>> = {}
+  const candidates = [
+    join(process.env.XDG_CONFIG_HOME ?? join(process.env.HOME ?? "", ".config"), "opencode", "opencode.json"),
+    join(process.env.XDG_CONFIG_HOME ?? join(process.env.HOME ?? "", ".config"), "opencode", "opencode.jsonc"),
+    join(directory, "opencode.json"),
+    join(directory, "opencode.jsonc"),
+  ]
+  for (const path of candidates) {
+    const cfg = await readJsonc(path)
+    const mcp = (cfg?.mcp ?? {}) as Record<string, unknown>
+    for (const [name, entry] of Object.entries(mcp)) {
+      servers[name] = (entry ?? {}) as Record<string, unknown> // later wins
+    }
+  }
+  return servers
+}
+
+export interface McpScan {
+  hasPw: boolean
+  pwUnmasked: boolean // playwright without --secrets — passwords unmasked in tool responses
+  pwNoOutdir: boolean // playwright without --output-dir — artifacts never reach evidence/
+  hasAt: boolean
+  dcHost: string // JIRA Data Center host from environment.JIRA_URL ("" when Cloud)
+}
+
+// Exported for the tests — the flags mirror the bash scan's HAS_PW/PW_UNMASKED/
+// PW_NO_OUTDIR/HAS_AT/AT_DC_HOST:<host> contract.
+export function scanMcpServers(servers: Record<string, Record<string, unknown>>): McpScan {
+  const pw = servers.playwright
+  const cmd = Array.isArray(pw?.command) ? (pw.command as unknown[]) : []
+  // Contract flags apply to the LOCAL server; a remote playwright is the
+  // consumer's own setup, not a contract violation.
+  const pwLocal = Boolean(pw) && pw?.type !== "remote"
+  const at = servers.atlassian
+  const env = ((at?.environment ?? at?.env ?? {}) as Record<string, unknown>) ?? {}
+  const url = typeof env.JIRA_URL === "string" ? env.JIRA_URL : ""
+  return {
+    hasPw: Boolean(pw),
+    pwUnmasked: pwLocal && !cmd.includes("--secrets"),
+    pwNoOutdir: pwLocal && !cmd.includes("--output-dir"),
+    hasAt: Boolean(at),
+    dcHost: url ? url.replace(/^https?:\/\//, "").split("/")[0] : "",
+  }
+}
+
+async function productSuffix(projDir: string): Promise<string> {
+  let entries
+  try {
+    entries = await readdir(join(projDir, "products"), { withFileTypes: true })
+  } catch {
+    return "" // no products/ — single-product project, byte-identical to bash
+  }
+  const names = entries.filter((e) => e.isDirectory() && e.name !== "_template").map((e) => e.name)
+  if (names.length === 0) return ""
+  const shown = names.slice(0, 6).join(", ")
+  return names.length > 6 ? ` (products: ${shown}, +${names.length - 6} more)` : ` (products: ${shown})`
+}
+
+async function listProjects(directory: string): Promise<string[]> {
+  let entries
+  try {
+    entries = await readdir(join(directory, "projects"), { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const out: string[] = []
+  for (const e of entries) {
+    if (!e.isDirectory() || e.name === "_template" || e.name === "EXAMPLE") continue
+    out.push(e.name + (await productSuffix(join(directory, "projects", e.name))))
+  }
+  return out
+}
+
+// The Stop gate forces learnings to be CAPTURED; nothing forces them to be
+// groomed — count ungroomed inbox entries and say so once per session (the
+// template ships one illustrative entry; one is not a backlog).
+async function ungroomedLearnings(directory: string): Promise<number> {
+  try {
+    const text = await readFile(join(directory, "memory", "learnings", "_inbox.md"), "utf8")
+    return text.split("\n").filter((l) => /^## \d{4}-\d{2}-\d{2} /.test(l)).length
+  } catch {
+    return 0
+  }
+}
+
+async function browserMode(directory: string): Promise<string> {
+  const cfg = await readJsonc(join(directory, ".playwright-mcp.config.json"))
+  const b = (cfg?.browser ?? {}) as Record<string, unknown>
+  const headless = (b?.launchOptions as Record<string, unknown> | undefined)?.headless
+  const mode = headless === true ? "headless" : headless === false ? "headful (visible)" : ""
+  const iso = b?.isolated === true ? "isolated" : b?.isolated === false ? "persistent profile" : ""
+  const parts = [mode, iso].filter(Boolean)
+  return parts.length ? `${parts.join(", ")} (your .playwright-mcp.config.json)` : ""
+}
+
+export async function orientation(directory: string): Promise<string> {
+  const projects = await listProjects(directory)
+  const lines = [
+    "QA Agent Blueprint — session start",
+    "- Onboarded projects:",
+    ...(projects.length ? projects.map((p) => `  - ${p}`) : ["  (none yet — run /onboard-project)"]),
+  ]
+  const bm = await browserMode(directory)
+  if (bm) lines.push(`- Browser: ${bm}`)
+  lines.push(
+    "- Read memory/INDEX.md before anything else; then only the active project's",
+    "  PROJECT.md + learnings.md. No full-repo scans.",
+    "- Lost? The qa-help skill lists every command (/qa-help) — plain language works too.",
+  )
+  const scan = scanMcpServers(await readOpencodeMcp(directory))
+  // Contract violations are findings in any state. Order: security, then evidence.
+  if (scan.pwUnmasked) {
+    lines.push("- WARNING: the playwright MCP config has no --secrets flag — passwords would appear unmasked in tool responses. Add `--secrets .env.playwright-secrets` (and fill that file) or remove the entry and use the blueprint-provided server.")
+  }
+  if (scan.pwNoOutdir) {
+    lines.push("- WARNING: the playwright MCP config has no --output-dir flag — raw browser artifacts would not land in evidence/, breaking the evidence policy. Add `--output-dir evidence/.mcp-out` or use the blueprint-provided server.")
+  }
+  // The two day-one failures (dead playwright, unauthorized atlassian) are not
+  // detectable from here — turn the configured-state scan into a concrete
+  // hint, printed only while no project has been onboarded yet.
+  if (projects.length === 0) {
+    if (scan.hasPw && scan.hasAt) {
+      lines.push("- MCP config for playwright + atlassian found — confirm both are live (`opencode mcp list`; atlassian auth: Cloud = `opencode mcp auth atlassian`, Data Center = PAT in the macOS keychain, service JIRA_PAT_<jira-host>).")
+    } else {
+      lines.push("- First run: confirm both MCP servers are live before testing — `opencode mcp list` should show playwright and atlassian, and atlassian must be authorized (Cloud: `opencode mcp auth atlassian`; Data Center: PAT in the keychain, service JIRA_PAT_<jira-host>). A dead playwright server and an unauthorized atlassian are the two failures that look like a broken blueprint.")
+    }
+  }
+  if (scan.dcHost && !process.env.JIRA_PERSONAL_TOKEN) {
+    lines.push(`- JIRA Data Center (${scan.dcHost}) configured — the PAT is resolved from the macOS keychain (service JIRA_PAT_${scan.dcHost}) into shells at runtime; it lives in no file and no chat.`)
+  }
+  const n = await ungroomedLearnings(directory)
+  if (n > 1) {
+    lines.push(`- ${n} ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).`)
+  }
+  return lines.join("\n")
+}
+
+// --------------------------------------------------------------------------
+// 6. Secrets via shell.env (replaces the $CLAUDE_ENV_FILE PAT export)
 // --------------------------------------------------------------------------
 
 interface Deps {
   // Injected in tests. Default: macOS keychain service JIRA_PAT_<jira-host>,
-  // host derived from JIRA_URL — the token lives in no file and no chat
-  // (docs/rules/core/security.md).
-  resolveJiraPat?: () => Promise<string | undefined>
+  // host from JIRA_URL in the process env, falling back to the DC entry in the
+  // consumer's opencode.json (mcp.atlassian.environment.JIRA_URL lands in the
+  // MCP server's env, NOT in opencode's own process env — the plugin must read
+  // the config itself, like the bash hook's mcp_scan does). The token lives in
+  // no file and no chat (docs/rules/core/security.md).
+  resolveJiraPat?: (directory: string) => Promise<string | undefined>
 }
 
-function defaultResolveJiraPat(): Promise<string | undefined> {
-  if (process.platform !== "darwin") return Promise.resolve(undefined)
+async function defaultResolveJiraPat(directory: string): Promise<string | undefined> {
+  if (process.platform !== "darwin") return undefined
+  let host = ""
   const url = process.env.JIRA_URL
-  if (!url) return Promise.resolve(undefined)
-  let host: string
-  try {
-    host = new URL(url).hostname
-  } catch {
-    return Promise.resolve(undefined)
+  if (url) {
+    try {
+      host = new URL(url).hostname
+    } catch {
+      host = ""
+    }
   }
-  if (!host) return Promise.resolve(undefined)
+  if (!host) {
+    host = scanMcpServers(await readOpencodeMcp(directory)).dcHost
+  }
+  if (!host) return undefined
   const r = spawnSync("security", ["find-generic-password", "-s", `JIRA_PAT_${host}`, "-w"], { encoding: "utf8" })
-  if (r.status !== 0) return Promise.resolve(undefined)
+  if (r.status !== 0) return undefined
   const value = (r.stdout ?? "").trim()
-  return Promise.resolve(value || undefined)
+  return value || undefined
 }
 
 // --------------------------------------------------------------------------
@@ -339,6 +539,13 @@ interface PluginCtx {
 export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   const directory = ctx.directory
   await bootstrap(directory)
+
+  // Orientation is directory-level, so compute it once and inject it into each
+  // new session as context (noReply — documented plugin pattern; it must not
+  // trigger a response). Falls back to the app log when prompting fails.
+  let orientationText: Promise<string> | undefined
+  const getOrientation = () => (orientationText ??= orientation(directory).catch(() => ""))
+  const oriented = new Set<string>()
 
   // Evidence-gate session state (D3): which sessions showed test activity, and
   // which already got the idle reminder (the stop_hook_active loop-breaker's
@@ -387,6 +594,23 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
     },
 
     event: async ({ event }: { event: { type: string; properties?: Record<string, unknown> } }) => {
+      if (event?.type === "session.created") {
+        // opencode reports the id as properties.info.id on session.created;
+        // accept properties.sessionID too (shape parity with session.idle).
+        const info = event.properties?.info as Record<string, unknown> | undefined
+        const sessionID = String(event.properties?.sessionID ?? info?.id ?? "")
+        if (!sessionID || oriented.has(sessionID)) return
+        oriented.add(sessionID)
+        const text = await getOrientation()
+        if (!text) return
+        await ctx.client?.session?.prompt?.({
+          path: { id: sessionID },
+          body: { noReply: true, parts: [{ type: "text", text }] },
+        } as never).catch(async () => {
+          await ctx.client?.app?.log?.({ body: { service: "qa-blueprint", level: "info", message: text } } as never).catch(() => {})
+        })
+        return
+      }
       if (event?.type !== "session.idle") return
       const sessionID = String(event.properties?.sessionID ?? "")
       if (idleReminded.has(sessionID)) return
@@ -405,7 +629,7 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
       // Explicit environment wins; the keychain is only a fallback.
       if (process.env.JIRA_PERSONAL_TOKEN) return
       const resolve = deps.resolveJiraPat ?? defaultResolveJiraPat
-      const pat = await resolve().catch(() => undefined)
+      const pat = await resolve(directory).catch(() => undefined)
       if (pat) output.env.JIRA_PERSONAL_TOKEN = pat
     },
   }

@@ -1,4 +1,4 @@
-// blueprint-version: 0.6.0
+// blueprint-version: 0.6.1
 // opencode config template for the qa-agent-blueprint — merged into the
 // consumer's opencode.json(c) by `install.sh --mode opencode`. Contract:
 // docs/opencode-port-plan.md (D4 router via instructions, D5 tool-name
@@ -38,11 +38,14 @@
       ]
     },
     "atlassian": {
-      // Atlassian Cloud remote server; OAuth happens via the human /mcp-style
-      // flow. Data Center deployments replace THIS entry with the local
-      // mcp-atlassian command — keeping the name `atlassian` (AGENTS.md).
+      // Atlassian Cloud remote server (v2, HTTP transport — the v1 SSE
+      // endpoint is sunset-bound); OAuth happens via the human /mcp-style
+      // flow. ?tools=all exposes the flat tool list because hooks and agents
+      // match on concrete tool names. Data Center deployments replace THIS
+      // entry with the local mcp-atlassian command — keeping the name
+      // `atlassian` (AGENTS.md).
       "type": "remote",
-      "url": "https://mcp.atlassian.com/v1/sse",
+      "url": "https://mcp.atlassian.com/v2/mcp?tools=all",
       "enabled": true
     }
   },
@@ -56,12 +59,16 @@
       "**/.env*": "deny",
       "**/*.pem": "deny",
       "**/id_rsa*": "deny",
-      "**/id_ed25519*": "deny"
+      "**/id_ed25519*": "deny",
+      // last match wins — the committed placeholder template stays readable,
+      // same exemption the pre-tool guard encodes.
+      "**/.env.example": "allow"
     },
     "edit": {
       "**/.env": "deny",
       "**/.env.*": "deny",
-      "**/evidence/.audit/**": "deny"
+      "**/evidence/.audit/**": "deny",
+      "**/.env.example": "allow"
     }
   }
 

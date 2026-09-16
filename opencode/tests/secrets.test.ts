@@ -9,12 +9,16 @@
 //     injected into output.env so MCP child processes see it.
 //   - unset + not resolvable → hook stays silent, never throws, never prints
 //     a value anywhere.
+//   - the jira host comes from JIRA_URL in the process env, falling back to
+//     the DC entry in the consumer's opencode.json — that env map lands in the
+//     MCP server's process, NOT in opencode's own, so the plugin reads the
+//     config itself (same as the bash hook's mcp_scan).
 //
 // The keychain lookup itself is injected (deps.resolveJiraPat) so the suite
 // never touches the real keychain.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { qaBlueprint } from "../plugins/qa-blueprint.ts"
+import { qaBlueprint, scanMcpServers } from "../plugins/qa-blueprint.ts"
 import { fakeCtx } from "./fixtures/payloads.ts"
 
 const VAR = "JIRA_PERSONAL_TOKEN"
@@ -29,7 +33,7 @@ afterEach(() => {
   else process.env[VAR] = saved
 })
 
-async function runShellEnv(deps?: { resolveJiraPat?: () => Promise<string | undefined> }) {
+async function runShellEnv(deps?: { resolveJiraPat?: (directory: string) => Promise<string | undefined> }) {
   const { ctx } = fakeCtx("/tmp/qa-secrets-test")
   const hooks = await qaBlueprint(ctx as never, deps as never)
   const output: { env: Record<string, string> } = { env: {} }
@@ -64,5 +68,57 @@ describe("secrets via shell.env (opencode)", () => {
   test("no resolver available (non-macOS) → silent no-op", async () => {
     const env = await runShellEnv({ resolveJiraPat: undefined })
     expect(env[VAR]).toBeUndefined()
+  })
+
+  test("resolver receives the consumer directory (DC host is read from its opencode.json)", async () => {
+    let seen = ""
+    await runShellEnv({
+      resolveJiraPat: async (directory) => {
+        seen = directory
+        return undefined
+      },
+    })
+    expect(seen).toBe("/tmp/qa-secrets-test")
+  })
+})
+
+describe("scanMcpServers — DC host + contract flags from opencode config entries", () => {
+  test("DC atlassian entry yields its JIRA_URL host", () => {
+    const scan = scanMcpServers({
+      atlassian: { type: "local", command: ["uvx", "mcp-atlassian"], environment: { JIRA_URL: "https://jira.example.com" } },
+    })
+    expect(scan.hasAt).toBe(true)
+    expect(scan.dcHost).toBe("jira.example.com")
+  })
+
+  test("Cloud remote atlassian has no DC host", () => {
+    const scan = scanMcpServers({ atlassian: { type: "remote", url: "https://mcp.atlassian.com/v1/sse" } })
+    expect(scan.hasAt).toBe(true)
+    expect(scan.dcHost).toBe("")
+  })
+
+  test("local playwright without the contract flags is flagged both ways", () => {
+    const scan = scanMcpServers({ playwright: { type: "local", command: ["npx", "@playwright/mcp@latest"] } })
+    expect(scan.hasPw).toBe(true)
+    expect(scan.pwUnmasked).toBe(true)
+    expect(scan.pwNoOutdir).toBe(true)
+  })
+
+  test("blueprint playwright entry with --secrets and --output-dir is clean", () => {
+    const scan = scanMcpServers({
+      playwright: {
+        type: "local",
+        command: ["npx", "@playwright/mcp@latest", "--config", ".playwright-mcp.config.json", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out"],
+      },
+    })
+    expect(scan.pwUnmasked).toBe(false)
+    expect(scan.pwNoOutdir).toBe(false)
+  })
+
+  test("remote playwright is the consumer's own setup — never flagged", () => {
+    const scan = scanMcpServers({ playwright: { type: "remote", url: "http://grid.example:4444" } })
+    expect(scan.hasPw).toBe(true)
+    expect(scan.pwUnmasked).toBe(false)
+    expect(scan.pwNoOutdir).toBe(false)
   })
 })

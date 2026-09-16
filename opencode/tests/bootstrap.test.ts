@@ -15,17 +15,29 @@ import { existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawnSync } from "node:child_process"
-import { qaBlueprint } from "../plugins/qa-blueprint.ts"
+import { orientation, qaBlueprint } from "../plugins/qa-blueprint.ts"
 import { fakeCtx } from "./fixtures/payloads.ts"
 
 let dir: string
+let savedXdg: string | undefined
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "qa-boot-"))
+  // The MCP scan also reads the GLOBAL opencode config — point it at an empty
+  // dir so the machine's real ~/.config/opencode can't leak into assertions.
+  savedXdg = process.env.XDG_CONFIG_HOME
+  process.env.XDG_CONFIG_HOME = join(dir, ".xdg")
 })
 afterEach(async () => {
+  if (savedXdg === undefined) delete process.env.XDG_CONFIG_HOME
+  else process.env.XDG_CONFIG_HOME = savedXdg
   await rm(dir, { recursive: true, force: true })
 })
+
+// git may be unusable on this machine (e.g. unaccepted Xcode license, rc 69) —
+// skip the gitignore cases there instead of failing on the environment.
+const GIT_OK = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0
+const gitTest = GIT_OK ? test : test.skip
 
 async function init(target = dir) {
   const { ctx, prompts } = fakeCtx(target)
@@ -77,8 +89,9 @@ describe("bootstrap (opencode)", () => {
     expect(cfg.browser?.isolated).toBe(true)
   })
 
-  test("gitignores the secrets file when the consumer is a git repo and it is not ignored", async () => {
-    spawnSync("git", ["init", "-q"], { cwd: dir })
+  gitTest("gitignores the secrets file when the consumer is a git repo and it is not ignored", async () => {
+    const init_rc = spawnSync("git", ["init", "-q"], { cwd: dir }).status
+    if (init_rc !== 0) return // git --version worked but init is blocked — same env issue
     await init()
     const gi = await readFile(join(dir, ".gitignore"), "utf8")
     expect(gi).toContain(".env.playwright-secrets")
@@ -89,11 +102,86 @@ describe("bootstrap (opencode)", () => {
     expect(existsSync(join(dir, ".gitignore"))).toBe(false)
   })
 
-  test("does not double-append the gitignore entry on repeat runs", async () => {
-    spawnSync("git", ["init", "-q"], { cwd: dir })
+  gitTest("does not double-append the gitignore entry on repeat runs", async () => {
+    const init_rc = spawnSync("git", ["init", "-q"], { cwd: dir }).status
+    if (init_rc !== 0) return
     await init()
     await init()
     const gi = await readFile(join(dir, ".gitignore"), "utf8")
     expect(gi.split(".env.playwright-secrets").length - 1).toBe(1)
+  })
+})
+
+// Orientation: the session-start.sh signals (project list, browser mode, MCP
+// contract hints, ungroomed-learnings counter) ported to a session.created
+// context injection (session.prompt noReply) — the plan's Layer-1 asserts.
+describe("orientation (opencode)", () => {
+  test("output shape: header, project list, router pointers, browser line", async () => {
+    await init()
+    const text = await orientation(dir)
+    expect(text).toContain("QA Agent Blueprint — session start")
+    expect(text).toContain("(none yet — run /onboard-project)")
+    expect(text).toContain("Read memory/INDEX.md before anything else")
+    expect(text).toContain("/qa-help")
+    // bootstrap seeded the browser config → the mode is rendered from it
+    expect(text).toContain("- Browser: headless, isolated")
+  })
+
+  test("lists onboarded projects with their products inline", async () => {
+    await mkdir(join(dir, "projects", "SHOP", "products", "STOREFRONT"), { recursive: true })
+    await mkdir(join(dir, "projects", "SHOP", "products", "ADMIN"), { recursive: true })
+    await mkdir(join(dir, "projects", "_template"), { recursive: true })
+    const text = await orientation(dir)
+    expect(text).toContain("- SHOP (products: STOREFRONT, ADMIN)")
+    expect(text).not.toContain("_template")
+    // a real project exists → no first-run MCP lecture
+    expect(text).not.toContain("First run")
+  })
+
+  test("counts ungroomed learnings; one entry is not a backlog", async () => {
+    await init() // seeds memory/ from the blueprint
+    // a single entry (the shipped example) stays silent
+    await writeFile(join(dir, "memory", "learnings", "_inbox.md"), "# Inbox\n\n## 2026-09-01 — the one example\n")
+    expect(await orientation(dir)).not.toContain("ungroomed learnings")
+    await writeFile(
+      join(dir, "memory", "learnings", "_inbox.md"),
+      "# Inbox\n\n## 2026-09-01 — one\n\n## 2026-09-02 — two\n\n## 2026-09-03 — three\n",
+    )
+    expect(await orientation(dir)).toContain("3 ungroomed learnings in memory/learnings/_inbox.md")
+  })
+
+  test("flags a playwright entry without the contract flags", async () => {
+    await writeFile(
+      join(dir, "opencode.json"),
+      '{ "mcp": { "playwright": { "type": "local", "command": ["npx", "@playwright/mcp@latest"] } } }',
+    )
+    const text = await orientation(dir)
+    expect(text).toContain("no --secrets flag")
+    expect(text).toContain("no --output-dir flag")
+  })
+
+  test("names the DC host and the keychain service for a Data Center entry", async () => {
+    await writeFile(
+      join(dir, "opencode.json"),
+      '{ "mcp": { "atlassian": { "type": "local", "command": ["uvx", "mcp-atlassian"], "environment": { "JIRA_URL": "https://jira.example.com" } } } }',
+    )
+    const text = await orientation(dir)
+    expect(text).toContain("JIRA Data Center (jira.example.com)")
+    expect(text).toContain("JIRA_PAT_jira.example.com")
+  })
+
+  test("session.created injects the orientation as noReply context, once per session", async () => {
+    const { hooks, prompts } = await init()
+    await hooks.event({ event: { type: "session.created", properties: { info: { id: "s1" } } } } as never)
+    expect(prompts.length).toBe(1)
+    const body = (prompts[0] as { body: { noReply?: boolean; parts: { text: string }[] } }).body
+    expect(body.noReply).toBe(true)
+    expect(body.parts[0].text).toContain("QA Agent Blueprint — session start")
+    // same session again → no duplicate injection
+    await hooks.event({ event: { type: "session.created", properties: { info: { id: "s1" } } } } as never)
+    expect(prompts.length).toBe(1)
+    // a different session gets its own copy
+    await hooks.event({ event: { type: "session.created", properties: { info: { id: "s2" } } } } as never)
+    expect(prompts.length).toBe(2)
   })
 })

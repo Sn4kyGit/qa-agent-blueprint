@@ -38,6 +38,9 @@ node_modules/
 # OS
 .DS_Store
 
+# Claude Code local (machine-specific) settings — never committed
+.claude/settings.local.json
+
 # Python bytecode — a stray __pycache__/ next to a skill makes the installer
 # report that skill as a collision (see tc-history.py).
 __pycache__/

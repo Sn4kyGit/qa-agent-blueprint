@@ -87,18 +87,22 @@ qa-agent-blueprint/
 │   ├── commands/                            # test-ticket.md, retest-bug.md, … (~12 wrappers)
 │   ├── ROUTER.md                            # CLAUDE.md content, opencode tool/path names
 │   ├── opencode.template.jsonc              # consumer config template (D4–D7)
-│   ├── skills -> ../.claude/skills          # committed symlink (D1; S3 verifies)
 │   └── tests/                               # bun:test suites (TDD layer 1)
+#  (no opencode/skills symlink — D1 refined by D10: opencode discovers
+#   .claude/skills natively via the consumer's .claude compat symlink, S3-verified)
 ├── evals/run-opencode.sh                    # runner port (cases/criteria untouched)
 └── install.sh                               # + --mode opencode
 ```
 
 **Design decisions:**
 
-- **D1 — Skills single-source.** No copies. `opencode/skills` is a symlink to
-  `.claude/skills`; install.sh creates the corresponding link inside the
-  consumer's `.opencode/`. If S3 shows opencode does not follow symlinks,
-  fallback: install.sh materializes real copies + a freshness check in
+- **D1 — Skills single-source.** No copies. As implemented (refined by D10,
+  S3-verified): opencode discovers `.claude/skills` natively, so the
+  consumer's `.claude` compat symlink is the single skill source — no separate
+  `opencode/skills` link exists. (Original sketch had a committed
+  `opencode/skills -> ../.claude/skills` symlink; dropped once S3 confirmed
+  native discovery.) Fallback had S3 shown opencode does not follow symlinks:
+  install.sh materializes real copies + a freshness check in
   `manifest-conventions.sh` (same `shasum` idea as the bridge files).
 - **D2 — One TS plugin, thin.** `qa-blueprint.ts` implements the four hook
   surfaces. Where bash already encodes policy (`resolve-secrets.sh`, guard

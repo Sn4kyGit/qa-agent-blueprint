@@ -146,7 +146,7 @@ mkdir -p "$MTARGET"
 git -C "$MTARGET" init -q . 2>/dev/null
 # Existing .mcp.json: playwright WITHOUT the contract flags, an identical
 # atlassian, and an own server that must survive untouched.
-printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]},' '    "atlassian": {"type": "sse", "url": "https://mcp.atlassian.com/v1/sse"},' '    "mine": {"command": "my-server"}' '  }' '}' > "$MTARGET/.mcp.json"
+printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]},' '    "atlassian": {"type": "http", "url": "https://mcp.atlassian.com/v2/mcp?tools=all"},' '    "mine": {"command": "my-server"}' '  }' '}' > "$MTARGET/.mcp.json"
 OUTM="$("$INSTALL" --mode integrate --target "$MTARGET" --yes 2>&1)"
 printf '%s' "$OUTM" | grep -q "upgraded 'playwright'" \
   && pass "playwright upgraded to the blueprint config" \

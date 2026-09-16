@@ -8,6 +8,52 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.6.1] — 2026-09-16
+
+### Fixed
+- **opencode: dangling `.agents` compat symlink.** The installer linked
+  `$TARGET/.agents` → `<blueprint>/.agents`, but that directory did not exist
+  in the blueprint checkout — `/onboard-project` step 7 (bridge files) failed
+  with ENOENT in opencode consumers. The directory now ships (`.gitkeep`),
+  and the install fixture gained a symlink-*resolution* check (the old check
+  only compared the readlink target, which is why the bug slipped through).
+- **opencode: JIRA Data Center PAT resolution now sees `JIRA_URL` from the
+  consumer's `opencode.json`.** The documented DC setup puts `JIRA_URL` in the
+  MCP entry's `environment` map, which lands in the MCP server's process —
+  not opencode's own env — so the plugin's keychain lookup never found a host
+  and DC auth silently failed. The plugin now parses the consumer (and global)
+  opencode config itself, JSONC-tolerant, same as the bash hook's `mcp_scan`.
+
+### Added
+- **opencode: session-start orientation** (parity with `session-start.sh`).
+  On `session.created` the plugin injects the orientation as context
+  (`session.prompt` with `noReply: true`, once per session, `app.log`
+  fallback): onboarded projects incl. products, browser mode, MCP contract
+  hints (`--secrets`/`--output-dir` violations, first-run setup hint), the
+  JIRA DC keychain note, and the ungroomed-learnings inbox counter.
+  `update_notice` is deliberately not ported — symlink installs have no
+  version skew; `/whats-new` covers the project-side diff.
+- **opencode tests**: 12 new cases (86 total) — orientation shape, inbox
+  counter, MCP scan flags, DC host extraction, `noReply` injection; the
+  gitignore cases now skip cleanly when git is unusable on the machine
+  instead of failing on the environment.
+
+### Changed
+- **Atlassian remote MCP moved to the current endpoint**: HTTP transport,
+  `https://mcp.atlassian.com/v2/mcp?tools=all` (`.mcp.json` + opencode
+  template). Atlassian sunsets v1/SSE (auto-switch 2027-03); `?tools=all`
+  keeps the flat tool list the hooks and agents match on. **Re-authorize
+  once** via `/mcp` (Claude Code) or `opencode mcp auth atlassian` after
+  updating; clear the cached v1 OAuth client if auth complains.
+- opencode template permissions: `.env.example` is explicitly allowed again
+  (last-match-wins) — parity with the pre-tool guard, which always exempted
+  the committed placeholder.
+- `.claude/settings.local.json` is now gitignored (it was never tracked; the
+  entry closes the convention gap).
+- `docs/opencode-port-plan.md`: §3 layout diagram and D1 text corrected to
+  the implemented state (no `opencode/skills` symlink — D10/S3: opencode
+  discovers `.claude/skills` natively via the consumer compat link).
+
 ## [0.6.0] — 2026-09-16
 
 ### Changed

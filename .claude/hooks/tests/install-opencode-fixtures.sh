@@ -37,6 +37,10 @@ fail() { printf 'FAIL  %s\n      %s\n' "$1" "${2:-}"; fails=$((fails + 1)); }
 
 assert_link()    { [ -L "$2" ] && pass "$1" || fail "$1" "not a symlink: $2"; }
 assert_link_to() { [ "$(readlink "$2" 2>/dev/null)" = "$3" ] && pass "$1" || fail "$1" "$2 -> $(readlink "$2" 2>/dev/null || echo MISSING), expected $3"; }
+# A symlink whose TARGET is missing passes assert_link_to but breaks every
+# write through it (the 0.6.0 dangling .agents bug) — always pair the link
+# check with this resolution check.
+assert_dir()     { [ -d "$2" ] && pass "$1" || fail "$1" "not a resolvable directory: $2"; }
 assert_file()    { [ -f "$2" ] && pass "$1" || fail "$1" "missing file: $2"; }
 assert_no_file() { [ ! -e "$2" ] && [ ! -L "$2" ] && pass "$1" || fail "$1" "should not exist: $2"; }
 assert_grep()    { grep -qF -- "$3" "$2" 2>/dev/null && pass "$1" || fail "$1" "not found in $2: $3"; }
@@ -81,6 +85,7 @@ assert_link_to "plugins linked"     "$TARGET/.opencode/plugins"   "$REPO/opencod
 assert_link_to "compat .claude"     "$TARGET/.claude"             "$REPO/.claude"
 assert_link_to "compat docs"        "$TARGET/docs"                "$REPO/docs"
 assert_link_to "compat .agents"     "$TARGET/.agents"             "$REPO/.agents"
+assert_dir     "compat .agents resolves" "$TARGET/.agents"
 assert_file    "opencode.json written"      "$TARGET/opencode.json"
 assert_file    "secrets placeholder seeded" "$TARGET/.env.playwright-secrets"
 assert_file    "browser config seeded"      "$TARGET/.playwright-mcp.config.json"
