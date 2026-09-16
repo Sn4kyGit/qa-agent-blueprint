@@ -13,7 +13,7 @@ not currently pull in.
 
 | Skill | Upstream version | Why it's here |
 |---|---|---|
-| `bug-reproduction/` | 1.0 | Repro-before-fix discipline (bisect, determinism, red-before-fix) for `retest-bug` |
+| `bug-reproduction/` | 1.0 | Repro-before-fix discipline (bisect, determinism, red-before-fix) for `retest-bug` — **description trimmed** 1140 → 1008 chars (dropped one sentence and two `Related:` entries) to satisfy the opencode 1024-char description limit; body unmodified, consider upstreaming |
 | `risk-based-testing/` | 2.0 | Impact×probability risk matrix feeding test-strategy decisions |
 | `api-testing/` | — | REST/GraphQL testing — a gap this blueprint had zero coverage for |
 | `accessibility-testing/` | — | WCAG/axe-core testing |

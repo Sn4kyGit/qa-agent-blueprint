@@ -64,7 +64,22 @@ done < <(printf '%s\n' "CLAUDE.md"; find .claude/rules -type f -name '*.md' 2>/d
 
 total_tokens=$((total_chars / 4))
 echo "----------------------------------------------------------------"
-printf '%-46s %9s %8s\n' "ALWAYS LOADED" "$total_chars" "$total_tokens"
+printf '%-46s %9s %8s\n' "ALWAYS LOADED (claude)" "$total_chars" "$total_tokens"
+
+# The opencode harness loads opencode/ROUTER.md (the CLAUDE.md port) instead of
+# CLAUDE.md, against the SAME ceiling — the opencode layer must not silently
+# cost more than the Claude one (docs/opencode-port-plan.md, Phase 4).
+oc_chars=0
+if [ -f opencode/ROUTER.md ]; then
+  while IFS= read -r f; do
+    oc_chars=$((oc_chars + $(wc -c < "$f" | tr -d ' ')))
+  done < <(printf '%s\n' "opencode/ROUTER.md"; find .claude/rules -type f -name '*.md' 2>/dev/null | sort)
+  oc_tokens=$((oc_chars / 4))
+  printf '%-46s %9s %8s\n' "ALWAYS LOADED (opencode)" "$oc_chars" "$oc_tokens"
+else
+  oc_tokens=0
+  echo "opencode/ROUTER.md not present — opencode layer not measured"
+fi
 echo "budget: $BUDGET_TOKENS tokens"
 
 # The on-demand half, for context — not budgeted, it costs nothing until read.
@@ -75,12 +90,15 @@ done < <(find docs/rules -type f -name '*.md' 2>/dev/null)
 [ "$ondemand" -gt 0 ] && echo "on demand (docs/rules/): ~$((ondemand / 4)) tokens — not loaded until its topic comes up"
 
 echo
-if [ "$total_tokens" -le "$BUDGET_TOKENS" ]; then
+over=0
+[ "$total_tokens" -gt "$BUDGET_TOKENS" ] && over=$((total_tokens - BUDGET_TOKENS))
+[ "$oc_tokens" -gt "$BUDGET_TOKENS" ] && over=$((oc_tokens - BUDGET_TOKENS))
+if [ "$over" -eq 0 ]; then
   echo "within budget"
   exit 0
 fi
 cat <<EOF
-OVER BUDGET by $((total_tokens - BUDGET_TOKENS)) tokens.
+OVER BUDGET by $over tokens.
 
 Every session pays this, before a single skill loads. Before raising the budget,
 check the cheaper fix: does the added text state a norm that must bind *before* any

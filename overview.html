@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QA Agent Blueprint — Repo-Blaupause für Claude Code</title>
+<title>QA Agent Blueprint — Repo-Blaupause für Claude Code & opencode</title>
 <style>
   :root {
     --bg: #0b0d12;
@@ -248,10 +248,10 @@
 <div class="page">
 
 <header class="hero">
-  <p class="kicker">Claude Code · Repo-Blaupause</p>
+  <p class="kicker">Claude Code & opencode · Repo-Blaupause</p>
   <h1>QA Agent Blueprint</h1>
   <p class="lede">
-    Macht Claude Code zu einem ticketgetriebenen QA-Manager und Tester: JIRA-Ticket rein,
+    Macht Claude Code oder opencode zu einem ticketgetriebenen QA-Manager und Tester: JIRA-Ticket rein,
     getestetes Ticket raus — mit Pflicht-Evidence, projekt- und produktspezifischem Wissen
     und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
   </p>
@@ -260,7 +260,7 @@
     <div class="stat"><div class="n">5</div><div class="l">Subagents</div></div>
     <div class="stat"><div class="n">5+10</div><div class="l">Regeln (immer / on demand)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
-    <div class="stat"><div class="n">147</div><div class="l">Fixtures</div></div>
+    <div class="stat"><div class="n">177+74</div><div class="l">Fixtures + bun-Tests</div></div>
     <div class="stat"><div class="n">20</div><div class="l">Eval-Cases</div></div>
     <div class="stat"><div class="n">7,9k</div><div class="l">Token immer geladen</div></div>
   </div>
@@ -269,11 +269,12 @@
 <section>
   <h2>Installation</h2>
   <p class="sub">Am einfachsten: dem Agenten sagen. In Claude Code (im Projekt, das getestet werden soll) einfügen:</p>
-  <pre><code>Set up https://github.com/Sn4kyGit/claude_blueprint as a Claude Code
+  <pre><code>Set up https://github.com/Sn4kyGit/qa-agent-blueprint as a Claude Code
 plugin in this project. Read its AGENTS.md first and follow the runbook.</code></pre>
   <p>Oder selbst zwei Befehle — <code>--scope project</code> aktiviert nur hier, ohne Flag überall:</p>
-  <pre><code>claude plugin marketplace add Sn4kyGit/claude_blueprint
+  <pre><code>claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace</code></pre>
+  <p>Unter <strong>opencode</strong> (modell-agnostisch, Modell = deine <code>/models</code>-Wahl): <code>install.sh --mode opencode --target &lt;projekt&gt; --yes</code> vom Clone aus — Details: <a href="https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md">Quickstart opencode</a>.</p>
   <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 27 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
 </section>
 
@@ -792,7 +793,7 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
 <footer>
   <p>
     QA Agent Blueprint · MIT · Stand: 14. September 2026 (0.5.1) —
-    aktualisiert auf Repo-Stand (27 Skills, 5 Subagents, 147 Fixtures, 20 Eval-Cases,
+    aktualisiert auf Repo-Stand (27 Skills, 5 Subagents, 177 Fixtures + 74 bun-Tests, 20 Eval-Cases,
     5 Verdikte, Keychain-Secrets für Testuser-Logins und JIRA-PAT, Flow-Maps,
     /re-board und /whats-new als Upgrade-Pfad, Shadow-Modus als Default).
     Quelle der Wahrheit ist das Repo: <code>CLAUDE.md</code>, <code>memory/INDEX.md</code>, <code>README.md</code>.

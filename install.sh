@@ -18,7 +18,7 @@
 #               (interactive prompt unless --yes).
 #
 # Usage:
-#   ./install.sh [--mode integrate|plugin] [--target <path>]
+#   ./install.sh [--mode integrate|plugin|opencode] [--target <path>]
 #                [--dry-run] [--yes] [--uninstall]
 #                [--non-interactive] [-h|--help]
 #
@@ -76,8 +76,8 @@ while [ $# -gt 0 ]; do
 done
 
 case "$MODE" in
-  ""|integrate|plugin) ;;
-  *) err "Invalid --mode '$MODE' (expected integrate|plugin)"; exit 1 ;;
+  ""|integrate|plugin|opencode) ;;
+  *) err "Invalid --mode '$MODE' (expected integrate|plugin|opencode)"; exit 1 ;;
 esac
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -1354,7 +1354,7 @@ plugins = cfg.setdefault("enabledPlugins", {})
 changed = []
 if "qa-agent-blueprint" not in market:
     # Local path: reliable from a checkout, and honest about where the code is.
-    # Swap for {"source": "github", "repo": "Sn4kyGit/claude_blueprint"} to track a
+    # Swap for {"source": "github", "repo": "Sn4kyGit/qa-agent-blueprint"} to track a
     # remote instead.
     market["qa-agent-blueprint"] = {"source": {"source": "local", "path": source}}
     changed.append("extraKnownMarketplaces")
@@ -1415,7 +1415,7 @@ To consume the blueprint as a Claude Code plugin inside your project:
    {
      "extraKnownMarketplaces": {
        "qa-agent-blueprint": {
-         "source": { "source": "github", "repo": "Sn4kyGit/claude_blueprint" }
+         "source": { "source": "github", "repo": "Sn4kyGit/qa-agent-blueprint" }
        }
      },
      "enabledPlugins": {
@@ -1615,22 +1615,286 @@ print_report() {
 }
 
 # =================================================================================
+# OPENCODE MODE — symlink layout + opencode.json merge (docs/opencode-port-plan.md,
+# Phase 6 + D10: nothing is copied, updates are a git pull of this checkout)
+# =================================================================================
+
+check_prereqs_opencode() {
+  info "Checking prerequisites (opencode mode)..."
+  if command -v node >/dev/null 2>&1; then
+    local major
+    major="$(node -v | sed 's/^v//' | cut -d. -f1)"
+    if [ "$major" -ge 18 ]; then
+      report FOUND "node" "$(node -v) (>= 18 required)"
+    else
+      report MISSING "node" "$(node -v) found, but >= 18 is required — https://nodejs.org"
+      exit 1
+    fi
+  else
+    report MISSING "node" "not found — install Node.js LTS (>= 18): https://nodejs.org"
+    exit 1
+  fi
+
+  if command -v opencode >/dev/null 2>&1; then
+    report FOUND "opencode CLI" "$(opencode --version 2>/dev/null || echo 'version unknown')"
+  else
+    report MISSING "opencode CLI" "not found — install: npm install -g opencode-ai (https://opencode.ai)"
+    exit 1
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    report FOUND "python3" "needed for the opencode.json template merge"
+  else
+    report MISSING "python3" "needed for the opencode.json template merge"
+    exit 1
+  fi
+
+  if command -v bun >/dev/null 2>&1; then
+    report FOUND "bun" "$(bun --version 2>/dev/null) (runs the blueprint's plugin test suites; opencode bundles its own runtime)"
+  else
+    report SKIPPED "bun" "not found — only needed to run opencode/tests on the blueprint checkout, not at runtime"
+  fi
+
+  if playwright_browsers_present; then
+    report FOUND "Playwright browsers" "already installed"
+  else
+    next_step "Install the Playwright Chromium: npx playwright install chromium"
+  fi
+  info "JIRA Data Center only: uv (brew install uv) for the local mcp-atlassian server — not needed for Atlassian Cloud."
+}
+
+# opencode_link <link> <source> — symlink into the blueprint checkout; foreign
+# content at <link> always wins (never replaced, only reported).
+opencode_link() {
+  local link="$1" src="$2"
+  if [ -L "$link" ]; then
+    if [ "$(readlink "$link")" = "$src" ]; then
+      report SKIPPED "$link" "already linked"
+    else
+      if [ "$DRY_RUN" -eq 1 ]; then dry "relink $link -> $src"; return 0; fi
+      ln -sfn "$src" "$link"
+      report MERGED "$link" "relinked -> $src"
+    fi
+    return 0
+  fi
+  if [ -e "$link" ]; then
+    report SKIPPED "$link" "exists and is not our symlink — left untouched (foreign content wins)"
+    return 0
+  fi
+  if [ "$DRY_RUN" -eq 1 ]; then dry "link $link -> $src"; return 0; fi
+  mkdir -p "$(dirname "$link")"
+  ln -s "$src" "$link"
+  report ADDED "$link" "-> $src"
+}
+
+opencode_seed_files() {
+  # Both playwright MCP flags (--config, --secrets) hard-fail on ENOENT, so
+  # these files must exist BEFORE the first session — the plugin's bootstrap
+  # would only seed them after the server already died once.
+  local secrets="$TARGET/.env.playwright-secrets" cfg="$TARGET/.playwright-mcp.config.json"
+  if [ -e "$secrets" ]; then
+    report SKIPPED ".env.playwright-secrets" "exists — values stay the user's job"
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    dry "seed .env.playwright-secrets (comment-only placeholder)"
+  else
+    cat > "$secrets" <<'SECRETS_TEMPLATE'
+# Secrets consumed by Playwright MCP via --secrets (values are masked in tool
+# responses, so the agent never sees them). Gitignored — never commit.
+# Reference per-project test users by the keys used in projects/<KEY>/PROJECT.md.
+# Example:
+# SHOP_QA_STANDARD_PASSWORD=replace-me
+SECRETS_TEMPLATE
+    report ADDED ".env.playwright-secrets" "comment-only placeholder — fill in your test users"
+    # Gitignore only if inside a git repo and not already ignored (same
+    # conditions as the plugin bootstrap; git itself may be unavailable).
+    if command -v git >/dev/null 2>&1 \
+       && git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1 \
+       && ! git -C "$TARGET" check-ignore -q .env.playwright-secrets 2>/dev/null; then
+      printf '\n# QA Agent Blueprint — Playwright MCP secrets, never commit\n.env.playwright-secrets\n' >> "$TARGET/.gitignore"
+      report ADDED ".gitignore" ".env.playwright-secrets entry"
+    fi
+  fi
+  if [ -e "$cfg" ]; then
+    report SKIPPED ".playwright-mcp.config.json" "exists — it is your preference dial (headful: launchOptions.headless false)"
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    dry "seed .playwright-mcp.config.json (headless + isolated defaults)"
+  else
+    cat > "$cfg" <<'BROWSER_CONFIG'
+{
+  "browser": {
+    "isolated": true,
+    "launchOptions": { "headless": true }
+  }
+}
+BROWSER_CONFIG
+    report ADDED ".playwright-mcp.config.json" "headless + isolated defaults — edit for a visible browser"
+  fi
+}
+
+# Merge opencode/opencode.template.jsonc into the target's opencode.json.
+# Semantics (same spirit as the .mcp.json merge): existing mcp server NAMES
+# win — except the playwright contract flags, which are force-upgraded because
+# the hooks/agents hard-reference them. instructions union, subagent_depth
+# raised to 2, permission denies deep-merged with existing keys winning.
+# No file yet → the template is copied verbatim (keeps its comments and the
+# blueprint-version stamp).
+opencode_merge_config() {
+  local tpl="$REPO_ROOT/opencode/opencode.template.jsonc" cfg="$TARGET/opencode.json"
+  if [ ! -f "$cfg" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then dry "write opencode.json from template"; return 0; fi
+    cp "$tpl" "$cfg"
+    report ADDED "opencode.json" "from opencode.template.jsonc (mcp contract, instructions, permission denies, subagent_depth 2)"
+    return 0
+  fi
+  if [ "$DRY_RUN" -eq 1 ]; then dry "merge template into existing opencode.json"; return 0; fi
+  backup_file "$cfg"
+  python3 - "$tpl" "$cfg" <<'PY'
+import json, sys
+
+def parse_jsonc(text):
+    # strip // and /* */ comments, never inside quoted strings (the template
+    # carries URLs and globs like **/evidence/** that contain /* and */)
+    out, i, n, in_str = [], 0, len(text), False
+    while i < n:
+        c = text[i]
+        if in_str:
+            out.append(c)
+            if c == '"': in_str = False
+            i += 1
+        elif c == '"':
+            in_str = True; out.append(c); i += 1
+        elif c == "/" and i + 1 < n and text[i+1] == "/":
+            while i < n and text[i] != "\n": i += 1
+        elif c == "/" and i + 1 < n and text[i+1] == "*":
+            end = text.find("*/", i + 2)
+            i = n if end == -1 else end + 2
+        else:
+            out.append(c); i += 1
+    return json.loads("".join(out))
+
+tpl = parse_jsonc(open(sys.argv[1]).read())
+cfg = parse_jsonc(open(sys.argv[2]).read())
+
+# instructions: union, template entries appended when missing
+instr = cfg.get("instructions") or []
+for entry in tpl.get("instructions", []):
+    if entry not in instr:
+        instr.append(entry)
+cfg["instructions"] = instr
+
+# subagent_depth: qa-manager (subagent) spawns leaf subagents — needs 2
+if not isinstance(cfg.get("subagent_depth"), int) or cfg["subagent_depth"] < 2:
+    cfg["subagent_depth"] = 2
+
+# mcp: existing names win; playwright contract flags force-upgraded
+mcp = cfg.setdefault("mcp", {})
+for name, entry in (tpl.get("mcp") or {}).items():
+    if name not in mcp:
+        mcp[name] = entry
+    elif name == "playwright":
+        existing = mcp[name]
+        if isinstance(existing, dict):
+            existing["command"] = entry["command"]  # contract flags are load-bearing
+            if "type" not in existing:
+                existing["type"] = entry.get("type", "local")
+
+# permission: deep-merge rule maps, existing keys win
+def merge_rule(dst, src):
+    if isinstance(dst, dict) and isinstance(src, dict):
+        for k, v in src.items():
+            dst.setdefault(k, v)
+        return dst
+    return dst if dst is not None else src
+perm = cfg.get("permission")
+tpl_perm = tpl.get("permission")
+if tpl_perm:
+    if perm is None:
+        cfg["permission"] = tpl_perm
+    elif isinstance(perm, dict) and isinstance(tpl_perm, dict):
+        for tool, rules in tpl_perm.items():
+            perm[tool] = merge_rule(perm.get(tool), rules)
+
+with open(sys.argv[2], "w") as fh:
+    fh.write("// merged by qa-agent-blueprint install.sh (opencode mode)\n")
+    json.dump(cfg, fh, indent=2)
+    fh.write("\n")
+PY
+  report MERGED "opencode.json" "template merged (existing mcp names kept, playwright flags upgraded, comments flattened — backup kept)"
+}
+
+opencode_uninstall() {
+  info "opencode uninstall: removing only symlinks that point into $REPO_ROOT"
+  local l
+  for l in ".opencode/ROUTER.md" ".opencode/agents" ".opencode/commands" ".opencode/plugins" \
+           ".claude" "docs" ".agents"; do
+    local link="$TARGET/$l"
+    [ -L "$link" ] || continue
+    case "$(readlink "$link")" in
+      "$REPO_ROOT"|"$REPO_ROOT/"*)
+        if [ "$DRY_RUN" -eq 1 ]; then dry "remove link $link"; continue; fi
+        rm "$link"
+        report REMOVED "$l" "symlink removed" ;;
+      *)
+        report SKIPPED "$l" "symlink points elsewhere — left untouched" ;;
+    esac
+  done
+  # .opencode/ dir goes only when it is now empty (foreign files stay).
+  if [ -d "$TARGET/.opencode" ] && [ -z "$(ls -A "$TARGET/.opencode" 2>/dev/null)" ]; then
+    [ "$DRY_RUN" -eq 1 ] || rmdir "$TARGET/.opencode"
+    report REMOVED ".opencode/" "was empty after unlinking"
+  fi
+  report SKIPPED "opencode.json" "merged keys left in place (harmless without the links) — remove the mcp/instructions/permission entries by hand if you want them gone"
+  report SKIPPED "seed files" ".env.playwright-secrets / .playwright-mcp.config.json kept — they are your data"
+  next_step "Review $TARGET/opencode.json for leftover blueprint keys"
+}
+
+run_opencode_mode() {
+  info "opencode mode: symlinks into this checkout, nothing is copied (updates = git pull here)."
+  if [ "$TARGET" = "$REPO_ROOT" ]; then
+    err "Target is the blueprint repo itself — opencode mode installs INTO a consumer project (--target <path>)."
+    exit 1
+  fi
+  # The blueprint's own surface (router, ported agents/commands, plugin)
+  opencode_link "$TARGET/.opencode/ROUTER.md" "$REPO_ROOT/opencode/ROUTER.md"
+  opencode_link "$TARGET/.opencode/agents"    "$REPO_ROOT/opencode/agents"
+  opencode_link "$TARGET/.opencode/commands"  "$REPO_ROOT/opencode/commands"
+  opencode_link "$TARGET/.opencode/plugins"   "$REPO_ROOT/opencode/plugins"
+  # D10 compat links: skill/rule/agent bodies reference these paths literally
+  opencode_link "$TARGET/.claude" "$REPO_ROOT/.claude"
+  opencode_link "$TARGET/docs"    "$REPO_ROOT/docs"
+  opencode_link "$TARGET/.agents" "$REPO_ROOT/.agents"
+  opencode_seed_files
+  opencode_merge_config
+  next_step "Connect a provider in opencode (/connect — e.g. OpenRouter) and pick your model with /models — the blueprint pins none (D6)"
+  next_step "JIRA auth: Cloud → opencode mcp auth atlassian (OAuth); Data Center → PAT in the macOS keychain, service JIRA_PAT_<jira-host> (AGENTS.md)"
+  next_step "Restart opencode in $TARGET, then run /onboard-project"
+  next_step "Shadow mode is ON by default — JIRA reports are composed, not posted, until you opt out (PROJECT.md or QA_AGENT_SHADOW=0)"
+}
+
+# =================================================================================
 # MAIN
 # =================================================================================
 
 autodetect_mode
 [ "$DRY_RUN" -eq 1 ] && info "DRY RUN — actions are reported, nothing is written."
 
-if [ "$UNINSTALL" -eq 1 ] && [ "$MODE" != "integrate" ]; then
-  err "--uninstall only makes sense with --mode integrate (or auto-detected integrate)."
+if [ "$UNINSTALL" -eq 1 ] && [ "$MODE" != "integrate" ] && [ "$MODE" != "opencode" ]; then
+  err "--uninstall only makes sense with --mode integrate or --mode opencode."
   exit 1
 fi
 
-check_prereqs
+if [ "$MODE" = "opencode" ]; then
+  check_prereqs_opencode
+else
+  check_prereqs
+fi
 
 case "$MODE" in
   integrate)  run_integrate ;;
   plugin)     run_plugin_mode ;;
+  opencode)
+    if [ "$UNINSTALL" -eq 1 ]; then opencode_uninstall; else run_opencode_mode; fi
+    ;;
 esac
 
 print_report

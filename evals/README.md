@@ -19,7 +19,31 @@ bash evals/run.sh --model sonnet   # pin the answer model (--judge-model for the
 bash evals/run.sh --list           # list cases
 bash evals/run-openrouter.sh ...   # same args, billed per-token via OpenRouter
                                    # instead of the Claude subscription quota
+QA_EVAL_MODEL=openrouter/z-ai/glm-5.3-flash bash evals/run-opencode.sh ...
+                                   # opencode harness (docs/opencode-port-plan.md):
+                                   # same cases, same gate, `opencode run` instead
+                                   # of `claude -p`
 ```
+
+**opencode harness (dual-harness port).** `run-opencode.sh` runs the SAME
+cases against the opencode variant: every case is materialized into a consumer
+layout (`.opencode/ROUTER.md`, `.opencode/agents|commands`, `.claude/skills|
+rules`, generated `opencode.json`) — unlike the Claude side, no case runs in
+the repo root, because opencode has no CLAUDE.md auto-load and the blueprint
+would silently be absent. Two isolation mechanics matter: `--auto --pure`
+(the `--dangerously-skip-permissions` equivalent) and `XDG_CONFIG_HOME`
+pointed at an empty tempdir — opencode *merges* the global config, so hiding
+it wholesale is the only hard MCP cut (the user's global config carries live
+MCP servers). Models are never defaulted (D6): `QA_EVAL_MODEL` /
+`QA_JUDGE_MODEL` env or `--model`/`--judge-model`, always full `provider/model`
+ids (aliases don't resolve). Dev-loop cheap option verified 2026-09-16:
+`openrouter/z-ai/glm-5.3-flash` (~$0.03/session class; the OpenRouter key is
+read from `evals/.env.openrouter` via the process env). Note: flash-class
+models show real variance on write-through cases (a shadow-mode run narrated
+`proposed-report.md` instead of writing it, correctly FAILed via HARNESS
+FACT, then passed on re-run) — the production gate keeps a production-class
+judge/eval model; flash is for the dev loop.
+
 
 **Billing via OpenRouter (quota relief).** `run-openrouter.sh` wraps run.sh:
 the `claude -p` calls go through a localhost shim (`openrouter-shim.py`) to

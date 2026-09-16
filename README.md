@@ -1,15 +1,18 @@
-# QA Agent Blueprint for Claude Code
+# QA Agent Blueprint
 
-**A Git blueprint that turns Claude Code into a learning QA Manager + Tester.**
-Hand it a JIRA ticket — it tests or re-tests the ticket autonomously, produces
-evidence, reports back in your project's format, and remembers what it learned.
+**A Git blueprint that turns Claude Code or opencode into a learning QA
+Manager + Tester.** Hand it a JIRA ticket — it tests or re-tests the ticket
+autonomously, produces evidence, reports back in your project's format, and
+remembers what it learned. Harness-agnostic: Claude Code as a plugin,
+opencode via symlinks (model = your `/models` choice, the blueprint pins
+none).
 
 Exploratory testing runs through Playwright MCP, regression through the Playwright
 CLI runner, tickets through the Atlassian MCP server. Everything the agent knows
 about *your* projects lives in plain Markdown files in your repo — reviewable,
 diffable, and shared with your team through Git.
 
-> **👉 [Check out the detailed overview](https://sn4kygit.github.io/claude_blueprint/overview.html)** —
+> **👉 [Check out the detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
 > the whole architecture rendered as a one-pager: five layers, 15 core skills,
 > five verdicts, and what is enforced rather than merely written down.
 
@@ -20,8 +23,8 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 27 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 147 fixtures · 20 eval cases |
-| **Two ways in** | Merged into your repo (integrate), or as a plugin |
+| **Contents** | 27 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 177 fixtures + 74 bun tests · 20 eval cases |
+| **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
 ---
@@ -80,14 +83,14 @@ skills, agents and hooks load from the plugin; only your own data
 Paste this into Claude Code (or any coding agent) inside the project you want
 tested:
 
-> Set up <https://github.com/Sn4kyGit/claude_blueprint> as a Claude Code plugin
+> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> as a Claude Code plugin
 > in this project. Read its **AGENTS.md** first and follow the runbook there —
 > then tell me which steps need me (OAuth, secrets, onboarding).
 
 ### Or two commands yourself
 
 ```bash
-claude plugin marketplace add Sn4kyGit/claude_blueprint
+claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
 ```
 
@@ -98,11 +101,32 @@ is git under the hood. On first session start the plugin's SessionStart hook
 bootstraps `projects/`, `memory/`, `evidence/` and a `.env.playwright-secrets`
 placeholder in your repo, and injects the router.
 
+### opencode instead of Claude Code
+
+The same blueprint also runs under [opencode](https://opencode.ai) —
+model-agnostic (the model is your `/models` choice; the blueprint pins none).
+Easiest: paste this into opencode (or any coding agent) inside the project you
+want tested:
+
+> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> for opencode in this
+> project. Read its **AGENTS.md** first and follow the opencode runbook there —
+> then tell me which steps need me (provider connect, JIRA auth, onboarding).
+
+Or one command yourself, from a local checkout:
+
+```bash
+install.sh --mode opencode --target <your-project> --yes
+```
+
+Symlinks instead of copies; details incl. provider connect and JIRA auth:
+[docs/quickstart-opencode.md](docs/quickstart-opencode.md).
+
+
 ### The classic way: clone + installer
 
 ```bash
-git clone https://github.com/Sn4kyGit/claude_blueprint.git
-cd claude_blueprint
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git
+cd qa-agent-blueprint
 ./install.sh            # asks how you want it, then sets that up
 ```
 
@@ -121,7 +145,7 @@ to your project's `.claude/settings.json`:
 {
   "extraKnownMarketplaces": {
     "qa-agent-blueprint": {
-      "source": { "source": "github", "repo": "Sn4kyGit/claude_blueprint" }
+      "source": { "source": "github", "repo": "Sn4kyGit/qa-agent-blueprint" }
     }
   },
   "enabledPlugins": {
@@ -363,10 +387,10 @@ long-term → integrate. Many repos → plugin.**
 **A — integrate.** Preview first, it changes nothing:
 
 ```bash
-git clone https://github.com/Sn4kyGit/claude_blueprint.git ~/tools/claude_blueprint
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/tools/qa-agent-blueprint
 cd ~/work/your-project
-~/tools/claude_blueprint/install.sh --dry-run   # prints the full plan
-~/tools/claude_blueprint/install.sh             # or --yes for non-interactive
+~/tools/qa-agent-blueprint/install.sh --dry-run   # prints the full plan
+~/tools/qa-agent-blueprint/install.sh             # or --yes for non-interactive
 ```
 
 Every step is reported as `ADDED` / `MERGED` / `SKIPPED` / `WARN`. Merges are
@@ -383,17 +407,16 @@ your `.claude/settings.json` (with a backup, keeping everything else, and doing
 nothing on a re-run):
 
 ```bash
-~/tools/claude_blueprint/install.sh --mode plugin --target .
+~/tools/qa-agent-blueprint/install.sh --mode plugin --target .
 ```
 
 It registers the marketplace against your **local checkout**, which is the honest
 default: the code you enabled is the code you can read. To track a remote instead,
-change the source afterwards — note that the repository is `claude_blueprint` while
-the plugin and its marketplace are named `qa-agent-blueprint`, so the enabled-plugin
-key does not change:
+change the source afterwards — repository, plugin and marketplace all share the
+name `qa-agent-blueprint`, so the enabled-plugin key stays as is:
 
 ```json
-"source": { "source": "github", "repo": "Sn4kyGit/claude_blueprint" }
+"source": { "source": "github", "repo": "Sn4kyGit/qa-agent-blueprint" }
 ```
 
 Restart Claude Code and accept the trust dialog. Since plugins don't load

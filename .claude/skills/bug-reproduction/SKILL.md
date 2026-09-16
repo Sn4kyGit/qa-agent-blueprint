@@ -6,15 +6,15 @@ description: >-
   thin report (env, build, steps, data), the reproduce-minimize-isolate-capture loop,
   git bisect to find the introducing commit, building a deterministic minimal repro
   (fixed seeds, frozen time, stubbed network), writing the failing regression test BEFORE
-  the fix (red) and confirming the fix flips it green, and writing repro evidence back
-  into the ticket. Distinguishes flaky-not-reproducible from environment-specific.
+  the fix (red) and confirming it flips green, and writing repro evidence back
+  into the ticket.
   Use when: "reproduce this bug," "minimal reproduction," "repro steps," "find the commit
   that broke it," "git bisect," "make the repro deterministic," "write a failing test for
   this bug," "regression test for a defect," "can't reproduce this bug."
   Not for: Classifying/deduplicating/severity-routing existing failures without
   reproducing them — that is ai-bug-triage. Generating tests from specs rather than from a
   defect — that is ai-test-generation.
-  Related: ai-bug-triage, ai-test-generation, test-reliability, systematic-debugging, qa-project-context.
+  Related: ai-bug-triage, ai-test-generation.
 license: MIT
 metadata:
   author: kindlmann

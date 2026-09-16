@@ -8,6 +8,51 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.6.0] — 2026-09-16
+
+### Changed
+- **Repository renamed** `Sn4kyGit/claude_blueprint` → `Sn4kyGit/qa-agent-blueprint`
+  (repo, plugin and marketplace now share one name). GitHub redirects old web
+  and git URLs, so existing marketplace installs keep working; all docs and
+  installer references use the new name. GitHub description, README framing
+  and `overview.html` now describe both harnesses (Claude Code + opencode)
+  instead of Claude-only.
+
+### Added
+- **opencode harness** (`install.sh --mode opencode`): the full blueprint —
+  27 skills, 5 subagents, evidence gate, JIRA audit — runs under
+  [opencode](https://opencode.ai), model-agnostic (no model pinned anywhere;
+  the model is the user's `/models` choice). Nothing is copied into the
+  consumer: the installer symlinks `.opencode/{ROUTER.md,agents,commands,
+  plugins}` plus compat links (`.claude`, `docs`, `.agents`) and merges
+  `opencode/opencode.template.jsonc` into the consumer's `opencode.json`
+  (existing `mcp` names win, playwright contract flags force-upgrade, backup
+  kept). `opencode/plugins/qa-blueprint.ts` ports the four Claude hooks one
+  to one: pre-tool guard (`tool.execute.before`, same blocklists and
+  message prefix), JIRA write audit (`tool.execute.after`, same log format),
+  the Stop-hook evidence policy as a write-gate on `atlassian_*` plus
+  `session.idle` reminder (markers `QA_EVIDENCE_MISSING:` /
+  `QA_LEARNINGS_MISSING:` unchanged), and session-start bootstrap +
+  JIRA-PAT keychain resolution (`shell.env`). Setup walkthrough:
+  `docs/quickstart-opencode.md`; plan + decision log:
+  `docs/opencode-port-plan.md`.
+- **opencode test battery** (`opencode/tests/run-all.sh`): 74 bun unit tests
+  mirroring the bash hook fixtures (guard 25, audit 8, evidence gate 17,
+  bootstrap 7, secrets 4) plus installer fixtures
+  (`install-opencode-fixtures.sh`, 30 asserts: symlink layout, JSONC merge
+  semantics, foreign-content protection, idempotency, uninstall) and six new
+  convention checks in `manifest-conventions.sh` (version agreement incl.
+  template stamp, no `mcp__` names under opencode/, command↔skill parity,
+  template contract, agent frontmatter lint, skill constraints).
+- **`evals/run-opencode.sh`** — the behavioral gate for the opencode harness:
+  same 20 cases, same 0.9/0.66 gate, `opencode run` instead of `claude -p`.
+  Every case is materialized into the consumer layout (opencode has no
+  CLAUDE.md auto-load), global config is hidden via `XDG_CONFIG_HOME`
+  (opencode merges it otherwise — the only hard MCP cut), models come from
+  `QA_EVAL_MODEL`/`QA_JUDGE_MODEL` or flags, never defaulted. Verified with
+  `openrouter/z-ai/glm-5.3-flash` (19/20) and control `openrouter/xiaomi/
+  mimo-v2.5` (17/20): zero cases failed by both — no port-bug signature.
+
 ## [0.5.1] — 2026-09-14
 
 ### Added

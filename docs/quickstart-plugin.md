@@ -8,7 +8,7 @@ blueprint; an empty folder becomes your QA home (`projects/`, `memory/`,
 Three ways to wire the plugin. **A** is two CLI commands, **B** gives you a
 local checkout you can read, **C** is fully manual. Or skip all of them: open
 Claude Code in `~/qa-workspace` and paste *"Set up
-https://github.com/Sn4kyGit/claude_blueprint as a plugin in this project —
+https://github.com/Sn4kyGit/qa-agent-blueprint as a plugin in this project —
 read its AGENTS.md and follow the runbook."*
 
 ## Prerequisites (~10 min)
@@ -20,7 +20,7 @@ read its AGENTS.md and follow the runbook."*
    ```bash
    brew install gh && gh auth login   # browser login with an account that has access
    ```
-   Sanity check: `git ls-remote https://github.com/Sn4kyGit/claude_blueprint.git`
+   Sanity check: `git ls-remote https://github.com/Sn4kyGit/qa-agent-blueprint.git`
    must not ask for credentials.
 4. An **empty working folder** — this guide uses `~/qa-workspace`.
 
@@ -28,7 +28,7 @@ read its AGENTS.md and follow the runbook."*
 
 ```bash
 mkdir -p ~/qa-workspace && cd ~/qa-workspace
-claude plugin marketplace add Sn4kyGit/claude_blueprint
+claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
 ```
 
@@ -39,7 +39,7 @@ dialog.
 ## Variant B — with clone, installer does the wiring
 
 ```bash
-git clone https://github.com/Sn4kyGit/claude_blueprint.git ~/qa-blueprint
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
 mkdir -p ~/qa-workspace
 ~/qa-blueprint/install.sh --mode plugin --target ~/qa-workspace --yes
 ```
@@ -60,7 +60,7 @@ Create `~/qa-workspace/.claude/settings.json` with exactly these two keys:
 {
   "extraKnownMarketplaces": {
     "qa-agent-blueprint": {
-      "source": { "source": "github", "repo": "Sn4kyGit/claude_blueprint" }
+      "source": { "source": "github", "repo": "Sn4kyGit/qa-agent-blueprint" }
     }
   },
   "enabledPlugins": {

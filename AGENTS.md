@@ -22,18 +22,49 @@ copied into the consumer repo; only the user's own data (`projects/`,
 Run from inside the consumer project:
 
 ```bash
-claude plugin marketplace add Sn4kyGit/claude_blueprint
+claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
 ```
 
 Then tell the user to **restart Claude Code** and accept the trust dialog.
+
+### opencode instead of Claude Code?
+
+The same blueprint runs under [opencode](https://opencode.ai) (model-agnostic —
+the model is the user's `/models` choice, the blueprint pins none). If you are
+an agent that was given only the GitHub link, the full run from zero is:
+
+```bash
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
+~/qa-blueprint/install.sh --mode opencode --target <consumer-repo> --yes
+```
+
+(private repo → clone needs GitHub auth on the machine, see "Missing
+prerequisites" below — `gh auth login` is the one human step there.)
+
+The installer symlinks `.opencode/{ROUTER.md,agents,commands,plugins}` plus
+compat links (`.claude`, `docs`, `.agents`) into the consumer and merges
+`opencode/opencode.template.jsonc` into its `opencode.json` (existing `mcp`
+names win; playwright contract flags force-upgrade). Prerequisites it checks:
+node ≥ 18, `opencode` CLI (`npm install -g opencode-ai` — you may install it
+with the user's OK), python3. Verify afterwards from the consumer:
+
+```bash
+opencode run "list your skills"   # should show the 27 blueprint skills
+```
+
+Full walkthrough incl. human steps (provider connect via `/connect`, JIRA auth,
+browser mode, shadow mode): `docs/quickstart-opencode.md`. A consumer picks
+**one** harness — the `.claude` compat symlink and the Claude plugin would
+double-register skills.
+
 
 - `--scope project` enables the plugin only in this project (writes one key
   into `.claude/settings.json`). Drop the flag for user scope (all projects —
   note the PreToolUse guard hook then fires in *every* repo).
 - While the repo is **private**, the fetch needs GitHub auth on the machine
   (`gh auth login`, or any git credential with access) — it is git under the
-  hood. Check first: `git ls-remote https://github.com/Sn4kyGit/claude_blueprint.git`
+  hood. Check first: `git ls-remote https://github.com/Sn4kyGit/qa-agent-blueprint.git`
   must not prompt.
 
 ### Missing prerequisites? Install them yourself.
@@ -137,7 +168,7 @@ Expected inventory: `Skills (27)`, `Agents (5)`, `Hooks (4)`
 When the user wants the repo locally (to read or hack on the code they run):
 
 ```bash
-git clone https://github.com/Sn4kyGit/claude_blueprint.git ~/qa-blueprint
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
 ~/qa-blueprint/install.sh --mode plugin --target <consumer-repo> --yes
 ```
 
@@ -190,17 +221,31 @@ claude plugin marketplace remove qa-agent-blueprint-marketplace
 
 ## If you are developing on this repo
 
+**opencode port**: the dual-harness plan (Claude Code + opencode, model-agnostic,
+TDD phasing) lives in `docs/opencode-port-plan.md`. Read it before touching
+anything under `opencode/`; its decision log (§7) is authoritative for the
+port's open questions.
+
 After any change, run the fixture battery and the manifest validator. After any
 change to **rules, skills, or the router**, also run the behavioral evals and
 update the norm→test matrix (`evals/COVERAGE.md`) if you touched a norm:
 
 ```bash
-for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 5x "all fixtures passed"
+for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 6x "all fixtures passed"
 claude plugin validate .
 bash evals/run.sh                                        # behavioral gate: exit 1 below 0.9
 # or billed per-token via OpenRouter instead of subscription quota (key in
 # gitignored evals/.env.openrouter; see evals/README.md → "Billing via OpenRouter"):
 bash evals/run-openrouter.sh
+```
+
+opencode-side equivalents (single entry: `bash opencode/tests/run-all.sh` =
+bun unit tests + the bash battery above):
+
+```bash
+bash opencode/tests/run-all.sh                           # bun test opencode/tests + fixture battery
+QA_EVAL_MODEL=openrouter/<provider-id> bash evals/run-opencode.sh   # opencode behavioral gate
+# (models are never defaulted — QA_EVAL_MODEL/QA_JUDGE_MODEL or --model flags; D6)
 ```
 
 Eval cost discipline: during development run only the cases whose norms you

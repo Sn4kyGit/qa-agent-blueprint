@@ -1,0 +1,9 @@
+{
+  "name": "qa-agent-blueprint-opencode",
+  "private": true,
+  "type": "module",
+  "description": "opencode harness variant of qa-agent-blueprint — see docs/opencode-port-plan.md",
+  "scripts": {
+    "test": "bun test tests"
+  }
+}
