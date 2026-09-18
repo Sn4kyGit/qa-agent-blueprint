@@ -45,13 +45,21 @@
 #               in security.md. Both must bind before any skill runs (they govern
 #               ad-hoc actions, not a topic); the four-constraint detail and the
 #               config-pipe rationale live in docs/rules/core/*.md. Budget 8050.
+#   2026-09-18  eval-driven sharpenings (~60 tok): the delegation announcement
+#               names the progress.md follow-along surface (delegation-visibility
+#               was 0.33 without it), and product-layer.md states that suite runs
+#               have no ticket to route from (rule-reachability was 0.33 — models
+#               found product-layer.md but misapplied its ticket-signal ladder to
+#               ticketless runs). Both flipped their case to 3/3. Plus the
+#               narrated-draft clause in the shadow-mode rule (run 1 of the
+#               verification asked permission instead of writing). Budget 8120.
 #
 # Usage:  bash .claude/hooks/tests/context-budget.sh
 # Exit:   0 within budget, 1 over.
 #
 set -uo pipefail
 
-BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-8050}"
+BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-8120}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"

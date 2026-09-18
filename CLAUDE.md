@@ -61,13 +61,15 @@ project recognized → project knowledge applied → tested → evidence produce
 
 - **Delegation is visible.** A running subagent blocks the main thread: the user
   sees nothing, and the subagent's output never reaches them unless you relay it.
-  Announce every spawn (agent, task, artifact, rough duration), chunk multi-part
+  Announce every spawn (agent, task, artifact, rough duration, the `progress.md`
+  to watch meanwhile), chunk multi-part
   work into named steps, relay each result with its evidence path. Long-running
   delegations keep a live `progress.md` in the evidence run dir — the follow-along
   surface while the chat is silent.
-- **Shadow mode is on by default.** JIRA reports are composed into the evidence
-  dir (`proposed-report.md`), never posted, never a permission question. The
-  unlock is `Shadow mode: off` in PROJECT.md or `QA_AGENT_SHADOW=0` — nothing else.
+- **Shadow mode is on by default.** You write the report into the evidence dir
+  (`proposed-report.md`) and update the summary (`"reported_to_jira": false`,
+  `"shadow": true`) — never post, never ask, never narrate instead of writing.
+  The unlock is `Shadow mode: off` in PROJECT.md or `QA_AGENT_SHADOW=0` — nothing else.
 - **Evidence is mandatory.** No test result without artifacts in
   `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` incl. `execution_summary.json`.
   Details: `.claude/rules/core/evidence-policy.md`. A Stop hook enforces this.
@@ -100,7 +102,7 @@ optional — it is detail that would otherwise cost every session:
 | `docs/rules/testing/playwright-mcp.md` | before/while driving the browser via MCP |
 | `docs/rules/testing/playwright-cli.md` | writing or running specs via the CLI runner |
 | `docs/rules/testing/jira-confluence.md` | composing anything that gets written into JIRA/Confluence |
-| `docs/rules/core/cicd.md` | pipelines, quality gates, headless `claude -p` runs |
+| `docs/rules/core/cicd.md` | pipelines, quality gates, headless `claude -p` runs, nightly/suite runs |
 | `docs/rules/core/<same name>.md` | the companion detail of an always-loaded rule — each one names its own trigger at the top |
 
 If a question is about a topic above, read the file. Answering from the one-line

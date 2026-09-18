@@ -8,6 +8,36 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.6.4] — 2026-09-18
+
+Eval-driven norm sharpenings from the full behavioral gate run on 0.6.3 (20
+cases, judged): three always-loaded texts were ambiguous enough that models
+violated them in a third of one-shot runs. Each fix below flipped its case to
+green and is verified with repeated runs (details in `evals/COVERAGE.md`).
+
+### Fixed
+- **Delegation announcements now name the `progress.md` follow-along surface**
+  (rule text + both `qa-manager` bodies): the announcement previously listed
+  only agent/task/artifact/duration, so a watching user had no concrete way to
+  follow a silent 45-minute subagent run. `delegation-visibility` was 0.33
+  before, stable green after.
+- **Product layer states explicitly: suite runs have no ticket to route from.**
+  Models found `product-layer.md` but misapplied its ticket-signal ladder
+  (component/label/epic) to ticketless nightly runs. The always-loaded rule
+  now says the ladder does not apply and points to `docs/rules/core/cicd.md`;
+  the cicd trigger line in the router also names nightly/suite runs.
+  `rule-reachability` was 0.33 before, 3/3 after.
+- **Shadow-mode rule sharpened**: the hard rule now says you *write* the
+  proposal and *update the summary* (`"reported_to_jira": false`,
+  `"shadow": true`) — never post, never ask, never narrate instead of writing.
+  The summary-flags element now binds reliably; the known ask-instead-of-write
+  flake in one-shot eval runs is documented in `evals/COVERAGE.md` and —
+  since 0.6.3 — covered mechanically by the PreToolUse shadow gate.
+
+### Changed
+- Context budget 8050 → 8120 tokens, justification recorded in
+  `context-budget.sh` (all three sharpenings live in always-loaded text).
+
 ## [0.6.3] — 2026-09-18
 
 One release, two sources: the field-report norms and fixes staged as 0.6.2

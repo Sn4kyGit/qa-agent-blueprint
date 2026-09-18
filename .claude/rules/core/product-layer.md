@@ -31,6 +31,10 @@ wins. No other rule or skill needs its own product wording because of this.
 | 7 | Two or more conflicting matches | ask, naming every match | **BLOCKED** |
 | 8 | No match and no default · registry names a product with no directory · a directory with no registry row · a required field still `TODO:` | ask | **BLOCKED** |
 
+**Suite runs have no ticket** — no components, labels, or secondary signals
+exist to match; the ladder above does not apply. The product comes only from
+the invocation (`--product=X`) or the declared default. Details: `docs/rules/core/cicd.md`.
+
 **Secondary signals** are consulted only when components and labels yield nothing —
 they never override an explicit component match, and a conflict between them is an
 ambiguity (the *conflicting matches* rung), not a vote to be counted:

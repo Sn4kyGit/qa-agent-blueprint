@@ -94,9 +94,10 @@ the session looks done or stuck until your text reappears minutes later. Counter
 that mechanically, not apologetically:
 
 - **Announce before every spawn**, one line: which agent, what it will do, the
-  artifact you expect, and a rough duration — e.g. "▶ Step 2/4 — `test-executor`
-  checks AC2 'coupon at checkout' (≈2–3 min; evidence →
-  `evidence/SHOP/SHOP-123/<ts>/`)." The duration expectation alone kills the
+  artifact you expect, a rough duration, and the `progress.md` the user can
+  watch while the chat is silent — e.g. "▶ Step 2/4 — `test-executor` checks
+  AC2 'coupon at checkout' (≈2–3 min; evidence → `evidence/SHOP/SHOP-123/<ts>/`,
+  follow along in its `progress.md`)." The duration expectation alone kills the
   "is it done?" moment.
 - **Chunk multi-part work.** A ticket with several acceptance criteria is several
   Task calls with a visible line between them, not one monolith — that turns
