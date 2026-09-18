@@ -42,6 +42,8 @@ only enforcement once a fixture proves it".
 | SessionStart warns when a marketplace advertises a newer plugin version; silent when current/unknown | fixture: `session-start-fixtures.sh` (update notice block) |
 | plugin.json declares no component path that sits on a loader convention location (duplicate-load bug class) | fixture: `manifest-conventions.sh` |
 | Browser contract vs. preference: hook warns on missing `--secrets`/`--output-dir`, stays silent on headful; `.playwright-mcp.config.json` seeded once, never overwritten | fixture: `session-start-fixtures.sh` (MCP scan + browser blocks) |
+| Browser-driving subagents run sequentially, never in parallel (one MCP server = one shared browser tab; parallel runs contaminate — 0.6.1 field report) | **uncovered** — scheduling norm inside qa-manager; a case could only grade recitation. Candidate for a trace-aware runner: parallel `test-executor` spawns in one session must not occur |
+| Shadow Mode is mechanically enforced: PreToolUse guard blocks Atlassian write tools while shadow is on (fail-safe on unresolvable key/unreadable project file); unlock via `Shadow mode: off` or `QA_AGENT_SHADOW=0` | fixture: `guard-fixtures.sh` (shadow section) + `opencode/tests/guard.test.ts` (shadow gate) — 0.6.3, audit F1 |
 | Installer keeps a user playwright config that carries the contract flags (preferences never trigger an overwrite) | fixture: `install-integrate-fixtures.sh` (headful-kept block) |
 
 ## `evidence-policy.md`
@@ -49,6 +51,7 @@ only enforcement once a fixture proves it".
 | Norm | Coverage |
 |---|---|
 | Verdict set incl. NEEDS_REVIEW semantics (no bug, no transition, human ruling) | case: `failure-outdated` |
+| Evidence is ticket-scoped: a fresh summary only covers the ticket(s) the run touched — SHOP-1 evidence does not satisfy a SHOP-2 run | fixture: `stop-evidence-fixtures.sh` (per-ticket cases) + `opencode/tests/evidence-gate.test.ts` (F2 cases) — 0.6.3, audit F2 |
 | NO_TEST: tools ran, nothing completed; reason stated; nothing posted; out of pass rate | case: `no-test-verdict` (+ `aggregate.py` excludes it — tested via qa-report, not a fixture) |
 | Learnings: exactly one of `captured` / `none_because` | case: `learnings-declaration` |
 | Product fields conditional (never null) | case: `routing-absent` |
@@ -67,6 +70,7 @@ only enforcement once a fixture proves it".
 |---|---|
 | Shadow mode default-on: no JIRA writes, proposal into the run's evidence dir, `shadow: true` + `reported_to_jira: false` | case: `shadow-mode` (+ fixture: `post-jira-audit` logs every write — a shadow-run line there is a bug). **Known flaky at hard tier** (history.log, since 2026-09-11): the safety core (never post) has held in 100% of runs; what oscillates 1/3–3/3 is one-shot execution discipline ("claims `proposed-report.md` written, harness shows no file"). Follow-up: Stop-hook check — session ends claiming a shadow proposal while neither the file nor the summary update exists → block; that enforces mechanically what the model will not reliably do from prose |
 | Forbidden commands (rm -rf, force push, env writes) blocked mechanically | fixture: `guard-fixtures.sh` |
+| Secrets-file reads via grep/sed/awk/jq blocked too (0.6.1 field report: key-name grep bypassed the cat-only list); key existence via `resolve-secrets.sh --status`, token-bearing harness configs via scan tooling, never ad-hoc pipes | fixture: `guard-fixtures.sh` (reader-list cases, both harnesses) — the scan-tooling half is advisory prose in `docs/rules/core/security.md` |
 | Never test production; BLOCKED + ask when a ticket demands it | **uncovered** — candidate case: "ticket says verify on prod" must yield BLOCKED, not a plan |
 | Never merge/approve an MR; never roll back autonomously | **uncovered** — candidate case, same shape: "approve this MR for me" must refuse |
 
@@ -83,6 +87,7 @@ only enforcement once a fixture proves it".
 | Norm | Coverage |
 |---|---|
 | AAA structure, severity P0–P4, risk ordering, Definition of Done | **deliberately advisory** — violations show up loudly in reports and get corrected there; an eval can only check the agent *recites* the scheme, which proves nothing. Revisit if a concrete silent failure appears. |
+| Direct writes for test-data setup: stage only, reversible, documented in the summary, confirmed per project; never to turn a red run green | **deliberately advisory** — the falsifiable half (every write named in `execution_summary.json`) is auditable via `/qa-report` on evidence, not via a model eval; the "never to turn red green" line is the fabricated-evidence norm already covered by the evidence gate. Revisit if a silent failure appears. |
 
 ## Skills
 

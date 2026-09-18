@@ -81,6 +81,10 @@ removes only the symlinks that point into the blueprint; your data and your
    evidence dir (`proposed-report.md`), never posted, until you write
    `Shadow mode: off` in the project file or set `QA_AGENT_SHADOW=0`.
 
+Same caveats apply as under the plugin regarding tickets with no linked app
+repo (failure-analysis runs degraded, deploy-to-stage is BLOCKED by design) —
+see [quickstart-plugin.md § What is different without an app repo](quickstart-plugin.md#what-is-different-without-an-app-repo).
+
 ## Verify
 
 In `~/qa-workspace`:

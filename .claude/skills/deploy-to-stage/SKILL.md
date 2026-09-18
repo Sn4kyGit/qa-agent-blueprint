@@ -1,6 +1,6 @@
 ---
 name: deploy-to-stage
-description: Execute the active project's stage-deploy runbook, with safety checks, when a ticket's fix isn't on stage yet. Use for "/deploy-to-stage", "bring den Fix auf Stage", "deploy auf Stage", or when test-ticket/retest-bug determine the fix isn't deployed.
+description: Execute the active project's stage-deploy runbook, with safety checks, when a ticket's fix isn't on stage yet. Use for "/deploy-to-stage", "bring den Fix auf Stage", "deploy auf Stage", or when test-ticket/retest-bug determine the fix isn't deployed. Not for production deploys — this runbook only ever targets stage, and never runs unless PROJECT.md says the agent may trigger deploys.
 ---
 
 # /deploy-to-stage — project runbook, with safety checks

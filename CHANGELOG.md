@@ -8,6 +8,97 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.6.3] — 2026-09-18
+
+One release, two sources: the field-report norms and fixes staged as 0.6.2
+(never tagged — folded into this release), plus all twelve findings of the
+harness & UX audit (`docs/audit-2026-09-18.md`).
+
+### Fixed
+- **Shadow Mode is now mechanically enforced** (audit F1). The PreToolUse
+  guard blocks Atlassian write tools while shadow mode is on (the default) —
+  previously only a norm in the router text, with no hook behind it. Fails
+  safe: an unresolvable ticket key or unreadable project file stays blocked.
+  Unlock: `Shadow mode: off` in `projects/<KEY>/PROJECT.md` or
+  `QA_AGENT_SHADOW=0`. Registered via a second matcher in `hooks/hooks.json`
+  and `.claude/settings.json`; same gate in the opencode plugin, byte-equal
+  block message, fixtures on both sides.
+- **Latent namespace bug in the stop hook**: plugin-provided MCP tools surface
+  as `mcp__plugin_<name>_<server>__<tool>` (single underscore between plugin
+  name and server) — the old "namespace-tolerant" regex expected a double
+  underscore and never matched that real shape, so plugin-mode Atlassian
+  writes were invisible as test activity. Regex corrected on both hooks; new
+  fixture for the plugin-namespaced shape.
+- **Stop-hook evidence check is ticket-scoped** (audit F2): the transcript
+  scan now collects the JIRA keys the test activity touched, and EACH key
+  needs its own fresh `execution_summary.json` — fresh evidence for SHOP-1 no
+  longer satisfies a run that tested SHOP-2. Falls back to the global check
+  when no key could be tied to the run. Same scoping in the opencode plugin
+  (session → touched keys map); fixtures on both sides.
+- **opencode guard message parity** (audit F3): the `.env*`-reader block
+  message on the TS side lacked the `resolve-secrets.sh --status` pointer the
+  bash side had. Fixed — and pinned: new `opencode/tests/message-parity.test.ts`
+  extracts every block message from BOTH guards and fails on any drift.
+- **Secret-read keyword net widened** (audit F4 + field report): `grep`,
+  `sed`, `awk`, `jq` and `source` join the reader list (field report: an agent
+  checking which credential keys exist ran `grep -o '^[A-Z_]*='
+  .env.playwright-secrets` straight past the old cat-only list), and
+  interpreter invocations reading a secrets file (`python3 -c
+  "open('.env').read()"`, `ruby -e "File.read(...)"`, perl, node, php) are
+  blocked — both harnesses, with fixtures (including the allowed
+  `.env.example` / no-read-verb counter-cases). The block message points at
+  the sanctioned path (`resolve-secrets.sh --status`, names only).
+- **`QA_AUDIT_USER` removed** (audit F7): the undocumented opencode-only env
+  var is gone; the audit log uses `$USER`/`process.env.USER ?? "unknown"` on
+  both sides.
+- **Routing descriptions** (audit F5/F6): `webdriverio-testing` gained an
+  explicit non-trigger ("loaded by `/test-automation`, not invoked directly"),
+  and eleven native skills (`bug-report`, `deploy-to-stage`, `qa-help`,
+  `qa-report`, `re-board`, `whats-new`, `onboard-product`, `onboard-project`,
+  `failure-analysis`, `report-to-jira`, `retro-learn`) each gained a "Not for"
+  clause naming the skill they are most likely confused with.
+
+### Added
+- **Norm: browser-driving subagents run sequentially, never in parallel** —
+  one playwright MCP server is one shared browser session; parallel
+  test-executors contaminate each other (field report: three parallel runs,
+  zero usable evidence). In `docs/rules/testing/playwright-mcp.md` and both
+  `qa-manager.md` bodies (kept byte-identical).
+- **Norm: test-data hygiene** (`test-automation` skill) — specs tear down what
+  they create; mass runs leave the tenant clean; many independent cases failing
+  together means *suspect the environment first* and record the cause as
+  environment, not product defect.
+- **Norm: MCP liveness preflight** before long/unattended runs
+  (`webdriverio-testing`, `test-automation`) — one cheap probe per dependency;
+  a dead server is one BLOCKED report, never a retry loop; reconnecting is a
+  human step. Includes the one-Appium-pipeline-per-machine constraint.
+- **Norm: direct writes for test-data setup** — allowed with constraints
+  (stage only, reversible, documented in the execution summary, confirmed once
+  per project in PROJECT.md; never to turn a red run green). Stub in
+  `qa-principles.md`, full constraints in `docs/rules/core/qa-principles.md`.
+- **Norm: token-bearing harness configs are scan-tooling territory** —
+  `~/.claude.json` / opencode.json env maps are inspected via the session-start
+  scan / plugin config scan, never ad-hoc pipes (`docs/rules/core/security.md`;
+  one-liner in the core rule).
+
+### Changed
+- **README quickstart restructured** (audit F8/F9): exactly one path visible
+  by default (plugin, two commands), the four alternatives moved into a
+  `<details>` block, and `install.sh --dry-run` is surfaced right under the
+  quickstart as the trust answer.
+- **Skill tables now add up** (audit F10): `/qa-help` is a 16th row in the
+  core-skills table, `webdriverio-testing` gets an explicit note under the
+  specialist table — 16 + 10 + 1 = the 27 the header claims.
+- **opencode quickstart** (audit F12): cross-references the plugin
+  quickstart's "no linked app repo" caveats instead of omitting them.
+- Context budget 7950 → 8050 tokens, with the justification recorded in
+  `context-budget.sh` (the two new always-loaded norms must bind before any
+  skill runs; their detail lives on-demand).
+- `evals/COVERAGE.md`: rows for the new norms — shadow-gate and ticket-scoped
+  evidence fixture-covered (F1/F2), scheduling/direct-write norms marked
+  advisory with reasoning.
+
+
 ## [0.6.1] — 2026-09-16
 
 ### Fixed

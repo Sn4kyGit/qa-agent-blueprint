@@ -1,6 +1,6 @@
 ---
 name: re-board
-description: Bring an existing onboarded project up to the current blueprint schema without repeating the full onboarding — fills fields the template gained since the project's Blueprint version stamp (Secrets source, Framework, ...), seeds missing files (flow-map.md, drafted from existing evidence), resolves open TODOs, and refreshes the bridge file and version stamp. Every change is individually confirmed, nothing is bulk-applied. Use for "/re-board <KEY>", "re-onboard", "Projekt aktualisieren", "Onboarding nachholen", after a blueprint update when /whats-new shows project-affecting changes, or when a project file predates the current template.
+description: Bring an existing onboarded project up to the current blueprint schema without repeating the full onboarding — fills fields the template gained since the project's Blueprint version stamp (Secrets source, Framework, ...), seeds missing files (flow-map.md, drafted from existing evidence), resolves open TODOs, and refreshes the bridge file and version stamp. Every change is individually confirmed, nothing is bulk-applied. Use for "/re-board <KEY>", "re-onboard", "Projekt aktualisieren", "Onboarding nachholen", after a blueprint update when /whats-new shows project-affecting changes, or when a project file predates the current template. Not for a brand-new project — that's /onboard-project; this is the delta-upgrade path for an already-onboarded one.
 ---
 
 # /re-board <KEY> — delta onboarding for an existing project

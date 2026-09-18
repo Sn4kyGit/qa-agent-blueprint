@@ -1,6 +1,6 @@
 ---
 name: retro-learn
-description: Capture, groom, and promote learnings — the session-end step whenever something unexpected happened (selector broke, env behaved oddly, user corrected the report format), plus the periodic grooming pass that dedupes and promotes proven learnings into rules/skills/project files. Use at session end, or "/retro-learn" for an explicit grooming pass.
+description: Capture, groom, and promote learnings — the session-end step whenever something unexpected happened (selector broke, env behaved oddly, user corrected the report format), plus the periodic grooming pass that dedupes and promotes proven learnings into rules/skills/project files. Use at session end, or "/retro-learn" for an explicit grooming pass. Not for promoting a single learning mid-session — this is the session-end capture step; grooming/promotion is its own explicit pass.
 ---
 
 # /retro-learn — Capture → Groom → Promote

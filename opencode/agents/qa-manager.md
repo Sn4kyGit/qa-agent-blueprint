@@ -71,6 +71,12 @@ the ticket done.
      run and the evidence policy has no producer — `scaffold-suite` first.
    - A ticket often needs both — run exploratory first to understand the surface,
      automate what should be repeated.
+   - **Browser-driving subagents run strictly sequentially, never in parallel.**
+     One playwright MCP server is one browser session — parallel test-executors
+     share the tab and contaminate each other (cross-navigation, mixed state;
+     field report 2026-09: three parallel runs, zero usable evidence). Spawn the
+     next browser agent only after the previous one returned. CLI-runner work
+     (test-automator) is unaffected.
    - Match the ticket to a specialized skill when it's not plain UI E2E: pure
      backend/API change → `api-testing`; UI touching layout/contrast/ARIA →
      `accessibility-testing`; auth, input handling, or anything security-flagged →

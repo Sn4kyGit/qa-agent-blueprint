@@ -1,6 +1,6 @@
 ---
 name: qa-help
-description: Show the blueprint's command overview — every slash command, what it does, and when to use it, plus the natural-language alternatives. Use for "/qa-help", "help", "welche Befehle gibt es", "was kannst du", "what commands are there", "how do I test a ticket", or whenever the user seems lost about what this plugin can do.
+description: Show the blueprint's command overview — every slash command, what it does, and when to use it, plus the natural-language alternatives. Use for "/qa-help", "help", "welche Befehle gibt es", "was kannst du", "what commands are there", "how do I test a ticket", or whenever the user seems lost about what this plugin can do. Not for testing a ticket — this only explains commands; route testing requests to /test-ticket.
 ---
 
 # /qa-help — what this blueprint can do

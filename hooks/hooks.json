@@ -29,6 +29,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/.claude/hooks/pre-tool-guard.sh"
           }
         ]
+      },
+      {
+        "matcher": "mcp__.*atlassian__.*(create|edit|add|transition|update|delete).*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/hooks/pre-tool-guard.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [

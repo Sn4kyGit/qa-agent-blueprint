@@ -27,11 +27,18 @@ import { qaBlueprint } from "../plugins/qa-blueprint.ts"
 import { bashBefore, fakeCtx, toolAfter, SESSION_ID } from "./fixtures/payloads.ts"
 
 let dir: string
+let prevShadow: string | undefined
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "qa-gate-"))
+  // The shadow gate has its own suite (guard.test.ts); these tests exercise the
+  // evidence gate, which sits BEHIND it — disable shadow so writes reach it.
+  prevShadow = process.env.QA_AGENT_SHADOW
+  process.env.QA_AGENT_SHADOW = "0"
 })
 afterEach(async () => {
+  if (prevShadow === undefined) delete process.env.QA_AGENT_SHADOW
+  else process.env.QA_AGENT_SHADOW = prevShadow
   await rm(dir, { recursive: true, force: true })
 })
 
@@ -58,10 +65,11 @@ async function writeSummary(rel: string, body: unknown, opts: { ageHours?: numbe
   return f
 }
 
-async function markActivity(hooks: Rig["hooks"], kind: "playwright" | "atlassianWrite" | "atlassianRead" | "pnpmRunner" | "npmScript" | "heredoc") {
+async function markActivity(hooks: Rig["hooks"], kind: "playwright" | "atlassianWrite" | "atlassianWriteShop2" | "atlassianRead" | "pnpmRunner" | "npmScript" | "heredoc") {
   const call = {
     playwright: () => toolAfter("playwright_browser_navigate", { url: "https://example.invalid" }),
     atlassianWrite: () => toolAfter("atlassian_transitionJiraIssue", { issueKey: "SHOP-1" }),
+    atlassianWriteShop2: () => toolAfter("atlassian_transitionJiraIssue", { issueKey: "SHOP-2" }),
     atlassianRead: () => toolAfter("atlassian_getJiraIssue", { issueKey: "SHOP-1" }),
     pnpmRunner: () => toolAfter("bash", { command: "cd ../shop-web-tests && pnpm playwright test --grep @smoke" }),
     npmScript: () => toolAfter("bash", { command: "npm run test:e2e" }),
@@ -225,6 +233,20 @@ describe("evidence gate (opencode) — gate evaluation", () => {
       learnings: { captured: [], none_because: "no product knowledge gained" },
     })
     await markActivity(r.hooks, "playwright")
+    await expect(jiraWrite(r)).resolves.toBeUndefined()
+  })
+
+  test("per-ticket scoping (F2): evidence for SHOP-1 does not cover a SHOP-2 run", async () => {
+    const r = await rig()
+    await writeSummary("SHOP/SHOP-1/run1", summary({ captured: [], none_because: "clean run" }))
+    await markActivity(r.hooks, "atlassianWriteShop2")
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_MISSING:[\s\S]*SHOP-2/)
+  })
+
+  test("per-ticket scoping (F2): evidence for SHOP-2 covers a SHOP-2 run", async () => {
+    const r = await rig()
+    await writeSummary("SHOP/SHOP-2/run1", summary({ captured: [], none_because: "clean run" }))
+    await markActivity(r.hooks, "atlassianWriteShop2")
     await expect(jiraWrite(r)).resolves.toBeUndefined()
   })
 

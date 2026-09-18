@@ -47,6 +47,7 @@ check "Write .env.example"            0 '{"tool_name":"Write","tool_input":{"fil
 check "Write /repo/.env.example"      0 '{"tool_name":"Write","tool_input":{"file_path":"/repo/.env.example"}}'
 check "Bash redirect > .env.example"  0 '{"tool_name":"Bash","tool_input":{"command":"cat > .env.example"}}'
 check "Bash read .env.example"        0 '{"tool_name":"Bash","tool_input":{"command":"cat .env.example"}}'
+check "Bash grep .env.example"        0 '{"tool_name":"Bash","tool_input":{"command":"grep KEY .env.example"}}'
 
 echo
 echo "== blocked: secrets files (.claude/rules/core/security.md) =="
@@ -61,6 +62,48 @@ check "Bash cat .env"                 2 '{"tool_name":"Bash","tool_input":{"comm
 # .env is still a write to a secrets file and must stay blocked.
 check "Bash cp template INTO .env"    2 '{"tool_name":"Bash","tool_input":{"command":"cp .env.example .env"}}'
 check "Bash cat .env.playwright-secrets" 2 '{"tool_name":"Bash","tool_input":{"command":"cat .env.playwright-secrets"}}'
+# grep/sed/awk/jq are readers too — field report 0.6.1: `grep -o '^[A-Z_]*='`
+# on the secrets file bypassed the old cat-only list. Key-name checks go
+# through resolve-secrets.sh --status, never through the file itself.
+check "Bash grep keys from .env.playwright-secrets" 2 '{"tool_name":"Bash","tool_input":{"command":"grep -o ^[A-Z_0-9]*= .env.playwright-secrets"}}'
+check "Bash grep .env.local"           2 '{"tool_name":"Bash","tool_input":{"command":"grep PASSWORD .env.local"}}'
+check "Bash sed reads .env"            2 '{"tool_name":"Bash","tool_input":{"command":"sed -n 1p .env"}}'
+check "Bash awk reads .env"            2 '{"tool_name":"Bash","tool_input":{"command":"awk -F= \"{print $1}\" .env"}}'
+check "Bash jq reads .env"             2 '{"tool_name":"Bash","tool_input":{"command":"jq . .env"}}'
+check "Bash source .env"               2 '{"tool_name":"Bash","tool_input":{"command":"source .env"}}'
+# Interpreter one-liners that OPEN the file (audit 2026-09-18, F4)
+check "python3 open().read() .env"     2 '{"tool_name":"Bash","tool_input":{"command":"python3 -c \"print(open(\".env\").read())\""}}'
+check "ruby File.read .env"            2 '{"tool_name":"Bash","tool_input":{"command":"ruby -e \"puts File.read(\".env\")\""}}'
+# ...but merely MENTIONING the name in a string is not a read
+check "python string mentions .env"    0 '{"tool_name":"Bash","tool_input":{"command":"python3 -c \"note=\".env.template\"; print(note)\""}}'
+
+echo
+echo "== fail closed: unparsable payloads (audit 2026-09-18, F1/F4) =="
+check "unparsable call touching .env"  2 'not json at all .env.production'
+check "unparsable call touching a pem" 2 'garbage {{ cert.pem'
+
+echo
+echo "== shadow mode: JIRA writes blocked by default (security.md; audit F1) =="
+SHADOW_TMP="$(mktemp -d)"
+trap 'rm -r "$SHADOW_TMP" 2>/dev/null' EXIT
+mkdir -p "$SHADOW_TMP/projects/SHOP"
+printf '# SHOP\nShadow mode: off\n' > "$SHADOW_TMP/projects/SHOP/PROJECT.md"
+
+check "JIRA write blocked, shadow default"      2 '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"issueKey":"SHOP-123"}}'
+check "JIRA write blocked, plugin-namespaced"   2 '{"tool_name":"mcp__plugin_qa-agent-blueprint_atlassian__editJiraIssue","tool_input":{"issueKey":"SHOP-123"}}'
+check "JIRA write, unresolvable key → blocked"  2 '{"tool_name":"mcp__atlassian__transitionJiraIssue","tool_input":{}}'
+check "unparsable atlassian write → blocked"    2 'garbage mcp__atlassian__createJiraIssue payload'
+check "JIRA read is not a write"                0 '{"tool_name":"mcp__atlassian__getJiraIssue","tool_input":{"issueKey":"SHOP-123"}}'
+check "shadow off via PROJECT.md"               0 '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"'"$SHADOW_TMP"'"}'
+
+printf '%s' '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"issueKey":"SHOP-123"}}' | QA_AGENT_SHADOW=0 bash "$GUARD" >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  printf 'ok    %-46s exit=%s\n' "shadow off via QA_AGENT_SHADOW=0" 0
+else
+  printf 'FAIL  %-46s want=%s got=%s\n' "shadow off via QA_AGENT_SHADOW=0" 0 2
+  fails=$((fails + 1))
+fi
+rm -r "$SHADOW_TMP" 2>/dev/null
 
 echo
 echo "== blocked: reserved product-key names (case-insensitive) =="

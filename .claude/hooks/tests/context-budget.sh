@@ -39,13 +39,19 @@
 #               only sanctioned writer of .env*. Without that line the
 #               always-loaded "never write .env*" rule contradicts the resolver
 #               and the agent refuses the safe path. Budget 7950.
+#   2026-09-16  field-report norms (~70 tok): direct test-data writes (stage only,
+#               reversible, documented, confirmed per project — never to turn a
+#               red run green) in qa-principles.md, and the key-existence one-liner
+#               in security.md. Both must bind before any skill runs (they govern
+#               ad-hoc actions, not a topic); the four-constraint detail and the
+#               config-pipe rationale live in docs/rules/core/*.md. Budget 8050.
 #
 # Usage:  bash .claude/hooks/tests/context-budget.sh
 # Exit:   0 within budget, 1 over.
 #
 set -uo pipefail
 
-BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-7950}"
+BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-8050}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"

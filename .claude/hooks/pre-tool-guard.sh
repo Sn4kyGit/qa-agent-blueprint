@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# pre-tool-guard.sh — PreToolUse hook (matcher: Bash|Write|Edit|MultiEdit|
-# NotebookEdit). Mechanical enforcement of .claude/rules/core/security.md:
-# blocks writes/reads-as-writes to secret files and the most destructive shell
-# commands, regardless of how the request was framed upstream.
+# pre-tool-guard.sh — PreToolUse hook (matchers: Bash|Write|Edit|MultiEdit|
+# NotebookEdit, and mcp__*atlassian__* writes for the shadow gate). Mechanical
+# enforcement of .claude/rules/core/security.md: blocks writes/reads-as-writes
+# to secret files, the most destructive shell commands, and JIRA writes while
+# Shadow Mode is on — regardless of how the request was framed upstream.
 #
 set -uo pipefail
 
@@ -22,6 +23,12 @@ $1
 TOOL_NAME="$(get_json 'print(d.get("tool_name") or "")')"
 COMMAND="$(get_json 'print((d.get("tool_input") or {}).get("command") or "")')"
 FILE_PATH="$(get_json 'print((d.get("tool_input") or {}).get("file_path") or "")')"
+CWD="$(get_json 'print(d.get("cwd") or "")')"; CWD="${CWD:-$PWD}"
+
+block() {
+  echo "BLOCKED by pre-tool-guard: $1" >&2
+  exit 2
+}
 
 # --- fallback whenever the payload could not be parsed: scan the raw JSON with
 # plain grep instead of silently allowing everything. This used to require
@@ -33,12 +40,20 @@ FILE_PATH="$(get_json 'print((d.get("tool_input") or {}).get("file_path") or "")
 if [ -z "$TOOL_NAME" ]; then
   COMMAND="$INPUT"
   FILE_PATH="$INPUT"
+  # An unparsable call that touches a secrets path is refused outright (the
+  # anchored reader checks below cannot be trusted on a raw JSON blob), and an
+  # unparsable call that looks like an Atlassian write is treated as one for
+  # the shadow gate further down — fail safe on both axes.
+  if printf '%s' "$INPUT" | sed 's/\.env\.example//g' | grep -qiE '\.env(\.|"|'"'"'|$)|\.pem|id_rsa|id_ed25519|secret|credential'; then
+    block "refusing an unrecognized call touching a secrets path — failing closed."
+  fi
+  if printf '%s' "$INPUT" | grep -qiE 'atlassian__?[a-z]*(create|edit|add|transition|update|delete)'; then
+    # Single underscore before `atlassian` — the shadow-gate regex expects the
+    # namespace prefix to end in one `_` (the real plugin naming shape), and the
+    # sentinel must pass through that gate to be blocked there.
+    TOOL_NAME="mcp__unparsed_atlassian__create"
+  fi
 fi
-
-block() {
-  echo "BLOCKED by pre-tool-guard: $1" >&2
-  exit 2
-}
 
 is_secret_path() {
   # Lowercase the path for the substring patterns below: bash `case` is
@@ -88,11 +103,49 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # line, so a harmless pipe into a pager followed by an unrelated echo mentioning
   # the file name in prose was blocked. A guard that blocks ordinary work gets
   # switched off, and then it protects nothing at all.
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|more|head|tail|cp|mv)[[:space:]]+[^;&|]*\.env([^a-zA-Z]|$)'; then
-    block "refusing a command that reads/copies a .env* file — secrets never enter chat or context."
+  # grep/sed/awk/jq are readers too — a field agent demonstrated `grep -o '^[A-Z_]*='
+  # .env.playwright-secrets` sailing through the old list (0.6.1 field report).
+  # Listing key NAMES is exactly what resolve-secrets.sh --status exists for.
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|more|head|tail|cp|mv|grep|sed|awk|jq|source)[[:space:]]+[^;&|]*\.env([^a-zA-Z]|$)'; then
+    block "refusing a command that reads/copies a .env* file — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status."
+  fi
+  # The next-most-likely bypass class: interpreter one-liners that OPEN the
+  # file (python3 -c "print(open('.env').read())" et al.). The open/read/load
+  # keyword is required, so `python3 -c "note='.env template'"` — merely
+  # MENTIONING the name in a string — stays allowed (audit 2026-09-18, F4:
+  # the false-positive rate must stay visible in fixtures). A regex guard can
+  # never enumerate every way to read a file — this is a best-effort net; the
+  # real guarantee is --secrets masking at the browser layer
+  # (docs/rules/core/security.md).
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(python3?|perl|ruby|node|php)[[:space:]][^;&|]*(open|read|load|require|include|slurp)[^;&|]*\.env([^a-zA-Z]|$)'; then
+    block "refusing a command that appears to read a .env* file via an interpreter — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status."
   fi
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '>>?[[:space:]]*\.env'; then
     block "refusing a command that writes into a .env* file directly — use the vault/secrets workflow instead."
+  fi
+fi
+
+# 3. Shadow Mode: no JIRA write leaves the building by default (security.md →
+# "Shadow mode" — on unless QA_AGENT_SHADOW=0 or the project's PROJECT.md says
+# "Shadow mode: off"). Until 0.6.3 the only hook on this class was PostToolUse,
+# which LOGS after the write — detection, not enforcement (audit 2026-09-18,
+# finding 1). Fails safe: an unresolvable ticket key or unreadable project file
+# keeps the gate closed — shadow-on is the default posture, so an ambiguous
+# case must not silently open it.
+# Same namespace-tolerant shape as the stop hook: the plugin-namespaced form is
+# mcp__plugin_<name>_<server>__<tool> — a SINGLE underscore joins plugin name
+# and server, so the prefix group ends in `_`, and `atlassian__` follows.
+if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?atlassian__.*(create|edit|add|transition|update|delete)'; then
+  if [ "${QA_AGENT_SHADOW:-1}" != "0" ]; then
+    ISSUE_KEY="$(get_json 'import re; m = re.search(r"[A-Z][A-Z0-9]+-[0-9]+", json.dumps(d.get("tool_input") or {})); print(m.group(0) if m else "")')"
+    PROJ="${ISSUE_KEY%%-*}"
+    SHADOW_OFF=0
+    if [ -n "$PROJ" ] && [ -f "$CWD/projects/$PROJ/PROJECT.md" ]; then
+      grep -qiE 'shadow mode:[[:space:]]*off' "$CWD/projects/$PROJ/PROJECT.md" && SHADOW_OFF=1
+    fi
+    if [ "$SHADOW_OFF" != "1" ]; then
+      block "refusing a JIRA write while Shadow Mode is on (default). Compose the report as evidence/<KEY>/<TICKET>/<ts>/proposed-report.md instead. Unlock: 'Shadow mode: off' in projects/<KEY>/PROJECT.md, or QA_AGENT_SHADOW=0."
+    fi
   fi
 fi
 

@@ -14,6 +14,8 @@ No secrets in context, ever. This is enforced by rule AND by hooks — see below
   by typing or reading the actual password.
 - `.env`, `.env.playwright-secrets`, and any `*.auth`/storage-state file are
   gitignored and must never be committed, pasted into chat, or attached to a ticket.
+  Key-existence checks: `resolve-secrets.sh --status`, never the file.
+
 
 ## Shadow mode — testing fully, writing nothing (default: on)
 

@@ -21,8 +21,30 @@ security-flagged (auth rework, new input surface, a reported vulnerability), use
 the `security-testing` skill instead of this smoke list — it covers the full OWASP
 Top 10 + LLM risks, dependency scanning, and SAST integration.
 
-## Specialized testing types
+## Direct writes to the system under test — full constraints
 
+The core rule (`/.claude/rules/core/qa-principles.md`) allows DB/seeding-API
+writes for test-data setup under constraints; here is the full text:
+
+1. **Stage/test tenant only** — never production, the same boundary as
+   everything else.
+2. **Reversible** — you must be able to undo exactly what you wrote; record the
+   before-value when one exists.
+3. **Documented** — the `execution_summary.json` names every write (what,
+   where, before/after). An undocumented write is indistinguishable from
+   tampering.
+4. **Confirmed once per project** — the first time a project needs direct
+   writes, ask the user; the decision is recorded in `PROJECT.md`. Silence is
+   not consent.
+
+The hard line: a direct write never turns a failing test green by changing the
+data the assertion reads. Data that makes a real defect invisible is fabricated
+evidence — worse than a red run. And a write whose UI effect you cannot
+subsequently observe is an unverified assumption: report the write as done, the
+mechanism as unconfirmed (field report 2026-09: a correct DB change whose UI
+surface stayed elusive — recorded exactly that way).
+
+## Specialized testing types
 Beyond exploratory/regression/API (test levels table above), this blueprint vendors
 deeper skills for testing types that come up often enough to deserve their own
 methodology rather than an ad-hoc approach: `accessibility-testing` (WCAG,

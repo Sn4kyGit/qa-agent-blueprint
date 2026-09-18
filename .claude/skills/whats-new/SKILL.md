@@ -1,6 +1,6 @@
 ---
 name: whats-new
-description: Show what changed in the blueprint since a project was onboarded or last re-boarded — diffs the project's Blueprint version stamp against the installed plugin version and renders the relevant CHANGELOG sections in the user's language, with a concrete note on which changes call for /re-board. Use for "/whats-new", "was ist neu", "was hat sich geändert", "changelog", "what changed since my onboarding", or right after a plugin update.
+description: Show what changed in the blueprint since a project was onboarded or last re-boarded — diffs the project's Blueprint version stamp against the installed plugin version and renders the relevant CHANGELOG sections in the user's language, with a concrete note on which changes call for /re-board. Use for "/whats-new", "was ist neu", "was hat sich geändert", "changelog", "what changed since my onboarding", or right after a plugin update. Not for applying changes — this is read-only; the apply step is always /re-board.
 ---
 
 # /whats-new — what changed since this project was onboarded

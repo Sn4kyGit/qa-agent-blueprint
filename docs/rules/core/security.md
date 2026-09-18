@@ -99,12 +99,27 @@ to end: namespacing, path rewriting, idempotency, uninstall) — all under
 after any change to a hook, and add a fixture for every new rule.
 
 - `PreToolUse` guard (`pre-tool-guard.sh`) blocks `Bash`/`Write`/`Edit`/`MultiEdit`/
-  `NotebookEdit` calls that touch `.env*`, attempt `rm -rf`, or force-push.
+  `NotebookEdit` calls that touch `.env*`, attempt `rm -rf`, or force-push. The
+  `.env*` reader list covers `cat|less|more|head|tail|cp|mv|grep|sed|awk|jq` —
+  field report 0.6.1: a `grep -o '^[A-Z_]*='` on the secrets file bypassed the
+  old cat-only list; key-EXISTENCE checks go through `resolve-secrets.sh
+  --status` (names only), never through the file itself.
 - Permission denylist in `.claude/settings.json` prevents reads of known secret file
   patterns outright.
 - `PostToolUse` JIRA write audit (`post-jira-audit.sh`) logs every Atlassian MCP
   write (create/edit/transition/delete) to `evidence/.audit/jira-writes.log` for
   traceability — including headless CI runs.
+
+## Files that can embed tokens are scan-tooling territory
+
+Harness config files — `~/.claude.json`, a consumer's `opencode.json` with env
+maps — can carry auth tokens in server definitions. Inspecting them (which MCP
+servers exist, which env keys are set) goes through the scan tooling: the
+session-start `mcp_scan` (Claude) or the opencode plugin's config scan, both of
+which extract only non-secret fields. Never pipe such a file through an ad-hoc
+`cat | python -c …` filter you wrote yourself — from outside that process nobody
+can verify the filter never printed a value (field report 0.6.1, an agent's own
+honest audit of exactly this).
 
 ## Shadow mode — why it exists and how to run it
 

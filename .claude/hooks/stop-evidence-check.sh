@@ -42,21 +42,29 @@ TRANSCRIPT="$(get_field transcript_path)"
 #   - an mcp__atlassian__* tool call whose name implies a write
 #     (create/edit/add/transition/update/delete), or
 #   - a Bash call whose command actually runs the Playwright CLI runner.
-looks_like_a_test_run() {
+#
+# While at it, collect the JIRA ticket keys the activity touched (audit
+# 2026-09-18 F2): evidence is scoped PER TICKET — a fresh summary for SHOP-1
+# must not satisfy a run that tested SHOP-2. Prints the discovered keys, one
+# per line (empty when none could be tied to the activity); the exit status
+# carries the "did a test run" signal (0 = yes).
+test_run_keys() {
   [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] || return 1
   command -v python3 >/dev/null 2>&1 || return 1
   local _tmp_py
   _tmp_py="$(mktemp)"
   cat > "$_tmp_py" <<'PY'
-import json, os, re, sys
+import json, re, sys
 
 path = sys.argv[1]
-# Tolerate an intermediate namespace segment: a plugin-provided MCP server may
-# surface as mcp__<plugin>__atlassian__* rather than mcp__atlassian__*. Matching
-# only the bare form would silently switch enforcement off for plugin users —
-# the failure mode being: no evidence demanded, no audit trail, all quiet.
-atlassian_write = re.compile(r'^mcp__(?:[^_]+(?:_[^_]+)*__)*atlassian__.*(create|edit|add|transition|update|delete)', re.IGNORECASE)
-playwright_tool = re.compile(r'^mcp__(?:[^_]+(?:_[^_]+)*__)*playwright__')
+# Tolerate an intermediate namespace segment: a plugin-provided MCP server
+# surfaces as mcp__plugin_<name>_<server>__<tool> — a SINGLE underscore joins
+# the plugin name and the server, so the segment list ends in `_atlassian`,
+# not `atlassian__`. The previous pattern (`(?:[^_]+(?:_[^_]+)*__)*`) never
+# matched that real shape: plugin-mode writes were invisible to the hook while
+# looking covered in review (found via the 2026-09-18 audit's guard work).
+atlassian_write = re.compile(r'^mcp__(?:[a-zA-Z0-9-]+(?:_[a-zA-Z0-9-]+)*_+)?atlassian__.*(create|edit|add|transition|update|delete)', re.IGNORECASE)
+playwright_tool = re.compile(r'^mcp__(?:[a-zA-Z0-9-]+(?:_[a-zA-Z0-9-]+)*_+)?playwright__')
 # Runner invocations. Anchored to the START of the command's first line (optionally
 # after a plain `cd <dir> &&` prefix), because a *search* over the whole command
 # string false-positives on any Bash call that merely CONTAINS the text without
@@ -71,28 +79,38 @@ playwright_cli = re.compile(
     r'(?:playwright\s+test\b'
     r'|(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:test|e2e|test:e2e|test:ui)\b)'
 )
+ticket_key = re.compile(r'\b[A-Z][A-Z0-9]+-\d+\b')
+
+keys = set()
 
 def walk(node):
+    found = False
     if isinstance(node, dict):
         if node.get("type") == "tool_use":
             name = node.get("name") or ""
-            if playwright_tool.match(name):
-                return True
-            if atlassian_write.match(name):
-                return True
-            if name == "Bash":
+            active = False
+            if playwright_tool.match(name) or atlassian_write.match(name):
+                active = True
+            elif name == "Bash":
                 cmd = (node.get("input") or {}).get("command") or ""
                 first_line = cmd.lstrip("\n").split("\n", 1)[0]
                 if playwright_cli.match(first_line):
-                    return True
+                    active = True
+            if active:
+                found = True
+                # Tie the run to its ticket(s): every KEY-123 in the activity's
+                # input payload counts — the issueKey of a JIRA write, the
+                # --grep of a CLI run, the URL of a ticket page.
+                for m in ticket_key.findall(json.dumps(node.get("input") or {})):
+                    keys.add(m)
         for v in node.values():
             if walk(v):
-                return True
+                found = True
     elif isinstance(node, list):
         for v in node:
             if walk(v):
-                return True
-    return False
+                found = True
+    return found
 
 found = False
 try:
@@ -107,10 +125,11 @@ try:
                 continue
             if walk(obj):
                 found = True
-                break
 except FileNotFoundError:
     pass
 
+for k in sorted(keys):
+    print(k)
 sys.exit(0 if found else 1)
 PY
   python3 "$_tmp_py" "$TRANSCRIPT"
@@ -158,8 +177,50 @@ PY
   done
 }
 
-if looks_like_a_test_run && ! has_recent_evidence; then
-  cat >&2 <<'EOF'
+# Per-ticket evidence check (F2): when the run could be tied to ticket keys,
+# EACH key needs its own fresh summary under evidence/<PROJ>/<TICKET>/ — a
+# fresh SHOP-1 summary must not cover a run that tested SHOP-2. Prints the keys
+# lacking evidence; with no keys extractable, falls back to the global
+# freshness check and prints "-" as the marker.
+missing_evidence_keys() {
+  if [ -n "$KEYS" ]; then
+    local k proj
+    for k in $KEYS; do
+      proj="${k%%-*}"
+      find "$CWD/evidence/$proj/$k" -name execution_summary.json -newermt '-2 hours' 2>/dev/null | grep -q . \
+        || printf '%s\n' "$k"
+    done
+  else
+    has_recent_evidence || printf '%s\n' "-"
+  fi
+}
+
+KEYS=""
+if ! KEYS="$(test_run_keys)"; then
+  exit 0   # no test activity in this session — nothing to enforce
+fi
+
+MISSING_KEYS="$(missing_evidence_keys)"
+if [ -n "$MISSING_KEYS" ]; then
+  if [ "$MISSING_KEYS" != "-" ]; then
+    {
+      echo "QA_EVIDENCE_MISSING: this session ran test activity against ticket(s):"
+      printf '%s\n' "$MISSING_KEYS" | sed 's/^/  /'
+      cat <<'EOF'
+but no execution_summary.json was written under evidence/<KEY>/<TICKET>/ for
+them in the last 2 hours. Evidence from another ticket does not cover this run.
+
+Before ending the session, per ticket:
+  - write evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/execution_summary.json
+    (schema: .claude/rules/core/evidence-policy.md), or
+  - if no test actually completed (still investigating, aborted), write a
+    minimal summary with "verdict": "NO_TEST", a one-line "no_test_reason"
+    and the usual "learnings" declaration — the explicit alternative to
+    stopping silently.
+EOF
+    } >&2
+  else
+    cat >&2 <<'EOF'
 QA_EVIDENCE_MISSING: this session actually invoked a Playwright MCP tool, an
 Atlassian write (create/edit/transition/...), or the Playwright CLI runner,
 but no execution_summary.json was written under evidence/<KEY>/<TICKET>/ in
@@ -173,18 +234,18 @@ Before ending the session:
     and the usual "learnings" declaration — the explicit alternative to
     stopping silently.
 EOF
+  fi
   exit 2
 fi
 
 # Evidence exists — now the learning obligation, enforced with the same firmness.
-if looks_like_a_test_run; then
-  MISSING="$(summaries_missing_learnings)"
-  if [ -n "$MISSING" ]; then
-    {
-      echo "QA_LEARNINGS_MISSING: this run produced evidence, but the summary"
-      echo "does not declare what was learned. Affected file(s):"
-      printf '%s\n' "$MISSING" | sed 's/^/  /'
-      cat <<'EOF'
+MISSING="$(summaries_missing_learnings)"
+if [ -n "$MISSING" ]; then
+  {
+    echo "QA_LEARNINGS_MISSING: this run produced evidence, but the summary"
+    echo "does not declare what was learned. Affected file(s):"
+    printf '%s\n' "$MISSING" | sed 's/^/  /'
+    cat <<'EOF'
 
 Add a "learnings" object to each one (.claude/rules/core/evidence-policy.md):
 
@@ -205,7 +266,6 @@ being corrected".
 EOF
     } >&2
     exit 2
-  fi
 fi
 
 exit 0

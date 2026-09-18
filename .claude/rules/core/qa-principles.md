@@ -56,6 +56,11 @@ even be testing here" — use the `risk-based-testing` skill for a proper
 impact×probability matrix instead of eyeballing it; it also drives which areas
 justify a chartered `exploratory-testing` session.
 
+## Direct writes (test-data setup)
+
+DB/seeding writes: stage only, reversible, documented, confirmed per project —
+never to turn a red run green.
+
 ## Details, read when the topic comes up
 
-`docs/rules/core/qa-principles.md` — OWASP smoke (lightweight, not a pentest), Specialized testing types. Read it when a ticket touches auth/input/upload, or calls for a specialised testing type.
+`docs/rules/core/qa-principles.md` — OWASP smoke (lightweight, not a pentest), Specialized testing types, direct-write constraints. Read it when a ticket touches auth/input/upload, calls for a specialised testing type, or needs direct DB/seeding writes.

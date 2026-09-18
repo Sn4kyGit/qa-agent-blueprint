@@ -13,7 +13,7 @@ about *your* projects lives in plain Markdown files in your repo — reviewable,
 diffable, and shared with your team through Git.
 
 > **👉 [Check out the detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
-> the whole architecture rendered as a one-pager: five layers, 15 core skills,
+> the whole architecture rendered as a one-pager: five layers, 16 core skills,
 > five verdicts, and what is enforced rather than merely written down.
 
 > **This is a public blueprint.** It contains no credentials, no internal URLs, no
@@ -78,17 +78,6 @@ prompt. All of it came from files the agent read because the ticket key told it 
 skills, agents and hooks load from the plugin; only your own data
 (`projects/`, `memory/`, `evidence/`) lives in your repo.
 
-### The easiest way: tell your agent
-
-Paste this into Claude Code (or any coding agent) inside the project you want
-tested:
-
-> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> as a Claude Code plugin
-> in this project. Read its **AGENTS.md** first and follow the runbook there —
-> then tell me which steps need me (OAuth, secrets, onboarding).
-
-### Or two commands yourself
-
 ```bash
 claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
@@ -101,7 +90,22 @@ is git under the hood. On first session start the plugin's SessionStart hook
 bootstraps `projects/`, `memory/`, `evidence/` and a `.env.playwright-secrets`
 placeholder in your repo, and injects the router.
 
-### opencode instead of Claude Code
+Preview everything the installer would do, without changing anything:
+`./install.sh --dry-run`.
+
+<details>
+<summary>Other ways in — "tell your agent" prompt, opencode, clone + installer, manual settings.json</summary>
+
+#### The easiest way: tell your agent
+
+Paste this into Claude Code (or any coding agent) inside the project you want
+tested:
+
+> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> as a Claude Code plugin
+> in this project. Read its **AGENTS.md** first and follow the runbook there —
+> then tell me which steps need me (OAuth, secrets, onboarding).
+
+#### opencode instead of Claude Code
 
 The same blueprint also runs under [opencode](https://opencode.ai) —
 model-agnostic (the model is your `/models` choice; the blueprint pins none).
@@ -121,8 +125,7 @@ install.sh --mode opencode --target <your-project> --yes
 Symlinks instead of copies; details incl. provider connect and JIRA auth:
 [docs/quickstart-opencode.md](docs/quickstart-opencode.md).
 
-
-### The classic way: clone + installer
+#### The classic way: clone + installer
 
 ```bash
 git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git
@@ -135,7 +138,7 @@ your own project** and it asks which of the two ways in you want — integrate o
 plugin — and explains the trade-off before you pick. Pick **plugin** for the
 recommended mode.
 
-### Plugin-only via settings.json
+#### Plugin-only via settings.json
 
 The two CLI commands above write exactly two keys into settings. If you prefer
 to wire them by hand (e.g. committing the enablement for your team), add these
@@ -155,6 +158,8 @@ to your project's `.claude/settings.json`:
 ```
 
 Restart Claude Code and accept the trust dialog — same bootstrap as above.
+
+</details>
 
 ### Updating
 
@@ -234,10 +239,11 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>15 core skills</b> — the ticket workflow</summary>
+<summary><b>16 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
+| `/qa-help` | Show every command, plus the plain-language phrasing that also triggers it |
 | `/test-ticket` | Full workflow: read → route → stage-check → test → evidence → report |
 | `/retest-bug` | Focused re-test of a fixed bug + a tight regression sweep |
 | `/exploratory-testing` | Chartered SBTM session via Playwright MCP |
@@ -267,6 +273,10 @@ Adapted from [petrkindlmann/qa-skills](https://github.com/petrkindlmann/qa-skill
 see `.claude/skills/THIRD_PARTY_NOTICES.md`. `qa-manager` reaches for one when a
 ticket calls for it — driven by the product's feature/test-method matrix rather
 than by guesswork.
+
+Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
+by `/test-automation` when a project's declared framework is webdriverio (not
+invoked directly; see its SKILL.md). 16 + 10 + 1 = the 27 skills from the header.
 
 </details>
 

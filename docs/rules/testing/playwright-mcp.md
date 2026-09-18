@@ -53,6 +53,27 @@ runs both (verified). So: one source per server name; if you bring your own,
 it must carry the contract above, and in plugin mode the plugin's entry stays
 unless the plugin itself is disabled.
 
+## One browser per session — never parallel browser agents
+
+One playwright MCP server = one browser instance per Claude/opencode session.
+Subagents do **not** get their own browser: two `test-executor` agents spawned
+in parallel share the same tab, navigation and credential state and contaminate
+each other (cross-navigation mid-flow, one variant seeing another's data —
+field report 2026-09: three parallel runs, zero usable evidence, all re-run
+sequentially). Rules that follow:
+
+- The orchestrator (`qa-manager` or you) launches a browser-driving subagent
+  only after the previous one has returned. Deterministic CLI runs
+  (`test-automator` via the Playwright/WDIO runner) are unaffected — the runner
+  manages its own browser instances per spec.
+- The same applies within one chat: finish (or explicitly close) one
+  exploratory browser flow before starting an unrelated one — see `isolated`
+  above and "Never test two unrelated tickets in one session".
+- If results ever smell like contamination (data from another variant, a login
+  you never performed, navigation you never triggered): discard the run, mark
+  it NO_TEST with the reason, and re-run sequentially. Contaminated evidence is
+  worse than no evidence.
+
 ## Snapshot mode over screenshots for navigation
 
 Use the accessibility snapshot (`browser_snapshot`) to decide what to click/fill —

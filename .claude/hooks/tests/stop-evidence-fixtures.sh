@@ -36,9 +36,18 @@ write_transcript() {
       # Mentions the words in prose only — must NOT count as a test run.
       printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"text","text":"I edited evidence-policy.md and wrote about execution_summary.json and verdict PASS"}]}}' > "$path" ;;
     namespaced_mcp)
-      # A plugin-provided MCP server may surface with an extra namespace segment.
-      # Enforcement must not quietly switch off for plugin users.
-      printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__qa-agent-blueprint__playwright__browser_navigate","input":{"url":"https://example.invalid"}}]}}' > "$path" ;;
+      # A plugin-provided MCP server surfaces as mcp__plugin_<name>_<server>__<tool>
+      # (SINGLE underscore between plugin name and server — that is the real Claude
+      # Code naming shape). Enforcement must not quietly switch off for plugin users.
+      printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__plugin_qa-agent-blueprint_playwright__browser_navigate","input":{"url":"https://example.invalid"}}]}}' > "$path" ;;
+    namespaced_atlassian)
+      # Same plugin naming shape, JIRA write tool. The previous regex never matched
+      # this shape, so plugin-mode JIRA writes were invisible as test activity.
+      printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__plugin_qa-agent-blueprint_atlassian__editJiraIssue","input":{"issueKey":"SHOP-1"}}]}}' > "$path" ;;
+    atlassian_shop2)
+      # JIRA write against SHOP-2 — for the per-ticket evidence scoping (F2):
+      # fresh evidence for SHOP-1 must NOT satisfy this run.
+      printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__atlassian__editJiraIssue","input":{"issueKey":"SHOP-2"}}]}}' > "$path" ;;
     pnpm_runner)
       # A real suite is run through a package manager, not always bare npx.
       printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"cd ../shop-web-tests && pnpm playwright test --grep @smoke"}}]}}' > "$path" ;;
@@ -58,6 +67,14 @@ write_summary() {
   else
     printf '{"ticket":"SHOP-1","project":"SHOP","verdict":"%s","learnings":%s}\n' "$verdict" "$learnings" > "$dir/execution_summary.json"
   fi
+}
+
+# Parametrized twin for the per-ticket scoping cases (F2).
+write_summary_for() {
+  local dir="$1" ticket="$2" project="$3"
+  mkdir -p "$dir"
+  printf '{"ticket":"%s","project":"%s","verdict":"PASS","learnings":{"captured":[],"none_because":"clean run"}}\n' "$ticket" "$project" \
+    > "$dir/execution_summary.json"
 }
 
 run_hook() {
@@ -157,6 +174,9 @@ check "stop_hook_active breaks the loop" 0 "$?"
 C9="$WORK/c9"; write_transcript "$C9/t.jsonl" namespaced_mcp
 check "namespaced playwright MCP tool counts" 2 "$(run_hook "$C9" "$C9/t.jsonl")"
 
+C9b="$WORK/c9b"; write_transcript "$C9b/t.jsonl" namespaced_atlassian
+check "plugin-namespaced atlassian write counts" 2 "$(run_hook "$C9b" "$C9b/t.jsonl")"
+
 C10="$WORK/c10"; write_transcript "$C10/t.jsonl" pnpm_runner
 check "pnpm playwright test counts" 2 "$(run_hook "$C10" "$C10/t.jsonl")"
 
@@ -165,6 +185,17 @@ check "npm run test:e2e counts" 2 "$(run_hook "$C11" "$C11/t.jsonl")"
 
 C12="$WORK/c12"; write_transcript "$C12/t.jsonl" heredoc_mentions_runner
 check "heredoc mentioning the runner does not" 0 "$(run_hook "$C12" "$C12/t.jsonl")"
+
+# --- case 12b/12c: per-ticket scoping (audit 2026-09-18 F2) -------------------
+# A run against SHOP-2 is not covered by fresh evidence for SHOP-1 ...
+C12B="$WORK/c12b"; write_transcript "$C12B/t.jsonl" atlassian_shop2
+write_summary_for "$C12B/evidence/SHOP/SHOP-1/20260906-100000" SHOP-1 SHOP
+check "evidence for SHOP-1 does not cover a SHOP-2 run" 2 "$(run_hook "$C12B" "$C12B/t.jsonl")"
+
+# ... but fresh evidence for SHOP-2 itself satisfies it.
+C12C="$WORK/c12c"; write_transcript "$C12C/t.jsonl" atlassian_shop2
+write_summary_for "$C12C/evidence/SHOP/SHOP-2/20260906-100000" SHOP-2 SHOP
+check "evidence for SHOP-2 covers a SHOP-2 run" 0 "$(run_hook "$C12C" "$C12C/t.jsonl")"
 
 # --- case 13: NO_TEST — the explicit no-verdict verdict -----------------------
 # Tools ran but no test completed; the summary says so with a reason instead of

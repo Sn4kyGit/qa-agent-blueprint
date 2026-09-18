@@ -2,9 +2,9 @@
 name: webdriverio-testing
 description: >-
   Write or run deterministic WebdriverIO specs (web, Selenium Grid remote, and mobile
-  via Appium) through the WDIO CLI runner. Use when the project's or product's "Test
-  assets" declare framework webdriverio — for regression specs, Grid-run suites, or
-  WDIO-driven mobile checks. Not for Playwright suites — those follow
+  via Appium) through the WDIO CLI runner. Not for direct invocation — this is loaded
+  by test-automation when a project's "Test assets" → Framework says webdriverio; route
+  user requests to /test-automation instead. Not for Playwright suites — those follow
   docs/rules/testing/playwright-cli.md. Related: test-automation, test-reliability.
 ---
 
@@ -75,3 +75,16 @@ duplicate. Check `memory/learnings/selector-failures.md` and `flaky-tests.md`
 before choosing selectors or wait strategies. Scaffolding a brand-new WDIO suite
 from nothing is **not** covered here (`scaffold-suite` is Playwright-only) —
 flag it to the user instead of improvising a project layout.
+
+## Before a long or unattended run
+
+- **Liveness preflight first.** When the flow drives devices through an MCP
+  server (e.g. a wdio/Appium MCP), one cheap probe before the suite — a server
+  down at the harness level (`CONNECTION_CLOSED` et al.) cannot be retried into
+  health (field report 2026-09: 11 cases lost overnight to exactly that).
+  Report BLOCKED with the reason and stop; reconnecting (`/mcp`, restart) is a
+  human step. Resource contention counts too: one Appium/simulator pipeline per
+  machine at a time — two in parallel crash-loop WebDriverAgent.
+- **Environment second.** A clean tenant and a fresh redeploy beat a midnight
+  run against clutter — leftover test data degrades the environment until
+  unrelated cases fail (see "Test-data hygiene" in `test-automation`).

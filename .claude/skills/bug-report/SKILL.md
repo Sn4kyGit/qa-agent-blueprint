@@ -1,6 +1,6 @@
 ---
 name: bug-report
-description: Produce a bug report exactly per the active project's template (projects/<KEY>/templates/bug-report.md). Use whenever a test finding needs to become a bug ticket, "/bug-report" is invoked directly with a finding already in hand, or for "Bug melden", "Ticket aus dem Fund machen", "mach ein Bug-Ticket draus".
+description: Produce a bug report exactly per the active project's template (projects/<KEY>/templates/bug-report.md). Use whenever a test finding needs to become a bug ticket, "/bug-report" is invoked directly with a finding already in hand, or for "Bug melden", "Ticket aus dem Fund machen", "mach ein Bug-Ticket draus". Not for triaging *why* a test failed — run /failure-analysis first; this skill composes the ticket once the cause is known.
 ---
 
 # /bug-report — project-conformant bug report

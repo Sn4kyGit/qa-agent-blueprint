@@ -7,12 +7,37 @@
 // part of the contract (docs/rules/core/security.md names the hook output).
 
 import { describe, expect, test } from "bun:test"
+import { mkdtemp, mkdir, writeFile } from "fs/promises"
+import { tmpdir } from "os"
+import { join } from "path"
 import { qaBlueprint } from "../plugins/qa-blueprint.ts"
-import { bashBefore, fakeCtx, fileBefore, unknownBefore, type BeforeCall } from "./fixtures/payloads.ts"
+import { bashBefore, fakeCtx, fileBefore, unknownBefore, SESSION_ID, type BeforeCall } from "./fixtures/payloads.ts"
 
 async function hooks() {
   const { ctx } = fakeCtx("/tmp/qa-guard-test")
   return qaBlueprint(ctx as never)
+}
+
+/** Plugin instance rooted at a fresh temp dir (for projects/<KEY>/PROJECT.md). */
+async function hooksIn(dir: string) {
+  const { ctx } = fakeCtx(dir)
+  return qaBlueprint(ctx as never)
+}
+
+async function tempProject(projectMd?: string): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), "qa-shadow-"))
+  if (projectMd !== undefined) {
+    await mkdir(join(dir, "projects", "SHOP"), { recursive: true })
+    await writeFile(join(dir, "projects", "SHOP", "PROJECT.md"), projectMd)
+  }
+  return dir
+}
+
+function jiraWrite(args: Record<string, unknown>): BeforeCall {
+  return {
+    input: { tool: "atlassian_editJiraIssue", sessionID: SESSION_ID, callID: "tool_fixture" },
+    output: { args },
+  }
 }
 
 async function run(h: Awaited<ReturnType<typeof hooks>>, call: BeforeCall) {
@@ -34,6 +59,18 @@ const blocked: Array<[string, BeforeCall]> = [
   // INTO .env is still a write to a secrets file and must stay blocked.
   ["Bash cp template INTO .env", bashBefore("cp .env.example .env")],
   ["Bash cat .env.playwright-secrets", bashBefore("cat .env.playwright-secrets")],
+  // grep/sed/awk/jq are readers too — field report 0.6.1: `grep -o '^[A-Z_]*='`
+  // on the secrets file bypassed the old cat-only list.
+  ["Bash grep keys from .env.playwright-secrets", bashBefore("grep -o ^[A-Z_0-9]*= .env.playwright-secrets")],
+  ["Bash grep .env.local", bashBefore("grep PASSWORD .env.local")],
+  ["Bash sed reads .env", bashBefore("sed -n 1p .env")],
+  ["Bash awk reads .env", bashBefore("awk -F= {print$1} .env")],
+  ["Bash jq reads .env", bashBefore("jq . .env")],
+  // `source` loads the file into the shell — same leak as cat (audit F4).
+  ["Bash source .env", bashBefore("source .env")],
+  // Interpreters reading the file bypass the reader-word list (audit F4).
+  ["Bash python3 open().read() .env", bashBefore(`python3 -c "print(open('.env').read())"`)],
+  ["Bash ruby File.read .env", bashBefore(`ruby -e "puts File.read('.env')"`)],
   // == reserved product-key names (case-insensitive) ==
   ["Write products/SECRET/PRODUCT.md", fileBefore("write", "projects/SHOP/products/SECRET/PRODUCT.md")],
   ["Write products/CREDENTIALS/...", fileBefore("write", "projects/SHOP/products/CREDENTIALS/PRODUCT.md")],
@@ -55,9 +92,12 @@ const allowed: Array<[string, BeforeCall]> = [
   ["Write /repo/.env.example", fileBefore("write", "/repo/.env.example")],
   ["Bash redirect > .env.example", bashBefore("cat > .env.example")],
   ["Bash read .env.example", bashBefore("cat .env.example")],
+  ["Bash grep .env.example", bashBefore("grep KEY .env.example")],
   // == prose mentioning a secrets filename is not a read of it ==
   ["pipeline + unrelated echo naming it", bashBefore('ls projects | head -3; echo "note: the dot-env file is a template"')],
-  ["grep is not a reader we block", bashBefore("grep -c KEY README.md")],
+  ["grep on ordinary files is not blocked", bashBefore("grep -c KEY README.md")],
+  // An interpreter with no read verb is not a secrets read (audit F4 fixture).
+  ["python string mentions .env without reading", bashBefore(`python3 -c "note='.env.template'; print(note)"`)],
   // == the sanctioned resolver path stays open ==
   ["Bash resolve-secrets.sh", bashBefore("bash .claude/hooks/resolve-secrets.sh")],
   ["Bash resolve-secrets.sh arg", bashBefore("bash .claude/hooks/resolve-secrets.sh . --status")],
@@ -84,4 +124,45 @@ describe("pre-tool guard (opencode)", () => {
       await expect(run(h, call)).resolves.toBeUndefined()
     })
   }
+})
+
+// Shadow gate (audit 2026-09-18 F1) — mirrors the "Shadow mode" section of
+// guard-fixtures.sh. Default is closed; unlock via PROJECT.md or env var.
+describe("shadow gate (opencode)", () => {
+  test("blocks JIRA write, shadow default (PROJECT.md without 'off')", async () => {
+    const dir = await tempProject("# SHOP\nShadow mode: on\n")
+    const h = await hooksIn(dir)
+    await expect(run(h, jiraWrite({ issueKey: "SHOP-1" }))).rejects.toThrow(/Shadow Mode is on/)
+  })
+
+  test("blocks JIRA write, unresolvable key → fail safe", async () => {
+    const dir = await tempProject()
+    const h = await hooksIn(dir)
+    await expect(run(h, jiraWrite({}))).rejects.toThrow(/Shadow Mode is on/)
+  })
+
+  test("blocks unparsable call that looks like an Atlassian write", async () => {
+    const dir = await tempProject()
+    const h = await hooksIn(dir)
+    await expect(run(h, unknownBefore({ payload: "atlassian__createJiraIssue" }))).rejects.toThrow(/Shadow Mode is on/)
+  })
+
+  test("allows when PROJECT.md says 'Shadow mode: off'", async () => {
+    const dir = await tempProject("# SHOP\nShadow mode: off\n")
+    const h = await hooksIn(dir)
+    await expect(run(h, jiraWrite({ issueKey: "SHOP-1" }))).resolves.toBeUndefined()
+  })
+
+  test("allows when QA_AGENT_SHADOW=0", async () => {
+    const dir = await tempProject("# SHOP\nShadow mode: on\n")
+    const h = await hooksIn(dir)
+    const prev = process.env.QA_AGENT_SHADOW
+    process.env.QA_AGENT_SHADOW = "0"
+    try {
+      await expect(run(h, jiraWrite({ issueKey: "SHOP-1" }))).resolves.toBeUndefined()
+    } finally {
+      if (prev === undefined) delete process.env.QA_AGENT_SHADOW
+      else process.env.QA_AGENT_SHADOW = prev
+    }
+  })
 })

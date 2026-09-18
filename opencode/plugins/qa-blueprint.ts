@@ -66,7 +66,15 @@ const GIT_FORCE_PUSH = /git\s+push\s+.*(--force|-f\b)/
 // The reader must sit at a COMMAND position and the .env file must belong to
 // THAT command — otherwise a pipe followed by prose naming the file blocks
 // ordinary work, and a guard that blocks ordinary work gets switched off.
-const ENV_READER = /(^|[;&|(]|&&|\|\|)\s*(cat|less|more|head|tail|cp|mv)\s+[^;&|]*\.env([^a-zA-Z]|$)/
+// grep/sed/awk/jq are readers too (0.6.1 field report: `grep -o '^[A-Z_]*='`
+// on the secrets file sailed through the old list).
+const ENV_READER = /(^|[;&|(]|&&|\|\|)\s*(cat|less|more|head|tail|cp|mv|grep|sed|awk|jq|source)\s+[^;&|]*\.env([^a-zA-Z]|$)/
+// The next-most-likely bypass class: interpreter one-liners that OPEN the
+// file. The open/read/load keyword is required so `python3 -c "note='.env
+// template'"` — merely mentioning the name — stays allowed (audit F4: the
+// false-positive rate must stay visible in fixtures). Best-effort net; the
+// real guarantee is --secrets masking at the browser layer.
+const ENV_INTERPRETER = /(python3?|perl|ruby|node|php)\s[^;&|]*(open|read|load|require|include|slurp)[^;&|]*\.env([^a-zA-Z]|$)/
 const ENV_REDIRECT = />>?\s*\.env/
 
 // Tools whose filePath argument is a WRITE (reads are governed by opencode
@@ -101,7 +109,8 @@ function guardCheck(tool: string, args: Record<string, unknown>) {
     // template must stay writable; .env/.env.local/.env.playwright-secrets
     // still match in full.
     const noExample = command.replaceAll(".env.example", "")
-    if (ENV_READER.test(noExample)) block("refusing a command that reads/copies a .env* file — secrets never enter chat or context.")
+    if (ENV_READER.test(noExample)) block("refusing a command that reads/copies a .env* file — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status.")
+    if (ENV_INTERPRETER.test(noExample)) block("refusing a command that appears to read a .env* file via an interpreter — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status.")
     if (ENV_REDIRECT.test(noExample)) block("refusing a command that writes into a .env* file directly — use the vault/secrets workflow instead.")
   }
 }
@@ -124,11 +133,42 @@ function issueKeyOf(args: Record<string, unknown> | undefined): string {
 
 async function auditJiraWrite(directory: string, tool: string, args: Record<string, unknown> | undefined, ok: boolean) {
   const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z") // same shape as `date -u +%Y-%m-%dT%H:%M:%SZ`
-  const user = process.env.QA_AUDIT_USER ?? process.env.USER ?? "unknown"
+  const user = process.env.USER ?? "unknown" // parity with the bash hook ($USER)
   const line = `${ts} | tool=${tool || "unknown"} | key=${issueKeyOf(args)} | result=${ok ? "ok" : "error"} | user=${user}\n`
   const logDir = join(directory, "evidence", ".audit")
   await mkdir(logDir, { recursive: true })
   await appendFile(join(logDir, "jira-writes.log"), line)
+}
+
+// --------------------------------------------------------------------------
+// 2b. Shadow gate (port of the guard's shadow check, audit 2026-09-18 F1)
+// --------------------------------------------------------------------------
+
+// No JIRA write leaves the building by default: verdicts are composed into
+// evidence/ as proposed-report.md until the project opts out ("Shadow mode:
+// off" in projects/<KEY>/PROJECT.md) or QA_AGENT_SHADOW=0 is set. Fails safe:
+// an unresolvable ticket key or unreadable project file keeps the gate closed.
+const SHADOW_MSG = "refusing a JIRA write while Shadow Mode is on (default). Compose the report as evidence/<KEY>/<TICKET>/<ts>/proposed-report.md instead. Unlock: 'Shadow mode: off' in projects/<KEY>/PROJECT.md, or QA_AGENT_SHADOW=0."
+
+async function shadowGateBlocks(directory: string, tool: string, args: Record<string, unknown> | undefined): Promise<boolean> {
+  if (!tool) {
+    // fail closed: an unparsable call that looks like an Atlassian write is one.
+    // `__?` mirrors the bash fallback (1–2 underscores: opencode tool names use
+    // one, a raw Claude-style payload carries `atlassian__createJiraIssue`).
+    if (!/atlassian__?[a-z]*(create|edit|add|transition|update|delete)/i.test(JSON.stringify(args ?? {}))) return false
+    tool = "atlassian_create"
+  }
+  if (!JIRA_WRITE.test(tool)) return false
+  if ((process.env.QA_AGENT_SHADOW ?? "1") === "0") return false
+  const key = issueKeyOf(args)
+  if (key !== "unknown") {
+    const proj = key.split("-")[0]
+    try {
+      const md = await readFile(join(directory, "projects", proj, "PROJECT.md"), "utf8")
+      if (/shadow mode:\s*off/i.test(md)) return false
+    } catch { /* unreadable → gate stays closed */ }
+  }
+  return true
 }
 
 // --------------------------------------------------------------------------
@@ -156,6 +196,8 @@ function isTestActivity(tool: string, args: Record<string, unknown> | undefined)
 interface GateResult {
   status: "ok" | "no_dir" | "evidence_missing" | "learnings_missing"
   files: string[]
+  /** Ticket keys that lack fresh evidence (F2) — empty on the global fallback. */
+  missingKeys: string[]
 }
 
 async function findFreshSummaries(evidenceDir: string): Promise<string[]> {
@@ -186,13 +228,41 @@ async function findFreshSummaries(evidenceDir: string): Promise<string[]> {
   return out
 }
 
-async function evaluateGate(directory: string): Promise<GateResult> {
+// JIRA ticket keys (SHOP-123) found in a tool call's args — ties a test run to
+// its ticket(s) for the per-ticket evidence check (audit 2026-09-18 F2).
+const TICKET_KEY = /\b[A-Z][A-Z0-9]+-\d+\b/g
+
+function ticketKeysOf(args: Record<string, unknown> | undefined): string[] {
+  if (!args) return []
+  let blob = ""
+  try {
+    blob = JSON.stringify(args)
+  } catch {
+    return []
+  }
+  return [...new Set(blob.match(TICKET_KEY) ?? [])]
+}
+
+async function evaluateGate(directory: string, keys: ReadonlySet<string>): Promise<GateResult> {
   const evidenceDir = join(directory, "evidence")
-  if (!existsSync(evidenceDir)) return { status: "no_dir", files: [] } // nothing scaffolded → nothing to enforce (bash: exit 0)
+  if (!existsSync(evidenceDir)) return { status: "no_dir", files: [], missingKeys: [] } // nothing scaffolded → nothing to enforce (bash: exit 0)
+
+  // Per-ticket scoping (F2): when the run named tickets, EACH needs its own
+  // fresh summary — evidence for SHOP-1 must not satisfy a run against SHOP-2.
+  // No keys extractable → global freshness fallback, same as the bash hook.
+  if (keys.size > 0) {
+    const missingKeys: string[] = []
+    for (const k of keys) {
+      const dir = join(evidenceDir, k.split("-")[0], k)
+      if ((await findFreshSummaries(dir)).length === 0) missingKeys.push(k)
+    }
+    if (missingKeys.length > 0) return { status: "evidence_missing", files: [], missingKeys }
+  } else {
+    const fresh = await findFreshSummaries(evidenceDir)
+    if (fresh.length === 0) return { status: "evidence_missing", files: [], missingKeys: [] }
+  }
 
   const fresh = await findFreshSummaries(evidenceDir)
-  if (fresh.length === 0) return { status: "evidence_missing", files: [] }
-
   const missing: string[] = []
   for (const f of fresh) {
     let d: unknown
@@ -212,7 +282,7 @@ async function evaluateGate(directory: string): Promise<GateResult> {
     const hasNoneBecause = typeof noneBecause === "string" && noneBecause.trim().length > 0
     if (!hasCaptured && !hasNoneBecause) missing.push(f)
   }
-  return missing.length ? { status: "learnings_missing", files: missing } : { status: "ok", files: [] }
+  return missing.length ? { status: "learnings_missing", files: missing, missingKeys: [] } : { status: "ok", files: [], missingKeys: [] }
 }
 
 const EVIDENCE_MISSING_MSG = `QA_EVIDENCE_MISSING: this session actually invoked a Playwright MCP tool, an
@@ -221,6 +291,21 @@ but no execution_summary.json was written under evidence/<KEY>/<TICKET>/ in
 the last 2 hours.
 
 Before reporting to JIRA or ending the session:
+  - write evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/execution_summary.json
+    (schema: .claude/rules/core/evidence-policy.md), or
+  - if no test actually completed (still investigating, aborted), write a
+    minimal summary with "verdict": "NO_TEST", a one-line "no_test_reason"
+    and the usual "learnings" declaration — the explicit alternative to
+    stopping silently.`
+
+// Per-ticket variant (F2) — same demanded artifacts, but names the tickets
+// whose evidence is missing, mirroring the bash hook's keyed message.
+const evidenceMissingMsg = (missingKeys: string[]) => `QA_EVIDENCE_MISSING: this session ran test activity against ticket(s):
+${missingKeys.map((k) => `  ${k}`).join("\n")}
+but no execution_summary.json was written under evidence/<KEY>/<TICKET>/ for
+them in the last 2 hours. Evidence from another ticket does not cover this run.
+
+Before reporting to JIRA or ending the session, per ticket:
   - write evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/execution_summary.json
     (schema: .claude/rules/core/evidence-policy.md), or
   - if no test actually completed (still investigating, aborted), write a
@@ -547,16 +632,20 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   const getOrientation = () => (orientationText ??= orientation(directory).catch(() => ""))
   const oriented = new Set<string>()
 
-  // Evidence-gate session state (D3): which sessions showed test activity, and
+  // Evidence-gate session state (D3): which sessions showed test activity (and
+  // which ticket keys that activity touched — F2 per-ticket scoping), and
   // which already got the idle reminder (the stop_hook_active loop-breaker's
   // equivalent).
-  const testActivity = new Set<string>()
+  const testActivity = new Map<string, Set<string>>()
   const idleReminded = new Set<string>()
 
   async function gateMessageFor(sessionID: string): Promise<string | null> {
-    if (!testActivity.has(sessionID)) return null
-    const gate = await evaluateGate(directory)
-    if (gate.status === "evidence_missing") return EVIDENCE_MISSING_MSG
+    const keys = testActivity.get(sessionID)
+    if (!keys) return null
+    const gate = await evaluateGate(directory, keys)
+    if (gate.status === "evidence_missing") {
+      return gate.missingKeys.length > 0 ? evidenceMissingMsg(gate.missingKeys) : EVIDENCE_MISSING_MSG
+    }
     if (gate.status === "learnings_missing") return learningsMissingMsg(gate.files)
     return null
   }
@@ -568,6 +657,9 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
     ) => {
       const args = output?.args ?? {}
       guardCheck(input?.tool ?? "", args)
+
+      // Shadow gate first: a blocked write never reaches the evidence question.
+      if (await shadowGateBlocks(directory, input?.tool ?? "", args)) block(SHADOW_MSG)
 
       // Evidence gate: the verdict must not reach JIRA without evidence.
       if (input?.tool && JIRA_WRITE.test(input.tool)) {
@@ -582,7 +674,9 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
     ) => {
       const tool = input?.tool ?? ""
       if (tool && isTestActivity(tool, input?.args)) {
-        testActivity.add(input.sessionID)
+        const keys = testActivity.get(input.sessionID) ?? new Set<string>()
+        for (const k of ticketKeysOf(input?.args)) keys.add(k)
+        testActivity.set(input.sessionID, keys)
       }
       // Audit: never blocks, never throws (the bash hook exits 0 always).
       if (tool && JIRA_WRITE.test(tool)) {
