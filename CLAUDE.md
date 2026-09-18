@@ -8,7 +8,7 @@ project recognized → project knowledge applied → tested → evidence produce
 
 1. Derive the project from the ticket prefix: `SHOP-1234` → `projects/SHOP/`.
 2. **Before every test**, read `projects/<KEY>/PROJECT.md` — it defines test users,
-   environments, deploy path, pipelines, MR process, report format, and templates.
+   environments, deploy path, pipelines, report format, and templates.
 3. Also read `projects/<KEY>/learnings.md` — project-specific pitfalls already learned.
 4. Unknown prefix or missing project file → run the `onboard-project` skill or ask the
    user. Never guess a project's process.
@@ -16,25 +16,19 @@ project recognized → project knowledge applied → tested → evidence produce
    `## Products` section, stop here — steps 2–3 are the complete context. If it has
    one, route the ticket to a product and read `products/<PRODUCT>/PRODUCT.md` +
    `learnings.md` **in addition**: what the product states wins, what it omits is
-   inherited. Order: explicit mention → JIRA component → label → `project-wide`
-   entry (infra/cross-cutting: project file alone) → the project's declared
-   secondary signals (epic/parent, fix version, changed MR paths) → a declared
-   default. Conflicting matches or nothing at all → ask; headless → BLOCKED. A
-   default resolves silence, never a conflict, and a product is never inferred from
-   the summary text. Full ladder and merge rules:
-   `.claude/rules/core/product-layer.md`.
+   inherited. Ladder, conflict/ask rules, headless BLOCKED, default-resolves-silence:
+   `.claude/rules/core/product-layer.md` (always loaded). A product is never inferred
+   from the summary text.
 6. `projects/_template/` is the scaffold for new projects; `projects/EXAMPLE/` is a
    fictional reference. Never treat either as a real project.
 7. **Vendored skills are global, their context is per-project.** The 10 vendored
    skills under `.claude/skills/` (see row below) apply to *every* onboarded
-   project — nothing in them is project-specific. What IS project-specific is the
-   context they read: this repo keeps one bridge file per project at
-   `.agents/qa-project-context/<KEY>.md` — and per product, once a project has
-   products, at `.agents/qa-project-context/<KEY>/<PRODUCT>.md` (not the single
-   shared path a vendored skill's own text describes). Before invoking any of them,
-   point them at the **current ticket's** file explicitly — never assume a generic
-   or previously-used path is still current, especially once more than one project
-   or product is onboarded.
+   project. What is project-specific is the context they read: one bridge file per
+   project at `.agents/qa-project-context/<KEY>.md` — and per product at
+   `.agents/qa-project-context/<KEY>/<PRODUCT>.md` (not the single shared path a
+   vendored skill's own text describes). Before invoking any of them, point them at
+   the **current ticket's** file explicitly — never assume a previously-used path
+   is still current.
 
 ## Tool selection (skill routing)
 
@@ -64,8 +58,7 @@ project recognized → project knowledge applied → tested → evidence produce
   Announce every spawn (agent, task, artifact, rough duration, the `progress.md`
   to watch meanwhile), chunk multi-part
   work into named steps, relay each result with its evidence path. Long-running
-  delegations keep a live `progress.md` in the evidence run dir — the follow-along
-  surface while the chat is silent.
+  delegations keep that `progress.md` live in the evidence run dir.
 - **Shadow mode is on by default.** You write the report into the evidence dir
   (`proposed-report.md`) and update the summary (`"reported_to_jira": false`,
   `"shadow": true`) — never post, never ask, never narrate instead of writing.
@@ -85,17 +78,17 @@ project recognized → project knowledge applied → tested → evidence produce
   No pipe tables.
   Details: `docs/rules/testing/jira-confluence.md`.
 - **MCP servers are a declared set**, currently `playwright` + `atlassian`, kept small
-  on purpose. Never add one on your own initiative — propose, the user decides, and an
-  approved server gets a row in the register. Details, and the extra condition for
-  credential/vault servers: `.claude/rules/core/token-discipline.md` → MCP budget.
+  on purpose. Never add one on your own initiative — propose, the user decides.
+  Details, and the extra condition for credential/vault servers:
+  `.claude/rules/core/token-discipline.md` → MCP budget.
 
 ## Rules
 
 `.claude/rules/core/` is **always loaded** and holds the norms: `qa-principles.md`,
 `token-discipline.md`, `product-layer.md`, `evidence-policy.md`, `security.md`.
 
-`docs/rules/` is **read on demand**, when its topic comes up. Nothing there is
-optional — it is detail that would otherwise cost every session:
+`docs/rules/` is **read on demand**, when its topic comes up — nothing optional,
+just detail that would otherwise cost every session:
 
 | Read this | When |
 |---|---|

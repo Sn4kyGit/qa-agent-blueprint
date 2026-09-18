@@ -8,6 +8,41 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.6.5] — 2026-09-18
+
+Review round 2 (five findings) plus the first full behavioral gate under a
+non-Anthropic model (`xiaomi/mimo-v2.5-pro` via OpenRouter — the eval runner's
+`OR_MODEL` switch). One genuine norm gap surfaced and is fixed below.
+
+### Fixed
+- **Installer: binary files no longer break `--mode integrate`.** The
+  path-rewrite step read every file as UTF-8 before checking whether it was
+  even rewritable, so a consumer repo containing any binary (images, fonts,
+  archives) made re-runs and uninstall crash. Binary files now pass through
+  as raw bytes; covered by a new fixture in `install-integrate-fixtures.sh`.
+- **Installer: foreign opencode symlinks are left untouched.**
+  `install.sh --mode opencode` previously replaced an existing
+  `.opencode/agents`-style symlink even when it pointed somewhere unrelated.
+  It now relinks only its own stale targets (target contains
+  `qa-agent-blueprint`/`qa-blueprint`) and warns + skips foreign ones; three
+  new fixtures in `install-opencode-fixtures.sh`.
+- **Product routing: the table is a count lookup, not a ranking.** Under
+  MiMo, `routing-ambiguous` scored 1/3 — weaker models read the numbered
+  rungs as precedence ("component match wins outright") instead of consulting
+  the conflict row. The rule now states that position never breaks ties and
+  names the component→A / label→B case explicitly. 3/3 after.
+
+### Changed
+- **Always-loaded layer trimmed by ~270 tokens** (duplicated pointer text in
+  `CLAUDE.md`/`opencode/ROUTER.md`, `product-layer.md`, `evidence-policy.md`,
+  `security.md`, `qa-principles.md`; the shadow-mode mechanics now live only
+  in the hard rule). Reserve policy recorded in `context-budget.sh`: keep
+  300–500 tokens free inside the 8120 budget.
+- Docs: README shows the opencode quickstart line visibly (not only inside
+  `<details>`); `quickstart-plugin.md` aligns the JIRA Data Center PAT
+  storage with the keychain-first flow; `opencode-port-plan.md` status line
+  reflects that the port shipped in 0.6.0.
+
 ## [0.6.4] — 2026-09-18
 
 Eval-driven norm sharpenings from the full behavioral gate run on 0.6.3 (20

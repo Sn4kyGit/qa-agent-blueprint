@@ -1,8 +1,10 @@
 # opencode Port — Plan (TDD)
 
-Status: **Phase 0 complete (2026-09-16), Phase 1 ready to start**. Working document for making `qa-agent-blueprint`
+Status: **all phases DONE 2026-09-16 — shipped as v0.6.0** (tag pushed, see CHANGELOG). Working document for making `qa-agent-blueprint`
 a dual-harness plugin: Claude Code (existing) + opencode (new). Written 2026-09-16
-against the verified state below; update it as spikes land.
+against the verified state below. The port is complete; this file is kept as the
+decision record — §7 (decision log) remains authoritative for the port's
+rationale.
 
 ## 0. Goal and non-goals
 

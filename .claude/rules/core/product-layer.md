@@ -16,9 +16,10 @@ wins. No other rule or skill needs its own product wording because of this.
 
 1. Derive `<KEY>` from the ticket prefix, read `projects/<KEY>/PROJECT.md`.
 2. No `## Products` section → **stop here**. There is no product step.
-3. Otherwise match the ticket's `components[]`, then `labels[]` (both already
-   fetched with the ticket — no extra MCP call), against the registry table in the
-   project's stated match order.
+3. Otherwise match the ticket's `components[]` and `labels[]` (both already
+   fetched with the ticket — no extra MCP call) against the registry table. The
+   table is a lookup by **count of matches**, not a ranking — position never
+   breaks ties.
 
 | # | Condition | Interactive | Headless |
 |---|---|---|---|
@@ -28,7 +29,7 @@ wins. No other rule or skill needs its own product wording because of this.
 | 4 | Match on a `project-wide` entry | scope = project, no PRODUCT.md | same |
 | 5 | Exactly one **secondary-signal** match (see below) | use it, `confidence: medium` | use it, `confidence: medium` |
 | 6 | No match + a default product is declared | default, `confidence: low` | default, `confidence: low` |
-| 7 | Two or more conflicting matches | ask, naming every match | **BLOCKED** |
+| 7 | Two or more conflicting matches (e.g. component→A, label→B) | ask, naming every match | **BLOCKED** |
 | 8 | No match and no default · registry names a product with no directory · a directory with no registry row · a required field still `TODO:` | ask | **BLOCKED** |
 
 **Suite runs have no ticket** — no components, labels, or secondary signals
@@ -48,14 +49,13 @@ ambiguity (the *conflicting matches* rung), not a vote to be counted:
   directory split, worthless without a linked MR. Map paths to products via the
   registry's optional `Code paths` column.
 
-A secondary-signal match is recorded as such (`product_routed_by`), because it is a
-weaker claim than a component match and the report should say so.
+A secondary-signal match is recorded as such (`product_routed_by`) — a weaker claim
+than a component match, and the report should say so.
 
 - **A default resolves silence, never conflict.** It applies on a clean *no match*
   only — never as a tie-breaker between *conflicting matches*. Breaking a tie with
   the default tests the wrong product with the wrong users and reports a plausible
-  green. (This text names the rungs instead of numbering them: the numbering shifted
-  once when secondary signals were inserted, and the prose kept the old numbers.)
+  green.
 - **No prose inference.** "The summary says checkout, so it's the CHECKOUT product"
   is exactly the guessing `CLAUDE.md` rule 4 forbids. Free text may become a
   *proposal to a human*, never an autonomous resolution, and never headless.

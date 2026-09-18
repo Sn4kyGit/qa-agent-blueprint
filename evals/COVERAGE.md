@@ -26,7 +26,7 @@ only enforcement once a fixture proves it".
 |---|---|
 | Ticket prefix routes to `projects/<KEY>/`; unknown prefix → onboard or ask, never guess | case: `routing-*` (implied setup) |
 | Product routing: clean match routes without asking; only that product's files read | case: `routing-component` |
-| Conflicting product matches → ask; match order is not a tie-breaker | case: `routing-ambiguous` |
+| Conflicting product matches → ask; the routing table is a count lookup, not a ranking, and position never breaks ties | case: `routing-ambiguous` |
 | Project without products: no glob, no product fields, no `"product": null` | case: `routing-absent` |
 | `docs/rules/` files are read when their topic comes up | case: `rule-reachability` |
 | FAIL → `failure-analysis` before any bug is filed | case: `failure-outdated` + `failure-undocumented-change` |

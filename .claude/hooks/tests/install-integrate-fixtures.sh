@@ -24,12 +24,20 @@ INSTALL="$REPO/install.sh"
 
 fails=0
 WORK="$(mktemp -d)"
+# A binary file inside the blueprint's docs/ tree — integrate must treat it as
+# opaque bytes: when comparing for second-run idempotency and when matching for
+# uninstall. Regression guard for the UTF-8-decode bug that broke both the
+# moment real PDFs lived in docs/ (field report 2026-09-18); untracked working
+# artifacts must not be what this suite depends on.
+BINFIX="$REPO/docs/.fixture-binary.bin"
+printf '\211PNG\r\n\032\n\000\xffd8\377binary-payload' > "$BINFIX"
 # QA_KEEP=1 leaves the throwaway repo in place and prints its path — the only sane
 # way to inspect what the installer actually wrote when a fixture fails.
 if [ "${QA_KEEP:-0}" = "1" ]; then
   echo "work dir kept: $WORK"
+  trap 'rm -f "$BINFIX"' EXIT
 else
-  trap 'rm -r "$WORK" 2>/dev/null' EXIT
+  trap 'rm -f "$BINFIX"; rm -r "$WORK" 2>/dev/null' EXIT
 fi
 
 pass() { printf 'ok    %s\n' "$1"; }
@@ -65,6 +73,9 @@ assert_file    "agents copied"                   "$TARGET/.claude/agents/qa-mana
 assert_grep    "own skill untouched"             "$TARGET/.claude/skills/my-own-skill/SKILL.md" "Mine."
 assert_file    "docs copied, namespaced"         "$TARGET/docs/qa-blueprint/architecture.md"
 assert_grep    "host docs untouched"             "$TARGET/docs/README.md" "Host docs"
+cmp -s "$BINFIX" "$TARGET/docs/qa-blueprint/.fixture-binary.bin" \
+  && pass "binary file copied byte-identical" \
+  || fail "binary file copied byte-identical" "cmp differs: $TARGET/docs/qa-blueprint/.fixture-binary.bin"
 assert_file    "secrets template created"        "$TARGET/.env.playwright-secrets"
 assert_no_file "no dotenv file is invented"      "$TARGET/.env"
 

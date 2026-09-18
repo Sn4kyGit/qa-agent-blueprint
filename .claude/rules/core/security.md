@@ -19,15 +19,12 @@ No secrets in context, ever. This is enforced by rule AND by hooks — see below
 
 ## Shadow mode — testing fully, writing nothing (default: on)
 
-Shadow mode is **on by default** — `QA_AGENT_SHADOW=0` or `Shadow mode: off`
-(`PROJECT.md` → "Reporting") grants JIRA write access. While on, every JIRA
-**write** is suppressed: the agent reads, routes, tests, produces evidence,
-composes comment and transition into
-`evidence/<KEY>/<TICKET>/<ts>/proposed-report.md` instead of posting, sets
-`"reported_to_jira": false` and `"shadow": true`, and says so. A line in
-`evidence/.audit/jira-writes.log` from a shadow run is a bug — on `browser`
-access no such log exists; the proposal review is the only control.
-Rationale: `docs/rules/core/security.md`.
+Shadow mode is **on by default**; the mechanics (proposal file, summary flags,
+unlock) are the hard rule in `CLAUDE.md`. While on, every JIRA **write** is
+suppressed: the agent reads, routes, tests, and produces evidence exactly as if
+reporting. A line in `evidence/.audit/jira-writes.log` from a shadow run is a
+bug — on `browser` access no such log exists; the proposal review is the only
+control. Rationale: `docs/rules/core/security.md`.
 
 ## Forbidden actions
 

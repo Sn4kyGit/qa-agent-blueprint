@@ -124,9 +124,8 @@ there is no verdict.
 ## `learnings` — declared, not remembered
 
 The blueprint's second promise, next to evidence, is "explain once, never again"
-(`.claude/skills/retro-learn/SKILL.md`). Fifteen prose reminders to run
-`retro-learn` across a dozen files enforce exactly nothing, so the obligation is
-**declared in the summary** instead:
+(`.claude/skills/retro-learn/SKILL.md`). Prose reminders enforce nothing, so the
+obligation is **declared in the summary** instead:
 
 - `learnings.captured` — a short list of what went into
   `memory/learnings/_inbox.md` during this run (one line each, the inbox holds the

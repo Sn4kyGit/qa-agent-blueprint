@@ -53,8 +53,7 @@ ticket:
 
 For anything bigger than a single ticket — a release, an epic, or "what should we
 even be testing here" — use the `risk-based-testing` skill for a proper
-impact×probability matrix instead of eyeballing it; it also drives which areas
-justify a chartered `exploratory-testing` session.
+impact×probability matrix instead of eyeballing it.
 
 ## Direct writes (test-data setup)
 

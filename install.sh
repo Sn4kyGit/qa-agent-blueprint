@@ -231,9 +231,18 @@ REWRITABLE = (".md", ".sh", ".json", ".py", ".ts")
 mode = sys.argv[1]
 if mode == "stdout":
     path = sys.argv[2]
-    with open(path, encoding="utf-8") as fh:
-        text = fh.read()
-    sys.stdout.write(rewrite(text) if path.endswith(REWRITABLE) else text)
+    # Non-rewritable files (e.g. PDFs in docs/) must pass through as raw bytes:
+    # reading them as UTF-8 raises UnicodeDecodeError, the caller's pipe then
+    # compares EMPTY output against the installed file and every binary file
+    # looked "modified" — breaking second-run idempotency and uninstall
+    # (field report 2026-09-18, after PDFs landed in docs/).
+    if not path.endswith(REWRITABLE):
+        with open(path, "rb") as fh:
+            sys.stdout.buffer.write(fh.read())
+    else:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+        sys.stdout.write(rewrite(text))
 else:
     changed = 0
     for path in sys.argv[2:]:
@@ -1664,16 +1673,24 @@ check_prereqs_opencode() {
 }
 
 # opencode_link <link> <source> — symlink into the blueprint checkout; foreign
-# content at <link> always wins (never replaced, only reported).
+# content at <link> always wins (never replaced, only reported). A symlink that
+# already points into A qa-agent-blueprint checkout is ours (possibly stale after
+# the checkout moved) and gets relinked; a symlink to anywhere else is foreign
+# and is left untouched exactly like a foreign file — silently re-pointing it
+# would rewire the consumer's own config (field report 2026-09-18).
 opencode_link() {
   local link="$1" src="$2"
   if [ -L "$link" ]; then
-    if [ "$(readlink "$link")" = "$src" ]; then
+    local cur
+    cur="$(readlink "$link")"
+    if [ "$cur" = "$src" ]; then
       report SKIPPED "$link" "already linked"
-    else
-      if [ "$DRY_RUN" -eq 1 ]; then dry "relink $link -> $src"; return 0; fi
+    elif [[ "$cur" == *qa-agent-blueprint* || "$cur" == *qa-blueprint* ]]; then
+      if [ "$DRY_RUN" -eq 1 ]; then dry "relink $link -> $src (stale link into an old blueprint checkout: $cur)"; return 0; fi
       ln -sfn "$src" "$link"
-      report MERGED "$link" "relinked -> $src"
+      report MERGED "$link" "relinked -> $src (was $cur)"
+    else
+      report WARN "$link" "foreign symlink (-> $cur) left untouched — point it at $src yourself if intended"
     fi
     return 0
   fi

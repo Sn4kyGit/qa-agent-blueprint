@@ -92,9 +92,14 @@ qa-agent-blueprint`, then restart — see `CHANGELOG.md` for what changed.)*
        "env": { "JIRA_URL": "https://jira.<firma>.tld" }
      }
      ```
-     and create a Personal Access Token in JIRA, exported in your shell
-     (`export JIRA_PERSONAL_TOKEN=...`, e.g. in `~/.zshrc`) — never into
-     `.mcp.json`, the repo, or chat. Requires `uv` (`brew install uv`; pulls
+     and create a Personal Access Token in JIRA. Preferred storage (macOS):
+     the login keychain, service `JIRA_PAT_<jira-host>` —
+     `security add-generic-password -s JIRA_PAT_jira.<firma>.tld -a jira -w`
+     (prompts for the token). The plugin's session-start hook resolves it into
+     the session, so the token lives in **no** file and no shell export.
+     Fallback (CI, non-macOS): `export JIRA_PERSONAL_TOKEN=...`. Either way the
+     token goes **never** into `.mcp.json`, the repo, or chat. Requires `uv`
+     (`brew install uv`; pulls
      [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian),
      Jira DC v8.14+).
 4. Verify: `claude mcp list` shows `playwright` and `atlassian`.

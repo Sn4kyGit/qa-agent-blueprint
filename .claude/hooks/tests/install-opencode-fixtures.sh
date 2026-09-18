@@ -134,6 +134,23 @@ assert_grep "own skill intact" "$TARGET3/.claude/skills/mine/SKILL.md" "Mine."
 printf '%s' "$OUT" | grep -qi "claude" && pass "conflict is reported" || fail "conflict is reported" "no .claude warning in output"
 
 echo
+echo "== foreign symlinks are never re-pointed =="
+# opencode_link used to ln -sfn over ANY existing symlink — a consumer's own
+# link (e.g. .opencode/plugins -> their dotfiles) was silently re-pointed at
+# the blueprint. Foreign content wins for symlinks exactly as for files
+# (field report 2026-09-18).
+TARGET3B="$WORK/consumer-foreign-symlink"
+mkdir -p "$TARGET3B/.opencode" "$WORK/their-dotfiles/plugins"
+printf 'theirs\n' > "$WORK/their-dotfiles/plugins/keep.txt"
+ln -s "$WORK/their-dotfiles/plugins" "$TARGET3B/.opencode/plugins"
+OUT="$("$INSTALL" --mode opencode --target "$TARGET3B" --yes 2>&1)"
+[ "$(readlink "$TARGET3B/.opencode/plugins")" = "$WORK/their-dotfiles/plugins" ] \
+  && pass "foreign symlink untouched" \
+  || fail "foreign symlink untouched" "plugins now points at: $(readlink "$TARGET3B/.opencode/plugins")"
+assert_file "foreign link target intact" "$TARGET3B/.opencode/plugins/keep.txt"
+printf '%s' "$OUT" | grep -qi "foreign symlink" && pass "foreign symlink warned" || fail "foreign symlink warned" "no warning in output"
+
+echo
 echo "== idempotent re-install =="
 OUT="$("$INSTALL" --mode opencode --target "$TARGET" --yes 2>&1)"
 if [ $? -ne 0 ]; then fail "re-install exits 0" "$(printf '%s' "$OUT" | tail -3)"; else pass "re-install exits 0"; fi

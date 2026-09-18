@@ -53,6 +53,18 @@
 #               ticketless runs). Both flipped their case to 3/3. Plus the
 #               narrated-draft clause in the shadow-mode rule (run 1 of the
 #               verification asked permission instead of writing). Budget 8120.
+#   2026-09-18  review-driven trims (~270 tok): compressed duplicated pointer text
+#               in CLAUDE.md/ROUTER.md, product-layer.md, evidence-policy.md and
+#               security.md (the shadow-mode mechanics moved fully into the hard
+#               rule). Reserve policy from the same review: keep 300-500 tokens
+#               free inside the budget — a norm that needs more than that belongs
+#               in docs/rules/, not the always-loaded layer.
+#   2026-09-18  eval-driven sharpening (~20 tok, MiMo gate): product-layer.md now
+#               states the routing table is a count lookup, not a ranking
+#               (routing-ambiguous was 1/3 under xiaomi/mimo-v2.5-pro — weaker
+#               models read the numbered rungs as precedence; flipped to 3/3).
+#               Reserve after this change: 292/263 — the next always-loaded
+#               addition must trim its weight elsewhere first.
 #
 # Usage:  bash .claude/hooks/tests/context-budget.sh
 # Exit:   0 within budget, 1 over.

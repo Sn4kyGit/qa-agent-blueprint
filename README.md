@@ -93,6 +93,10 @@ placeholder in your repo, and injects the router.
 Preview everything the installer would do, without changing anything:
 `./install.sh --dry-run`.
 
+Running [opencode](https://opencode.ai) instead of Claude Code? Your path is
+[docs/quickstart-opencode.md](docs/quickstart-opencode.md) — same blueprint,
+model-agnostic.
+
 <details>
 <summary>Other ways in — "tell your agent" prompt, opencode, clone + installer, manual settings.json</summary>
 
