@@ -262,4 +262,10 @@ release, run `claude plugin marketplace update qa-agent-blueprint-marketplace`
 `claude plugin details` shows the new version with the full inventory (the
 0.2.0 duplicate-hooks bug only ever appeared on update+restart, never in
 `validate`). Then `claude plugin tag --push -m "%s"`. The tag command
-validates manifest agreement and refuses a dirty tree.
+validates manifest agreement and refuses a dirty tree. Finally create the
+GitHub release from the changelog section:
+
+```bash
+sed -n '/## \[<X.Y.Z>\]/,/## \[/p' CHANGELOG.md | sed '$d' > /tmp/relnotes.md
+gh release create qa-agent-blueprint--v<X.Y.Z> --title "<X.Y.Z> — <headline>" --notes-file /tmp/relnotes.md
+```
