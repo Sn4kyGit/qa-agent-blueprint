@@ -790,10 +790,41 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
   </p>
 </section>
 
+<section>
+  <h2>Was kostet der Betrieb?</h2>
+  <p class="sub">
+    Das Plugin ist MIT — kostenlos. Das Git-Repo wird genau zweimal kontaktiert: bei der
+    Installation und beim expliziten Update. Alles andere läuft lokal; die einzigen
+    Netzwerk-Ziele im Betrieb sind <strong>dein JIRA</strong> und <strong>deine Stage</strong>.
+    Keine Telemetrie, keine Lizenz-Checks.
+  </p>
+  <p class="sub">
+    Die echten Kosten sind <strong>Modell-Tokens</strong> — und genau dafür ist die Architektur
+    gebaut: Die immer geladene Ebene ist gemessen (~7.800 Tokens) und per Test gedeckelt,
+    die 27 Skills laden erst bei Bedarf, Subagents halten Browser-Transkripte aus dem
+    Hauptkontext, Evidence wird als Pfad referenziert statt eingelesen, und Projektwissen
+    wird über <code>memory/INDEX.md</code> gefunden statt per Vollscan.
+  </p>
+  <table>
+    <tr><th>Ein Ticket-Test (explorativ, ~25 Browser-Schritte)</th><th>Mit Blueprint</th><th>Nacktes Claude Code</th></tr>
+    <tr><td>Browser-Transkript</td><td>~350–500k Tokens (der Subagent zahlt es auch)</td><td>~350–500k Tokens</td></tr>
+    <tr><td>Projektwissen, Evidence-Rücklesen, Irrwege</td><td>nahe null (Runbooks, Routing, Evidence-Policy)</td><td>wird jede Session neu erkundet</td></tr>
+    <tr><td><strong>Summe pro Ticket</strong></td><td><strong>~0,4–0,6 Mio. Tokens</strong></td><td><strong>~0,6–1,1 Mio. Tokens</strong></td></tr>
+    <tr><td>Re-Test mit vorhandenem Spec</td><td>~50k (CLI-Runner)</td><td>wieder voller Preis</td></tr>
+  </table>
+  <p class="note">
+    <strong>Ehrlichkeit:</strong> Die Browser-Snapshots dominieren die Kosten in beiden Fällen —
+    der Blueprint macht den Browser nicht billiger, er streicht den <em>wiederholbaren</em>
+    Verbrauch: keine Neu-Erkundung, keine Tests gegen eine Umgebung ohne den Fix, und
+    Re-Tests mit Spec kosten ein Zehntel. Im Subscription-Modell ist das Quota statt Euro;
+    zu API-Preisen liegt ein explorativer Ticket-Test bei grob 1–2 $ statt 2–4 $.
+  </p>
+</section>
+
 <footer>
   <p>
-    QA Agent Blueprint · MIT · Stand: 16. September 2026 (0.6.1) —
-    aktualisiert auf Repo-Stand (27 Skills, 5 Subagents, 177 Fixtures + 86 bun-Tests, 20 Eval-Cases,
+    QA Agent Blueprint · MIT · Stand: 18. September 2026 (0.6.5) —
+    aktualisiert auf Repo-Stand (27 Skills, 5 Subagents, 177 Fixtures + 105 bun-Tests, 20 Eval-Cases,
     5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
     Keychain-Secrets für Testuser-Logins und JIRA-PAT, Flow-Maps,
     /re-board und /whats-new als Upgrade-Pfad, Shadow-Modus als Default).

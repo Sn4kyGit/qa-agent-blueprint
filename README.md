@@ -503,6 +503,9 @@ export. CI/non-macOS: keep exporting `JIRA_PERSONAL_TOKEN`, that always wins.
 
 - **No secrets in this repo, and none in context.** Credentials are vault paths or
   env keys — never values, not in chat, code, tickets, or screenshots.
+- **Nothing phones home.** After install, everything runs from the local copy —
+  no telemetry, no license checks, no calls to this repo. The network is touched
+  for exactly two things: your JIRA and your stage.
 - Playwright MCP runs with `--secrets .env.playwright-secrets`, so passwords are
   masked in every tool response, and defaults to an isolated browser profile, so
   no state leaks between runs (both preferences aside from `--secrets`/
@@ -516,6 +519,35 @@ export. CI/non-macOS: keep exporting `JIRA_PERSONAL_TOKEN`, that always wins.
   `Read(evidence/**)` to `permissions.deny`.
 
 Details: `.claude/rules/core/security.md` · `docs/artifact-strategy.md`.
+
+---
+
+## What does it cost to run?
+
+The plugin is MIT — free. The git repo is contacted exactly twice in its life:
+at install, and when you explicitly update. Everything else is local.
+
+The real cost is **model tokens**, and the architecture is built to keep them
+down: the always-loaded layer is measured (~7.8k tokens) and capped by a test,
+the 27 skills load on demand, subagents isolate browser transcripts from the
+main context, evidence is referenced by path instead of read back, and project
+knowledge is found via `memory/INDEX.md` instead of full-repo scans.
+
+Rough comparison — one exploratory ticket test (~25 Playwright steps, headful)
+vs. doing the same with bare Claude Code:
+
+| | Blueprint | Bare Claude Code |
+|---|---|---|
+| Browser transcript | ~350–500k tokens (the subagent pays it too) | ~350–500k tokens |
+| Project knowledge, evidence read-back, detours | near zero (runbooks, routing, evidence policy) | re-explored every session, plus wrong turns |
+| **Total per ticket** | **~0.4–0.6M tokens** | **~0.6–1.1M tokens** |
+| Re-test with existing spec | ~50k (CLI runner) | full price again |
+
+On a subscription that is quota, not euros; at API prices an exploratory ticket
+test lands around $1–2 vs. $2–4. Honest caveat: the dominant cost is the
+browser snapshots either way — the blueprint earns its keep by removing the
+*repeatable* spend (no re-exploration, no testing-what-isn't-deployed runs,
+tenth-price re-tests once a spec exists), not by making the browser cheaper.
 
 ---
 
