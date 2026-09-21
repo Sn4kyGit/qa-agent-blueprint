@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Agent Blueprint — Spickzettel (alle drei Teile)</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --bg-soft: #11141c;
+    --card: rgba(255, 255, 255, 0.045);
+    --card-border: rgba(255, 255, 255, 0.09);
+    --ink: #eef0f6;
+    --muted: #9aa1b5;
+    --violet: #8b5cf6;
+    --fuchsia: #e0457b;
+    --orange: #ff8a5c;
+    --teal: #2dd4bf;
+    --grad: linear-gradient(100deg, #8b5cf6 0%, #e0457b 48%, #ff8a5c 100%);
+    --mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    padding: 0 1.5rem 2.5rem;
+    position: relative;
+    overflow-x: hidden;
+    font-size: 14.5px;
+  }
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(130px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    width: 560px; height: 560px;
+    background: radial-gradient(circle, rgba(139,92,246,0.28), transparent 65%);
+    top: -180px; left: -120px;
+  }
+  body::after {
+    width: 620px; height: 620px;
+    background: radial-gradient(circle, rgba(224,69,123,0.20), transparent 65%);
+    top: 30%; right: -220px;
+  }
+  .page { max-width: 920px; margin: 0 auto; position: relative; z-index: 1; }
+
+  code, .mono {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: rgba(139, 92, 246, 0.14);
+    border: 1px solid rgba(139, 92, 246, 0.22);
+    border-radius: 5px;
+    padding: 0.05em 0.35em;
+    color: #cdbcff;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    background: #07090d;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 0.8rem 1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  pre code { background: none; border: none; padding: 0; color: #d7dae6; }
+  pre .c { color: #6b7280; }
+  pre .a { color: var(--orange); }
+
+  /* ---------- hero ---------- */
+  header.hero { padding: 2.6rem 0 1.4rem; }
+  .kicker {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--teal);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    background: rgba(45, 212, 191, 0.08);
+    border-radius: 999px;
+    padding: 0.3rem 0.85rem;
+    margin-bottom: 0.9rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    margin-bottom: 0.7rem;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lede { font-size: 1.05rem; color: var(--muted); max-width: 48rem; }
+  .lede strong { color: var(--ink); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.55rem;
+    margin: 1.4rem 0 0;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 0.65rem 0.5rem;
+    text-align: center;
+  }
+  .stat .n {
+    font-size: 1.25rem; font-weight: 800; font-family: var(--mono);
+    background: var(--grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat .l { font-size: 0.66rem; color: var(--muted); margin-top: 0.1rem; }
+
+  /* ---------- toc ---------- */
+  .toc {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    margin: 1.2rem 0 0.4rem;
+    font-family: var(--mono); font-size: 0.78rem;
+  }
+  .toc a {
+    text-decoration: none;
+    color: #cdbcff;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    padding: 0.3rem 0.8rem;
+  }
+  .toc a:hover { border-color: rgba(139, 92, 246, 0.5); }
+
+  /* ---------- part headers ---------- */
+  .part {
+    margin: 2.4rem 0 1.2rem;
+    padding-top: 1.6rem;
+    border-top: 1px solid rgba(255,255,255,0.09);
+  }
+  .part .kicker { margin-bottom: 0.6rem; }
+  .part h1 { font-size: clamp(1.6rem, 4vw, 2.3rem); margin-bottom: 0.5rem; }
+
+  /* ---------- sections ---------- */
+  section { margin-bottom: 1.7rem; }
+  h2 {
+    font-size: 1.18rem;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.55rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  h2::before {
+    content: "";
+    width: 22px; height: 4px;
+    border-radius: 2px;
+    background: var(--grad);
+    flex: none;
+  }
+
+  ul.tight { list-style: none; }
+  ul.tight li {
+    position: relative;
+    padding-left: 1.15rem;
+    margin-bottom: 0.32rem;
+    color: #c9cedd;
+    font-size: 0.92rem;
+  }
+  ul.tight li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--fuchsia);
+  }
+  ul.tight li strong { color: var(--ink); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1.6rem; }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.6rem; align-items: start; }
+
+  .analogy { color: var(--muted); font-size: 0.88rem; margin-bottom: 0.6rem; }
+  .analogy em { color: var(--teal); font-style: normal; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin: 0.3rem 0 0.4rem; }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    border-bottom: 1px solid rgba(255,255,255,0.18);
+    padding: 0.4rem 0.6rem 0.35rem 0;
+  }
+  td { border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0.42rem 0.6rem 0.42rem 0; vertical-align: top; color: #c9cedd; }
+  td:first-child { font-family: var(--mono); font-size: 0.76rem; color: #cdbcff; white-space: nowrap; }
+  td strong { color: var(--ink); }
+
+  .flow {
+    display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;
+    font-family: var(--mono); font-size: 0.76rem; margin: 0.3rem 0 0.6rem;
+  }
+  .flow .step {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    padding: 0.28rem 0.75rem;
+  }
+  .flow .arrow {
+    background: var(--grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+  }
+
+  .callout {
+    background: linear-gradient(120deg, rgba(139,92,246,0.12), rgba(224,69,123,0.10));
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 12px;
+    padding: 0.8rem 1.1rem;
+    margin-top: 0.9rem;
+    font-size: 0.88rem;
+    color: #d7dae6;
+  }
+  .callout strong { color: var(--ink); }
+
+  footer {
+    color: var(--muted);
+    font-size: 0.76rem;
+    border-top: 1px solid rgba(255,255,255,0.09);
+    padding-top: 0.9rem;
+    margin-top: 1.4rem;
+  }
+
+  /* ---------- print: light theme, A4, one page per part ---------- */
+  @page { size: A4; margin: 9mm; }
+  @media print {
+    html, body { background: #fff !important; }
+    body::before, body::after { display: none !important; }
+    body { color: #20242f; padding: 0; font-size: 8.6pt; line-height: 1.38; }
+    .page { max-width: none; }
+    header.hero { padding: 0 0 0.55rem; }
+    .kicker { color: #0f766e; border-color: #99e5de; background: #f0fdfa; padding: 0.14rem 0.6rem; margin-bottom: 0.4rem; }
+    h1 { background: none; -webkit-text-fill-color: #6d28d9; color: #6d28d9; font-size: 20pt; margin-bottom: 0.3rem; }
+    .lede { font-size: 9.2pt; color: #3f4657; }
+    .lede strong { color: #20242f; }
+    .stats { margin: 0.6rem 0 0; gap: 0.3rem; }
+    .stat { border-color: #d8dce6; background: #f7f8fb; padding: 0.35rem 0.3rem; border-radius: 8px; }
+    .stat .n { background: none; -webkit-text-fill-color: #6d28d9; color: #6d28d9; font-size: 11pt; }
+    .stat .l { color: #5a6274; }
+    .toc { display: none; }
+    .part { page-break-before: always; margin: 0 0 0.6rem; padding-top: 0; border-top: none; }
+    .part:first-of-type { page-break-before: avoid; }
+    .part h1 { font-size: 15pt; margin-bottom: 0.25rem; }
+    section { margin-bottom: 0.75rem; }
+    h2 { font-size: 11pt; margin-bottom: 0.3rem; }
+    h2::before { background: #6d28d9; height: 3px; width: 16px; }
+    ul.tight li { color: #333947; font-size: 8.4pt; margin-bottom: 0.14rem; }
+    ul.tight li::before { color: #c2185b; }
+    ul.tight li strong { color: #20242f; }
+    .grid2 { gap: 0.1rem 1rem; }
+    .cols2 { gap: 0 1rem; }
+    .analogy { color: #5a6274; font-size: 8pt; margin-bottom: 0.24rem; }
+    .analogy em { color: #0f766e; }
+    code, .mono { background: #f3eefe; border-color: #ddd3f7; color: #5b21b6; padding: 0 0.25em; }
+    pre { background: #f7f8fb; border-color: #d8dce6; padding: 0.4rem 0.65rem; font-size: 7pt; line-height: 1.38; border-radius: 8px; }
+    pre code { color: #333947; }
+    pre .c { color: #8a92a6; }
+    pre .a { color: #b45309; }
+    table { font-size: 8.2pt; }
+    th { color: #0f766e; border-bottom-color: #c3c9d6; padding: 0.22rem 0.5rem 0.2rem 0; }
+    td { color: #333947; border-bottom-color: #e4e7ee; padding: 0.22rem 0.5rem 0.22rem 0; }
+    td:first-child { color: #5b21b6; }
+    td strong { color: #20242f; }
+    .flow { gap: 0.22rem; font-size: 7.2pt; margin: 0.15rem 0 0.3rem; }
+    .flow .step { border-color: #d8dce6; background: #f7f8fb; padding: 0.1rem 0.45rem; }
+    .flow .arrow { background: none; -webkit-text-fill-color: #6d28d9; color: #6d28d9; }
+    .callout { background: #faf7ff; border-color: #ddd3f7; color: #333947; padding: 0.5rem 0.8rem; margin-top: 0.5rem; font-size: 8.3pt; }
+    .callout strong { color: #20242f; }
+    footer { color: #5a6274; border-top-color: #d8dce6; padding-top: 0.5rem; margin-top: 0.7rem; font-size: 7.4pt; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <p class="kicker">Spickzettel · Alle drei Teile</p>
+  <h1>QA Agent Blueprint</h1>
+  <p class="lede">
+    <strong>JIRA-Ticket rein → getestetes Ticket raus.</strong>
+    Ein KI-QA-Kollege als Plugin für Claude Code: Er testet Tickets selbstständig,
+    liefert Beweise, meldet das Ergebnis zurück nach JIRA — und lernt dazu.
+  </p>
+  <div class="stats">
+    <div class="stat"><div class="n">27</div><div class="l">Fähigkeiten (Skills)</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">Spezialisten (Subagents)</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">Türsteher (Hooks)</div></div>
+    <div class="stat"><div class="n">147</div><div class="l">Selbsttests (Fixtures)</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">Verdikte</div></div>
+  </div>
+  <nav class="toc">
+    <a href="#teil1">Teil 1 · Was ist das?</a>
+    <a href="#teil2">Teil 2 · Wie funktioniert er?</a>
+    <a href="#teil3">Teil 3 · Technical Deep Dive</a>
+  </nav>
+</header>
+
+<!-- ================= TEIL 1 ================= -->
+<div class="part" id="teil1">
+  <p class="kicker">Teil 1 · Allgemein</p>
+  <h1>Was ist der QA Agent Blueprint?</h1>
+
+  <section>
+    <h2>Was ist das?</h2>
+    <ul class="tight">
+      <li>Ein <strong>Plugin für Claude Code</strong> (Anthropics KI-Entwicklerwerkzeug), das daraus einen QA-Manager + Tester macht — kein neues Tool, keine neue Oberfläche.</li>
+      <li>Ticketgetrieben: Der <strong>JIRA-Ticket-Schlüssel</strong> (z. B. SHOP-1234) ist der Eingang — darüber findet der Agent alles, was er über das Projekt wissen muss.</li>
+      <li>Alles Projektwissen liegt in <strong>normalen Textdateien im eigenen Git</strong> — einsehbar, versionierbar, mit dem Team geteilt. Kein Geheimwissen im Kopf des Agenten.</li>
+      <li>Angebunden sind genau zwei Systeme: <strong>JIRA</strong> (Tickets rein, Ergebnisse raus) und ein <strong>Browser</strong> (Playwright) fürs Testen.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Was er kann</h2>
+    <div class="grid2">
+      <ul class="tight">
+        <li><strong>Ticket testen</strong> (<code>/test-ticket</code>): lesen → Projekt erkennen → Umgebung prüfen → testen → beweisen → zurückmelden</li>
+        <li><strong>Bug gegentesten</strong> (<code>/retest-bug</code>): Repro-Schritte nachspielen + enger Regressionssweep um die Fundstelle</li>
+        <li><strong>Explorativ testen</strong> (<code>/exploratory-testing</code>): neue Features &amp; unklares Verhalten im Browser erkunden</li>
+        <li><strong>Autotests schreiben</strong> (<code>/test-automation</code>): was verstanden ist, wird wiederholbar</li>
+      </ul>
+      <ul class="tight">
+        <li><strong>Bug melden</strong> (<code>/bug-report</code>): Fund exakt im Bug-Template des Projekts, mit Duplikat-Check</li>
+        <li><strong>Nach JIRA berichten</strong> (<code>/report-to-jira</code>): Kommentar, Anhänge, korrekter Status</li>
+        <li><strong>Wochenreport</strong> (<code>/qa-report</code>): Pass-Rate, P0/P1, Blocker-Gründe — pro Projekt &amp; Produkt</li>
+        <li><strong>Einrichten &amp; pflegen</strong>: <code>/onboard-project</code> (einmalig), <code>/re-board</code> (nach Updates), <code>/whats-new</code> („was ist neu?")</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>So arbeitest du mit ihm</h2>
+    <ul class="tight">
+      <li><strong>Einfach normal schreiben</strong> — „Teste SHOP-1234", „Der Fix für WEB-456 ist auf Stage, prüf das", „Wie läuft's mit dem Testing?" Deutsch oder Englisch; Slash-Befehle sind nur die explizite Form.</li>
+      <li><strong>Einmalig pro Projekt einrichten</strong> (~30–60 Min. Interview): Umgebungen, Testuser, Deploy-Runbook, Report-Format — danach weiß er es dauerhaft.</li>
+      <li><strong>Er fragt, statt zu raten</strong>: Ist unklar, welches Produkt gemeint ist oder fehlt ein Zugang, fragt er nach — im CI meldet er sauber BLOCKED.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Die fünf Verdikte</h2>
+    <table>
+      <tr><th>Verdikt</th><th>Bedeutung</th></tr>
+      <tr><td>PASS</td><td>Getestet, keine Befunde — Kommentar + Status-Wechsel, Screenshot als Beleg</td></tr>
+      <tr><td>FAIL</td><td>Mindestens ein Befund — vorher wird geklärt: Produkt kaputt oder Test veraltet?</td></tr>
+      <tr><td>BLOCKED</td><td>Der Test lief nie (Umgebung weg, Fix nicht deployed) — mit Grund und Entblocker</td></tr>
+      <tr><td>NEEDS_REVIEW</td><td>Der Test ist vermutlich selbst veraltet — Vorschlag an einen Menschen</td></tr>
+      <tr><td>NO_TEST</td><td>Untersucht, aber kein Test abgeschlossen — ehrlich statt schöngerechnet</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Warum man ihm vertrauen kann</h2>
+    <ul class="tight">
+      <li><strong>Shadow-Modus ab Tag eins:</strong> Er testet vollständig und legt JIRA-Kommentare als <em>Vorschlag</em> ab — gepostet wird erst nach deiner Freigabe.</li>
+      <li><strong>Nur Stage, niemals Produktion</strong> — egal, wer fragt oder wie es formuliert ist.</li>
+      <li><strong>Passwörter sieht er nie:</strong> Testuser-Logins &amp; JIRA-Token liegen im macOS-Schlüsselbund; er sieht nur „6/6 Logins vorhanden".</li>
+      <li><strong>Kein Urteil ohne Beweise:</strong> Jeder Lauf endet mit Screenshots, Logs und einem maschinenlesbaren Protokoll — ein Hook blockt sonst das Session-Ende.</li>
+      <li><strong>Jeder JIRA-Schreibzugriff</strong> landet in einem Audit-Log — nachvollziehbar, auch im automatisierten Lauf.</li>
+    </ul>
+    <div class="callout">
+      <strong>Merksatz:</strong> Er ersetzt nicht die QA — er nimmt ihr die wiederholbare Fleißarbeit ab
+      (Ticket lesen, Umgebung prüfen, Flows durchklicken, Beweise sichern, Ticket befüllen),
+      damit Menschen die Urteile fällen.
+    </div>
+  </section>
+
+  <section>
+    <h2>Was kostet das?</h2>
+    <ul class="tight">
+      <li><strong>Das Plugin ist kostenlos</strong> (MIT) — und telefoniert nie nach Hause: Nach der Installation läuft alles lokal, Netzwerk geht nur zu <strong>deinem JIRA</strong> und <strong>deiner Stage</strong>. Das Repo wird nur bei Install und Update angefasst.</li>
+      <li><strong>Die echten Kosten sind Modell-Tokens</strong> — deshalb ist Sparsamkeit eingebaut: Das Handbuch (~7.800 Tokens) ist per Test gedeckelt, Fachbücher laden nur bei Bedarf, Beweisfotos kommen nie in den Kopf, Projektwissen wird gezielt geholt statt gescannt.</li>
+      <li><strong>Größenordnung pro Ticket-Test</strong> (explorativ, ~25 Browser-Schritte): <strong>~0,4–0,6 Mio. Tokens</strong> mit Blueprint vs. <strong>~0,6–1,1 Mio.</strong> mit nacktem Claude Code — dort wird Projektwissen jede Session neu erkundet und Irrwege kommen dazu. Zu API-Preisen grob 1–2 $ statt 2–4 $; im Abo ist es Quota statt Euro.</li>
+      <li><strong>Der zweite Lauf ist der günstige:</strong> Existiert ein Autotest, kostet der Re-Test nur noch ~50k Tokens — ein Zehntel.</li>
+    </ul>
+  </section>
+</div>
+
+<!-- ================= TEIL 2 ================= -->
+<div class="part" id="teil2">
+  <p class="kicker">Teil 2 · Technik — einfach erklärt</p>
+  <h1>Wie funktioniert er?</h1>
+  <p class="lede">
+    Stell dir einen <strong>neuen QA-Kollegen</strong> vor: Er hat ein <strong>Handbuch</strong>,
+    das er immer dabei hat, kann <strong>Spezialisten</strong> dazurufen — und kommt an
+    <strong>Türstehern</strong> nicht vorbei, die die Hausregeln wirklich durchsetzen.
+  </p>
+
+  <section>
+    <h2>Der Ablauf bei einem Ticket</h2>
+    <div class="flow">
+      <span class="step">Ticket lesen</span><span class="arrow">→</span>
+      <span class="step">Projekt erkennen</span><span class="arrow">→</span>
+      <span class="step">Stage prüfen</span><span class="arrow">→</span>
+      <span class="step">Testen</span><span class="arrow">→</span>
+      <span class="step">Beweise sichern</span><span class="arrow">→</span>
+      <span class="step">Berichten</span><span class="arrow">→</span>
+      <span class="step">Lernen</span>
+    </div>
+    <table>
+      <tr><th>Schritt</th><th>Was passiert — in Menschensprache</th></tr>
+      <tr><td>1 · Lesen</td><td>Holt das Ticket aus <strong>JIRA</strong> — das Ticket-Kürzel (SHOP-1234) sagt ihm, welche Projektakte gilt.</td></tr>
+      <tr><td>2 · Routen</td><td>Mehrere Produkte im Projekt? Er erkennt über <strong>Komponente/Label</strong> das richtige — im Zweifel fragt er nach, statt zu raten.</td></tr>
+      <tr><td>3 · Prüfen</td><td>Ist der Fix überhaupt <strong>auf Stage</strong>? Nein → er meldet BLOCKED mit Grund, statt grün zu testen, was gar nicht da ist.</td></tr>
+      <tr><td>4 · Testen</td><td>Er <strong>erkundet</strong> das Feature im Browser (Neues, Unklares) oder fährt <strong>fertige Autotests</strong> (Bekanntes, ~4× günstiger).</td></tr>
+      <tr><td>5 · Beweisen</td><td>Screenshots, Logs, maschinenlesbares Protokoll pro Lauf. <strong>Kein Urteil ohne Beleg</strong> — das wird erzwungen, nicht erbeten.</td></tr>
+      <tr><td>6 · Berichten</td><td>Kommentar + Anhänge + Status für JIRA — im Shadow-Modus nur als <strong>Vorschlag</strong>. Danach: Gelerntes → ins Handbuch.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Das Gedächtnis — fünf Schubladen</h2>
+    <p class="analogy">Warum bleibt er günstig und schnell? Weil er <em>nicht alles immer im Kopf</em> hat — nur das Handbuch. Der Rest wird gezielt aus der passenden Schublade geholt.</p>
+    <table>
+      <tr><th>Schublade</th><th>Analogie</th><th>Inhalt</th></tr>
+      <tr><td>1 · Handbuch</td><td>Immer dabei</td><td>Nur die Regeln (~7.500 Wörter): Was ist Pflicht, was ist verboten</td></tr>
+      <tr><td>2 · Fachbücher</td><td>Nur bei Bedarf geöffnet</td><td>27 Fähigkeiten — z. B. Accessibility, Security, API-Tests</td></tr>
+      <tr><td>3 · Projektakte</td><td>Nur das aktive Projekt</td><td>Umgebungen, Testuser, Deploy-Runbook, Report-Format, Flow-Map</td></tr>
+      <tr><td>4 · Lerntagebuch</td><td>Wächst, wird aufgeräumt</td><td>Überraschungen; beim 2. Auftreten wandern sie ins Handbuch</td></tr>
+      <tr><td>5 · Beweisfotos</td><td>Nie im Kopf, nur als Pfad</td><td>Screenshots &amp; Logs unter <code>evidence/</code> — Basis für den Wochenreport</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Das Team dahinter — fünf Rollen</h2>
+    <p class="analogy">Jede Rolle hat ihre <em>eigene Aktenmappe</em> (eigenes Gedächtnis): Ein 30-Schritte-Browser-Protokoll flutet nie die Besprechung — zurück kommt nur das Ergebnis.</p>
+    <table>
+      <tr><th>Rolle</th><th>Job</th><th>Darf nicht</th></tr>
+      <tr><td>Der Dirigent</td><td>Liest das Ticket, entscheidet die Strategie, verteilt die Arbeit, prüft am Ende Evidence &amp; Ergebnis</td><td>Selbst Browser fahren oder Tests schreiben</td></tr>
+      <tr><td>Der Tester</td><td>Klickt sich explorativ durchs Feature, reproduziert Bugs</td><td>In JIRA schreiben</td></tr>
+      <tr><td>Der Testschreiber</td><td>Schreibt &amp; fährt wiederholbare Autotests</td><td>—</td></tr>
+      <tr><td>Der Prüfer</td><td>Bei jedem FAIL: Produkt kaputt — oder Test veraltet?</td><td><strong>Absichtlich nichts verändern</strong> — sonst könnte er rote Tests grün editieren</td></tr>
+      <tr><td>Der Melder</td><td>Gießt den Fund exakt ins Bug-Template des Projekts</td><td>Einen Browser bedienen</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Die Türsteher — Regeln sind Worte, Hooks sind Durchsetzung</h2>
+    <div class="cols2">
+      <table>
+        <tr><th>Türsteher</th><th>Lässt nicht durch</th></tr>
+        <tr><td>Guard</td><td>Lösch-Kommandos (<code>rm -rf</code>), Force-Push, Schreiben in Passwort-Dateien</td></tr>
+        <tr><td>Evidence-Check</td><td>Session-Ende ohne Beweise &amp; ohne Lern-Deklaration</td></tr>
+      </table>
+      <table>
+        <tr><th>Türsteher</th><th>Lässt nicht durch</th></tr>
+        <tr><td>Session-Start</td><td>Ratlosigkeit: zeigt Projekte, offene Learnings, Login-Status („6/6 Logins")</td></tr>
+        <tr><td>JIRA-Audit</td><td>Unsichtbare Schreibzugriffe: jeder landet im Protokoll</td></tr>
+      </table>
+    </div>
+    <div class="callout">
+      <strong>Ernst gemeint:</strong> Ein Türsteher zählt erst, wenn ein Selbsttest beweist, dass er
+      blockt — <strong>147 Fixtures</strong> tun genau das. Einer hatte monatelang still <em>nichts</em>
+      blockiert — und in der Review sah alles korrekt aus.
+    </div>
+  </section>
+
+  <section>
+    <h2>Zwei Sicherheitsideen zum Mitnehmen</h2>
+    <table>
+      <tr><th>Idee</th><th>Analogie</th></tr>
+      <tr><td><strong>Shadow-Modus</strong></td><td>Probefahrt mit Beifahrer: Er macht alles, postet nichts — nach ~2 Wochen geprüfter Vorschläge gibt das Team Schreibrechte.</td></tr>
+      <tr><td><strong>Keychain-Tresor</strong></td><td>Passwörter im macOS-Schlüsselbund; fehlt eines, poppt ein Dialogfenster auf — getippt wird ins Fenster, nie in den Chat. Der Agent sieht nie einen Wert.</td></tr>
+    </table>
+  </section>
+</div>
+
+<!-- ================= TEIL 3 ================= -->
+<div class="part" id="teil3">
+  <p class="kicker">Teil 3 · Technical Deep Dive</p>
+  <h1>Wie der Agent arbeitet</h1>
+  <p class="lede">
+    Ein kompletter Lauf an einem Beispiel — <strong>„Teste SHOP-1234"</strong> — und danach:
+    <strong>wie er Wissen speichert</strong>, damit er es nie zweimal erklärt bekommt.
+  </p>
+
+  <section>
+    <h2>Beispiel-Lauf: „Teste SHOP-1234"</h2>
+    <table>
+      <tr><th>#</th><th>Schritt</th><th>Was technisch passiert</th></tr>
+      <tr><td>1</td><td><strong>Router erkennt das Ticket</strong></td><td>Die immer geladene <code>CLAUDE.md</code> matcht „SHOP-1234" → lädt den Skill <code>test-ticket</code>, der an den Subagent <strong>qa-manager</strong> delegiert.</td></tr>
+      <tr><td>2</td><td><strong>Ticket lesen</strong></td><td>qa-manager holt das Ticket über den <code>atlassian</code>-MCP (nur lesend): Ziel, Akzeptanzkriterien, Komponente „storefront", Fix-Version.</td></tr>
+      <tr><td>3</td><td><strong>Routing</strong></td><td>Präfix → <code>projects/SHOP/PROJECT.md</code>; Komponente → <code>products/STOREFRONT/PRODUCT.md</code> gemergt (nur Abweichungen). Versiegelte Felder (Transitions, Deploy-Recht) kommen immer aus der Projektdatei.</td></tr>
+      <tr><td>4</td><td><strong>Stage-Check</strong></td><td>Fix-Version gegen Deploy-Status prüfen (Runbook im Projektfile). Nicht deployed → <code>/deploy-to-stage</code> oder <code>BLOCKED</code> — niemals raten.</td></tr>
+      <tr><td>5</td><td><strong>Strategie aus der Feature-Matrix</strong></td><td>Checkout-Änderung → explorative Session; die Matrix sagt, ob Spezialisten (API, Accessibility, Security …) dazugehören.</td></tr>
+      <tr><td>6</td><td><strong>Testen</strong></td><td><strong>test-executor</strong> fährt die Browser-Session: Playwright MCP, isoliertes Profil, <code>--secrets</code> maskiert Passwörter; das Login kommt aus der Keychain-aufgelösten Env-Datei.</td></tr>
+      <tr><td>7</td><td><strong>Evidence ablegen</strong></td><td><code>evidence/SHOP/SHOP-1234/&lt;timestamp&gt;/</code>: Screenshots, Logs, <code>execution_summary.json</code> (Verdikt, Dauer, Learnings).</td></tr>
+      <tr><td>8</td><td><strong>Bei FAIL: Triage</strong></td><td><strong>failure-analyst</strong> (ohne Schreibrechte) prüft Assertion, JIRA-Historie, Versionsfenster → <code>product-defect</code> oder <code>test-outdated</code>. Defekt → <strong>bug-reporter</strong> schreibt nach Projekttemplate, mit Duplikat-Check.</td></tr>
+      <tr><td>9</td><td><strong>Zurückmelden</strong></td><td><code>report-to-jira</code> komponiert Kommentar + Anhänge + Transition. Shadow-Modus an → nur Vorschlag. Jeder echte Schreibzugriff landet im <strong>Audit-Log</strong> (PostToolUse-Hook).</td></tr>
+      <tr><td>10</td><td><strong>Session-Ende</strong></td><td>Stop-Hook prüft: Summary vorhanden? Learnings deklariert? Sonst blockt er — maschinenlesbar (<code>QA_EVIDENCE_MISSING:</code>).</td></tr>
+    </table>
+    <div class="callout">
+      <strong>Warum Subagents?</strong> test-executor läuft in einem <strong>eigenen Kontextfenster</strong>:
+      Das 30-Schritte-Browser-Transkript flutet nie den Hauptkontext — zurück kommt nur ein Verdikt
+      plus Pfade zu den Artefakten. Skill = Anleitung; Subagent = abgeschottete Rolle mit eigenen Werkzeugen.
+    </div>
+  </section>
+
+  <section>
+    <h2>Wie er Wissen speichert</h2>
+    <div class="cols2">
+      <pre><code><span class="c"># alles im eigenen Git — diffbar, reviewbar,</span>
+<span class="c"># mit dem Team geteilt</span>
+projects/SHOP/
+├── PROJECT.md        <span class="c">← Umgebungen, Testuser</span>
+│                     <span class="c">  (als Referenzen!), Runbook,</span>
+│                     <span class="c">  Gates, Routing-Registry</span>
+├── flow-map.md       <span class="c">← Flows, Anker, Nachbarn</span>
+│                     <span class="c">  → steuert Re-Test-Sweeps</span>
+├── learnings.md
+└── products/STOREFRONT/  <span class="c">← nur Abweichungen</span>
+
+memory/
+├── INDEX.md          <span class="c">← Landkarte, wird zuerst gelesen</span>
+└── learnings/
+    ├── _inbox.md     <span class="c">← Auffangbank (Capture)</span>
+    └── &lt;thema&gt;.md    <span class="c">← verdichtet (Groom)</span>
+
+evidence/SHOP/SHOP-1234/&lt;ts&gt;/  <span class="c">← Artefakte, nie</span>
+                                <span class="c">  im Modellkontext</span></code></pre>
+      <table>
+        <tr><th>Phase</th><th>Mechanik</th></tr>
+        <tr><td><strong>Capture</strong></td><td>Jeder Lauf deklariert im Summary, was gelernt wurde — oder warum nichts anfiel. Stop-Hook erzwingt es.</td></tr>
+        <tr><td><strong>Groom</strong></td><td><code>/retro-learn</code> dedupliziert, zählt <code>seen:</code> hoch, löscht Überholtes. Session-Start meldet den Rückstau.</td></tr>
+        <tr><td><strong>Promote</strong></td><td>2. Sichtung → Regel, <code>PROJECT.md</code> oder <code>flow-map.md</code>: ab dann automatisch geladen, nie wieder erklärt.</td></tr>
+        <tr><td><strong>Routing lernt</strong></td><td>Menschliche Regel → sofort in die Registry; Einzelfall → erst beim 2. Mal; Ausnahme → nie.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Vier Design-Entscheidungen, die das tragen</h2>
+    <table>
+      <tr><th>Entscheidung</th><th>Konsequenz</th></tr>
+      <tr><td><strong>Plugin-Modus ohne Drift</strong></td><td>Plugins laden kein <code>CLAUDE.md</code> — der Session-Start-Hook injiziert es <strong>wortwörtlich</strong>. Ein Router-Text für beide Installationsarten.</td></tr>
+      <tr><td><strong>MCP = Vertrag über Namen</strong></td><td>Hooks/Skills matchen auf <code>playwright</code>/<code>atlassian</code>; Pflicht-Flags <code>--secrets</code> + <code>--output-dir</code>; der Rest ist frei wählbar (<code>.playwright-mcp.config.json</code>).</td></tr>
+      <tr><td><strong>Secrets nie im Transkript</strong></td><td>Keychain-Resolver schreibt <code>.env.playwright-secrets</code>, Werte erscheinen nirgends; der Guard-Hook blockt zusätzlich jeden Schreibzugriff auf <code>.env*</code>-Pfade.</td></tr>
+      <tr><td><strong>Kontext-Budget gemessen</strong></td><td>Immer geladene Ebene: 7.491 von 7.500 Token — ein Test schlägt fehl, wenn sie wächst; alles andere lädt bei Bedarf.</td></tr>
+    </table>
+  </section>
+</div>
+
+<footer>
+  <p>QA Agent Blueprint · MIT · Stand: 14. September 2026 (v0.5.1) · Alle drei Spickzettel in einem Dokument —
+  Teil 1: „Was ist das?" · Teil 2: „Wie funktioniert er — einfach erklärt" · Teil 3: „Technical Deep Dive".
+  Quelle der Wahrheit: das Repo (README.md, overview.html).</p>
+</footer>
+
+</div>
+</body>
+</html>
