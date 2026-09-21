@@ -10,6 +10,10 @@ repro from the original report.
 
 ## Steps
 
+0. Run the preflight first (same gate as `test-ticket`): the blueprint's
+   `preflight.sh <KEY>` must pass before any browser/JIRA call — a re-test
+   against a half-reachable VPN state produces exactly the false results the
+   gate exists to prevent.
 1. Read the ticket — pull the **original bug report** (description, comments) to
    get the exact repro steps and the expected-vs-actual from the first report.
    Route to `projects/<KEY>/PROJECT.md` + `learnings.md` as usual — and on to the

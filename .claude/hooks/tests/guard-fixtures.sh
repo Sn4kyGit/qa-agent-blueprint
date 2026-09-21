@@ -93,10 +93,14 @@ check "JIRA write blocked, shadow default"      2 '{"tool_name":"mcp__atlassian_
 check "JIRA write blocked, plugin-namespaced"   2 '{"tool_name":"mcp__plugin_qa-agent-blueprint_atlassian__editJiraIssue","tool_input":{"issueKey":"SHOP-123"}}'
 check "JIRA write, unresolvable key → blocked"  2 '{"tool_name":"mcp__atlassian__transitionJiraIssue","tool_input":{}}'
 check "unparsable atlassian write → blocked"    2 'garbage mcp__atlassian__createJiraIssue payload'
-check "JIRA read is not a write"                0 '{"tool_name":"mcp__atlassian__getJiraIssue","tool_input":{"issueKey":"SHOP-123"}}'
+check "JIRA read is not a write"                0 '{"tool_name":"mcp__atlassian__getJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"/tmp"}'
+# Shadow-off fixtures run against a temp project — which trips the preflight
+# gate unless a fresh pass artifact exists (the gate covers JIRA reads too).
+mkdir -p "$SHADOW_TMP/evidence/.preflight"
+printf '{"key":"SHOP","checked_at":%s,"ok":true}\n' "$(date +%s)" > "$SHADOW_TMP/evidence/.preflight/ok.json"
 check "shadow off via PROJECT.md"               0 '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"'"$SHADOW_TMP"'"}'
 
-printf '%s' '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"issueKey":"SHOP-123"}}' | QA_AGENT_SHADOW=0 bash "$GUARD" >/dev/null 2>&1
+printf '%s' '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"'"$SHADOW_TMP"'"}' | QA_AGENT_SHADOW=0 bash "$GUARD" >/dev/null 2>&1
 if [ $? -eq 0 ]; then
   printf 'ok    %-46s exit=%s\n' "shadow off via QA_AGENT_SHADOW=0" 0
 else
@@ -139,6 +143,50 @@ echo
 echo "== blocked: destructive commands =="
 check "Bash rm -rf"                   2 '{"tool_name":"Bash","tool_input":{"command":"rm -rf build/"}}'
 check "Bash git push --force"         2 '{"tool_name":"Bash","tool_input":{"command":"git push --force origin main"}}'
+
+echo
+echo "== preflight gate: browser/JIRA MCP calls need a fresh pass =="
+# The gate refuses playwright/atlassian MCP calls until evidence/.preflight/
+# ok.json exists and is younger than the TTL — the mechanical backstop against
+# "VPN forgotten" false positives. Fixture CWD carries one onboarded project.
+PFWORK="$(mktemp -d)"
+trap 'rm -rf "$PFWORK"' EXIT
+mkdir -p "$PFWORK/projects/SHOP" "$PFWORK/evidence/.preflight"
+echo '# SHOP' > "$PFWORK/projects/SHOP/PROJECT.md"
+PW_CALL='{"tool_name":"mcp__playwright__browser_navigate","tool_input":{"url":"https://stage.corp.example.com"},"cwd":"'"$PFWORK"'"}'
+PW_PLUGIN_CALL='{"tool_name":"mcp__plugin_qa-agent-blueprint_playwright__browser_navigate","tool_input":{"url":"https://stage.corp.example.com"},"cwd":"'"$PFWORK"'"}'
+AT_READ='{"tool_name":"mcp__atlassian__getJiraIssue","tool_input":{"issueKey":"SHOP-1"},"cwd":"'"$PFWORK"'"}'
+
+check "playwright, no artifact"       2 "$PW_CALL"
+check "playwright (plugin-ns), none"  2 "$PW_PLUGIN_CALL"
+check "atlassian read, no artifact"   2 "$AT_READ"
+
+NOW="$(date +%s)"
+printf '{"key":"SHOP","checked_at":%s,"ok":true}\n' "$NOW" > "$PFWORK/evidence/.preflight/ok.json"
+check "playwright, fresh artifact"    0 "$PW_CALL"
+check "atlassian read, fresh"         0 "$AT_READ"
+
+OLD=$(( NOW - 7200 ))
+printf '{"key":"SHOP","checked_at":%s,"ok":true}\n' "$OLD" > "$PFWORK/evidence/.preflight/ok.json"
+check "playwright, stale artifact"    2 "$PW_CALL"
+QA_PREFLIGHT_TTL_MIN=180 bash -c 'printf %s "$1" | bash "$2" >/dev/null 2>&1' _ "$PW_CALL" "$GUARD"
+if [ $? -eq 0 ]; then
+  printf 'ok    %-46s exit=0\n' "stale vs. wider TTL env"
+else
+  printf 'FAIL  %-46s want=0\n' "stale vs. wider TTL env"
+  fails=$((fails + 1))
+fi
+
+QA_PREFLIGHT=0 bash -c 'printf %s "$1" | bash "$2" >/dev/null 2>&1' _ "$PW_CALL" "$GUARD"
+if [ $? -eq 0 ]; then
+  printf 'ok    %-46s exit=0\n' "QA_PREFLIGHT=0 escape hatch"
+else
+  printf 'FAIL  %-46s want=0\n' "QA_PREFLIGHT=0 escape hatch"
+  fails=$((fails + 1))
+fi
+
+rm -rf "$PFWORK/projects"
+check "no projects → nothing to gate" 0 "$PW_CALL"
 
 echo
 echo "== allowed: ordinary work is unaffected =="

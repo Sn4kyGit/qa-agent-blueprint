@@ -65,13 +65,19 @@
 #               models read the numbered rungs as precedence; flipped to 3/3).
 #               Reserve after this change: 292/263 — the next always-loaded
 #               addition must trim its weight elsewhere first.
+#   2026-09-18  preflight gate (~35 tok): router row for docs/rules/testing/
+#               preflight.md (the hard PreToolUse gate + preflight.sh: stage/
+#               JIRA reachability, multiple-VPN detection, secrets status —
+#               the "VPN forgotten" false-positive factory). Budget 8120 →
+#               8400 by user decision: the reserve target is now ~500 tokens,
+#               not 300.
 #
 # Usage:  bash .claude/hooks/tests/context-budget.sh
 # Exit:   0 within budget, 1 over.
 #
 set -uo pipefail
 
-BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-8120}"
+BUDGET_TOKENS="${QA_CONTEXT_BUDGET:-8400}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"

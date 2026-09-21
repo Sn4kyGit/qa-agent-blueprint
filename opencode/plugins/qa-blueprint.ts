@@ -172,6 +172,46 @@ async function shadowGateBlocks(directory: string, tool: string, args: Record<st
 }
 
 // --------------------------------------------------------------------------
+// 2c. Preflight gate (port of the guard's preflight check)
+// --------------------------------------------------------------------------
+
+// No browser/JIRA MCP call before a preflight has passed: the classic
+// false-positive factory is a forgotten VPN — stage and JIRA are unreachable
+// and the "result" describes the environment, not the product. preflight.sh
+// writes evidence/.preflight/ok.json on a full pass and REMOVES it on
+// failure; this gate only checks artifact freshness, never probes the
+// network (a probe per tool call would tax every call).
+// opencode tool names are `<server>_<tool>` (same D5 mapping as JIRA_WRITE).
+const BROWSER_JIRA_TOOL = /^(playwright|atlassian)_/i
+
+const PREFLIGHT_MSG = "refusing browser/JIRA MCP calls before a preflight has passed (evidence/.preflight/ok.json missing or older than ${TTL}m). Run the blueprint's preflight.sh <KEY> first — it probes stage/JIRA reachability (incl. VPN hints + multiple-VPN detection) and secrets status. Override: QA_PREFLIGHT=0."
+
+async function preflightGateBlocks(directory: string, tool: string): Promise<boolean> {
+  if (!tool || !BROWSER_JIRA_TOOL.test(tool)) return false
+  if ((process.env.QA_PREFLIGHT ?? "1") === "0") return false
+  // nothing to preflight against when no project is onboarded (parity with
+  // the bash gate's `ls projects/*/PROJECT.md` existence check)
+  let hasProject = false
+  try {
+    for (const e of await readdir(join(directory, "projects"))) {
+      try {
+        await stat(join(directory, "projects", e, "PROJECT.md"))
+        hasProject = true
+        break
+      } catch { /* no PROJECT.md in this entry */ }
+    }
+  } catch { return false } // no projects dir at all → nothing to gate
+  if (!hasProject) return false
+  const ttlMin = Number(process.env.QA_PREFLIGHT_TTL_MIN ?? "60")
+  try {
+    const raw = await readFile(join(directory, "evidence", ".preflight", "ok.json"), "utf8")
+    const m = raw.match(/"checked_at":\s*(\d+)/)
+    if (m && (Date.now() / 1000 - Number(m[1])) / 60 < ttlMin) return false
+  } catch { /* missing/unreadable artifact → gate stays closed */ }
+  block(PREFLIGHT_MSG.replace("${TTL}", String(ttlMin)))
+}
+
+// --------------------------------------------------------------------------
 // 3. Evidence gate (port of stop-evidence-check.sh, redesigned per D3)
 // --------------------------------------------------------------------------
 
@@ -660,6 +700,9 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
 
       // Shadow gate first: a blocked write never reaches the evidence question.
       if (await shadowGateBlocks(directory, input?.tool ?? "", args)) block(SHADOW_MSG)
+
+      // Preflight gate: no browser/JIRA call on an unverified environment.
+      await preflightGateBlocks(directory, input?.tool ?? "")
 
       // Evidence gate: the verdict must not reach JIRA without evidence.
       if (input?.tool && JIRA_WRITE.test(input.tool)) {

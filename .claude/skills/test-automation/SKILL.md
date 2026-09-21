@@ -37,13 +37,14 @@ This skill is what a nightly-regression pipeline invokes via `claude -p` — see
 `docs/rules/core/cicd.md` for headless-run constraints (no interactive
 prompts, pre-authorized actions only).
 
-**Preflight before any long unattended run.** Verify what the run depends on is
-actually alive — one cheap probe each: the stage URL responds, the suite's
-smoke spec passes solo, any MCP server in the loop answers a trivial call. A
-dead harness costs a whole night of BLOCKED cases (field report 2026-09: 11
-cases lost to an MCP server down at the connection level). A failed preflight
-is one BLOCKED report with the reason — never a retry loop against a dead
-server; reconnecting it is a human step.
+**Preflight before any long unattended run.** Run the blueprint's
+`preflight.sh <KEY>` — it probes stage/JIRA reachability (incl. multiple-VPN
+detection) and secrets status, and the PreToolUse gate enforces a fresh pass
+for browser/JIRA MCP calls. Additionally verify the suite's smoke spec passes
+solo. A dead harness costs a whole night of BLOCKED cases (field report
+2026-09: 11 cases lost to an MCP server down at the connection level). A
+failed preflight is one BLOCKED report with the reason — never a retry loop
+against a dead server; reconnecting it is a human step.
 
 `failure-analysis` still runs headless — the analysis is the useful part and it
 costs one JQL — but the `NEEDS_REVIEW` verdict is unreachable there: a nightly writes

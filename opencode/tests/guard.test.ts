@@ -33,6 +33,13 @@ async function tempProject(projectMd?: string): Promise<string> {
   return dir
 }
 
+/** Fresh preflight pass artifact — opens the preflight gate for this dir. */
+async function stampPreflight(dir: string, ageMinutes = 0): Promise<void> {
+  await mkdir(join(dir, "evidence", ".preflight"), { recursive: true })
+  const checkedAt = Math.floor(Date.now() / 1000) - ageMinutes * 60
+  await writeFile(join(dir, "evidence", ".preflight", "ok.json"), JSON.stringify({ key: "SHOP", checked_at: checkedAt, ok: true }))
+}
+
 function jiraWrite(args: Record<string, unknown>): BeforeCall {
   return {
     input: { tool: "atlassian_editJiraIssue", sessionID: SESSION_ID, callID: "tool_fixture" },
@@ -149,12 +156,14 @@ describe("shadow gate (opencode)", () => {
 
   test("allows when PROJECT.md says 'Shadow mode: off'", async () => {
     const dir = await tempProject("# SHOP\nShadow mode: off\n")
+    await stampPreflight(dir) // shadow-off fixtures still need the preflight gate open
     const h = await hooksIn(dir)
     await expect(run(h, jiraWrite({ issueKey: "SHOP-1" }))).resolves.toBeUndefined()
   })
 
   test("allows when QA_AGENT_SHADOW=0", async () => {
     const dir = await tempProject("# SHOP\nShadow mode: on\n")
+    await stampPreflight(dir)
     const h = await hooksIn(dir)
     const prev = process.env.QA_AGENT_SHADOW
     process.env.QA_AGENT_SHADOW = "0"
@@ -164,5 +173,86 @@ describe("shadow gate (opencode)", () => {
       if (prev === undefined) delete process.env.QA_AGENT_SHADOW
       else process.env.QA_AGENT_SHADOW = prev
     }
+  })
+})
+
+// Preflight gate — mirrors the "preflight gate" section of guard-fixtures.sh.
+// No browser/JIRA MCP call until evidence/.preflight/ok.json exists and is
+// younger than the TTL; only when a project is onboarded at all.
+describe("preflight gate (opencode)", () => {
+  const playwrightCall: BeforeCall = {
+    input: { tool: "playwright_browser_navigate", sessionID: SESSION_ID, callID: "tool_pf" },
+    output: { args: { url: "https://stage.corp.example.com" } },
+  }
+  const atlassianRead: BeforeCall = {
+    input: { tool: "atlassian_getJiraIssue", sessionID: SESSION_ID, callID: "tool_pf" },
+    output: { args: { issueKey: "SHOP-1" } },
+  }
+
+  test("blocks playwright call, no artifact", async () => {
+    const dir = await tempProject("# SHOP\n")
+    const h = await hooksIn(dir)
+    await expect(run(h, playwrightCall)).rejects.toThrow(/preflight has passed/)
+  })
+
+  test("blocks atlassian READ, no artifact (reads need the gate too)", async () => {
+    const dir = await tempProject("# SHOP\n")
+    const h = await hooksIn(dir)
+    await expect(run(h, atlassianRead)).rejects.toThrow(/preflight has passed/)
+  })
+
+  test("allows with a fresh artifact", async () => {
+    const dir = await tempProject("# SHOP\n")
+    await stampPreflight(dir)
+    const h = await hooksIn(dir)
+    await expect(run(h, playwrightCall)).resolves.toBeUndefined()
+    await expect(run(h, atlassianRead)).resolves.toBeUndefined()
+  })
+
+  test("blocks a stale artifact (default TTL 60m)", async () => {
+    const dir = await tempProject("# SHOP\n")
+    await stampPreflight(dir, 120)
+    const h = await hooksIn(dir)
+    await expect(run(h, playwrightCall)).rejects.toThrow(/preflight has passed/)
+  })
+
+  test("allows a stale artifact under a wider TTL env", async () => {
+    const dir = await tempProject("# SHOP\n")
+    await stampPreflight(dir, 120)
+    const h = await hooksIn(dir)
+    const prev = process.env.QA_PREFLIGHT_TTL_MIN
+    process.env.QA_PREFLIGHT_TTL_MIN = "180"
+    try {
+      await expect(run(h, playwrightCall)).resolves.toBeUndefined()
+    } finally {
+      if (prev === undefined) delete process.env.QA_PREFLIGHT_TTL_MIN
+      else process.env.QA_PREFLIGHT_TTL_MIN = prev
+    }
+  })
+
+  test("QA_PREFLIGHT=0 escape hatch", async () => {
+    const dir = await tempProject("# SHOP\n")
+    const h = await hooksIn(dir)
+    const prev = process.env.QA_PREFLIGHT
+    process.env.QA_PREFLIGHT = "0"
+    try {
+      await expect(run(h, playwrightCall)).resolves.toBeUndefined()
+    } finally {
+      if (prev === undefined) delete process.env.QA_PREFLIGHT
+      else process.env.QA_PREFLIGHT = prev
+    }
+  })
+
+  test("no projects onboarded → nothing to gate", async () => {
+    const dir = await tempProject() // bare temp dir, no projects/
+    const h = await hooksIn(dir)
+    await expect(run(h, playwrightCall)).resolves.toBeUndefined()
+  })
+
+  test("block message names the override and the artifact", async () => {
+    const dir = await tempProject("# SHOP\n")
+    const h = await hooksIn(dir)
+    await expect(run(h, playwrightCall)).rejects.toThrow(/QA_PREFLIGHT=0/)
+    await expect(run(h, playwrightCall)).rejects.toThrow(/evidence\/\.preflight\/ok\.json/)
   })
 })

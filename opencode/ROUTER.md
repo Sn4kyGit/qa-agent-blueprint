@@ -94,6 +94,7 @@ just detail that would otherwise cost every session:
 
 | Read this | When |
 |---|---|
+| `docs/rules/testing/preflight.md` | before any browser/JIRA action of a test run — reachability, VPN posture, secrets (the gate enforces it) |
 | `docs/rules/testing/playwright-mcp.md` | before/while driving the browser via MCP |
 | `docs/rules/testing/playwright-cli.md` | writing or running specs via the CLI runner |
 | `docs/rules/testing/jira-confluence.md` | composing anything that gets written into JIRA/Confluence |

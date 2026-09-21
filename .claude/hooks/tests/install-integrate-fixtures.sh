@@ -151,6 +151,43 @@ BEFORE="$(cat "$SET")"
   || fail "plugin re-run changes nothing" "settings.json was rewritten on the second run"
 
 echo
+echo "== integrate upgrade: a NEW matcher for an already-installed hook is appended, not skipped =="
+# 0.6.6 added a second PreToolUse entry for pre-tool-guard.sh (the preflight
+# gate's MCP matcher). Command-keyed dedup would have skipped it on every
+# upgrade, silently leaving integrate consumers without the gate — the merge
+# now dedups by (matcher, command). Simulate a pre-0.6.6 install: the two old
+# PreToolUse entries, namespaced exactly as the installer writes them.
+UTARGET="$WORK/upgrade-host"
+mkdir -p "$UTARGET/.claude"
+cat > "$UTARGET/.claude/settings.json" <<'EOF'
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/qa-blueprint/pre-tool-guard.sh"}]
+      },
+      {
+        "matcher": "mcp__.*atlassian__.*(create|edit|add|transition|update|delete).*",
+        "hooks": [{"type": "command", "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/qa-blueprint/pre-tool-guard.sh"}]
+      }
+    ]
+  }
+}
+EOF
+"$INSTALL" --mode integrate --target "$UTARGET" --yes >/dev/null 2>&1
+USET="$UTARGET/.claude/settings.json"
+assert_grep "preflight matcher appended" "$USET" 'mcp__.*(playwright|atlassian)__.*'
+# … exactly once, and a re-run does not duplicate it
+COUNT="$(grep -cF 'mcp__.*(playwright|atlassian)__.*' "$USET")"
+[ "$COUNT" = "1" ] && pass "preflight matcher present exactly once" \
+  || fail "preflight matcher present exactly once" "grep count=$COUNT"
+"$INSTALL" --mode integrate --target "$UTARGET" --yes >/dev/null 2>&1
+COUNT="$(grep -cF 'mcp__.*(playwright|atlassian)__.*' "$USET")"
+[ "$COUNT" = "1" ] && pass "upgrade re-run does not duplicate the matcher" \
+  || fail "upgrade re-run does not duplicate the matcher" "grep count=$COUNT after re-run"
+
+echo
 echo "== MCP merge: playwright contract flags are adopted, preferences are not forced =="
 MTARGET="$WORK/mcp-host"
 mkdir -p "$MTARGET"

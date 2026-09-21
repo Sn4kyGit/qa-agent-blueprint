@@ -149,4 +149,29 @@ if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+
   fi
 fi
 
+# 4. Preflight gate: no browser/JIRA MCP call before a preflight has passed.
+# The classic false-positive factory is a forgotten VPN: stage and JIRA are
+# unreachable and the "result" describes the environment, not the product.
+# preflight.sh writes evidence/.preflight/ok.json on a full pass and REMOVES
+# it on failure; this gate only checks the artifact's freshness, never probes
+# the network itself (a probe per tool call would tax every call).
+# Gate closed when: no artifact, unreadable, or older than the TTL — and only
+# when at least one project is onboarded (nothing to preflight against
+# otherwise). Escape hatch: QA_PREFLIGHT=0 (and QA_PREFLIGHT_TTL_MIN for the TTL).
+if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?(playwright|atlassian)__'; then
+  if [ "${QA_PREFLIGHT:-1}" != "0" ] && ls "$CWD"/projects/*/PROJECT.md >/dev/null 2>&1; then
+    OK_JSON="$CWD/evidence/.preflight/ok.json"
+    TTL="${QA_PREFLIGHT_TTL_MIN:-60}"
+    CHECKED_AT=0
+    if [ -f "$OK_JSON" ]; then
+      CHECKED_AT="$(sed -n 's/.*"checked_at":[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$OK_JSON" | head -1)"
+      CHECKED_AT="${CHECKED_AT:-0}"
+    fi
+    AGE_MIN=$(( ($(date +%s) - CHECKED_AT) / 60 ))
+    if [ "$AGE_MIN" -ge "$TTL" ]; then
+      block "refusing browser/JIRA MCP calls before a preflight has passed (evidence/.preflight/ok.json missing or older than ${TTL}m). Run the blueprint's preflight.sh <KEY> first — it probes stage/JIRA reachability (incl. VPN hints + multiple-VPN detection) and secrets status. Override: QA_PREFLIGHT=0."
+    fi
+  fi
+fi
+
 exit 0

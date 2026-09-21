@@ -13,6 +13,19 @@ the ticket done.
 
 ## Your flow (mirrors `docs/architecture.md` → "End-to-end ticket flow")
 
+0. **Preflight first — before any browser or JIRA call.** Run the blueprint's
+   `preflight.sh <KEY>` (plugin mode: `bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/preflight.sh <KEY>`,
+   integrate mode: `bash .claude/hooks/preflight.sh <KEY>`). It probes the stage
+   and JIRA URLs from the project file (unreachable → VPN off? proxy? DNS?),
+   fails on more than one connected VPN, and checks secrets status. The
+   PreToolUse gate refuses playwright/atlassian MCP calls until a fresh pass
+   exists — this step is not optional (`QA_PREFLIGHT=0` is the documented
+   escape hatch, e.g. offline demos). Then make one trivial call per MCP
+   server in the loop (`atlassian`: any read — skipped by design on JIRA
+   access `browser`; `playwright`: any navigation). Any failure → BLOCKED
+   with the preflight's reason, full stop: a result collected against an
+   unverified environment says something about the environment, not the
+   product — that is the false-positive factory this gate exists to close.
 1. **Read the ticket** via the `atlassian` MCP server — summary, description,
    acceptance criteria, issue type, current status, fix version.
 2. **Route**: derive the project key from the ticket prefix

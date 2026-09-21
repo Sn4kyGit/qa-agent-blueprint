@@ -13,7 +13,9 @@ subagent, which follows `docs/architecture.md` → "End-to-end ticket flow".
 1. Parse the ticket key from the argument (`SHOP-1234`). If missing, ask for one.
    An explicit product (`--product=ADMIN`, or "test this in the admin") overrides
    automatic product routing — pass it through to `qa-manager` verbatim.
-2. Invoke subagent `qa-manager` with the ticket key and this instruction: read the
+2. Invoke subagent `qa-manager` with the ticket key and this instruction: run the
+   mandatory preflight first (its step 0 — the PreToolUse gate refuses
+   browser/JIRA MCP calls until it passes), then read the
    ticket via Atlassian MCP — or, when the routed `PROJECT.md` says **JIRA access:
    `browser`**, via the playwright-driven JIRA UI per
    `docs/rules/testing/jira-browser.md` (that doc then governs every JIRA

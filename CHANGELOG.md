@@ -8,6 +8,51 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.6.6] — 2026-09-18
+
+Preflight: the environment is verified before the first test action — as a
+probe AND as a hard gate. Closes the "VPN forgotten" false-positive factory:
+stage and JIRA unreachable, the agent walks into confusing errors, and the
+"result" describes the environment, not the product.
+
+### Added
+- **`.claude/hooks/preflight.sh <KEY>`** — the probe: every URL in the
+  project's Environments table and the declared JIRA base URL must answer
+  (any HTTP status counts; unreachable → `VPN off? proxy? DNS?` hint),
+  **more than one connected VPN service fails the run** (`scutil`; two VPNs
+  collide on routes/DNS — override `QA_PREFLIGHT_ALLOW_MULTI_VPN=1`), plus
+  declared-secrets presence via `resolve-secrets.sh --status`. A full pass
+  writes `evidence/.preflight/ok.json`; a failed run **removes** it, closing
+  the gate again.
+- **PreToolUse preflight gate** (bash guard + opencode plugin, message parity
+  covered by the drift test): `playwright`/`atlassian` MCP calls — reads too —
+  are refused until the artifact exists and is younger than
+  `QA_PREFLIGHT_TTL_MIN` (default 60m). Only fires once a project is
+  onboarded; escape hatch `QA_PREFLIGHT=0`. New PreToolUse matcher
+  `mcp__.*(playwright|atlassian)__.*` in `hooks/hooks.json` +
+  `.claude/settings.json`.
+- **Norm: qa-manager step 0** (both harness bodies): preflight first, then
+  one trivial call per MCP server in the loop; any failure is one BLOCKED
+  with the reason — never test against an unverified environment. Mirrored
+  into `test-ticket`, `retest-bug`, `exploratory-testing`; the nightly
+  preflight in `test-automation` now points at the shared script.
+- **Detail doc** `docs/rules/testing/preflight.md` + router rows (both
+  routers), fixtures `preflight-fixtures.sh` (mocked curl/scutil) + gate
+  sections in `guard-fixtures.sh` and `guard.test.ts`, eval case
+  `preflight-gate` (hard tier — the scenario's `.invalid` URLs make the probe
+  really fail in the eval sandbox).
+
+### Changed
+- Context budget 8120 → 8400 tokens, reserve target now ~500 (user decision);
+  justification recorded in `context-budget.sh`.
+
+### Fixed
+- **Installer: settings.json hook merge now dedups by (matcher, command).**
+  Command-keyed dedup would have skipped the new preflight matcher on every
+  integrate-mode *upgrade* install (the hook command already existed),
+  silently leaving those consumers without the gate. Covered by a new
+  upgrade fixture.
+
 ## [0.6.5] — 2026-09-18
 
 Review round 2 (five findings) plus the first full behavioral gate under a

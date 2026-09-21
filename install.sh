@@ -857,18 +857,22 @@ for kind in ("deny", "allow"):
             emit("DRY-RUN" if dry else "MERGED", "settings.json",
                  f"{'would add' if dry else 'added'} permissions.{kind}: '{entry}'")
 
-# hooks: append per event, dedup by command string
+# hooks: append per event, dedup by (matcher, command) pair — command alone is
+# not enough: 0.6.6 added a SECOND PreToolUse entry for pre-tool-guard.sh (the
+# preflight gate's MCP matcher), and command-keyed dedup would have skipped it
+# on every upgrade install, silently leaving integrate-mode consumers without
+# the gate.
 hooks = tgt.setdefault("hooks", {})
 for ev, entries in bp.get("hooks", {}).items():
     lst = hooks.setdefault(ev, [])
-    existing_cmds = {h.get("command") for e in lst for h in e.get("hooks", [])}
+    existing_pairs = {(e.get("matcher"), h.get("command")) for e in lst for h in e.get("hooks", [])}
     for e in entries:
         matcher = e.get("matcher")
         new_hooks = [dict(h, command=h.get("command", "").replace("/.claude/hooks/", f"/{ns}/"))
                      for h in e.get("hooks", [])]
-        todo = [h for h in new_hooks if h["command"] not in existing_cmds]
+        todo = [h for h in new_hooks if (matcher, h["command"]) not in existing_pairs]
         for h in new_hooks:
-            if h["command"] in existing_cmds:
+            if (matcher, h["command"]) in existing_pairs:
                 emit("SKIPPED", "settings.json", f"hooks.{ev}: '{h['command']}' already present")
         if todo:
             entry = {"hooks": todo}
@@ -880,7 +884,7 @@ for ev, entries in bp.get("hooks", {}).items():
             for h in todo:
                 emit("DRY-RUN" if dry else "MERGED", "settings.json",
                      f"{'would append' if dry else 'appended'} hooks.{ev}: '{h['command']}'")
-            existing_cmds.update(h["command"] for h in todo)
+            existing_pairs.update((matcher, h["command"]) for h in todo)
 if changed and not dry:
     if backup:
         shutil.copy2(tp, backup)

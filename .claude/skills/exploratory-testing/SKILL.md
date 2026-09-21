@@ -11,6 +11,8 @@ exploration, and a debrief — not "click around and see what happens."
 
 ## Steps
 
+0. Run the preflight first (same gate as `test-ticket`): the blueprint's
+   `preflight.sh <KEY>` must pass before any browser/JIRA call.
 1. **Write the charter** before starting, in the SBTM pattern:
 
    ```
