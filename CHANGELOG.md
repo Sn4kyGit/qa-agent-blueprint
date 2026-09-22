@@ -8,6 +8,39 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.9.1] — 2026-09-22
+
+Fix: **no more dual evidence scaffolds.** Field report: a session started in
+a subfolder of the QA home (`KPS-Development/test-automation/`) got a second,
+redundant copy of `projects/`, `memory/`, `evidence/` — because every hook
+took the session's cwd as the QA home. One customer = one workspace = one
+home; the product repos live underneath it.
+
+### Fixed
+- **QA home walk-up** in all four bash hooks (`session-start`,
+  `pre-tool-guard`, `preflight`, `post-jira-audit`, `stop-evidence-check`)
+  and the opencode plugin (`resolveQaHome`): the home is the nearest ancestor
+  carrying the new `.qa-home` marker (written at bootstrap) or the legacy
+  trio (`projects/` + `memory/` + `evidence/`), stopping at `$HOME`. Data
+  lands at the root, never duplicated; a session outside any home behaves as
+  before (fresh scaffold at cwd). Unset `$HOME` no longer breaks preflight
+  under `env -i`.
+- **Harness-scoped files stay with the session cwd** on purpose:
+  `opencode.json`/`.mcp.json`, `.env.playwright-secrets`,
+  `.playwright-mcp.config.json` — the harness reads them from where it
+  started.
+- Session start says when the home was resolved upward: `QA home: <path>
+  (resolved up from cwd …) — all paths are relative to the QA home`, so the
+  model writes evidence/learnings to the right place.
+- Tests: 11 session-start fixtures + 6 bun tests for the walk-up matrix
+  (marker, legacy trio, $HOME boundary, subfolder plugin run, orientation
+  line); all pre-existing suites unchanged green.
+
+### Docs
+- `docs/architecture.md` gained "The QA home — one per customer workspace";
+  README § 3 and quickstart-opencode describe the workspace-root layout for
+  multi-repo customers; AGENTS.md runbook documents the resolution.
+
 ## [0.9.0] — 2026-09-22
 
 MCP config is project-scoped — enforced, not just advised. Field report: a

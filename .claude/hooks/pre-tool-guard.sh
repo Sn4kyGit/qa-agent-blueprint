@@ -24,6 +24,19 @@ TOOL_NAME="$(get_json 'print(d.get("tool_name") or "")')"
 COMMAND="$(get_json 'print((d.get("tool_input") or {}).get("command") or "")')"
 FILE_PATH="$(get_json 'print((d.get("tool_input") or {}).get("file_path") or "")')"
 CWD="$(get_json 'print(d.get("cwd") or "")')"; CWD="${CWD:-$PWD}"
+SESSION_CWD="$CWD"  # MCP config is harness-scoped (the session's cwd), NOT QA-home data — the foreign-MCP gate below reads .mcp.json from here
+
+# QA home discovery (0.9.1): the session may run in a subfolder of the QA
+# home — the shadow gate's PROJECT.md and the preflight artifact live at the
+# root. Walk up to the nearest .qa-home marker or the legacy trio.
+d="$CWD"
+while : ; do
+  if [ -e "$d/.qa-home" ] || { [ -d "$d/projects" ] && [ -d "$d/memory" ] && [ -d "$d/evidence" ]; }; then
+    CWD="$d"; break
+  fi
+  if { [ -n "${HOME:-}" ] && [ "$d" = "$HOME" ]; } || [ "$d" = "/" ]; then break; fi
+  d="$(dirname "$d")"
+done
 
 block() {
   echo "BLOCKED by pre-tool-guard: $1" >&2
@@ -168,7 +181,7 @@ if [ "${QA_ALLOW_GLOBAL_MCP:-0}" != "1" ]; then
       case "$SERVER" in
         playwright|atlassian|plugin_qa-agent-blueprint_*) : ;;  # blueprint servers always allowed
         *)
-          if ! mcp_server_declared "$CWD/.mcp.json" "$SERVER" && mcp_server_declared "$HOME/.claude.json" "$SERVER"; then
+          if ! mcp_server_declared "$SESSION_CWD/.mcp.json" "$SERVER" && mcp_server_declared "$HOME/.claude.json" "$SERVER"; then
             block "refusing a call to MCP server '${SERVER}' — it is configured globally but not declared in this project's config (.mcp.json / opencode.json). Global MCP config may point at another project's credentials or data — and another project's data is never used here, by design. Declare the server in this project's own config to use it deliberately. Escape hatch: QA_ALLOW_GLOBAL_MCP=1."
           fi ;;
       esac ;;

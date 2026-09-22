@@ -30,6 +30,18 @@ fi
 CWD="$(get_field cwd)"; CWD="${CWD:-$PWD}"
 TRANSCRIPT="$(get_field transcript_path)"
 
+# QA home discovery (0.9.1): evidence lives at the QA home root, even when the
+# session ran in a subfolder. Walk up to the nearest .qa-home marker or the
+# legacy trio (projects/ + memory/ + evidence/), stop at $HOME.
+d="$CWD"
+while : ; do
+  if [ -e "$d/.qa-home" ] || { [ -d "$d/projects" ] && [ -d "$d/memory" ] && [ -d "$d/evidence" ]; }; then
+    CWD="$d"; break
+  fi
+  if { [ -n "${HOME:-}" ] && [ "$d" = "$HOME" ]; } || [ "$d" = "/" ]; then break; fi
+  d="$(dirname "$d")"
+done
+
 [ -d "$CWD/evidence" ] || exit 0   # nothing to enforce if evidence/ isn't even scaffolded
 
 # Signal: did this session actually INVOKE a test tool (not just mention one in

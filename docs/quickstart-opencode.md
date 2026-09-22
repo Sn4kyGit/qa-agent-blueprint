@@ -85,6 +85,26 @@ Learnings captured in one workspace do not appear in the other. For most
 setups one QA home (the project workspace you test most, or a dedicated
 folder) is the simpler life.
 
+## One customer, several repos? One home at the workspace root
+
+The recommended layout when a customer spans several repositories:
+
+```
+KPS-Development/            ← the QA home (projects/, memory/, evidence/, .qa-home)
+├── shop-frontend/          ← a product repo
+├── shop-api/               ← another product repo
+└── test-automation/        ← the test suite repo
+```
+
+Sessions started **inside a subfolder** resolve the home automatically
+(walk-up to the `.qa-home` marker or the `projects/+memory/+evidence/` trio)
+— evidence, learnings and project files always land at the root, never
+duplicated into the repo folder. Two harness-scoped exceptions stay with the
+session's cwd on purpose: the MCP config (`opencode.json`) and the two seed
+files (`.env.playwright-secrets`, `.playwright-mcp.config.json`) — the harness
+reads them from where it was started. Easiest life: start opencode at the
+workspace root.
+
 ## Steps that need you
 
 1. **Provider + model** — connect a provider (`/connect`, e.g. OpenRouter or

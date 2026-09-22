@@ -15,7 +15,7 @@ import { existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawnSync } from "node:child_process"
-import { orientation, qaBlueprint } from "../plugins/qa-blueprint.ts"
+import { orientation, qaBlueprint, resolveQaHome } from "../plugins/qa-blueprint.ts"
 import { fakeCtx } from "./fixtures/payloads.ts"
 
 let dir: string
@@ -183,5 +183,74 @@ describe("orientation (opencode)", () => {
     // a different session gets its own copy
     await hooks.event({ event: { type: "session.created", properties: { info: { id: "s2" } } } } as never)
     expect(prompts.length).toBe(2)
+  })
+})
+
+// QA home resolution (0.9.1 "dual evidence scaffold" field report): a session
+// starting in a SUBFOLDER of the QA home must not scaffold a second copy of
+// projects//memory//evidence/ there — data lives at the workspace root.
+describe("QA home resolution (walk-up)", () => {
+  async function mkHome(withMarker: boolean): Promise<{ home: string; sub: string }> {
+    const home = join(dir, "KPS-Development")
+    const sub = join(home, "test-automation")
+    await mkdir(join(home, "projects"), { recursive: true })
+    await mkdir(join(home, "memory"), { recursive: true })
+    await mkdir(join(home, "evidence"), { recursive: true })
+    if (withMarker) await writeFile(join(home, ".qa-home"), "marker\n")
+    await mkdir(sub, { recursive: true })
+    return { home, sub }
+  }
+
+  test("subfolder of a marker-carrying home resolves to the home", async () => {
+    const { home, sub } = await mkHome(true)
+    expect(await resolveQaHome(sub)).toBe(home)
+  })
+
+  test("legacy trio without a marker resolves too", async () => {
+    const { home, sub } = await mkHome(false)
+    expect(await resolveQaHome(sub)).toBe(home)
+  })
+
+  test("nothing found → the directory itself (first-install behavior)", async () => {
+    const bare = join(dir, "fresh")
+    await mkdir(bare, { recursive: true })
+    expect(await resolveQaHome(bare)).toBe(bare)
+  })
+
+  test("the walk-up never crosses $HOME", async () => {
+    const boundary = join(dir, "boundary")
+    const deep = join(boundary, "a", "b")
+    await mkdir(deep, { recursive: true })
+    const savedHome = process.env.HOME
+    process.env.HOME = boundary
+    try {
+      expect(await resolveQaHome(deep)).toBe(deep)
+    } finally {
+      if (savedHome === undefined) delete process.env.HOME
+      else process.env.HOME = savedHome
+    }
+  })
+
+  test("plugin in a subfolder: data at the home, harness seeds at the session dir", async () => {
+    const { home, sub } = await mkHome(false) // legacy trio, no marker yet
+    const { ctx } = fakeCtx(sub)
+    await qaBlueprint(ctx as never)
+    // no dual scaffold in the subfolder
+    expect(existsSync(join(sub, "projects"))).toBe(false)
+    expect(existsSync(join(sub, "memory"))).toBe(false)
+    expect(existsSync(join(sub, "evidence"))).toBe(false)
+    // the resolved home got stamped for the next walk-up
+    expect(existsSync(join(home, ".qa-home"))).toBe(true)
+    // harness-scoped seeds stay with the session's cwd
+    expect(existsSync(join(sub, ".env.playwright-secrets"))).toBe(true)
+    expect(existsSync(join(sub, ".playwright-mcp.config.json"))).toBe(true)
+    expect(existsSync(join(home, ".env.playwright-secrets"))).toBe(false)
+  })
+
+  test("orientation names the resolved home when cwd is a subfolder", async () => {
+    const { home, sub } = await mkHome(true)
+    const text = await orientation(home, sub)
+    expect(text).toContain(`QA home: ${home}`)
+    expect(text).toContain("relative to the QA home, not to cwd")
   })
 })

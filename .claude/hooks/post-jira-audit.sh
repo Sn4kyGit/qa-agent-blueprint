@@ -20,6 +20,18 @@ $1
 }
 
 CWD="$(get_json 'print(d.get("cwd") or "")')"; CWD="${CWD:-$PWD}"
+
+# QA home discovery (0.9.1): the audit log lives at the QA home root, even
+# when the session runs in a subfolder (product repo). Walk up to the nearest
+# .qa-home marker or the legacy trio (projects/ + memory/ + evidence/).
+d="$CWD"
+while : ; do
+  if [ -e "$d/.qa-home" ] || { [ -d "$d/projects" ] && [ -d "$d/memory" ] && [ -d "$d/evidence" ]; }; then
+    CWD="$d"; break
+  fi
+  if { [ -n "${HOME:-}" ] && [ "$d" = "$HOME" ]; } || [ "$d" = "/" ]; then break; fi
+  d="$(dirname "$d")"
+done
 TOOL_NAME="$(get_json 'print(d.get("tool_name") or "")')"
 ISSUE_KEY="$(get_json '
 ti = d.get("tool_input") or {}

@@ -464,6 +464,26 @@ const BROWSER_CONFIG = `{
 }
 `
 
+// QA home discovery (0.9.1 — "dual evidence scaffold" field report): sessions
+// may start in a SUBFOLDER of the QA home (a product repo inside the customer
+// workspace). Data (projects/, memory/, evidence/) belongs at the workspace
+// root, never duplicated into the subfolder. Walk up from the session cwd to
+// the nearest directory carrying the .qa-home marker or the legacy trio;
+// stop at $HOME or the filesystem root; nothing found → the cwd itself
+// (unchanged first-install behavior).
+export async function resolveQaHome(directory: string): Promise<string> {
+  const home = process.env.HOME ?? ""
+  let d = directory
+  for (;;) {
+    const present = async (name: string, dir: boolean) =>
+      stat(join(d, name)).then((s) => (dir ? s.isDirectory() : true), () => false)
+    if (await present(".qa-home", false)) return d
+    if (await present("projects", true) && await present("memory", true) && await present("evidence", true)) return d
+    if (d === home || d === dirname(d)) return directory
+    d = dirname(d)
+  }
+}
+
 async function bootstrap(directory: string) {
   // memory/ and evidence/ are copied from the blueprint root when missing —
   // never overwritten; they become the consumer's own data.
@@ -477,6 +497,19 @@ async function bootstrap(directory: string) {
   // projects/ is created EMPTY on purpose: _template/EXAMPLE stay in the
   // blueprint and are read from there by onboard-project.
   await mkdir(join(directory, "projects"), { recursive: true }).catch(() => {})
+
+  // The QA-home marker makes future walk-up resolution unambiguous (the
+  // legacy trio works too, but only once all three dirs exist).
+  const marker = join(directory, ".qa-home")
+  if (!existsSync(marker)) {
+    await writeFile(marker, "qa-agent-blueprint home — resolved by walk-up from any subfolder\n").catch(() => {})
+  }
+}
+
+// Harness-scoped seeds (0.9.1 split): the MCP server is launched from the
+// SESSION's cwd, so both hard-fail-on-ENOENT files belong there — not in the
+// QA home when the two differ.
+async function seedHarnessFiles(directory: string) {
 
   // --secrets is a hard fail on ENOENT → seed the comment-only placeholder.
   const secretsFile = join(directory, ".env.playwright-secrets")
@@ -649,21 +682,26 @@ async function browserMode(directory: string): Promise<string> {
   return parts.length ? `${parts.join(", ")} (your .playwright-mcp.config.json)` : ""
 }
 
-export async function orientation(directory: string): Promise<string> {
-  const projects = await listProjects(directory)
+// home = the QA home (data: projects/, memory/, evidence/); sessionDir = the
+// harness's cwd (MCP config, browser preferences). Same dir in the common case.
+export async function orientation(home: string, sessionDir: string = home): Promise<string> {
+  const projects = await listProjects(home)
   const lines = [
     "QA Agent Blueprint — session start",
+    ...(home !== sessionDir
+      ? [`- QA home: ${home} (resolved up from cwd ${sessionDir}) — all paths (evidence/, memory/, projects/) are relative to the QA home, not to cwd`]
+      : []),
     "- Onboarded projects:",
     ...(projects.length ? projects.map((p) => `  - ${p}`) : ["  (none yet — run /onboard-project)"]),
   ]
-  const bm = await browserMode(directory)
+  const bm = await browserMode(sessionDir)
   if (bm) lines.push(`- Browser: ${bm}`)
   lines.push(
     "- Read memory/INDEX.md before anything else; then only the active project's",
     "  PROJECT.md + learnings.md. No full-repo scans.",
     "- Lost? The qa-help skill lists every command (/qa-help) — plain language works too.",
   )
-  const scan = scanMcpServers(await readOpencodeMcp(directory))
+  const scan = scanMcpServers(await readOpencodeMcp(sessionDir))
   // Contract violations are findings in any state. Order: security, then evidence.
   if (scan.pwUnmasked) {
     lines.push("- WARNING: the playwright MCP config has no --secrets flag — passwords would appear unmasked in tool responses. Add `--secrets .env.playwright-secrets` (and fill that file) or remove the entry and use the blueprint-provided server.")
@@ -684,11 +722,11 @@ export async function orientation(directory: string): Promise<string> {
   if (scan.dcHost && !process.env.JIRA_PERSONAL_TOKEN) {
     lines.push(`- JIRA Data Center (${scan.dcHost}) configured — the PAT is resolved from the macOS keychain (service JIRA_PAT_${scan.dcHost}) into shells at runtime; it lives in no file and no chat.`)
   }
-  const foreignMcp = await foreignGlobalMcpNames(directory)
+  const foreignMcp = await foreignGlobalMcpNames(sessionDir)
   if (foreignMcp.length) {
     lines.push(`- Global MCP servers visible but NOT declared in this project — the guard blocks them until declared here (they may belong to another project): ${foreignMcp.join(", ")}`)
   }
-  const n = await ungroomedLearnings(directory)
+  const n = await ungroomedLearnings(home)
   if (n > 1) {
     lines.push(`- ${n} ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).`)
   }
@@ -744,13 +782,17 @@ interface PluginCtx {
 
 export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   const directory = ctx.directory
-  await bootstrap(directory)
+  // 0.9.1: data paths (projects/, memory/, evidence/) resolve to the QA home
+  // (walk-up), harness-scoped files stay with the session's directory.
+  const home = await resolveQaHome(directory)
+  await bootstrap(home)
+  await seedHarnessFiles(directory)
 
   // Orientation is directory-level, so compute it once and inject it into each
   // new session as context (noReply — documented plugin pattern; it must not
   // trigger a response). Falls back to the app log when prompting fails.
   let orientationText: Promise<string> | undefined
-  const getOrientation = () => (orientationText ??= orientation(directory).catch(() => ""))
+  const getOrientation = () => (orientationText ??= orientation(home, directory).catch(() => ""))
   const oriented = new Set<string>()
 
   // Evidence-gate session state (D3): which sessions showed test activity (and
@@ -763,7 +805,7 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   async function gateMessageFor(sessionID: string): Promise<string | null> {
     const keys = testActivity.get(sessionID)
     if (!keys) return null
-    const gate = await evaluateGate(directory, keys)
+    const gate = await evaluateGate(home, keys)
     if (gate.status === "evidence_missing") {
       return gate.missingKeys.length > 0 ? evidenceMissingMsg(gate.missingKeys) : EVIDENCE_MISSING_MSG
     }
@@ -784,10 +826,10 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
       if (foreign) block(FOREIGN_MCP_MSG.replace("${SERVER}", foreign))
 
       // Shadow gate first: a blocked write never reaches the evidence question.
-      if (await shadowGateBlocks(directory, input?.tool ?? "", args)) block(SHADOW_MSG)
+      if (await shadowGateBlocks(home, input?.tool ?? "", args)) block(SHADOW_MSG)
 
       // Preflight gate: no browser/JIRA call on an unverified environment.
-      await preflightGateBlocks(directory, input?.tool ?? "")
+      await preflightGateBlocks(home, input?.tool ?? "")
 
       // Evidence gate: the verdict must not reach JIRA without evidence.
       if (input?.tool && JIRA_WRITE.test(input.tool)) {
@@ -810,7 +852,7 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
       if (tool && JIRA_WRITE.test(tool)) {
         try {
           const failed = Boolean(output?.metadata?.error)
-          await auditJiraWrite(directory, tool, input?.args, !failed)
+          await auditJiraWrite(home, tool, input?.args, !failed)
         } catch { /* logging must never break a session */ }
       }
     },

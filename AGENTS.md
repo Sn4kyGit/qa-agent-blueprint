@@ -220,7 +220,6 @@ claude plugin marketplace remove qa-agent-blueprint-marketplace
 (Clone path: `install.sh --mode plugin --uninstall --target <consumer-repo>`.)
 
 ## opencode: wrong target folder? Move, don't re-onboard
-
 opencode commands are per-folder — they exist only where the installer
 linked them. If a user picked the fresh `~/qa-workspace` but actually wants
 the commands inside their project workspace (a classic: option 1 instead of
@@ -238,6 +237,17 @@ Never overwrites existing names in the new folder (reported SKIPPED, left
 for a human merge). Installing into several folders is allowed — but each is
 then a **separate QA home** with its own learnings; say that trade-off out
 loud before doing it.
+
+## QA home resolution (walk-up, since 0.9.1)
+
+Hooks and the opencode plugin resolve the QA home by walking **up** from the
+session cwd to the nearest `.qa-home` marker (written at bootstrap) or the
+legacy trio (`projects/` + `memory/` + `evidence/`), stopping at `$HOME`.
+Data always lands at that root — never duplicated into a subfolder (field
+report: a session in `KPS-Development/test-automation/` scaffolded a second
+copy of everything). Harness-scoped files (`opencode.json`/`.mcp.json`,
+`.env.playwright-secrets`, `.playwright-mcp.config.json`) stay with the
+session cwd — the harness reads them from where it started.
 
 ## If you are developing on this repo
 

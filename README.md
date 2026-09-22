@@ -182,7 +182,11 @@ overwritten):
 **Several workspaces:** run the installer once per folder — each gets the
 same commands via symlinks. Note that each folder is then its own QA home
 (own `projects/`, `memory/`, `evidence/`); learnings do not flow between
-them. One shared home for everything is usually what you want.
+them. One shared home for everything is usually what you want. **One customer
+with several repos:** make the customer workspace the home and keep the repos
+as subfolders — a session started inside a subfolder finds the home by
+walking up (`.qa-home` marker), so data always lands at the root, never
+duplicated into the repo folder.
 
 Deep dive incl. edge cases: [docs/quickstart-opencode.md](docs/quickstart-opencode.md).
 

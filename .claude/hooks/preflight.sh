@@ -36,6 +36,20 @@ KEY="${1:-}"
 CWD="${2:-$PWD}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# QA home discovery (0.9.1): the session may run in a subfolder of the QA home
+# (product repo inside the customer workspace) — project files and the pass
+# artifact live at the root. Walk up to the nearest .qa-home marker or the
+# legacy trio (projects/ + memory/ + evidence/), stop at $HOME; nothing found
+# → CWD itself (unchanged first-install behavior).
+d="$CWD"
+while : ; do
+  if [ -e "$d/.qa-home" ] || { [ -d "$d/projects" ] && [ -d "$d/memory" ] && [ -d "$d/evidence" ]; }; then
+    CWD="$d"; break
+  fi
+  if { [ -n "${HOME:-}" ] && [ "$d" = "$HOME" ]; } || [ "$d" = "/" ]; then break; fi
+  d="$(dirname "$d")"
+done
+
 if [ -z "$KEY" ]; then
   echo "usage: preflight.sh <KEY> [CWD]" >&2
   exit 1

@@ -32,6 +32,20 @@ Layer 5 – Evidence (never in context, only referenced)
 
 Tooling underneath: Playwright MCP + Playwright CLI, Atlassian MCP, hooks.
 
+## The QA home — one per customer workspace
+
+All data layers (3–5) live in ONE folder per customer: the **QA home**, holding
+`projects/`, `memory/`, `evidence/`. A customer with several repos keeps them
+as subfolders of that home (e.g. `KPS-Development/<repo>/`). Sessions may
+start in any subfolder: hooks and the opencode plugin resolve the home by
+**walking up** from the session's cwd to the nearest directory carrying the
+`.qa-home` marker (written at bootstrap) or the legacy trio (all three data
+dirs), stopping at `$HOME` — so data never gets duplicated into a subfolder
+(the 0.9.1 "dual scaffold" bug did exactly that). Harness-scoped files are the
+exception: `opencode.json` / `.mcp.json`, `.env.playwright-secrets` and
+`.playwright-mcp.config.json` are read by the harness from where it was
+started and therefore stay with the session's cwd.
+
 ## Why this layering is token-efficient
 
 Claude Code provides four progressive-disclosure mechanisms, and the blueprint uses

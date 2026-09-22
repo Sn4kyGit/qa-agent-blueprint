@@ -392,6 +392,45 @@ except Exception:
 check_contains "missing security CLI is a note, not a crash" "$DC4CTX" "security CLI is unavailable"
 
 echo
+echo "== QA home walk-up: no dual scaffold in subfolders (0.9.1 field report) =="
+# A session starting in a SUBFOLDER of the QA home (a product repo inside the
+# customer workspace) must resolve the home upwards — data (projects/, memory/,
+# evidence/) lives at the root, harness-scoped seeds stay with the session cwd.
+plug_ctx_for() {
+  printf '{"cwd":"%s"}' "$1" | CLAUDE_PLUGIN_ROOT="$PLUGIN" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+'
+}
+ok_file()    { [ -f "$2" ] && printf 'ok    %s\n' "$1" || { printf 'FAIL  %s\n      missing: %s\n' "$1" "$2"; fails=$((fails + 1)); }; }
+ok_no_file() { [ ! -e "$2" ] && printf 'ok    %s\n' "$1" || { printf 'FAIL  %s\n      should not exist: %s\n' "$1" "$2"; fails=$((fails + 1)); }; }
+
+QH="$WORK/qh-home"; QSUB="$QH/test-automation"
+mkdir -p "$QH/projects/TA" "$QH/memory" "$QH/evidence" "$QSUB"
+printf '# TA\n' > "$QH/projects/TA/PROJECT.md"
+QCTX="$(plug_ctx_for "$QSUB")"
+check_contains "subfolder session resolves the QA home" "$QCTX" "QA home: $QH"
+check_contains "home line says paths are home-relative" "$QCTX" "relative to the QA home, not to cwd"
+check_contains "projects listed from the home"          "$QCTX" "- TA"
+ok_no_file "no dual projects/ scaffolded in subfolder" "$QSUB/projects"
+ok_no_file "no dual memory/ scaffolded in subfolder"   "$QSUB/memory"
+ok_no_file "no dual evidence/ scaffolded in subfolder" "$QSUB/evidence"
+ok_file    "legacy-trio home got the .qa-home marker"  "$QH/.qa-home"
+ok_file    "secrets seed stays at the session cwd"     "$QSUB/.env.playwright-secrets"
+ok_file    "browser config seed stays at session cwd"  "$QSUB/.playwright-mcp.config.json"
+ok_no_file "no harness seed duplicated into the home"  "$QH/.env.playwright-secrets"
+
+# The marker alone resolves as well (no trio needed).
+QH2="$WORK/qh-marker"; QSUB2="$QH2/repo/sub"
+mkdir -p "$QH2/projects" "$QSUB2"
+printf 'marker\n' > "$QH2/.qa-home"
+QCTX2="$(plug_ctx_for "$QSUB2")"
+check_contains "marker-only home resolves from two levels down" "$QCTX2" "QA home: $QH2"
+
+echo
 if [ "$fails" -eq 0 ]; then
   echo "all fixtures passed"
 else

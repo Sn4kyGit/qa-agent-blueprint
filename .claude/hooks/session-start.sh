@@ -28,6 +28,39 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
 # (plugin root, integrate-mode namespace copy, this repo).
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# QA home discovery (field report 0.9.1 — "dual evidence scaffold"): sessions
+# may start in a SUBFOLDER of the QA home (a product repo inside the customer
+# workspace). Data belongs at the workspace root, never duplicated into the
+# subfolder — so walk up from cwd to the nearest directory carrying the
+# .qa-home marker or the legacy trio (projects/ + memory/ + evidence/),
+# stopping at $HOME. Nothing found → cwd itself is the (fresh) home, as
+# documented for a first install.
+qa_home_of() {
+  local d="$1"
+  while : ; do
+    if [ -e "$d/.qa-home" ] || { [ -d "$d/projects" ] && [ -d "$d/memory" ] && [ -d "$d/evidence" ]; }; then
+      printf '%s' "$d"; return 0
+    fi
+    if { [ -n "${HOME:-}" ] && [ "$d" = "$HOME" ]; } || [ "$d" = "/" ]; then break; fi
+    d="$(dirname "$d")"
+  done
+  printf '%s' "$1"
+}
+QA_HOME_FROM=""
+if [ "$CWD" != "/" ]; then
+  resolved="$(qa_home_of "$CWD")"
+  if [ "$resolved" != "$CWD" ]; then QA_HOME_FROM="$CWD"; CWD="$resolved"; fi
+fi
+# Resolved via the legacy trio but no marker yet → stamp it for the next
+# walk-up (harmless, one tiny file at the root).
+if [ -n "$QA_HOME_FROM" ] && [ ! -e "$CWD/.qa-home" ]; then
+  printf 'qa-agent-blueprint home — resolved by walk-up from any subfolder\n' > "$CWD/.qa-home" 2>/dev/null || true
+fi
+# Harness-scoped files (MCP config, the two seed files) belong to the SESSION's
+# cwd — the harness reads them from where it was started, not from the QA home.
+# Data (projects/, memory/, evidence/) uses $CWD, which is the home by now.
+SESSION_CWD="${QA_HOME_FROM:-$CWD}"
+
 is_plugin_bootstrap() {
   [ -n "$PLUGIN_ROOT" ] || return 1
   [ -d "$CWD/.claude/rules/qa-blueprint" ] && return 1
@@ -87,7 +120,7 @@ list_projects() {
 # it created the file (transparency, and a restart hint: the server reads the
 # file at launch).
 seed_browser_config() {
-  local f="$CWD/.playwright-mcp.config.json"
+  local f="$SESSION_CWD/.playwright-mcp.config.json"
   [ -f "$f" ] && return 0
   cat > "$f" <<'BROWSER_CONFIG' 2>/dev/null || return 0
 {
@@ -106,7 +139,7 @@ BROWSER_CONFIG
 # Silent when the config is unreadable — the server failing at launch is the
 # loud failure; a hook should not editorialize on a file it cannot parse.
 browser_mode() {
-  local f="$CWD/.playwright-mcp.config.json"
+  local f="$SESSION_CWD/.playwright-mcp.config.json"
   [ -f "$f" ] || return 0
   command -v python3 >/dev/null 2>&1 || return 0
   python3 - "$f" <<'PY' 2>/dev/null
@@ -194,6 +227,10 @@ bootstrap_dirs() {
   # avoided while doing exactly that.)
   [ -d "$CWD/projects" ] || mkdir -p "$CWD/projects" 2>/dev/null || true
 
+  # The QA-home marker makes future walk-up resolution unambiguous (the legacy
+  # trio works too, but only once all three dirs exist).
+  [ -e "$CWD/.qa-home" ] || printf 'qa-agent-blueprint home — resolved by walk-up from any subfolder\n' > "$CWD/.qa-home" 2>/dev/null || true
+
   # Playwright MCP is launched with `--secrets .env.playwright-secrets` and that
   # flag is a hard fail: a missing file makes the server exit at startup
   # (ENOENT), so plugin users would get a dead browser server with no obvious
@@ -201,8 +238,8 @@ bootstrap_dirs() {
   # self-setup); plugin
   # mode copies nothing, so seed the same placeholder here. Values stay the
   # user's job — this file never contains anything but comments when written.
-  if [ ! -f "$CWD/.env.playwright-secrets" ]; then
-    cat > "$CWD/.env.playwright-secrets" <<'SECRETS_TEMPLATE' 2>/dev/null || true
+  if [ ! -f "$SESSION_CWD/.env.playwright-secrets" ]; then
+    cat > "$SESSION_CWD/.env.playwright-secrets" <<'SECRETS_TEMPLATE' 2>/dev/null || true
 # Secrets consumed by Playwright MCP via --secrets (values are masked in tool
 # responses, so the agent never sees them). Gitignored — never commit.
 # Reference per-project test users by the keys used in projects/<KEY>/PROJECT.md.
@@ -212,10 +249,10 @@ SECRETS_TEMPLATE
     # Plugin mode copies no .gitignore, so the consumer repo may not ignore this
     # file yet. Only append if git says it isn't already ignored.
     if command -v git >/dev/null 2>&1 \
-       && git -C "$CWD" rev-parse --git-dir >/dev/null 2>&1 \
-       && ! git -C "$CWD" check-ignore -q .env.playwright-secrets 2>/dev/null; then
+       && git -C "$SESSION_CWD" rev-parse --git-dir >/dev/null 2>&1 \
+       && ! git -C "$SESSION_CWD" check-ignore -q .env.playwright-secrets 2>/dev/null; then
       printf '\n# QA Agent Blueprint — Playwright MCP secrets, never commit\n.env.playwright-secrets\n' \
-        >> "$CWD/.gitignore" 2>/dev/null || true
+        >> "$SESSION_CWD/.gitignore" 2>/dev/null || true
     fi
   fi
 }
@@ -242,7 +279,10 @@ inbox_status() {
 # preferences, not contract (see docs/rules/testing/playwright-mcp.md).
 mcp_scan() {
   command -v python3 >/dev/null 2>&1 || return 1
-  python3 - "$CWD" "$HOME" <<'PY'
+  # MCP config is harness-scoped: the harness loaded servers from the
+  # SESSION's cwd, which may be a subfolder of the QA home (0.9.1 walk-up
+  # already moved $CWD to the home) — scan the original cwd for .mcp.json.
+  python3 - "${QA_HOME_FROM:-$CWD}" "$HOME" <<'PY'
 import json, os, sys
 cwd, home = sys.argv[1], sys.argv[2]
 
@@ -356,7 +396,7 @@ mcp_hint() {
 # A missing secrets file breaks the playwright MCP server in every mode, and the
 # only symptom the user sees is a connection error at startup — name it here.
 secrets_status() {
-  [ -f "$CWD/.env.playwright-secrets" ] && return 0
+  [ -f "$SESSION_CWD/.env.playwright-secrets" ] && return 0
   # Leading newline: this is appended inside the CONTEXT string as its own line.
   printf '\n- WARNING: .env.playwright-secrets is missing — the playwright MCP server exits at startup (--secrets ENOENT). Create it (install.sh writes a template) before any browser test.'
 }
@@ -370,7 +410,7 @@ secrets_status() {
 secrets_keys_line() {
   [ -f "$HERE/resolve-secrets.sh" ] || return 0
   local line
-  line="$(bash "$HERE/resolve-secrets.sh" "$CWD" --status 2>/dev/null)" || return 0
+  line="$(bash "$HERE/resolve-secrets.sh" "$SESSION_CWD" --status 2>/dev/null)" || return 0
   [ -n "$line" ] && printf '\n- Secrets: %s' "$line"
 }
 
@@ -408,7 +448,7 @@ jira_pat_resolve() {
 # once for both the hints and the JIRA Data Center PAT resolution (the scan is
 # read-only config parsing, no liveness checks).
 SECRETS_EXISTED=0
-[ -f "$CWD/.env.playwright-secrets" ] && SECRETS_EXISTED=1
+[ -f "$SESSION_CWD/.env.playwright-secrets" ] && SECRETS_EXISTED=1
 PLUGIN_BOOTSTRAP=0
 if is_plugin_bootstrap; then
   PLUGIN_BOOTSTRAP=1
@@ -423,7 +463,7 @@ MCP_SCAN="$(mcp_scan 2>/dev/null || true)"
 # is present to unlock. Silent when no project declares keychain.
 AUTO_SECRETS=""
 if [ "$SECRETS_EXISTED" -eq 0 ] && [ -f "$HERE/resolve-secrets.sh" ]; then
-  AUTO_SECRETS="$(bash "$HERE/resolve-secrets.sh" "$CWD" 2>/dev/null)"
+  AUTO_SECRETS="$(bash "$HERE/resolve-secrets.sh" "$SESSION_CWD" 2>/dev/null)"
   [ -n "$AUTO_SECRETS" ] && AUTO_SECRETS="
 - $AUTO_SECRETS"
 fi
@@ -445,7 +485,13 @@ BROWSER_LINE=""
 [ -n "$BROWSER_MODE" ] && BROWSER_LINE="
 - Browser: $BROWSER_MODE"
 
-CONTEXT="QA Agent Blueprint — session start
+# When the session started in a subfolder of the QA home, say where the data
+# actually lives — the model must write evidence/learnings THERE, not here.
+HOME_LINE=""
+[ -n "$QA_HOME_FROM" ] && HOME_LINE="
+- QA home: $CWD (resolved up from cwd $QA_HOME_FROM) — all paths (evidence/, memory/, projects/) are relative to the QA home, not to cwd"
+
+CONTEXT="QA Agent Blueprint — session start$HOME_LINE
 - Onboarded projects:
 $(list_projects)
 - Playwright CLI: $(playwright_version)$BROWSER_LINE
