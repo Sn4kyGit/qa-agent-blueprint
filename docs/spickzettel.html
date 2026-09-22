@@ -299,7 +299,7 @@
     liefert Beweise, meldet das Ergebnis zurück nach JIRA — und lernt dazu.
   </p>
   <div class="stats">
-    <div class="stat"><div class="n">27</div><div class="l">Fähigkeiten (Skills)</div></div>
+    <div class="stat"><div class="n">28</div><div class="l">Fähigkeiten (Skills)</div></div>
     <div class="stat"><div class="n">5</div><div class="l">Spezialisten (Subagents)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Türsteher (Hooks)</div></div>
     <div class="stat"><div class="n">147</div><div class="l">Selbsttests (Fixtures)</div></div>
@@ -321,9 +321,9 @@
     <h2>Was ist das?</h2>
     <ul class="tight">
       <li>Ein <strong>Plugin für Claude Code</strong> (Anthropics KI-Entwicklerwerkzeug), das daraus einen QA-Manager + Tester macht — kein neues Tool, keine neue Oberfläche.</li>
-      <li>Ticketgetrieben: Der <strong>JIRA-Ticket-Schlüssel</strong> (z. B. SHOP-1234) ist der Eingang — darüber findet der Agent alles, was er über das Projekt wissen muss.</li>
-      <li>Alles Projektwissen liegt in <strong>normalen Textdateien im eigenen Git</strong> — einsehbar, versionierbar, mit dem Team geteilt. Kein Geheimwissen im Kopf des Agenten.</li>
-      <li>Angebunden sind genau zwei Systeme: <strong>JIRA</strong> (Tickets rein, Ergebnisse raus) und ein <strong>Browser</strong> (Playwright) fürs Testen.</li>
+      <li>Ticketgetrieben: Der <strong>JIRA-Ticket-Schlüssel</strong> (z. B. SHOP-1234) ist der Eingang — darüber findet der Agent alles, was er über das Projekt wissen muss. Gelesen wird das Ticket über den <strong>Atlassian-MCP-Server</strong> — oder, wenn ein Projekt JIRA nur per Weboberfläche nutzt, über den Browser (<strong>Playwright MCP</strong>).</li>
+      <li>Alles Projektwissen liegt in <strong>normalen Textdateien in deinem Projektordner</strong> — lokal, einsehbar, ohne Geheimwissen im Kopf des Agenten. Per Git versionieren und mit dem Team teilen kannst du es (empfohlen), musst du aber nicht — Pflicht ist nur der Ordner.</li>
+      <li>Angebunden sind standardmäßig zwei Systeme: <strong>JIRA</strong> (Tickets rein, Ergebnisse raus) und ein <strong>Browser</strong> (Playwright) fürs Testen. Weitere Werkzeuge lassen sich pro Projekt ergänzen — z. B. <strong>WebdriverIO</strong> als Test-Framework oder <strong>Proxyman</strong> für Netzwerk-Mitschnitte; neue MCP-Server kommen nur auf deinen Beschluss dazu, nie von selbst.</li>
     </ul>
   </section>
 
@@ -340,9 +340,21 @@
         <li><strong>Bug melden</strong> (<code>/bug-report</code>): Fund exakt im Bug-Template des Projekts, mit Duplikat-Check</li>
         <li><strong>Nach JIRA berichten</strong> (<code>/report-to-jira</code>): Kommentar, Anhänge, korrekter Status</li>
         <li><strong>Wochenreport</strong> (<code>/qa-report</code>): Pass-Rate, P0/P1, Blocker-Gründe — pro Projekt &amp; Produkt</li>
+        <li><strong>Demo geben</strong> (<code>/demo</code>): Bug oder Testlauf sichtbar vorführen (Slow-Mo), auf Wunsch selbst klicken lassen; Video nur auf ausdrückliche Anfrage</li>
         <li><strong>Einrichten &amp; pflegen</strong>: <code>/onboard-project</code> (einmalig), <code>/re-board</code> (nach Updates), <code>/whats-new</code> („was ist neu?")</li>
       </ul>
     </div>
+  </section>
+
+  <section>
+    <h2>Das Team: ein Dirigent + vier Spezialisten</h2>
+    <ul class="tight">
+      <li><strong>Der Dirigent</strong> (qa-manager): liest das Ticket, entscheidet die Strategie, verteilt die Arbeit, prüft am Ende Beweise und Ergebnis.</li>
+      <li><strong>Der Tester</strong> (test-executor): klickt sich explorativ durchs Feature und reproduziert Bugs.</li>
+      <li><strong>Der Testschreiber</strong> (test-automator): schreibt und fährt wiederholbare Autotests.</li>
+      <li><strong>Der Prüfer</strong> (failure-analyst): klärt bei jedem FAIL — Produkt kaputt oder Test veraltet? (Darf absichtlich nichts verändern.)</li>
+      <li><strong>Der Melder</strong> (bug-reporter): gießt den Fund exakt ins Bug-Template des Projekts.</li>
+    </ul>
   </section>
 
   <section>
@@ -374,6 +386,7 @@
       <li><strong>Passwörter sieht er nie:</strong> Testuser-Logins &amp; JIRA-Token liegen im macOS-Schlüsselbund; er sieht nur „6/6 Logins vorhanden".</li>
       <li><strong>Kein Urteil ohne Beweise:</strong> Jeder Lauf endet mit Screenshots, Logs und einem maschinenlesbaren Protokoll — ein Hook blockt sonst das Session-Ende.</li>
       <li><strong>Jeder JIRA-Schreibzugriff</strong> landet in einem Audit-Log — nachvollziehbar, auch im automatisierten Lauf.</li>
+      <li><strong>Selbsttests (Fixtures) beweisen die Durchsetzung:</strong> kleine Skripte, die jeden Türsteher mit Probe-Anfragen füttern und prüfen, dass er wirklich blockt — <strong>147 davon</strong>, sie laufen bei jeder Änderung. Ein Türsteher ohne Selbsttest wäre Dekoration: Einer hatte in der Vergangenheit monatelang still <em>nichts</em> blockiert — und in der Review sah alles korrekt aus.</li>
     </ul>
     <div class="callout">
       <strong>Merksatz:</strong> Er ersetzt nicht die QA — er nimmt ihr die wiederholbare Fleißarbeit ab
@@ -431,7 +444,7 @@
     <table>
       <tr><th>Schublade</th><th>Analogie</th><th>Inhalt</th></tr>
       <tr><td>1 · Handbuch</td><td>Immer dabei</td><td>Nur die Regeln (~7.500 Wörter): Was ist Pflicht, was ist verboten</td></tr>
-      <tr><td>2 · Fachbücher</td><td>Nur bei Bedarf geöffnet</td><td>27 Fähigkeiten — z. B. Accessibility, Security, API-Tests</td></tr>
+      <tr><td>2 · Fachbücher</td><td>Nur bei Bedarf geöffnet</td><td>28 Fähigkeiten — z. B. Accessibility, Security, API-Tests</td></tr>
       <tr><td>3 · Projektakte</td><td>Nur das aktive Projekt</td><td>Umgebungen, Testuser, Deploy-Runbook, Report-Format, Flow-Map</td></tr>
       <tr><td>4 · Lerntagebuch</td><td>Wächst, wird aufgeräumt</td><td>Überraschungen; beim 2. Auftreten wandern sie ins Handbuch</td></tr>
       <tr><td>5 · Beweisfotos</td><td>Nie im Kopf, nur als Pfad</td><td>Screenshots &amp; Logs unter <code>evidence/</code> — Basis für den Wochenreport</td></tr>
@@ -516,8 +529,9 @@
   <section>
     <h2>Wie er Wissen speichert</h2>
     <div class="cols2">
-      <pre><code><span class="c"># alles im eigenen Git — diffbar, reviewbar,</span>
-<span class="c"># mit dem Team geteilt</span>
+      <pre><code><span class="c"># alles als normale Textdateien im eigenen</span>
+<span class="c"># Projektordner — einsehbar, auf Wunsch per</span>
+<span class="c"># Git versioniert und mit dem Team geteilt</span>
 projects/SHOP/
 ├── PROJECT.md        <span class="c">← Umgebungen, Testuser</span>
 │                     <span class="c">  (als Referenzen!), Runbook,</span>

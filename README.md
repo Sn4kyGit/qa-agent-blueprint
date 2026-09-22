@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 27 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 177 fixtures + 86 bun tests · 20 eval cases |
+| **Contents** | 28 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 177 fixtures + 86 bun tests · 21 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
@@ -243,7 +243,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>16 core skills</b> — the ticket workflow</summary>
+<summary><b>17 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
@@ -263,6 +263,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 | `/qa-report` | Aggregate the evidence into metrics: pass rate, P0/P1, BLOCKED reasons, routing quality |
 | `/retro-learn` | Capture, groom and promote learnings |
 | `/whats-new` | What changed in the blueprint since a project was onboarded — and what calls for `/re-board` |
+| `/demo` | Present a bug repro or finished test run to an audience: headed slow-mo replay + demo card, hands-on mode ("lass mich probieren"), .webm recording only on explicit request — never automatically |
 
 </details>
 
@@ -280,7 +281,7 @@ than by guesswork.
 
 Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
 by `/test-automation` when a project's declared framework is webdriverio (not
-invoked directly; see its SKILL.md). 16 + 10 + 1 = the 27 skills from the header.
+invoked directly; see its SKILL.md). 17 + 10 + 1 = the 28 skills from the header.
 
 </details>
 
@@ -529,7 +530,7 @@ at install, and when you explicitly update. Everything else is local.
 
 The real cost is **model tokens**, and the architecture is built to keep them
 down: the always-loaded layer is measured (~7.8k tokens) and capped by a test,
-the 27 skills load on demand, subagents isolate browser transcripts from the
+the 28 skills load on demand, subagents isolate browser transcripts from the
 main context, evidence is referenced by path instead of read back, and project
 knowledge is found via `memory/INDEX.md` instead of full-repo scans.
 
@@ -583,7 +584,7 @@ runs it.
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |
-| [evals/README.md](evals/README.md) | Behavioral conformance — 20 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
+| [evals/README.md](evals/README.md) | Behavioral conformance — 21 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
 | [docs/pilot-briefing.md](docs/pilot-briefing.md) | **Read before the first real onboarding**: what to collect, shadow mode, what is known unfinished |
 | [docs/rules/](docs/rules/) | The detail behind each always-loaded rule, read on demand |
 | [docs/runbooks/stage-deploy-general.md](docs/runbooks/stage-deploy-general.md) | Generic stage-deploy scaffold |

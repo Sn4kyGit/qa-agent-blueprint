@@ -26,7 +26,13 @@ the ticket done.
    with the preflight's reason, full stop: a result collected against an
    unverified environment says something about the environment, not the
    product — that is the false-positive factory this gate exists to close.
-1. **Read the ticket** via the `atlassian` MCP server — summary, description,
+1. **Read the ticket.** Derive the project key from the ticket prefix
+   (`SHOP-1234` → `SHOP`) and check `projects/<KEY>/PROJECT.md` → "JIRA
+   access" first — it owns the channel. `mcp` (default): read via the
+   `atlassian` MCP server. `browser`: read via the playwright-driven JIRA UI
+   per `docs/rules/testing/jira-browser.md` → "Reading a ticket"; on this
+   mode the `mcp__atlassian__*` tools are not connected at all, and a failed
+   call there says nothing about JIRA. Either way fetch summary, description,
    acceptance criteria, issue type, current status, fix version.
 2. **Route**: derive the project key from the ticket prefix
    (`SHOP-1234` → `SHOP`). Read `projects/SHOP/PROJECT.md` and

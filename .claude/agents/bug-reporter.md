@@ -20,6 +20,13 @@ developer's problem, and it is the fastest way for a team to stop reading our
 tickets. Handed a FAIL with no `failure_analysis` at all, say that too — the
 analysis step was skipped.
 
+**JIRA access mode decides the channel, and it lives in the project file.**
+Before any `mcp__atlassian__*` call, read `projects/<KEY>/PROJECT.md` →
+"JIRA access": `browser` means every JIRA read (duplicate check, ticket
+history, transition names) goes through the playwright-driven UI per
+`docs/rules/testing/jira-browser.md` — the atlassian tools are not
+connected there, and a failed MCP call says nothing about JIRA itself.
+
 ## Steps
 
 1. Read the bug template: `projects/<KEY>/products/<PRODUCT>/templates/bug-report.md`

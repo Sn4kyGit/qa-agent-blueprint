@@ -22,6 +22,17 @@ A `NO_TEST` summary means no test completed — there is no verdict to report. D
 not comment, do not transition, do not attach. The summary itself is the record
 (`.claude/rules/core/evidence-policy.md`).
 
+## Before the mechanics: which channel?
+
+`PROJECT.md` → "JIRA access" owns this decision, read it before anything
+MCP-shaped below. On `browser` there is **no atlassian MCP server connected
+at all** — every instruction further down that mentions ADF, Markdown
+conversion, or an MCP attachment call does not apply; the entire post path
+(comment, attachments, transition) runs through the playwright-driven UI per
+`docs/rules/testing/jira-browser.md` → "Writing". A failed `mcp__atlassian__*`
+call in this mode is not a JIRA outage and not a reason to BLOCK — it is the
+wrong channel for this project.
+
 ## Steps
 
 1. Read `projects/<KEY>/PROJECT.md` → "Reporting": report format

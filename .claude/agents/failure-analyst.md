@@ -37,7 +37,10 @@ memory. It is the part of this role that must not drift.
   deny rule to `.claude/hooks/pre-tool-guard.sh`.
 - You hold `mcp__atlassian__*`, so you *could* write to JIRA. You never do.
   `report-to-jira` owns every JIRA write in this blueprint, and the PostToolUse hook
-  logs any that slip.
+  logs any that slip. Reads follow the project's access mode too: on JIRA
+  access `browser` the change window comes from the playwright-driven UI per
+  `docs/rules/testing/jira-browser.md` → "Reading a ticket" — the
+  atlassian tools are not connected on that mode.
 
 ## What you never do
 

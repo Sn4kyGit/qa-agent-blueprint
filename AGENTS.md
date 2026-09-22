@@ -12,7 +12,7 @@ task. Humans start at `README.md`.
 
 `qa-agent-blueprint`: a ticket-driven QA Manager + Tester for Claude Code
 (JIRA ticket in → tested ticket out, mandatory evidence, learning loop).
-Ships 27 skills, 5 subagents, 4 hooks, and 2 MCP servers (`playwright`,
+Ships 28 skills, 5 subagents, 4 hooks, and 2 MCP servers (`playwright`,
 `atlassian`). Installs into any project as a Claude Code plugin — nothing is
 copied into the consumer repo; only the user's own data (`projects/`,
 `memory/`, `evidence/`) lives there.
@@ -160,7 +160,7 @@ referenced read-only from each product's `PRODUCT.md` (`App repo` field) during
 claude plugin details qa-agent-blueprint
 ```
 
-Expected inventory: `Skills (27)`, `Agents (5)`, `Hooks (4)`
+Expected inventory: `Skills (28)`, `Agents (5)`, `Hooks (4)`
 (SessionStart/Stop/PreToolUse/PostToolUse), `MCP servers (2)`.
 
 ## Alternative: clone + installer

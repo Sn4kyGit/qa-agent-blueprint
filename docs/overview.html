@@ -256,7 +256,7 @@
     und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
   </p>
   <div class="stats">
-    <div class="stat"><div class="n">27</div><div class="l">Skills</div></div>
+    <div class="stat"><div class="n">28</div><div class="l">Skills</div></div>
     <div class="stat"><div class="n">5</div><div class="l">Subagents</div></div>
     <div class="stat"><div class="n">5+10</div><div class="l">Regeln (immer / on demand)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
@@ -275,7 +275,7 @@ plugin in this project. Read its AGENTS.md first and follow the runbook.</code><
   <pre><code>claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace</code></pre>
   <p>Unter <strong>opencode</strong> (modell-agnostisch, Modell = deine <code>/models</code>-Wahl): <code>install.sh --mode opencode --target &lt;projekt&gt; --yes</code> vom Clone aus — Details: <a href="https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md">Quickstart opencode</a>.</p>
-  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 27 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
+  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 28 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
 </section>
 
 <section>
@@ -335,6 +335,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <tr><td>/qa-report</td><td>Aggregiert alle Evidence-Läufe: Pass-Rate, P0/P1, BLOCKED-Gründe — pro Projekt und Produkt</td><td>„Wie läuft's mit dem Testing?"</td></tr>
     <tr><td>/retro-learn</td><td>Hält Learnings fest, verdichtet sie und befördert Bewährtes in Regeln und Projektdateien</td><td>„Session abschließen"</td></tr>
     <tr><td>/whats-new</td><td>Zeigt, was sich am Blueprint seit dem Onboarding geändert hat — und was ein /re-board lohnt</td><td>„Was ist neu?"</td></tr>
+    <tr><td>/demo</td><td>Präsentiert eine Bug-Repro oder einen fertigen Testlauf sichtbar: Headed-Slow-Mo-Wiederholung + Demo-Karte, Selbst-ausprobieren-Modus, .webm-Aufzeichnung nur auf ausdrückliche Anfrage — niemals automatisch</td><td>„Präsentier den Bug", „Lass mich probieren"</td></tr>
     <tr><td>/qa-help</td><td>Diese Übersicht, direkt in der Session — antwortet in der Sprache, in der man fragt</td><td>„Welche Befehle gibt es?"</td></tr>
   </table>
 
@@ -801,7 +802,7 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
   <p class="sub">
     Die echten Kosten sind <strong>Modell-Tokens</strong> — und genau dafür ist die Architektur
     gebaut: Die immer geladene Ebene ist gemessen (~7.800 Tokens) und per Test gedeckelt,
-    die 27 Skills laden erst bei Bedarf, Subagents halten Browser-Transkripte aus dem
+    die 28 Skills laden erst bei Bedarf, Subagents halten Browser-Transkripte aus dem
     Hauptkontext, Evidence wird als Pfad referenziert statt eingelesen, und Projektwissen
     wird über <code>memory/INDEX.md</code> gefunden statt per Vollscan.
   </p>
@@ -824,7 +825,7 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
 <footer>
   <p>
     QA Agent Blueprint · MIT · Stand: 18. September 2026 (0.6.5) —
-    aktualisiert auf Repo-Stand (27 Skills, 5 Subagents, 177 Fixtures + 105 bun-Tests, 20 Eval-Cases,
+    aktualisiert auf Repo-Stand (28 Skills, 5 Subagents, 177 Fixtures + 105 bun-Tests, 21 Eval-Cases,
     5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
     Keychain-Secrets für Testuser-Logins und JIRA-PAT, Flow-Maps,
     /re-board und /whats-new als Upgrade-Pfad, Shadow-Modus als Default).

@@ -1,0 +1,13 @@
+{
+  "ticket": "ACME-77",
+  "verdict": "FAIL",
+  "started_at": "2026-09-10T10:30:00Z",
+  "steps": [
+    { "n": 1, "action": "log in as qa-standard", "result": "ok" },
+    { "n": 2, "action": "add product to cart, go to checkout", "result": "ok" },
+    { "n": 3, "action": "enter coupon WELCOME10 and submit", "result": "ok" },
+    { "n": 4, "action": "check total", "result": "total unchanged — expected -10%" }
+  ],
+  "screenshots": ["01-checkout.png", "02-total-unchanged.png"],
+  "notes": "Coupon silently ignored; bug ticket filed as ACME-77. Preflight passed at run time."
+}

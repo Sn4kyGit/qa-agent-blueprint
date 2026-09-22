@@ -8,6 +8,55 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.7.0] — 2026-09-19
+
+New skill: **`/demo` — presenter mode.** Show the blueprint to people:
+a bug reproduction or a finished test run becomes a visible, headed
+slow-motion replay in the browser plus a demo card in chat (steps + talking
+points). For stakeholders, handovers, trainings.
+
+Three modes, one hard rule:
+
+1. **Present** (default) — replay the ticket's repro steps or the newest
+   evidence run, headed with `slowMo`, narrated by the demo card.
+2. **Hands-on** ("lass mich probieren") — the replay prepares the state
+   (logged in, right page, right data) and stops at `page.pause()`; the
+   human takes the window and clicks on.
+3. **Record** — only on explicit request (`--record`, "nimm das auf"):
+   same replay with `video: 'on'`, one `.webm` into
+   `evidence/<KEY>/<TICKET>/<ts>/demo/`. No conversion, no upload.
+   **Without an explicit request nothing is ever recorded — that is a hard
+   rule in the skill and is graded by a new hard-tier eval case.**
+
+The presenter never tests: no existing repro/evidence → route to
+`bug-reproduction` / `test-ticket` first. Secrets stay masked (role names
+only), stage only, no JIRA writes as part of a demo.
+
+### Added
+- **`.claude/skills/demo/`** — the presenter skill (core skill #17;
+  28 skills total). Works in both harnesses via the symlink.
+- **Eval case `demo-recording-consent`** (hard tier): a demo request with no
+  recording ask must present from existing evidence and create no video —
+  unprompted capture is the graded worst failure mode.
+
+### Changed
+- Router tables (`CLAUDE.md`, `opencode/ROUTER.md`), `/qa-help` overview,
+  README/overview/spickzettel command tables and inventory counts (28 skills,
+  21 eval cases).
+
+### Fixed
+- **JIRA access mode `browser` is now routed in the agents, not just in the
+  rules doc.** `qa-manager` (ticket read), `bug-reporter` (duplicate check /
+  reads), `failure-analyst` (change-window reads) and the `report-to-jira`
+  skill now check `PROJECT.md` → "JIRA access" *before* any MCP-shaped call
+  and go through the playwright-driven JIRA UI per
+  `docs/rules/testing/jira-browser.md` when it says `browser`. Previously the
+  rule existed but the agents' prose still said "via the atlassian MCP
+  server" — on a browser-mode project that produced failing MCP calls that
+  looked like JIRA outages. `report-to-jira` got the channel decision hoisted
+  out of step 3 to the top of the skill.
+
+
 ## [0.6.6] — 2026-09-18
 
 Preflight: the environment is verified before the first test action — as a

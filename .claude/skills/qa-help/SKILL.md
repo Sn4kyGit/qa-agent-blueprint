@@ -31,6 +31,12 @@ mode they are namespaced: `/qa-agent-blueprint:<name>`.
 | `/report-to-jira` | Posts the verdict comment + attachments + workflow transition to JIRA (composes only, while shadow mode is on). |
 | `/deploy-to-stage` | Runs the project's stage-deploy runbook when the fix isn't on stage yet. |
 
+## Show others
+
+| Command | What it does |
+|---|---|
+| `/demo <KEY-123>` | Presents a bug repro or finished test run to an audience: headed slow-mo replay plus a demo card, hands-on mode where you take over the browser ("lass mich probieren"), and screen recording (.webm) — only when you explicitly ask for it, never automatically. |
+
 ## Set up
 
 | Command | What it does |
