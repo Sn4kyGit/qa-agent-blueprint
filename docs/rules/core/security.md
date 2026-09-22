@@ -104,6 +104,25 @@ after any change to a hook, and add a fixture for every new rule.
   field report 0.6.1: a `grep -o '^[A-Z_]*='` on the secrets file bypassed the
   old cat-only list; key-EXISTENCE checks go through `resolve-secrets.sh
   --status` (names only), never through the file itself.
+- **MCP config is project-scoped (field report 0.9.0):** a gitlab MCP server
+  configured in the *global* config (`~/.claude.json`) silently pointed at a
+  different customer's `.env` in another project's folder — the agent used it
+  for weeks without noticing, and only the secrets guard stopped it from
+  editing the foreign file. Two mechanical rules follow, both in the
+  PreToolUse guard (opencode: same logic in `qa-blueprint.ts` against
+  `opencode.json` + `~/.config/opencode/`):
+  1. **Foreign-server block** — a call to an MCP server that exists only in
+     global config but is not declared in the project's own `.mcp.json` /
+     `opencode.json` is blocked: global config may point at another project's
+     credentials, and another project's data is never used here, by design.
+     The blueprint's own two servers (`playwright`, `atlassian`) are always
+     allowed; anything else must be declared in the project deliberately.
+     Session start lists such servers as a warning before the agent hits the
+     block.
+  2. **Global-config write block** — the agent never modifies global MCP
+     config (`~/.claude.json`, `~/.config/opencode/opencode.json*`): a
+     project's servers live in its own config; global edits are a human task.
+  Escape hatch for deliberate global setups: `QA_ALLOW_GLOBAL_MCP=1`.
 - Permission denylist in `.claude/settings.json` prevents reads of known secret file
   patterns outright.
 - `PostToolUse` JIRA write audit (`post-jira-audit.sh`) logs every Atlassian MCP

@@ -256,3 +256,110 @@ describe("preflight gate (opencode)", () => {
     await expect(run(h, playwrightCall)).rejects.toThrow(/evidence\/\.preflight\/ok\.json/)
   })
 })
+
+// Foreign MCP gate (field report 2026-09-22: a GLOBAL gitlab MCP server
+// pointed at a different customer's .env — the agent nearly edited it).
+// Mirrors the "foreign MCP gate" section of guard-fixtures.sh. The gate only
+// fires when the server is provably global (readable global config) AND not
+// declared in the project's own opencode.json.
+describe("foreign MCP gate (opencode)", () => {
+  async function setup(opts: { globalServers?: string[]; projectServers?: string[] }) {
+    const dir = await tempProject() // bare temp dir: no projects/, preflight inactive
+    const globalCfg = await mkdtemp(join(tmpdir(), "qa-globalcfg-"))
+    if (opts.globalServers) {
+      await mkdir(join(globalCfg, "opencode"), { recursive: true })
+      await writeFile(join(globalCfg, "opencode", "opencode.json"),
+        JSON.stringify({ mcp: Object.fromEntries(opts.globalServers.map((s) => [s, { type: "local", command: ["x"] }])) }))
+    }
+    if (opts.projectServers) {
+      await writeFile(join(dir, "opencode.json"),
+        JSON.stringify({ mcp: Object.fromEntries(opts.projectServers.map((s) => [s, { type: "local", command: ["x"] }])) }))
+    }
+    return { dir, globalCfg }
+  }
+
+  async function withEnv<T>(env: Record<string, string | undefined>, fn: () => Promise<T>): Promise<T> {
+    const saved: Record<string, string | undefined> = {}
+    for (const [k, v] of Object.entries(env)) {
+      saved[k] = process.env[k]
+      if (v === undefined) delete process.env[k]; else process.env[k] = v
+    }
+    try {
+      return await fn()
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k]; else process.env[k] = v
+      }
+    }
+  }
+
+  function mcpCall(serverTool: string): BeforeCall {
+    return {
+      input: { tool: serverTool, sessionID: SESSION_ID, callID: "tool_fixture" },
+      output: { args: {} },
+    }
+  }
+
+  test("blocks a global-only MCP server", async () => {
+    const { dir, globalCfg } = await setup({ globalServers: ["gitlab", "playwright"] })
+    await withEnv({ XDG_CONFIG_HOME: globalCfg }, async () => {
+      const h = await hooksIn(dir)
+      await expect(run(h, mcpCall("gitlab_getIssue"))).rejects.toThrow(/MCP server 'gitlab'/)
+      await expect(run(h, mcpCall("gitlab_getIssue"))).rejects.toThrow(/QA_ALLOW_GLOBAL_MCP=1/)
+    })
+  })
+
+  test("allows when declared in the project's opencode.json", async () => {
+    const { dir, globalCfg } = await setup({ globalServers: ["gitlab"], projectServers: ["gitlab"] })
+    await withEnv({ XDG_CONFIG_HOME: globalCfg }, async () => {
+      const h = await hooksIn(dir)
+      await expect(run(h, mcpCall("gitlab_getIssue"))).resolves.toBeUndefined()
+    })
+  })
+
+  test("allows blueprint servers without project declaration", async () => {
+    const { dir, globalCfg } = await setup({ globalServers: ["playwright"] })
+    await withEnv({ XDG_CONFIG_HOME: globalCfg }, async () => {
+      const h = await hooksIn(dir)
+      await expect(run(h, mcpCall("playwright_browser_navigate"))).resolves.toBeUndefined()
+    })
+  })
+
+  test("QA_ALLOW_GLOBAL_MCP=1 escape hatch", async () => {
+    const { dir, globalCfg } = await setup({ globalServers: ["gitlab"] })
+    await withEnv({ XDG_CONFIG_HOME: globalCfg, QA_ALLOW_GLOBAL_MCP: "1" }, async () => {
+      const h = await hooksIn(dir)
+      await expect(run(h, mcpCall("gitlab_getIssue"))).resolves.toBeUndefined()
+    })
+  })
+
+  test("no readable global config → nothing to gate (builtin prefixes pass)", async () => {
+    const { dir, globalCfg } = await setup({}) // empty global cfg dir
+    await withEnv({ XDG_CONFIG_HOME: globalCfg }, async () => {
+      const h = await hooksIn(dir)
+      await expect(run(h, mcpCall("websearch_query"))).resolves.toBeUndefined()
+    })
+  })
+
+  test("blocks writes to global MCP config files", async () => {
+    const home = await mkdtemp(join(tmpdir(), "qa-fakehome-"))
+    const dir = await tempProject()
+    await withEnv({ HOME: home }, async () => {
+      const h = await hooksIn(dir)
+      await expect(run(h, fileBefore("edit", join(home, ".claude.json")))).rejects.toThrow(/global MCP config/)
+      await expect(run(h, fileBefore("write", join(home, ".config", "opencode", "opencode.json")))).rejects.toThrow(/global MCP config/)
+      await expect(run(h, bashBefore(`sed -i 's/a/b/' ${home}/.claude.json`))).rejects.toThrow(/global MCP config/)
+      await expect(run(h, bashBefore(`echo '{}' > ${home}/.config/opencode/opencode.json`))).rejects.toThrow(/global MCP config/)
+    })
+  })
+
+  test("allows writes to the project's own MCP config", async () => {
+    const home = await mkdtemp(join(tmpdir(), "qa-fakehome-"))
+    const dir = await tempProject()
+    await withEnv({ HOME: home }, async () => {
+      const h = await hooksIn(dir)
+      await expect(run(h, fileBefore("write", join(dir, ".mcp.json")))).resolves.toBeUndefined()
+      await expect(run(h, bashBefore(`echo '{}' > ${dir}/opencode.json`))).resolves.toBeUndefined()
+    })
+  })
+})

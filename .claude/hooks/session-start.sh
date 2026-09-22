@@ -254,9 +254,23 @@ def load(path):
         return {}
 
 servers = {}
+per_file = {}
 for path in (os.path.join(home, ".claude.json"), os.path.join(cwd, ".mcp.json")):
-    for name, cfg in load(path).items():
+    entries = load(path)
+    per_file[path] = set(entries)
+    for name, cfg in entries.items():
         servers.setdefault(name, []).append(cfg if isinstance(cfg, dict) else {})
+
+# Foreign MCP servers: configured globally (~/.claude.json) but NOT declared
+# in this project's .mcp.json — they may belong to another project entirely
+# (field report 2026-09-22: a global gitlab server pointed at a different
+# customer's .env). The PreToolUse guard blocks their use; surface the trap
+# here before the agent walks into it.
+foreign = sorted(
+    per_file.get(os.path.join(home, ".claude.json"), set())
+    - per_file.get(os.path.join(cwd, ".mcp.json"), set())
+    - {"playwright", "atlassian"}
+)
 
 pw = servers.get("playwright", [])
 flags = []
@@ -280,6 +294,8 @@ for c in at:
     if host:
         flags.append("AT_DC_HOST:" + host)
         break
+if foreign:
+    flags.append("FOREIGN_MCP:" + ",".join(foreign))
 print(" ".join(flags))
 PY
 }
@@ -292,6 +308,15 @@ PY
 # viewport, browser channel) is the user's preference, exercised via
 # .playwright-mcp.config.json or their own flags — never a warning here.
 mcp_hint() {
+  local scan="$MCP_SCAN"
+  # Foreign global-only MCP servers: warn ALWAYS (before the project-exists
+  # early returns) — a server from another project's config is a trap in any
+  # session state, and the guard blocks its use.
+  case "$scan" in
+    *FOREIGN_MCP:*)
+      printf '\n- Global MCP servers visible but NOT declared in this project — the guard blocks them until declared here (they may belong to another project): %s' \
+        "$(printf '%s' "$scan" | sed -E 's/.*FOREIGN_MCP:([^ ]*).*/\1/' | tr ',' ' ')" ;;
+  esac
   [ -d "$CWD/projects" ] || return 0
   local d
   for d in "$CWD"/projects/*/; do

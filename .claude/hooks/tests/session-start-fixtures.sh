@@ -166,6 +166,33 @@ except Exception:
 ')"
 check_contains "user-scope servers detected via HOME" "$CTX4" "MCP config for playwright + atlassian found"
 
+# A server that exists ONLY in user scope (leftover from another project) is a
+# trap: the PreToolUse guard blocks its use — session start says so up front.
+M6="$WORK/mcp-foreign"; FH2="$WORK/fakehome2"; mkdir -p "$M6/projects" "$FH2"
+printf '%s' '{"mcpServers":{"gitlab":{"command":"x"}}}' > "$FH2/.claude.json"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets"]}}}' > "$M6/.mcp.json"
+CTX6="$(printf '{"cwd":"%s"}' "$M6" | HOME="$FH2" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_contains "global-only server → foreign warning" "$CTX6" "NOT declared in this project"
+check_contains "foreign warning names the server"     "$CTX6" "gitlab"
+
+# Declared in the project too → no warning (deliberate, project-scoped).
+M7="$WORK/mcp-foreign-declared"; mkdir -p "$M7/projects"
+printf '%s' '{"mcpServers":{"gitlab":{"command":"x"}}}' > "$M7/.mcp.json"
+CTX7="$(printf '{"cwd":"%s"}' "$M7" | HOME="$FH2" bash "$HOOK" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
+except Exception:
+    print("")
+')"
+check_absent "declared in project → no foreign warning" "$CTX7" "NOT declared in this project"
+
 echo
 echo "== browser preference file: seeded once, mode rendered, never overwritten =="
 # Plugin bootstrap already seeded it into $CONSUMER above (secrets fixture block).

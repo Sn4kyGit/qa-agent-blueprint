@@ -48,6 +48,13 @@ proposes, the user decides. When a server is approved: wire it in `.mcp.json`, a
 a row here with the reason in one line, and note anything it changes about secrets
 handling in `.claude/rules/core/security.md`. Removing one is the same in reverse.
 
+**Project-scoped, always.** A project's MCP servers live in that project's own
+config (`.mcp.json` / `opencode.json`) — never in global config
+(`~/.claude.json`, `~/.config/opencode/`). Global config is invisible to the
+project boundary and can silently point at another project's credentials
+(field report 0.9.0 in `security.md`); the PreToolUse guard blocks both
+directions: calling a global-only server, and writing global config.
+
 **Before proposing one, check it earns its place**: does it enable something the
 blueprint genuinely cannot do (a browser, the ticket system, a credential source),
 or is it convenience that a Bash call or an existing skill already covers? Three

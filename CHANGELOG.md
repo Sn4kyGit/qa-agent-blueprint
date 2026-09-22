@@ -8,6 +8,39 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.9.0] — 2026-09-22
+
+MCP config is project-scoped — enforced, not just advised. Field report: a
+gitlab MCP server configured in the **global** config (`~/.claude.json`)
+silently pointed at a **different customer's** `.env` in another project's
+folder; the agent used it for weeks without noticing, and only the secrets
+guard stopped it from editing the foreign file. Another project's data is
+never used here, by design — now mechanically.
+
+### Added
+- **Foreign-MCP gate** (PreToolUse guard, both harnesses): a call to an MCP
+  server that exists only in global config but is **not declared in the
+  project's own** `.mcp.json` / `opencode.json` is **blocked**, with the
+  reason and the deliberate path forward (declare it in the project). The
+  blueprint's own two servers (`playwright`, `atlassian`) always pass;
+  escape hatch for intentional global setups: `QA_ALLOW_GLOBAL_MCP=1`.
+- **Global-config write block** (both harnesses): the agent never modifies
+  global MCP config (`~/.claude.json`, `~/.config/opencode/opencode.json*`)
+  — project servers live in the project; global edits are a human task.
+- **Session-start warning** (both harnesses): global-only MCP servers are
+  listed by name before the agent walks into the block.
+- New hook matcher `mcp__.*` on the PreToolUse guard (hooks.json +
+  settings.json; integrate-mode merges it via the (matcher,command) dedup).
+- 12 new guard fixtures (bash) + 7 new bun tests + 3 session-start fixtures,
+  all mirroring the KPS field report by name.
+
+### Changed
+- `docs/rules/core/security.md` — the field report and the two rules;
+  `docs/rules/core/token-discipline.md` — "project-scoped, always" in the
+  MCP register section.
+- Counts brought to reality: 317 fixture checks + 120 bun tests
+  (README/overview/spickzettel).
+
 ## [0.8.0] — 2026-09-22
 
 ### Added

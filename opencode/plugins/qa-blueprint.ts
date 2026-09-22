@@ -82,6 +82,74 @@ const ENV_REDIRECT = />>?\s*\.env/
 // hook matcher only covered Bash|Write|Edit|MultiEdit|NotebookEdit).
 const WRITE_TOOLS = new Set(["write", "edit", "multiedit", "patch", "apply_patch", "notebook_edit"])
 
+// MCP config is project-scoped (field report 2026-09-22: a GLOBAL gitlab MCP
+// server pointed at a different customer's .env — the agent nearly edited it,
+// saved only by the secrets guard). Another project's config/data is never
+// used or touched here, by design: (a) the agent never writes global MCP
+// config, (b) a call to a server that exists only in global config is blocked
+// until the human declares the server in the project's own config.
+const FOREIGN_MCP_MSG = "refusing a call to MCP server '${SERVER}' — it is configured globally but not declared in this project's config (.mcp.json / opencode.json). Global MCP config may point at another project's credentials or data — and another project's data is never used here, by design. Declare the server in this project's own config to use it deliberately. Escape hatch: QA_ALLOW_GLOBAL_MCP=1."
+const GLOBAL_MCP_WRITE_MSG = "refusing to modify global MCP config ($FILE_PATH) — MCP config is project-scoped here: a project's servers live in its own .mcp.json / opencode.json, never in global config (~/.claude.json, ~/.config/opencode). Another project's data is never used or touched — global config edits are a human task. Escape hatch: QA_ALLOW_GLOBAL_MCP=1."
+
+function globalMcpConfigPaths(): Set<string> {
+  const home = process.env.HOME ?? ""
+  const cfgHome = process.env.XDG_CONFIG_HOME ?? join(home, ".config")
+  return new Set([
+    join(home, ".claude.json"),
+    join(cfgHome, "opencode", "opencode.json"),
+    join(cfgHome, "opencode", "opencode.jsonc"),
+  ])
+}
+
+// A writer verb followed (in the same command segment) by a global config
+// path. `.claude.json` is unique to $HOME; the opencode match requires the
+// .config prefix so a PROJECT's opencode.json never trips this.
+const GLOBAL_CFG_WRITER = /(?:sed\s+-i|\btee\b|>>?|\bcp\b|\bmv\b|\brm\b|truncate|dd\s)[^;&|]*(?:\.claude\.json|\.config\/opencode\/opencode\.jsonc?)/
+
+const BLUEPRINT_MCP = new Set(["playwright", "atlassian"])
+
+const mcpNameCache = new Map<string, { mtimeMs: number; names: Set<string> }>()
+async function mcpNamesOf(path: string): Promise<Set<string>> {
+  try {
+    const st = await stat(path)
+    const hit = mcpNameCache.get(path)
+    if (hit && hit.mtimeMs === st.mtimeMs) return hit.names
+    const cfg = await readJsonc(path)
+    const names = new Set(Object.keys((cfg?.mcp ?? {}) as Record<string, unknown>))
+    mcpNameCache.set(path, { mtimeMs: st.mtimeMs, names })
+    return names
+  } catch {
+    return new Set<string>()
+  }
+}
+
+// Returns the offending server name when `tool` is an MCP call to a server
+// that exists ONLY in global config. Global-file unreadable → no gate: the
+// prefix may be a builtin tool, not an MCP server at all (fail precise, not
+// loud — the KPS case had the global file readable).
+async function foreignMcpServer(directory: string, tool: string): Promise<string | undefined> {
+  if (process.env.QA_ALLOW_GLOBAL_MCP === "1") return undefined
+  const m = /^([a-zA-Z0-9-]+)_/.exec(tool)
+  if (!m) return undefined
+  const server = m[1]
+  if (BLUEPRINT_MCP.has(server)) return undefined
+  const project = new Set([...(await mcpNamesOf(join(directory, "opencode.json"))), ...(await mcpNamesOf(join(directory, "opencode.jsonc")))])
+  if (project.has(server)) return undefined
+  const cfgHome = process.env.XDG_CONFIG_HOME ?? join(process.env.HOME ?? "", ".config")
+  const global_ = new Set([...(await mcpNamesOf(join(cfgHome, "opencode", "opencode.json"))), ...(await mcpNamesOf(join(cfgHome, "opencode", "opencode.jsonc")))])
+  if (global_.has(server)) return server
+  return undefined
+}
+
+// For the session-start orientation: global MCP servers not declared in this
+// project (the guard blocks them — surface the trap before the agent hits it).
+async function foreignGlobalMcpNames(directory: string): Promise<string[]> {
+  const cfgHome = process.env.XDG_CONFIG_HOME ?? join(process.env.HOME ?? "", ".config")
+  const globalNames = new Set([...(await mcpNamesOf(join(cfgHome, "opencode", "opencode.json"))), ...(await mcpNamesOf(join(cfgHome, "opencode", "opencode.jsonc")))])
+  const projectNames = new Set([...(await mcpNamesOf(join(directory, "opencode.json"))), ...(await mcpNamesOf(join(directory, "opencode.jsonc")))])
+  return [...globalNames].filter((n) => !projectNames.has(n) && !BLUEPRINT_MCP.has(n)).sort()
+}
+
 function block(reason: string): never {
   throw new Error(`${GUARD_PREFIX} ${reason}`)
 }
@@ -99,6 +167,15 @@ function guardCheck(tool: string, args: Record<string, unknown>) {
   const filePath = typeof args.filePath === "string" ? args.filePath : ""
   if (filePath && WRITE_TOOLS.has(tool) && isSecretPath(filePath)) {
     block(`refusing to write/edit a secrets file (${filePath}). Secrets are vault/env references only — see .claude/rules/core/security.md.`)
+  }
+
+  if (process.env.QA_ALLOW_GLOBAL_MCP !== "1") {
+    if (filePath && WRITE_TOOLS.has(tool) && globalMcpConfigPaths().has(filePath)) {
+      block(GLOBAL_MCP_WRITE_MSG.replace("$FILE_PATH", filePath))
+    }
+    if (tool === "bash" && GLOBAL_CFG_WRITER.test(typeof args.command === "string" ? args.command : "")) {
+      block(GLOBAL_MCP_WRITE_MSG.replace("$FILE_PATH", "the command line"))
+    }
   }
 
   if (tool === "bash") {
@@ -607,6 +684,10 @@ export async function orientation(directory: string): Promise<string> {
   if (scan.dcHost && !process.env.JIRA_PERSONAL_TOKEN) {
     lines.push(`- JIRA Data Center (${scan.dcHost}) configured — the PAT is resolved from the macOS keychain (service JIRA_PAT_${scan.dcHost}) into shells at runtime; it lives in no file and no chat.`)
   }
+  const foreignMcp = await foreignGlobalMcpNames(directory)
+  if (foreignMcp.length) {
+    lines.push(`- Global MCP servers visible but NOT declared in this project — the guard blocks them until declared here (they may belong to another project): ${foreignMcp.join(", ")}`)
+  }
   const n = await ungroomedLearnings(directory)
   if (n > 1) {
     lines.push(`- ${n} ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).`)
@@ -697,6 +778,10 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
     ) => {
       const args = output?.args ?? {}
       guardCheck(input?.tool ?? "", args)
+
+      // Foreign MCP gate: never another project's servers or data.
+      const foreign = await foreignMcpServer(directory, input?.tool ?? "")
+      if (foreign) block(FOREIGN_MCP_MSG.replace("${SERVER}", foreign))
 
       // Shadow gate first: a blocked write never reaches the evidence question.
       if (await shadowGateBlocks(directory, input?.tool ?? "", args)) block(SHADOW_MSG)

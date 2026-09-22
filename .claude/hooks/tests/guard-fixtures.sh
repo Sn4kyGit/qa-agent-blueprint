@@ -189,6 +189,46 @@ rm -rf "$PFWORK/projects"
 check "no projects → nothing to gate" 0 "$PW_CALL"
 
 echo
+echo "== foreign MCP gate: global-only servers blocked (field report 2026-09-22) =="
+# A gitlab server configured only in the GLOBAL config (~/.claude.json) may
+# point at another project's credentials — blocked until declared in the
+# project's own .mcp.json. HOME is faked so the fixture touches nothing real.
+FM_HOME="$(mktemp -d)"; FM_PROJ="$(mktemp -d)"; FM_PROJ_DECL="$(mktemp -d)"
+trap 'rm -rf "$FM_HOME" "$FM_PROJ" "$FM_PROJ_DECL" 2>/dev/null' EXIT
+printf '%s' '{"mcpServers":{"gitlab":{"command":"x"},"playwright":{"command":"x"}}}' > "$FM_HOME/.claude.json"
+printf '%s' '{"mcpServers":{}}' > "$FM_PROJ/.mcp.json"
+printf '%s' '{"mcpServers":{"gitlab":{"command":"x"}}}' > "$FM_PROJ_DECL/.mcp.json"
+fm_call() { printf '{"tool_name":"%s","tool_input":{},"cwd":"%s"}' "$1" "$2"; }
+check_home() { # <name> <want> <json> [extra env]
+  local name="$1" want="$2" json="$3" got
+  if [ $# -ge 4 ]; then
+    printf '%s' "$json" | env HOME="$FM_HOME" "$4" bash "$GUARD" >/dev/null 2>&1
+  else
+    printf '%s' "$json" | HOME="$FM_HOME" bash "$GUARD" >/dev/null 2>&1
+  fi
+  got=$?
+  if [ "$got" = "$want" ]; then printf 'ok    %-46s exit=%s\n' "$name" "$got"
+  else printf 'FAIL  %-46s want=%s got=%s\n' "$name" "$want" "$got"; fails=$((fails + 1)); fi
+}
+check_home "mcp gitlab global-only → blocked"          2 "$(fm_call mcp__gitlab__getIssue "$FM_PROJ")"
+check_home "mcp gitlab declared in project → allowed"  0 "$(fm_call mcp__gitlab__getIssue "$FM_PROJ_DECL")"
+check_home "mcp playwright (blueprint) w/o decl → ok"  0 "$(fm_call mcp__playwright__browser_navigate "$FM_PROJ")"
+check_home "mcp plugin-namespaced atlassian read → ok" 0 "$(fm_call mcp__plugin_qa-agent-blueprint_atlassian__getIssue "$FM_PROJ")"
+check_home "QA_ALLOW_GLOBAL_MCP=1 escape hatch"        0 "$(fm_call mcp__gitlab__getIssue "$FM_PROJ")" QA_ALLOW_GLOBAL_MCP=1
+check_home "mcp server nowhere configured → allowed"   0 "$(fm_call mcp__nonexistent__x "$FM_PROJ")"
+
+echo
+echo "== global MCP config writes blocked; project config writable =="
+mkdir -p "$FM_HOME/.config/opencode"
+printf '{}' > "$FM_HOME/.config/opencode/opencode.json"
+check_home "Write ~/.claude.json → blocked"            2 "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$FM_HOME/.claude.json\"}}"
+check_home "Edit ~/.config/opencode/opencode.json → blocked" 2 "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$FM_HOME/.config/opencode/opencode.json\"}}"
+check_home "Bash sed -i global config → blocked"       2 "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"sed -i 's/a/b/' $FM_HOME/.claude.json\"}}"
+check_home "Bash redirect > global config → blocked"   2 "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"echo '{}' > $FM_HOME/.config/opencode/opencode.json\"}}"
+check_home "Write project .mcp.json → allowed"         0 "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$FM_PROJ/.mcp.json\"}}"
+check_home "Bash redirect > project .mcp.json → ok"    0 "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"echo '{}' > $FM_PROJ/.mcp.json\"}}"
+
+echo
 echo "== allowed: ordinary work is unaffected =="
 check "Write a normal file"           0 '{"tool_name":"Write","tool_input":{"file_path":"README.md"}}'
 check "Bash normal command"           0 '{"tool_name":"Bash","tool_input":{"command":"npx playwright test"}}'

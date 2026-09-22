@@ -30,6 +30,22 @@ block() {
   exit 2
 }
 
+mcp_server_declared() { # <config-file> <server> — 0 if the file declares the server under mcpServers
+  [ -f "$1" ] || return 1
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$1" "$2" <<'PY' >/dev/null 2>&1
+import json, sys
+try:
+    cfg = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(1)
+sys.exit(0 if sys.argv[2] in (cfg.get("mcpServers") or {}) else 1)
+PY
+  else
+    grep -qE "\"$2\"[[:space:]]*:" "$1"
+  fi
+}
+
 # --- fallback whenever the payload could not be parsed: scan the raw JSON with
 # plain grep instead of silently allowing everything. This used to require
 # python3 to be ABSENT, which meant a broken parse (python3 present, but the
@@ -123,6 +139,40 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '>>?[[:space:]]*\.env'; then
     block "refusing a command that writes into a .env* file directly — use the vault/secrets workflow instead."
   fi
+fi
+
+# 2b. MCP config stays project-scoped (field report 2026-09-22: a GLOBAL
+# gitlab MCP server pointed at a different customer's .env — the agent nearly
+# edited it, saved only by the secrets guard above). Another project's
+# config/data is never used or touched here, by design: (a) the agent never
+# writes global MCP config (~/.claude.json, ~/.config/opencode/opencode.json*)
+# — global edits are a human task; (b) a call to an MCP server that exists
+# only in global config is blocked until the human declares the server in the
+# project's own .mcp.json.
+if [ "${QA_ALLOW_GLOBAL_MCP:-0}" != "1" ]; then
+  case "$TOOL_NAME" in
+    Write|Edit|MultiEdit|NotebookEdit)
+      case "$FILE_PATH" in
+        "$HOME/.claude.json"|"$HOME/.config/opencode/opencode.json"|"$HOME/.config/opencode/opencode.jsonc")
+          block "refusing to modify global MCP config ($FILE_PATH) — MCP config is project-scoped here: a project's servers live in its own .mcp.json / opencode.json, never in global config (~/.claude.json, ~/.config/opencode). Another project's data is never used or touched — global config edits are a human task. Escape hatch: QA_ALLOW_GLOBAL_MCP=1." ;;
+      esac ;;
+    Bash)
+      if printf '%s' "$COMMAND" | grep -qE '(sed[[:space:]]+-i|tee[[:space:]]|>>?|cp[[:space:]]|mv[[:space:]]|rm[[:space:]]|truncate|dd[[:space:]])[^;&|]*(\.claude\.json|\.config/opencode/opencode\.jsonc?)'; then
+        FILE_PATH="the command line"
+        block "refusing to modify global MCP config ($FILE_PATH) — MCP config is project-scoped here: a project's servers live in its own .mcp.json / opencode.json, never in global config (~/.claude.json, ~/.config/opencode). Another project's data is never used or touched — global config edits are a human task. Escape hatch: QA_ALLOW_GLOBAL_MCP=1."
+      fi ;;
+    mcp__*__*)
+      # Server = everything between mcp__ and the LAST __ (plugin-namespaced
+      # servers like plugin_qa-agent-blueprint_atlassian survive this).
+      SERVER="$(printf '%s' "$TOOL_NAME" | sed -E 's/^mcp__//; s/__[^_]*$//')"
+      case "$SERVER" in
+        playwright|atlassian|plugin_qa-agent-blueprint_*) : ;;  # blueprint servers always allowed
+        *)
+          if ! mcp_server_declared "$CWD/.mcp.json" "$SERVER" && mcp_server_declared "$HOME/.claude.json" "$SERVER"; then
+            block "refusing a call to MCP server '${SERVER}' — it is configured globally but not declared in this project's config (.mcp.json / opencode.json). Global MCP config may point at another project's credentials or data — and another project's data is never used here, by design. Declare the server in this project's own config to use it deliberately. Escape hatch: QA_ALLOW_GLOBAL_MCP=1."
+          fi ;;
+      esac ;;
+  esac
 fi
 
 # 3. Shadow Mode: no JIRA write leaves the building by default (security.md →

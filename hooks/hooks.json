@@ -47,6 +47,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/.claude/hooks/pre-tool-guard.sh"
           }
         ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/hooks/pre-tool-guard.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
