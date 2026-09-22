@@ -77,20 +77,35 @@ prompt. All of it came from files the agent read because the ticket key told it 
 > **You need:** [Claude Code](https://claude.com/claude-code) ≥ 2.x, git access
 > to this repo while it is private (`gh auth login` — it is git under the hood).
 
-**Step 1 — two commands**, run inside the project you want tested:
+**Step 1 — the easiest way: tell your agent.** Open Claude Code inside the
+project you want tested and paste:
+
+> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> as a Claude Code plugin
+> in this project. Read its **AGENTS.md** first and follow the runbook there —
+> then tell me which steps need me (JIRA auth, secrets, onboarding).
+
+The agent runs the install, checks prerequisites (and installs what is
+missing, with your OK), and hands back exactly the steps only a human can do.
+
+<details>
+<summary><b>Step 1 alternative — two commands yourself</b></summary>
 
 ```bash
 claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
 ```
 
+`--scope project` enables the plugin only here; drop the flag to enable it
+everywhere.
+
+</details>
+
 **Step 2 — restart Claude Code** and accept the trust dialog. Done installing.
 
-`--scope project` enables the plugin only here; drop the flag to enable it
-everywhere. Nothing is copied into your project — rules, skills, agents and
-hooks load from the plugin; only your own data (`projects/`, `memory/`,
-`evidence/`) lives in your repo. On first session start the SessionStart hook
-bootstraps those folders plus a `.env.playwright-secrets` placeholder.
+Nothing is copied into your project — rules, skills, agents and hooks load
+from the plugin; only your own data (`projects/`, `memory/`, `evidence/`)
+lives in your repo. On first session start the SessionStart hook bootstraps
+those folders plus a `.env.playwright-secrets` placeholder.
 
 ➡️ Continue at **[4 · After the install](#4--after-the-install-both-harnesses)**.
 
@@ -200,18 +215,7 @@ Preview everything the installer would do, without changing anything:
 `./install.sh --dry-run`.
 
 <details>
-<summary>Other ways in — "tell your agent" prompt, clone + installer, manual settings.json</summary>
-
-#### The easiest way: tell your agent
-
-Paste this into Claude Code (or any coding agent) inside the project you want
-tested:
-
-> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> as a Claude Code plugin
-> in this project. Read its **AGENTS.md** first and follow the runbook there —
-> then tell me which steps need me (OAuth, secrets, onboarding).
-
-(The opencode variant of this prompt is Step 1 of **section 3** above.)
+<summary>Other ways in — clone + installer, manual settings.json</summary>
 
 #### The classic way: clone + installer
 
