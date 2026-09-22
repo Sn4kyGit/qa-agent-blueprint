@@ -8,6 +8,22 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.8.0] — 2026-09-22
+
+### Added
+- **`install.sh --mode opencode --target <old> --move <new>`** — relocate an
+  opencode QA home. opencode commands are per-folder, so picking the fresh
+  `~/qa-workspace` at install time when you wanted the commands inside your
+  project workspace used to mean re-onboarding from scratch. The move
+  carries `projects/`, `memory/`, `evidence/`, the seed files and the merged
+  `opencode.json` to the new folder, links the blueprint surface there, and
+  unlinks the old one. Never overwrites existing names in the new folder
+  (reported SKIPPED, left for a human merge); dry-run aware; fixtures cover
+  the happy path and the no-overwrite branch.
+- Docs: README section 3 + quickstart-opencode explain the move and the
+  "several workspaces = several QA homes" trade-off; AGENTS.md runbook got
+  the move recipe for agents hitting the wrong-target situation.
+
 ## [0.7.0] — 2026-09-19
 
 New skill: **`/demo` — presenter mode.** Show the blueprint to people:

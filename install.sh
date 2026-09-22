@@ -19,8 +19,14 @@
 #
 # Usage:
 #   ./install.sh [--mode integrate|plugin|opencode] [--target <path>]
-#                [--dry-run] [--yes] [--uninstall]
+#                [--dry-run] [--yes] [--uninstall] [--move <new-target>]
 #                [--non-interactive] [-h|--help]
+#
+# --move (opencode mode only): relocate an existing QA home — moves the data
+#   (projects/, memory/, evidence/, seed files, opencode.json) to <new-target>,
+#   links the blueprint surface there, and unlinks it from --target. Use when
+#   the installer went into the wrong folder (e.g. ~/qa-workspace instead of
+#   the project workspace). Never overwrites existing files in <new-target>.
 #
 # Detection checks (all reported FOUND/MISSING/MERGED/SKIPPED):
 #   1. node/npm + minimum version (>= 18)
@@ -59,6 +65,7 @@ TARGET="$PWD"
 DRY_RUN=0
 YES=0
 UNINSTALL=0
+MOVE_TO=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -70,6 +77,8 @@ while [ $# -gt 0 ]; do
     --yes|-y)           YES=1; shift ;;
     --non-interactive)  YES=1; shift ;;  # backwards-compatible alias
     --uninstall)        UNINSTALL=1; shift ;;
+    --move)             MOVE_TO="${2:?--move needs a path}"; shift 2 ;;
+    --move=*)           MOVE_TO="${1#*=}"; shift ;;
     -h|--help)          usage ;;
     *) err "Unknown argument: $1 (see --help)"; exit 1 ;;
   esac
@@ -1892,6 +1901,57 @@ run_opencode_mode() {
   next_step "Shadow mode is ON by default — JIRA reports are composed, not posted, until you opt out (PROJECT.md or QA_AGENT_SHADOW=0)"
 }
 
+# --move <new-target>: relocate an opencode QA home. Data first (so the new
+# install's seed step never shadows it), then link the surface in the new
+# folder, then unlink the old one. Never overwrites anything in the new
+# target — a name that already exists there is reported SKIPPED and left for
+# a human merge, in both places.
+run_opencode_move() {
+  local old="$TARGET" new="$MOVE_TO" router_link="$TARGET/.opencode/ROUTER.md"
+  info "opencode move: relocating the QA home $old → $new"
+  if [ ! -L "$router_link" ]; then
+    err "No opencode install found at $old (.opencode/ROUTER.md symlink missing) — nothing to move."
+    exit 1
+  fi
+  case "$(readlink "$router_link")" in
+    "$REPO_ROOT"|"$REPO_ROOT/"*) ;;
+    *) err "$router_link points at $(readlink "$router_link"), not this checkout — refusing to move someone else's install."; exit 1 ;;
+  esac
+  if [ "$old" = "$new" ]; then
+    err "--move target is the current target — nothing to do."
+    exit 1
+  fi
+  if [ "$DRY_RUN" -eq 0 ]; then mkdir -p "$new"; fi
+
+  if [ "$YES" -ne 1 ] && [ "$DRY_RUN" -eq 0 ]; then
+    printf 'Move the QA home from %s to %s? Data moves, links are re-created there and removed here. [y/N] ' "$old" "$new"
+    read -r answer
+    case "$answer" in y|Y|yes|YES) ;; *) info "Aborted — nothing changed."; exit 0 ;; esac
+  fi
+
+  # 1. data (dirs + seed files + merged config)
+  local item
+  for item in projects memory evidence .env.playwright-secrets .playwright-mcp.config.json opencode.json; do
+    [ -e "$old/$item" ] || continue
+    if [ -e "$new/$item" ]; then
+      report SKIPPED "$item" "exists in $new — left in both places; merge by hand"
+      continue
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then dry "move $old/$item → $new/$item"; continue; fi
+    mv "$old/$item" "$new/$item"
+    report MOVED "$item" "$old → $new"
+  done
+
+  # 2. link the surface in the new home (seeds/merge skip what the move carried over)
+  TARGET="$new"
+  run_opencode_mode
+
+  # 3. unlink the old home
+  TARGET="$old"
+  opencode_uninstall
+  next_step "Restart opencode in $new — projects/, memory/ and evidence/ moved with you"
+}
+
 # =================================================================================
 # MAIN
 # =================================================================================
@@ -1904,6 +1964,17 @@ if [ "$UNINSTALL" -eq 1 ] && [ "$MODE" != "integrate" ] && [ "$MODE" != "opencod
   exit 1
 fi
 
+if [ -n "$MOVE_TO" ]; then
+  if [ "$MODE" != "opencode" ]; then
+    err "--move only makes sense with --mode opencode (plugin/integrate: just install into the new target)."
+    exit 1
+  fi
+  if [ "$UNINSTALL" -eq 1 ]; then
+    err "--move already unlinks the old target — drop --uninstall."
+    exit 1
+  fi
+fi
+
 if [ "$MODE" = "opencode" ]; then
   check_prereqs_opencode
 else
@@ -1914,7 +1985,9 @@ case "$MODE" in
   integrate)  run_integrate ;;
   plugin)     run_plugin_mode ;;
   opencode)
-    if [ "$UNINSTALL" -eq 1 ]; then opencode_uninstall; else run_opencode_mode; fi
+    if [ "$UNINSTALL" -eq 1 ]; then opencode_uninstall
+    elif [ -n "$MOVE_TO" ]; then run_opencode_move
+    else run_opencode_mode; fi
     ;;
 esac
 

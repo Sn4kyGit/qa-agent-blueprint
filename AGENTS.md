@@ -219,6 +219,26 @@ claude plugin marketplace remove qa-agent-blueprint-marketplace
 
 (Clone path: `install.sh --mode plugin --uninstall --target <consumer-repo>`.)
 
+## opencode: wrong target folder? Move, don't re-onboard
+
+opencode commands are per-folder — they exist only where the installer
+linked them. If a user picked the fresh `~/qa-workspace` but actually wants
+the commands inside their project workspace (a classic: option 1 instead of
+option 2 at the "Installationsziel" question), do NOT re-install and
+re-onboard — move the QA home, data included:
+
+```bash
+~/qa-blueprint/install.sh --mode opencode --target <old-folder> \
+  --move <project-workspace> --yes
+```
+
+Moves `projects/`, `memory/`, `evidence/`, seed files and the merged
+`opencode.json`, links the surface in the new folder, unlinks the old.
+Never overwrites existing names in the new folder (reported SKIPPED, left
+for a human merge). Installing into several folders is allowed — but each is
+then a **separate QA home** with its own learnings; say that trade-off out
+loud before doing it.
+
 ## If you are developing on this repo
 
 **opencode port**: the dual-harness plan (Claude Code + opencode, model-agnostic,

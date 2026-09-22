@@ -1,7 +1,7 @@
 # Quickstart: opencode on a fresh machine
 
 The opencode path through the blueprint: the same ticket-driven QA Manager +
-Tester (27 skills, 5 agents, evidence gate), running under
+Tester (28 skills, 5 agents, evidence gate), running under
 [opencode](https://opencode.ai) instead of Claude Code — with **your** choice
 of model. The blueprint pins none: the model is whatever you pick in
 `/models` (docs/opencode-port-plan.md, D6).
@@ -58,6 +58,33 @@ Uninstall: `install.sh --mode opencode --target ~/qa-workspace --uninstall`
 removes only the symlinks that point into the blueprint; your data and your
 `opencode.json` stay.
 
+## Wrong folder? Move the QA home
+
+Commands in opencode are per-folder: they exist only where the blueprint is
+installed. If the installer went into the wrong folder (e.g. `~/qa-workspace`
+when you actually wanted the commands inside `~/KPS-Development`), do not
+re-onboard — move the whole QA home, data included:
+
+```bash
+~/qa-blueprint/install.sh --mode opencode --target ~/qa-workspace \
+  --move ~/KPS-Development --yes
+```
+
+The move carries `projects/`, `memory/`, `evidence/`, the seed files and your
+merged `opencode.json` over, links the blueprint surface there, and unlinks
+the old folder. It never overwrites anything that already exists in the new
+folder — a name present in both places is reported SKIPPED and left for you
+to merge by hand.
+
+## Several workspaces
+
+You can install into as many folders as you like — every folder gets the same
+commands through the symlinks. Just know what you are choosing: **each folder
+is its own QA home** with its own `projects/`, `memory/` and `evidence/`.
+Learnings captured in one workspace do not appear in the other. For most
+setups one QA home (the project workspace you test most, or a dedicated
+folder) is the simpler life.
+
 ## Steps that need you
 
 1. **Provider + model** — connect a provider (`/connect`, e.g. OpenRouter or
@@ -93,7 +120,7 @@ In `~/qa-workspace`:
 opencode run "list your available skills"
 ```
 
-should show the 27 blueprint skills, and `/test-ticket` `/retest-bug`
+should show the 28 blueprint skills, and `/test-ticket` `/retest-bug`
 `/qa-report` etc. should appear as commands. The evidence gate is active from
 the first session: a JIRA write without fresh evidence is blocked with
 `QA_EVIDENCE_MISSING:`.

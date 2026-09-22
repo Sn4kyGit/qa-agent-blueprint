@@ -29,9 +29,9 @@ diffable, and shared with your team through Git.
 
 ---
 
-## What it actually does
+## 1 · What it is
 
-You type `/test-ticket SHOP-1234`. The agent then:
+A QA colleague that lives in your repo. You type `/test-ticket SHOP-1234`. The agent then:
 
 ```mermaid
 flowchart LR
@@ -72,33 +72,135 @@ prompt. All of it came from files the agent read because the ticket key told it 
 
 ---
 
-## Quickstart
+## 2 · Install — Claude Code (plugin)
 
-**Recommended mode: plugin.** Nothing is copied into your project — rules,
-skills, agents and hooks load from the plugin; only your own data
-(`projects/`, `memory/`, `evidence/`) lives in your repo.
+> **You need:** [Claude Code](https://claude.com/claude-code) ≥ 2.x, git access
+> to this repo while it is private (`gh auth login` — it is git under the hood).
+
+**Step 1 — two commands**, run inside the project you want tested:
 
 ```bash
 claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
 ```
 
-Restart Claude Code and accept the trust dialog. `--scope project` enables the
-plugin only here; drop the flag to enable it everywhere. While the repository
-is private, the fetch needs GitHub auth on the machine (`gh auth login`) — it
-is git under the hood. On first session start the plugin's SessionStart hook
-bootstraps `projects/`, `memory/`, `evidence/` and a `.env.playwright-secrets`
-placeholder in your repo, and injects the router.
+**Step 2 — restart Claude Code** and accept the trust dialog. Done installing.
+
+`--scope project` enables the plugin only here; drop the flag to enable it
+everywhere. Nothing is copied into your project — rules, skills, agents and
+hooks load from the plugin; only your own data (`projects/`, `memory/`,
+`evidence/`) lives in your repo. On first session start the SessionStart hook
+bootstraps those folders plus a `.env.playwright-secrets` placeholder.
+
+➡️ Continue at **[4 · After the install](#4--after-the-install-both-harnesses)**.
+
+---
+
+## 3 · Install — opencode (any model: Kimi, GLM, MiMo, GPT, …)
+
+The same blueprint under [opencode](https://opencode.ai) — **the model is
+your `/models` choice, the blueprint pins none.** Want Kimi? Connect the
+provider, pick Kimi in `/models`, done. The installer **symlinks** the
+blueprint into your QA home (nothing copied), so updates are a `git pull`.
+
+> **You need:** Node.js ≥ 18 · opencode (`npm install -g opencode-ai`) ·
+> python3 · git access to this repo while it is private
+> (`brew install gh && gh auth login`).
+
+**Step 1 — the easiest way: tell your agent.** Open opencode in the folder you
+want as your QA home (e.g. `~/qa-workspace`) and paste:
+
+> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> for opencode in this
+> project. Read its **AGENTS.md** first and follow the opencode runbook there —
+> then tell me which steps need me (provider connect, JIRA auth, onboarding).
+
+The agent clones the repo, runs the installer, and hands back exactly the
+steps only a human can do.
+
+<details>
+<summary><b>Step 1 alternative — run the installer yourself</b></summary>
+
+```bash
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
+mkdir -p ~/qa-workspace
+~/qa-blueprint/install.sh --mode opencode --target ~/qa-workspace --yes
+```
+
+The installer links the surface, seeds `.env.playwright-secrets` (placeholder)
+and `.playwright-mcp.config.json` (headless default), and merges
+`opencode/opencode.template.jsonc` into your `opencode.json` — existing MCP
+server names win (your own `atlassian` entry survives re-installs), only the
+playwright contract flags are force-upgraded, and your existing file is
+backed up first.
+
+</details>
+
+**Step 2 — provider + model** (the "configure it for Kimi" part — nothing
+blueprint-side to change): in opencode, `/connect` → pick your provider
+(Moonshot/Kimi, OpenRouter, a coding plan, …) → enter the API key. Then
+`/models` → pick the model (e.g. Kimi K3).
+
+**Step 3 — verify**, in `~/qa-workspace`:
+
+```bash
+opencode run "list your available skills"
+```
+
+should show the 28 blueprint skills; `/test-ticket`, `/retest-bug`,
+`/qa-report` etc. appear as commands.
+
+**Updating:** `cd ~/qa-blueprint && git pull` — live after a restart; if the
+template gained keys, re-run the installer (idempotent, never removes your
+entries). **Uninstall:** `install.sh --mode opencode --target ~/qa-workspace
+--uninstall` removes only the symlinks; your data and `opencode.json` stay.
+
+**Wrong folder?** Commands live where the blueprint is installed — if the
+installer went into `~/qa-workspace` but you want the commands in your
+project workspace, move the whole QA home (data comes along, nothing is
+overwritten):
+
+```bash
+~/qa-blueprint/install.sh --mode opencode --target ~/qa-workspace \
+  --move ~/my-project --yes
+```
+
+**Several workspaces:** run the installer once per folder — each gets the
+same commands via symlinks. Note that each folder is then its own QA home
+(own `projects/`, `memory/`, `evidence/`); learnings do not flow between
+them. One shared home for everything is usually what you want.
+
+Deep dive incl. edge cases: [docs/quickstart-opencode.md](docs/quickstart-opencode.md).
+
+➡️ Continue at **[4 · After the install](#4--after-the-install-both-harnesses)**.
+
+---
+
+## 4 · After the install (both harnesses)
+
+1. **JIRA auth** — Cloud: authorize the `atlassian` MCP server
+   (Claude Code: `/mcp`; opencode: `opencode mcp auth atlassian`). Data
+   Center: replace the `atlassian` entry with the local `mcp-atlassian`
+   server (keep the **name** `atlassian` — hooks match on it) and store a PAT
+   in the macOS keychain, service `JIRA_PAT_<jira-host>`; the blueprint
+   resolves it into the session, so the token lives in no file and no chat.
+   JIRA only via web UI (no tokens possible)? That is supported too —
+   declare `JIRA access: browser` in the project file.
+2. **Browser mode** — `.playwright-mcp.config.json` ships headless; set
+   `"launchOptions": { "headless": false }` to watch the agent work. Applies
+   after a restart.
+3. Fill `.env.playwright-secrets` with your test users (values are masked in
+   transcripts).
+4. Run `/onboard-project` — needs the JIRA project key, deployment kind, and
+   the stage URL.
+5. **Shadow mode is ON by default**: JIRA comments are composed into the
+   evidence dir (`proposed-report.md`), never posted, until you write
+   `Shadow mode: off` in the project file or set `QA_AGENT_SHADOW=0`.
 
 Preview everything the installer would do, without changing anything:
 `./install.sh --dry-run`.
 
-Running [opencode](https://opencode.ai) instead of Claude Code? Your path is
-[docs/quickstart-opencode.md](docs/quickstart-opencode.md) — same blueprint,
-model-agnostic.
-
 <details>
-<summary>Other ways in — "tell your agent" prompt, opencode, clone + installer, manual settings.json</summary>
+<summary>Other ways in — "tell your agent" prompt, clone + installer, manual settings.json</summary>
 
 #### The easiest way: tell your agent
 
@@ -109,25 +211,7 @@ tested:
 > in this project. Read its **AGENTS.md** first and follow the runbook there —
 > then tell me which steps need me (OAuth, secrets, onboarding).
 
-#### opencode instead of Claude Code
-
-The same blueprint also runs under [opencode](https://opencode.ai) —
-model-agnostic (the model is your `/models` choice; the blueprint pins none).
-Easiest: paste this into opencode (or any coding agent) inside the project you
-want tested:
-
-> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> for opencode in this
-> project. Read its **AGENTS.md** first and follow the opencode runbook there —
-> then tell me which steps need me (provider connect, JIRA auth, onboarding).
-
-Or one command yourself, from a local checkout:
-
-```bash
-install.sh --mode opencode --target <your-project> --yes
-```
-
-Symlinks instead of copies; details incl. provider connect and JIRA auth:
-[docs/quickstart-opencode.md](docs/quickstart-opencode.md).
+(The opencode variant of this prompt is Step 1 of **section 3** above.)
 
 #### The classic way: clone + installer
 

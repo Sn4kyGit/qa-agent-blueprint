@@ -170,5 +170,45 @@ assert_no_file "compat docs link removed"    "$TARGET/docs"
 assert_file    "seeded secrets file kept (user data)" "$TARGET/.env.playwright-secrets"
 
 echo
+echo "== move relocates a QA home (--move) =="
+TARGET4="$WORK/move-old"; TARGET5="$WORK/move-new"
+mkdir -p "$TARGET4"
+"$INSTALL" --mode opencode --target "$TARGET4" --yes >/dev/null 2>&1 \
+  && pass "move: install into old home" || fail "move: install into old home" "exit $?"
+# user data accumulates over time
+mkdir -p "$TARGET4/projects/TA" "$TARGET4/memory" "$TARGET4/evidence/TA/TA-1/run1"
+echo "# TA" > "$TARGET4/projects/TA/PROJECT.md"
+echo "learning" > "$TARGET4/memory/learnings.md"
+echo '{}' > "$TARGET4/evidence/TA/TA-1/run1/execution_summary.json"
+echo "custom-key" >> "$TARGET4/.env.playwright-secrets"
+OUT="$("$INSTALL" --mode opencode --target "$TARGET4" --move "$TARGET5" --yes 2>&1)"
+if [ $? -ne 0 ]; then fail "move exits 0" "$(printf '%s' "$OUT" | tail -3)"; else pass "move exits 0"; fi
+assert_link_to "move: router linked in new home" "$TARGET5/.opencode/ROUTER.md" "$REPO/opencode/ROUTER.md"
+assert_file "move: project file moved"  "$TARGET5/projects/TA/PROJECT.md"
+assert_file "move: memory moved"        "$TARGET5/memory/learnings.md"
+assert_file "move: evidence moved"      "$TARGET5/evidence/TA/TA-1/run1/execution_summary.json"
+assert_grep "move: secrets content intact" "$TARGET5/.env.playwright-secrets" "custom-key"
+assert_file "move: opencode.json moved" "$TARGET5/opencode.json"
+cfg_check  "move: instructions in moved config" "$TARGET5/opencode.json" \
+  "len([i for i in cfg['instructions'] if 'ROUTER.md' in str(i)]) == 1"
+assert_no_file "move: old router link removed" "$TARGET4/.opencode/ROUTER.md"
+assert_no_file "move: old compat link removed" "$TARGET4/.claude"
+assert_no_file "move: old data gone"           "$TARGET4/projects"
+assert_no_file "move: old opencode.json gone"  "$TARGET4/opencode.json"
+
+echo
+echo "== move never overwrites in the new home =="
+TARGET6="$WORK/move-merge"
+mkdir -p "$TARGET6/projects"
+echo "existing" > "$TARGET6/projects/marker.txt"
+OUT2="$("$INSTALL" --mode opencode --target "$TARGET5" --move "$TARGET6" --yes 2>&1)"
+if [ $? -ne 0 ]; then fail "move-merge exits 0" "$(printf '%s' "$OUT2" | tail -3)"; else pass "move-merge exits 0"; fi
+assert_file "move-merge: existing projects kept"  "$TARGET6/projects/marker.txt"
+assert_file "move-merge: skipped data stays put"  "$TARGET5/projects/TA/PROJECT.md"
+assert_file "move-merge: memory still moved"      "$TARGET6/memory/learnings.md"
+printf '%s' "$OUT2" | grep -qi "merge by hand" \
+  && pass "move-merge: skip reported" || fail "move-merge: skip reported" "no 'merge by hand' in output"
+
+echo
 if [ "$fails" -eq 0 ]; then echo "all fixtures passed"; else echo "$fails fixture(s) failed"; fi
 exit "$fails"
