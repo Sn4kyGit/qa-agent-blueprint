@@ -734,12 +734,25 @@ def has_flag(cfg, flag):
     args = cfg.get("args") or []
     return any(a == flag or a.startswith(flag + "=") for a in args)
 
+def uses_qa_secrets_wrapper(cfg):
+    # A playwright entry launched through .claude/scripts/qa-secrets.mjs mcp
+    # satisfies the secrets contract by construction (ephemeral mask file) —
+    # and is a deliberate, hand-built consumer setup. Force-upgrading it with
+    # the blueprint entry would destroy the wrapper, so it is KEPT with a
+    # note to verify the forwarded flags, never rewritten.
+    args = [str(a) for a in (cfg.get("args") or [])]
+    cmd = str(cfg.get("command") or "")
+    return any("qa-secrets" in a for a in args) or "qa-secrets" in cmd
+
 for name, cfg in bp.get("mcpServers", {}).items():
     if name in servers:
         existing = servers[name]
         if existing == cfg:
             print(f"SKIPPED|.mcp.json|server '{name}' already configured (identical)")
         elif name == "playwright":
+            if uses_qa_secrets_wrapper(existing):
+                print(f"SKIPPED|.mcp.json|kept existing 'playwright' — qa-secrets wrapper detected (secrets contract satisfied by the ephemeral mask file). VERIFY the wrapped command forwards --output-dir evidence/.mcp-out and --image-responses omit to the server.")
+                continue
             missing = [f for f in CONTRACT_FLAGS if not has_flag(existing, f)]
             missing_prefs = [f for f in PREFERENCE_FLAGS if not has_flag(existing, f)]
             if not missing:

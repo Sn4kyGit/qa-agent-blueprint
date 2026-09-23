@@ -8,6 +8,71 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.11.0] — 2026-09-23
+
+Theme: **secrets comfort without security loss.** Direct `.env` reads become a
+human-granted opt-in instead of a hard no — and the value-free paths
+(credential injection into runners, ephemeral MCP mask files) become first-class
+blueprint assets, so the comfortable path and the safe path are the same path.
+
+### Added
+- **`secrets_read` toggle (`.qa-guard.json` in the QA home).** With
+  `{"secrets_read": "allow"}` the PreToolUse guard lets direct reads of `.env*`
+  files through (`cat`/`less`/`more`/`head`/`tail`/`grep`/`sed` without `-i`/
+  `awk`/`jq`/`source`). Default is unchanged: missing file, missing key,
+  invalid JSON, or any other value means **block**. Both harnesses
+  (`pre-tool-guard.sh`, opencode `qa-blueprint.ts`), 34 new bash fixtures +
+  opencode parity tests.
+- **Still blocked, even with `allow`:** writes/edits/redirects, `cp`/`mv`
+  (a copy is not a read), `sed -i`/`sed --in-place`/`awk -i` (in-place edits
+  are writes), `rm <.env*>` (see hardening below), and interpreter one-liners
+  (`python3 -c "open('.env').read()"` — a regex cannot tell a read from a
+  write in arbitrary code, so that class fails closed in both states).
+- **The guard refuses agent edits to `.qa-guard.json` itself** (Write/Edit
+  tools and shell write-ops alike) — an agent that can edit the toggle can
+  grant itself access. Flipping it is a human task, like global MCP config.
+- **`qa-secrets.mjs` — the value-free credential entry** (`.claude/scripts/`,
+  Node ≥ 20.12). `run <KEY…> -- <cmd>` injects only the named keys from the
+  QA home's `.env` into the child and redacts their values (plaintext, base64,
+  url-encoded, pairwise-base64; chunk-boundary safe) in everything it prints;
+  `mcp <KEY…> -- <server>` wraps an MCP server with an **ephemeral**
+  `--secrets` mask file (named keys only, mode-0700 tmpdir, deleted on exit) —
+  no second durable secret store. QA-home walk-up like the hooks; the secrets
+  file is overridable via `.qa-guard.json` → `secrets_file`; `*_BASE_URL` is
+  rejected outright (environment config, not a credential). 51 fixtures in
+  `qa-secrets-fixtures.sh`.
+- **Per-environment secrets files** (`.env.snt`, `.env.review`, …): the file
+  resolves most-specific-first — `--file <path>` flag → `QA_SECRETS_FILE`
+  env → `.qa-guard.json` → `secrets_file` → `.env`. Switching environments is
+  a runner-invocation concern (like `STAGE_BASE_URL`), not a config edit.
+  `qa-secrets.mjs` also warns on placeholder values (`secret`, `admin`,
+  `test1234`, …) whose masking would erase an ordinary word from all output —
+  warn, never block.
+- **Wrapper-aware contract checks:** the installer keeps a playwright entry
+  launched through `qa-secrets.mjs mcp` (with a verify-note) instead of
+  force-upgrading it, and both session scans treat it as secrets-wired —
+  fixtures on all three paths.
+- **Docs:** `docs/rules/core/security.md` gains the three-level credential
+  flow (runner injection → MCP substitution → direct-read opt-in), the key
+  naming convention (`<ENV>_*` / `SHARED_*` / `OWNER_*`), the lookup rule
+  (PROJECT.md → `resolve-secrets.sh --status` → ask for the key, never the
+  value), the model-B variant (agent writes, human/CI executes), and an
+  honestly-scoped sourcing pattern. `scaffold-suite`/`api-testing` skills and
+  the PROJECT.md template point suites at `qa-secrets.mjs run` instead of
+  wholesale dotenv; `test-executor` gets the never-ask-for-values rule.
+
+### Changed (behavioral — hardening)
+- **`rm <.env*>` is now blocked** — previously only `rm -rf`/`rm -fr` were.
+  Deleting a secrets file is a human task; blocked regardless of the toggle.
+
+### Fixed
+- **`retest-bug` skill triggers restored** (0.10.0 regression, caught by the
+  `flow-map-scoping` eval): the description trim had dropped the English
+  trigger phrases ("re-test <KEY-123>", "fix is deployed/verified on
+  stage"), so English retest prompts no longer selected the skill and the
+  regression sweep fell back to generic risk-based scoping instead of the
+  flow map's Neighbors (1/3 → 3/3 after the restore).
+
 ## [0.10.0] — 2026-09-23
 
 Theme: **token diet.** Subscription quotas burn on context, not on thinking —

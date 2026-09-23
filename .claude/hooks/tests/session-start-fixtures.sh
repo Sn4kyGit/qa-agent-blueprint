@@ -132,6 +132,12 @@ M2="$WORK/mcp-unmasked"; mkdir -p "$M2/projects"
 printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest"]}}}' > "$M2/.mcp.json"
 check_contains "unmasked playwright config → warning" "$(context_for "$M2")" "no --secrets flag"
 
+# …but an entry launched through qa-secrets.mjs mcp satisfies the secrets
+# contract by construction (ephemeral mask file) — no warning there.
+M7="$WORK/mcp-wrapper"; mkdir -p "$M7/projects"
+printf '%s' '{"mcpServers":{"playwright":{"command":"node","args":[".claude/scripts/qa-secrets.mjs","mcp","STAGE_PASSWORD","--","npx","@playwright/mcp@latest"]}}}' > "$M7/.mcp.json"
+check_absent "qa-secrets wrapper entry → no unmasked warning" "$(context_for "$M7")" "no --secrets flag"
+
 # Plugin mode + a local duplicate → duplicate warning (verified behavior: a
 # project .mcp.json does NOT override a plugin server of the same name).
 M3="$WORK/mcp-dupe"; mkdir -p "$M3/projects"

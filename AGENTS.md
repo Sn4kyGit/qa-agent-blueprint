@@ -203,6 +203,16 @@ Full walkthrough incl. a no-clone `settings.json` variant:
 5. **Shadow mode is ON by default**: the agent composes JIRA comments but posts
    nothing until the user writes `Shadow mode: off` in the project file or sets
    `QA_AGENT_SHADOW=0`. Mention this before the first `/test-ticket`.
+6. **Secret reads stay blocked by default (0.11.0)**: the guard refuses
+   `cat .env` & co. unless a human writes `{"secrets_read": "allow"}` into the
+   QA home's `.qa-guard.json` — the guard refuses *agent* edits to that file
+   (an agent that can edit it can grant itself access), so never offer to flip
+   it; point the human at it. Writes/copies/`sed -i`/`rm` on `.env*` stay
+   blocked even with allow. The value-free paths need no toggle:
+   `node .claude/scripts/qa-secrets.mjs run <KEY…> -- <runner>` (test-runner
+   injection with output redaction; needs Node ≥ 20.12) and the
+   `qa-secrets.mjs mcp` wrapper (ephemeral `--secrets` mask file — installer
+   and session scans treat such playwright entries as secrets-wired).
 
 ## Do NOT
 

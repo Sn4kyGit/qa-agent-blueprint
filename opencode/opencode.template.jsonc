@@ -1,4 +1,4 @@
-// blueprint-version: 0.10.0
+// blueprint-version: 0.11.0
 // opencode config template for the qa-agent-blueprint — merged into the
 // consumer's opencode.json(c) by `install.sh --mode opencode`. Contract:
 // docs/opencode-port-plan.md (D4 router via instructions, D5 tool-name

@@ -291,6 +291,88 @@ describe("preflight gate (opencode)", () => {
   })
 })
 
+// secrets_read toggle (tdd 0.11.0 §7–§11) — mirrors the "secrets_read toggle"
+// section of guard-fixtures.sh. The toggle lives in the QA home's
+// .qa-guard.json; default/missing/invalid = block; only "allow" opens direct
+// reads — and even then only for the READER_CORE commands.
+describe("secrets_read toggle (opencode)", () => {
+  async function qaHome(config?: string): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), "qa-toggle-"))
+    await writeFile(join(dir, ".qa-home"), "")
+    if (config !== undefined) await writeFile(join(dir, ".qa-guard.json"), config)
+    return dir
+  }
+
+  test("default: no config → block", async () => {
+    const h = await hooksIn(await qaHome())
+    await expect(run(h, bashBefore("cat .env"))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+  })
+
+  test("missing key / wrong value / invalid JSON → block", async () => {
+    for (const cfg of ["{}", '{"secrets_read":"yes"}', "not json"]) {
+      const h = await hooksIn(await qaHome(cfg))
+      await expect(run(h, bashBefore("cat .env"))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+      await expect(run(h, bashBefore("grep PASSWORD .env"))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+    }
+  })
+
+  test("allow: READER_CORE commands follow the toggle", async () => {
+    const h = await hooksIn(await qaHome('{"secrets_read":"allow"}'))
+    for (const cmd of [
+      "cat .env", "less .env", "head .env", "tail .env",
+      "grep PASSWORD .env", "sed -n 1p .env", "awk -F= {print$1} .env",
+      "jq . .env", "source .env",
+    ]) {
+      await expect(run(h, bashBefore(cmd)), cmd).resolves.toBeUndefined()
+    }
+  })
+
+  test("allow: cp/mv/sed -i/awk -i are NOT readers — always blocked", async () => {
+    const h = await hooksIn(await qaHome('{"secrets_read":"allow"}'))
+    for (const cmd of [
+      "cp .env /tmp/secrets", "mv .env /tmp/secrets",
+      "sed -i s/a/b/ .env", "sed -i.bak s/a/b/ .env", "sed --in-place s/a/b/ .env",
+      "awk -i inplace {print} .env",
+    ]) {
+      await expect(run(h, bashBefore(cmd)), cmd).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+    }
+  })
+
+  test("allow: writes stay blocked", async () => {
+    const dir = await qaHome('{"secrets_read":"allow"}')
+    const h = await hooksIn(dir)
+    await expect(run(h, bashBefore("echo PASSWORD=x >> .env"))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+    await expect(run(h, fileBefore("write", join(dir, ".env")))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+  })
+
+  test("allow: interpreter reads stay blocked (fail closed — read vs write indistinguishable)", async () => {
+    const h = await hooksIn(await qaHome('{"secrets_read":"allow"}'))
+    await expect(run(h, bashBefore(`python3 -c "print(open('.env').read())"`))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+  })
+
+  test("rm hardening: deleting a secrets file is a human task, both modes", async () => {
+    for (const cfg of [undefined, '{"secrets_read":"allow"}']) {
+      const h = await hooksIn(await qaHome(cfg))
+      await expect(run(h, bashBefore("rm .env"))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+      await expect(run(h, bashBefore("rm -f .env"))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+      await expect(run(h, bashBefore("rm .env.local"))).rejects.toThrow(/^BLOCKED by pre-tool-guard:/)
+    }
+    const h = await hooksIn(await qaHome('{"secrets_read":"allow"}'))
+    await expect(run(h, bashBefore("rm scratch-output.txt"))).resolves.toBeUndefined()
+    await expect(run(h, bashBefore("rm .env.example"))).resolves.toBeUndefined()
+  })
+
+  test("the toggle file itself is a human task (self-escalation hole)", async () => {
+    const dir = await qaHome('{"secrets_read":"allow"}')
+    const h = await hooksIn(dir)
+    await expect(run(h, fileBefore("write", join(dir, ".qa-guard.json")))).rejects.toThrow(/qa-guard\.json/)
+    await expect(run(h, fileBefore("edit", join(dir, ".qa-guard.json")))).rejects.toThrow(/qa-guard\.json/)
+    await expect(run(h, bashBefore('echo "{}" > .qa-guard.json'))).rejects.toThrow(/qa-guard\.json/)
+    await expect(run(h, bashBefore("sed -i s/block/allow/ .qa-guard.json"))).rejects.toThrow(/qa-guard\.json/)
+    await expect(run(h, bashBefore("rm .qa-guard.json"))).rejects.toThrow(/qa-guard\.json/)
+  })
+})
+
 // Foreign MCP gate (field report 2026-09-22: a GLOBAL gitlab MCP server
 // pointed at a different customer's .env — the agent nearly edited it).
 // Mirrors the "foreign MCP gate" section of guard-fixtures.sh. The gate only

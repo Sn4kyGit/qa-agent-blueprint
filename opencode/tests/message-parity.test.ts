@@ -51,7 +51,7 @@ describe("block-message parity (bash guard ↔ opencode plugin)", () => {
   test("both sides carry the resolve-secrets.sh pointer in the reader message (F3)", async () => {
     const bash = await bashMessages()
     const ts = await tsMessages()
-    const needle = "refusing a command that reads/copies a .env* file — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status."
+    const needle = "refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it)."
     expect(bash.has(needle)).toBe(true)
     expect(ts.has(needle)).toBe(true)
   })

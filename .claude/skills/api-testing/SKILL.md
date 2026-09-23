@@ -118,7 +118,7 @@ Response time and payload size are testable assertions — assert that a hot end
 ## Anti-Patterns
 
 ### 1. Hardcoded auth tokens
-Tokens expire, rotate, and differ across environments. Use a login fixture that acquires tokens dynamically.
+Tokens expire, rotate, and differ across environments. Use a login fixture that acquires tokens dynamically. The credentials the fixture logs in with come from the environment by key name, never from a literal in the repo: run the suite through `node .claude/scripts/qa-secrets.mjs run <KEY…> -- <runner>` (injects only the named keys from the QA home's `.env`, redacts values in all output) or your own secret store — see `.claude/rules/core/security.md` → credential flow.
 
 ### 2. Testing against production
 API tests create, modify, and delete data. Run against a dedicated test environment or local instance.

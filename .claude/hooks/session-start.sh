@@ -317,7 +317,13 @@ pw = servers.get("playwright", [])
 flags = []
 if pw:
     flags.append("HAS_PW")
-    if not any("--secrets" in (c.get("args") or []) for c in pw):
+    # A playwright entry launched through qa-secrets.mjs mcp satisfies the
+    # secrets contract by construction (ephemeral mask file, appended
+    # --secrets) — the literal flag is inside the wrapper, not the args.
+    def _wraps_qa_secrets(c):
+        parts = [str(a) for a in (c.get("args") or [])] + [str(c.get("command") or "")]
+        return any("qa-secrets" in p for p in parts)
+    if not any("--secrets" in (c.get("args") or []) or _wraps_qa_secrets(c) for c in pw):
         flags.append("PW_UNMASKED")
     if not any("--output-dir" in (c.get("args") or []) for c in pw):
         flags.append("PW_NO_OUTDIR")

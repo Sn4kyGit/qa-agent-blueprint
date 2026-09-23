@@ -117,6 +117,16 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
     expect(scan.pwNoImageomit).toBe(false)
   })
 
+  test("playwright via qa-secrets mcp wrapper satisfies the secrets contract", () => {
+    const scan = scanMcpServers({
+      playwright: {
+        type: "local",
+        command: ["node", ".claude/scripts/qa-secrets.mjs", "mcp", "STAGE_PASSWORD", "--", "npx", "@playwright/mcp@latest"],
+      },
+    })
+    expect(scan.pwUnmasked).toBe(false)
+  })
+
   test("remote playwright is the consumer's own setup — never flagged", () => {
     const scan = scanMcpServers({ playwright: { type: "remote", url: "http://grid.example:4444" } })
     expect(scan.hasPw).toBe(true)

@@ -43,6 +43,30 @@ block() {
   exit 2
 }
 
+# secrets_read toggle (0.11.0, tdd §7): direct reads of secret files are a
+# comfort opt-in decided by the QA home's .qa-guard.json (CWD is the resolved
+# QA home at this point). Anything but the exact string "allow" — missing
+# file, missing key, invalid JSON, any other value — keeps the default:
+# block. Fail closed on every ambiguity.
+SECRETS_READ="block"
+GUARD_CFG="$CWD/.qa-guard.json"
+if [ -f "$GUARD_CFG" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    SR="$(python3 - "$GUARD_CFG" <<'PY' 2>/dev/null
+import json, sys
+try:
+    v = json.load(open(sys.argv[1])).get("secrets_read")
+except Exception:
+    v = None
+print(v if isinstance(v, str) else "")
+PY
+)"
+  else
+    SR="$(sed -n 's/.*"secrets_read"[[:space:]]*:[[:space:]]*"\([a-zA-Z]*\)".*/\1/p' "$GUARD_CFG" | head -1)"
+  fi
+  [ "$SR" = "allow" ] && SECRETS_READ="allow"
+fi
+
 mcp_server_declared() { # <config-file> <server> — 0 if the file declares the server under mcpServers
   [ -f "$1" ] || return 1
   if command -v python3 >/dev/null 2>&1; then
@@ -111,6 +135,16 @@ if [ -n "$FILE_PATH" ] && is_secret_path "$FILE_PATH"; then
   block "refusing to write/edit a secrets file ($FILE_PATH). Secrets are vault/env references only — see .claude/rules/core/security.md."
 fi
 
+# 1b. The guard's own toggle file is a human task: an agent that can write
+# .qa-guard.json can grant itself secrets_read=allow, and the toggle would be
+# theater. Same philosophy as the global-MCP-config gate below.
+if [ -n "$FILE_PATH" ]; then
+  case "$FILE_PATH" in
+    .qa-guard.json|*/.qa-guard.json)
+      block "refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow)." ;;
+  esac
+fi
+
 # 2. Bash: block destructive/secret-touching commands.
 if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; then
   if printf '%s' "$COMMAND" | grep -qE 'rm[[:space:]]+(-[a-zA-Z]*f[a-zA-Z]*r|-[a-zA-Z]*r[a-zA-Z]*f)[[:space:]]'; then
@@ -126,6 +160,33 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # in full. Destructive-command checks above deliberately use the raw command.
   COMMAND_NO_EXAMPLE="$(printf '%s' "$COMMAND" | sed 's/\.env\.example//g')"
 
+  # The toggle file via shell: sed -i/tee/redirects/cp/mv/rm on .qa-guard.json
+  # are the same self-escalation as a Write to it (check 1b).
+  if printf '%s' "$COMMAND" | grep -qE '(sed[[:space:]]+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee[[:space:]]|>>?|cp[[:space:]]|mv[[:space:]]|rm[[:space:]]|truncate|dd[[:space:]])[^;&|]*\.qa-guard\.json'; then
+    block "refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow)."
+  fi
+
+  # rm hardening (0.11.0, tdd §9/F2): deleting a secrets file is a human
+  # task. Plain `rm <.env*>` (and rm -f) used to sail through — only rm -rf
+  # was blocked. Blocked regardless of the secrets_read toggle.
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*rm[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*[^;&|]*\.env([^a-zA-Z]|$)'; then
+    block "refusing to delete a .env* file — removing a secrets file is a human task (blocked regardless of secrets_read)."
+  fi
+
+  # cp/mv are NOT readers (tdd §8/F1): they relocate the secrets file out of
+  # its protected context. Blocked in BOTH toggle states.
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cp|mv)[[:space:]]+[^;&|]*\.env([^a-zA-Z]|$)'; then
+    block "refusing to copy/move a .env* file — secrets never leave their protected file (blocked regardless of secrets_read)."
+  fi
+
+  # sed -i / awk -i edit in place — a WRITE, not a read (tdd §8/F1). The flag
+  # must sit directly after the command: `-i`, `-i.bak`, `--in-place`,
+  # `-i inplace`. A -i *string* inside the sed script is a rare accepted
+  # false positive (fail closed beats a write slipping through as a "read").
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(sed|awk)[[:space:]]+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)[[:space:]][^;&|]*\.env([^a-zA-Z]|$)'; then
+    block "refusing an in-place edit of a .env* file — sed -i / awk -i is a write, not a read (blocked regardless of secrets_read)."
+  fi
+
   # The reader has to sit at a COMMAND position (line start, or after ; && || |) and
   # the secrets file has to belong to THAT command's arguments — hence [^;&|]*
   # instead of .*. The previous pattern matched the filename anywhere later in the
@@ -135,8 +196,10 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # grep/sed/awk/jq are readers too — a field agent demonstrated `grep -o '^[A-Z_]*='
   # .env.playwright-secrets` sailing through the old list (0.6.1 field report).
   # Listing key NAMES is exactly what resolve-secrets.sh --status exists for.
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|more|head|tail|cp|mv|grep|sed|awk|jq|source)[[:space:]]+[^;&|]*\.env([^a-zA-Z]|$)'; then
-    block "refusing a command that reads/copies a .env* file — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status."
+  # 0.11.0: this READER_CORE class (cp/mv and * -i split out above) follows the
+  # secrets_read toggle in .qa-guard.json — default stays block.
+  if [ "$SECRETS_READ" != "allow" ] && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|more|head|tail|grep|sed|awk|jq|source)[[:space:]]+[^;&|]*\.env([^a-zA-Z]|$)'; then
+    block "refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it)."
   fi
   # The next-most-likely bypass class: interpreter one-liners that OPEN the
   # file (python3 -c "print(open('.env').read())" et al.). The open/read/load
@@ -146,8 +209,11 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # never enumerate every way to read a file — this is a best-effort net; the
   # real guarantee is --secrets masking at the browser layer
   # (docs/rules/core/security.md).
+  # This class does NOT follow the toggle (tdd §10/§11): a regex cannot tell
+  # open('.env') from open('.env','w') — allowing it in allow-mode would open
+  # a secret-WRITE hole, so it fails closed in both states.
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(python3?|perl|ruby|node|php)[[:space:]][^;&|]*(open|read|load|require|include|slurp)[^;&|]*\.env([^a-zA-Z]|$)'; then
-    block "refusing a command that appears to read a .env* file via an interpreter — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status."
+    block "refusing a command that appears to read a .env* file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status."
   fi
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '>>?[[:space:]]*\.env'; then
     block "refusing a command that writes into a .env* file directly — use the vault/secrets workflow instead."

@@ -5,6 +5,130 @@ always-loaded layer and carries the norms. **Read this file when wiring a creden
 Splitting it out is what keeps the always-on layer small; nothing here is
 optional when its topic comes up.
 
+## Credential flow: three levels
+
+The question every login answers is **when does a secret value need to enter
+the agent's context at all** — and the answer is almost always "never". Three
+levels, in order of preference:
+
+1. **Runner injection (secret-blind, preferred).** The agent names credential
+   *keys*; the test runner loads the values itself straight from the existing
+   `.env` and hands them to the test process only. Reference implementation:
+   `.claude/scripts/qa-secrets.mjs run` (Node ≥ 20.12):
+
+   ```bash
+   node .claude/scripts/qa-secrets.mjs run STAGE_USER STAGE_PASSWORD -- npx playwright test
+   ```
+
+   It injects only the named keys into the child's environment and redacts
+   their values — plaintext, base64, url-encoded and pairwise-base64 forms —
+   in everything the child prints (chunk-boundary safe). The values never
+   cross the agent's context, not even via a failing test's output. Suites may
+   equally read `process.env` through their own config; either way: no
+   wholesale `dotenv.config()` when only two keys are needed, and missing keys
+   fail by key NAME, never with a value.
+
+2. **MCP secret substitution.** The Playwright MCP server's `--secrets` flag
+   resolves values server-side and masks them in every tool response. Two
+   wiring shapes, both treated as secrets-wired by the installer and the
+   session scans:
+   - classic: `--secrets .env.playwright-secrets` (a *curated mask-scope
+     file*: everything in it is masked everywhere, so it holds only the keys
+     browser logins need — never `STAGE_BASE_URL`, or the stage URL would be
+     masked in every snapshot);
+   - wrapper: `node .claude/scripts/qa-secrets.mjs mcp STAGE_USER STAGE_PASSWORD -- npx @playwright/mcp@latest …`
+     builds an *ephemeral* mask file (mode-0700 tmpdir, deleted on server
+     exit) containing only the named keys — no second durable secret store.
+
+3. **Direct read (explicit opt-in, escape hatch).** The human sets
+   `{"secrets_read": "allow"}` in the QA home's `.qa-guard.json`. Then
+   `cat`/`less`/`head`/`tail`/`grep`/`sed` (without `-i`)/`awk`/`jq`/`source`
+   on `.env*` files pass the guard. This is **not** a value-free flow — the
+   human accepts that values can enter the agent context. Even in allow mode
+   the guard keeps blocking: writes/edits/redirects, `cp`/`mv` (a copy is not
+   a read), `sed -i`/`awk -i`/`sed --in-place` (in-place edits are writes),
+   `rm <.env*>` (deleting a secrets file is a human task), and interpreter
+   one-liners (`python3 -c "open('.env').read()"`) — a regex cannot tell a
+   read from a write in arbitrary code, so that class fails closed in both
+   states. Anything but the exact string `"allow"` — missing file, missing
+   key, invalid JSON, any other value — means block.
+
+   The guard **refuses agent writes to `.qa-guard.json` itself** (Write/Edit
+   tools and shell write-ops alike): an agent that can edit the toggle can
+   grant itself access, and the toggle would be theater. Flipping it is a
+   human task, like editing global MCP config.
+
+`STAGE_BASE_URL` is **environment configuration, not a credential**: it comes
+from the shell/CI environment only, never from the secrets file and never
+into the `--secrets` mask file (it would get masked in snapshots). The
+`*_BASE_URL` pattern is rejected by `qa-secrets.mjs` outright. The same split
+applies inside a mixed env file: name only credential keys — URLs, hosts,
+ports and flags are read by the suite itself, straight from the file.
+
+**Per-environment files** (`.env.snt`, `.env.review`, …): the secrets file
+resolves most-specific-first — `--file <path>` flag → `QA_SECRETS_FILE` env →
+`.qa-guard.json` → `secrets_file` → `.env` in the QA home (relative paths
+resolve against the QA home). Switching environments is a property of the
+runner invocation — like `STAGE_BASE_URL` — not a config edit; npm scripts
+per environment (`test:snt`, `test:review`) are the intended carrier. The
+same works for the `mcp` wrapper (per-environment browser masking).
+
+**Placeholder values** (`DB_PASSWORD=secret`): masking one also masks the
+ordinary *word* in all output. Name only keys whose values deserve masking —
+placeholders are read by the suite directly. `qa-secrets.mjs` warns on a
+small placeholder list (and on values below the redaction floor); it never
+blocks on them.
+
+## Key naming and lookup
+
+Credential keys follow one convention so scope is readable from the name:
+
+```text
+<ENV>_*       = environment-bound team test user   (STAGE_USER, PREPROD_API_PASSWORD)
+SHARED_*      = usable across projects/sites       (SHARED_API_USER)
+OWNER_*       = personally assigned credential     (OWNER_ANNA_SSO_PASSWORD)
+```
+
+`SHARED_*` describes *scope*, not security level — a shared admin password is
+exactly as critical as any other admin credential. An owner name documents
+the assignment; it is not access control. `PROJECT.md` → "Test users" may
+name key identifiers (keys are not secrets); it never contains values.
+
+When a login is needed, the lookup order is:
+
+1. the active `PROJECT.md` for the credential identifier,
+2. `resolve-secrets.sh --status` for which keys exist (names only),
+3. only then ask the human — and ask for the **key or the storage path**,
+   never for the value. A value pasted into chat is a leak (see "If a secret
+   or PII leaks into an artifact").
+
+**Model-B variant (paranoia tier):** if the agent must not run tests at all,
+it can still *write* the specs and the exact `qa-secrets.mjs run …` command
+line; the human or CI executes. Everything here holds — the value-free flow
+just ends one step earlier.
+
+## Sourcing pattern, honestly scoped
+
+For ad-hoc commands a subshell-source remains possible:
+
+```bash
+(
+  set -a
+  . ./.env
+  set +a
+  curl -u "$STAGE_USER:$STAGE_PASSWORD" "$STAGE_BASE_URL/..."
+)
+```
+
+Do **not** claim the values are "only in the subshell and never visible": a
+secret consumed by a shell or child process can surface through debugging,
+logging, error output or traces. The honest norm: credentials may be consumed
+only for the runtime of the process that needs them; values are never
+deliberately printed to stdout/stderr, interpolated into commands that get
+logged, or stored in test artifacts. No `set -x`, no debug wrappers around a
+sourced command. (This pattern also needs `secrets_read: "allow"` — `source`
+is a reader — or it runs outside the agent, in the human's own shell.)
+
 ## Credential sources (vault CLI, or a credential MCP server)
 
 The MCP set is configurable (`.claude/rules/core/token-discipline.md` → MCP budget),
@@ -91,19 +215,25 @@ session's environment, in no file and no global shell export. An already-set
 A hook counts as enforcement only once a test proves it blocks — these are shell
 scripts parsing a JSON payload, and a parse failure makes them fail open while
 still looking correct in review. Every hook that enforces something has fixtures:
-`guard-fixtures.sh` (PreToolUse allow/block), `stop-evidence-fixtures.sh` (the Stop
+`guard-fixtures.sh` (PreToolUse allow/block, incl. the secrets_read toggle),
+`stop-evidence-fixtures.sh` (the Stop
 hook's evidence *and* learning-declaration checks), `session-start-fixtures.sh`
-(project/product listing) and `install-integrate-fixtures.sh` (integrate mode end
+(project/product listing), `qa-secrets-fixtures.sh` (credential injection,
+redaction, ephemeral MCP mask file) and
+`install-integrate-fixtures.sh` (integrate mode end
 to end: namespacing, path rewriting, idempotency, uninstall) — all under
 `.claude/hooks/tests/`. Run the matching one
 after any change to a hook, and add a fixture for every new rule.
 
 - `PreToolUse` guard (`pre-tool-guard.sh`) blocks `Bash`/`Write`/`Edit`/`MultiEdit`/
   `NotebookEdit` calls that touch `.env*`, attempt `rm -rf`, or force-push. The
-  `.env*` reader list covers `cat|less|more|head|tail|cp|mv|grep|sed|awk|jq` —
-  field report 0.6.1: a `grep -o '^[A-Z_]*='` on the secrets file bypassed the
-  old cat-only list; key-EXISTENCE checks go through `resolve-secrets.sh
-  --status` (names only), never through the file itself.
+  `.env*` classes (0.11.0): readers (`cat|less|more|head|tail|grep|sed|awk|jq|source`)
+  follow the `secrets_read` toggle in `.qa-guard.json` (default block); `cp`/`mv`,
+  `sed -i`/`awk -i`/`--in-place`, `rm <.env*>` and interpreter one-liners stay
+  blocked in both states; agent writes to `.qa-guard.json` itself are refused
+  (self-escalation). Field report 0.6.1: a `grep -o '^[A-Z_]*='` on the secrets
+  file bypassed the old cat-only list; key-EXISTENCE checks go through
+  `resolve-secrets.sh --status` (names only), never through the file itself.
 - **MCP config is project-scoped (field report 0.9.0):** a gitlab MCP server
   configured in the *global* config (`~/.claude.json`) silently pointed at a
   different customer's `.env` in another project's folder — the agent used it

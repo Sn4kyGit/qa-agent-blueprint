@@ -54,6 +54,13 @@
 Credentials live in the vault — here are only references. Combine
 the vault prefix below with the relative path. Matching secret keys go
 into `.env.playwright-secrets` for the Playwright MCP `--secrets` masking.
+Key naming convention: `<ENV>_*` (environment-bound, e.g. `STAGE_USER`),
+`SHARED_*` (cross-project scope — scope, not a security level), `OWNER_*`
+(personally assigned, e.g. `OWNER_ANNA_SSO_PASSWORD`). Automated suites
+consume the same keys via runner injection
+(`node .claude/scripts/qa-secrets.mjs run <KEY…> -- npx playwright test`) —
+the file stays the single source, values never enter the agent context
+(`.claude/rules/core/security.md` → credential flow).
 
 - **Secrets source**: `env-file` | `keychain` ← how the secret keys below reach
   `.env.playwright-secrets`. `env-file` = you fill the file by hand (default,

@@ -236,6 +236,70 @@ check_home "Write project .mcp.json → allowed"         0 "{\"tool_name\":\"Wri
 check_home "Bash redirect > project .mcp.json → ok"    0 "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"echo '{}' > $FM_PROJ/.mcp.json\"}}"
 
 echo
+echo "== secrets_read toggle: .qa-guard.json (tdd 0.11.0 §7–§11) =="
+# The toggle lives in the QA home (resolved by walk-up from the payload cwd).
+# Default/missing/invalid = block; only the exact value "allow" opens direct
+# reads — and even then only for the READER_CORE commands.
+TOG="$(mktemp -d)"; trap 'rm -rf "$TOG" 2>/dev/null' EXIT
+touch "$TOG/.qa-home"
+tog_bash() { printf '{"tool_name":"Bash","tool_input":{"command":%s},"cwd":"%s"}' "$1" "$TOG"; }
+tog_write() { printf '{"tool_name":"Write","tool_input":{"file_path":"%s"},"cwd":"%s"}' "$1" "$TOG"; }
+
+# --- default: no config file → block (existing behaviour preserved)
+check "toggle: no config, cat .env"        2 "$(tog_bash '"cat .env"')"
+# --- missing key / wrong value / invalid JSON → block
+printf '{}' > "$TOG/.qa-guard.json"
+check "toggle: empty config, cat .env"     2 "$(tog_bash '"cat .env"')"
+printf '{"secrets_read":"yes"}' > "$TOG/.qa-guard.json"
+check "toggle: wrong value, cat .env"      2 "$(tog_bash '"cat .env"')"
+printf 'not json' > "$TOG/.qa-guard.json"
+check "toggle: invalid JSON, cat .env"     2 "$(tog_bash '"cat .env"')"
+check "toggle: invalid JSON, grep .env"    2 "$(tog_bash '"grep PASSWORD .env"')"
+
+# --- allow: READER_CORE follows the toggle
+printf '{"secrets_read":"allow"}' > "$TOG/.qa-guard.json"
+check "toggle: allow, cat .env"            0 "$(tog_bash '"cat .env"')"
+check "toggle: allow, less .env"           0 "$(tog_bash '"less .env"')"
+check "toggle: allow, head .env"           0 "$(tog_bash '"head .env"')"
+check "toggle: allow, tail .env"           0 "$(tog_bash '"tail .env"')"
+check "toggle: allow, grep .env"           0 "$(tog_bash '"grep PASSWORD .env"')"
+check "toggle: allow, sed read .env"       0 "$(tog_bash '"sed -n 1p .env"')"
+check "toggle: allow, awk read .env"       0 "$(tog_bash '"awk -F= \"{print $1}\" .env"')"
+check "toggle: allow, jq .env"             0 "$(tog_bash '"jq . .env"')"
+check "toggle: allow, source .env"         0 "$(tog_bash '"source .env"')"
+
+# --- allow: cp/mv/sed -i/awk -i are NOT readers (§8) — always blocked
+check "toggle: allow, cp .env"             2 "$(tog_bash '"cp .env /tmp/secrets"')"
+check "toggle: allow, mv .env"             2 "$(tog_bash '"mv .env /tmp/secrets"')"
+check "toggle: allow, sed -i .env"         2 "$(tog_bash '"sed -i s/a/b/ .env"')"
+check "toggle: allow, sed -i.bak .env"     2 "$(tog_bash '"sed -i.bak s/a/b/ .env"')"
+check "toggle: allow, sed --in-place"      2 "$(tog_bash '"sed --in-place s/a/b/ .env"')"
+check "toggle: allow, awk -i inplace"      2 "$(tog_bash '"awk -i inplace \"{print}\" .env"')"
+# --- allow: writes stay blocked (§9)
+check "toggle: allow, redirect >> .env"    2 "$(tog_bash '"echo PASSWORD=x >> .env"')"
+check "toggle: allow, Write .env"          2 "$(tog_write "$TOG/.env")"
+# --- allow: interpreter reads stay blocked (fail closed — a regex cannot tell
+#     open('.env') from open('.env','w'), so this class never opens, §10/§11)
+check "toggle: allow, python read .env"    2 "$(tog_bash '"python3 -c \"print(open(\".env\").read())\""')"
+
+# --- rm hardening (§9/F2): deleting a secrets file is a human task, both modes
+check "toggle: default, rm .env"           2 "$(tog_bash '"rm .env"')"
+check "toggle: allow, rm .env"             2 "$(tog_bash '"rm .env"')"
+check "toggle: allow, rm -f .env"          2 "$(tog_bash '"rm -f .env"')"
+check "toggle: allow, rm .env.local"       2 "$(tog_bash '"rm .env.local"')"
+check "toggle: allow, rm plain file ok"    0 "$(tog_bash '"rm scratch-output.txt"')"
+check "toggle: allow, rm .env.example ok"  0 "$(tog_bash '"rm .env.example"')"
+
+# --- the toggle file itself is a human task: an agent that can write
+#     .qa-guard.json can grant itself secrets_read=allow (self-escalation)
+check "toggle: Write .qa-guard.json"       2 "$(tog_write "$TOG/.qa-guard.json")"
+check "toggle: Edit .qa-guard.json"        2 '{"tool_name":"Edit","tool_input":{"file_path":"'"$TOG"'/.qa-guard.json"},"cwd":"'"$TOG"'"}'
+check "toggle: redirect > .qa-guard.json"  2 "$(tog_bash '"echo \"{}\" > .qa-guard.json"')"
+check "toggle: sed -i .qa-guard.json"      2 "$(tog_bash '"sed -i s/block/allow/ .qa-guard.json"')"
+check "toggle: rm .qa-guard.json"          2 "$(tog_bash '"rm .qa-guard.json"')"
+rm -rf "$TOG" 2>/dev/null
+
+echo
 echo "== allowed: ordinary work is unaffected =="
 check "Write a normal file"           0 '{"tool_name":"Write","tool_input":{"file_path":"README.md"}}'
 check "Bash normal command"           0 '{"tool_name":"Bash","tool_input":{"command":"npx playwright test"}}'

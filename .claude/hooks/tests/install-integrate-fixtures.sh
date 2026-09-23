@@ -249,6 +249,19 @@ else
   pass "kept config not rewritten"
 fi
 
+# A playwright entry launched through the qa-secrets wrapper is a deliberate
+# consumer setup and satisfies the secrets contract by construction — it must
+# be KEPT (with a verify note), never force-upgraded into the blueprint entry.
+WRAP="$WORK/mcp-wrapper"
+mkdir -p "$WRAP"
+git -C "$WRAP" init -q . 2>/dev/null
+printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "node", "args": [".claude/scripts/qa-secrets.mjs", "mcp", "STAGE_PASSWORD", "--", "npx", "@playwright/mcp@latest"]}' '  }' '}' > "$WRAP/.mcp.json"
+OUTW="$("$INSTALL" --mode integrate --target "$WRAP" --yes 2>&1)"
+printf '%s' "$OUTW" | grep -q "qa-secrets wrapper detected" \
+  && pass "qa-secrets wrapper entry is kept" \
+  || fail "qa-secrets wrapper entry is kept" "$(printf '%s' "$OUTW" | grep mcp)"
+assert_grep "wrapper entry not rewritten" "$WRAP/.mcp.json" 'qa-secrets.mjs'
+
 echo
 echo "== plugin mode reports local MCP duplicates instead of silently doubling =="
 PDUP="$WORK/plugin-dupe"

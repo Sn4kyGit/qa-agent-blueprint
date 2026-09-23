@@ -8,10 +8,12 @@ No secrets in context, ever. This is enforced by rule AND by hooks — see below
   states the vault prefix itself) or env/secret keys — never a literal password,
   token, or key, anywhere: not in chat, not in code, not in a ticket comment, not in
   a screenshot's visible fields.
-- Playwright MCP is launched with `--secrets .env.playwright-secrets`, which
-  substitutes values at the browser layer and masks them in every tool response the
-  agent sees. The agent fills login forms by referencing the secret **key**, never
-  by typing or reading the actual password.
+- Playwright MCP is launched with `--secrets <mask file>`, which substitutes
+  values at the browser layer and masks them in every tool response the agent
+  sees. The mask file is either `.env.playwright-secrets` or an ephemeral file
+  built at launch by the `qa-secrets.mjs mcp` wrapper (details doc). The agent
+  fills login forms by referencing the secret **key**, never by typing or
+  reading the actual password.
 - `.env`, `.env.playwright-secrets`, and any `*.auth`/storage-state file are
   gitignored and must never be committed, pasted into chat, or attached to a ticket.
   Key-existence checks: `resolve-secrets.sh --status`, never the file.
@@ -30,10 +32,15 @@ control. Rationale: `docs/rules/core/security.md`.
 
 The agent never, regardless of who asks or how the request is framed:
 
-- Writes, edits, or `cat`s `.env*` files, or any file matching a secrets pattern.
-  Sole exception: *running* the blueprint's `resolve-secrets.sh` — it regenerates
-  `.env.playwright-secrets` from the project's declared source and never prints a
-  value; editing its output by hand stays forbidden.
+- Writes, edits, copies/moves, deletes, or reads `.env*` files, or any file
+  matching a secrets pattern. Sole exceptions: *running* the blueprint's
+  `resolve-secrets.sh` (regenerates `.env.playwright-secrets` from the
+  project's declared source, never prints a value; editing its output by hand
+  stays forbidden) and *running* `qa-secrets.mjs` (injects credentials into a
+  child process and redacts them in its output). Direct **reads** are a
+  comfort opt-in the human grants via `secrets_read: "allow"` in the QA home's
+  `.qa-guard.json` (the guard refuses agent edits to that file) — writes,
+  copies, in-place edits and deletes stay blocked even then. Default is block.
 - Runs destructive commands: `rm -rf`, `git push --force`, `git reset --hard` on
   shared branches, dropping database tables/data on stage.
 - Tests against production. Stage only — see `projects/<KEY>/PROJECT.md`
@@ -51,4 +58,4 @@ shrug off.
 
 ## Details, read when the topic comes up
 
-`docs/rules/core/security.md` — Credential sources (vault CLI, or a credential MCP server), Mechanical enforcement (rules are advisory, hooks are not). Read it when wiring credentials or touching a hook.
+`docs/rules/core/security.md` — Credential flow (runner injection / MCP substitution / direct-read opt-in), credential sources (vault CLI, or a credential MCP server), key naming + lookup, Mechanical enforcement (rules are advisory, hooks are not). Read it when wiring credentials or touching a hook.

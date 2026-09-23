@@ -68,7 +68,20 @@ const GIT_FORCE_PUSH = /git\s+push\s+.*(--force|-f\b)/
 // ordinary work, and a guard that blocks ordinary work gets switched off.
 // grep/sed/awk/jq are readers too (0.6.1 field report: `grep -o '^[A-Z_]*='`
 // on the secrets file sailed through the old list).
-const ENV_READER = /(^|[;&|(]|&&|\|\|)\s*(cat|less|more|head|tail|cp|mv|grep|sed|awk|jq|source)\s+[^;&|]*\.env([^a-zA-Z]|$)/
+// 0.11.0 (tdd §8/F1): cp|mv split OUT of the reader class — movers relocate
+// the file and stay blocked in BOTH toggle states; the READER_CORE class
+// follows the secrets_read toggle in .qa-guard.json (default: block).
+const ENV_READER = /(^|[;&|(]|&&|\|\|)\s*(cat|less|more|head|tail|grep|sed|awk|jq|source)\s+[^;&|]*\.env([^a-zA-Z]|$)/
+const ENV_MOVER = /(^|[;&|(]|&&|\|\|)\s*(cp|mv)\s+[^;&|]*\.env([^a-zA-Z]|$)/
+// sed -i / awk -i edit in place — a WRITE, not a read. The flag must sit
+// directly after the command: -i, -i.bak, --in-place, -i inplace.
+const ENV_INPLACE = /(^|[;&|(]|&&|\|\|)\s*(sed|awk)\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)\s[^;&|]*\.env([^a-zA-Z]|$)/
+// rm hardening (tdd §9/F2): plain `rm <.env*>` used to sail through — only
+// rm -rf was blocked. Deleting a secrets file is a human task.
+const ENV_RM = /(^|[;&|(]|&&|\|\|)\s*rm\s+(-[a-zA-Z]+\s+)*[^;&|]*\.env([^a-zA-Z]|$)/
+// The guard's own toggle file is a human task: an agent that can write
+// .qa-guard.json can grant itself secrets_read=allow (self-escalation).
+const GUARD_CFG_WRITER = /(sed\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee\s|>>?|cp\s|mv\s|rm\s|truncate|dd\s)[^;&|]*\.qa-guard\.json/
 // The next-most-likely bypass class: interpreter one-liners that OPEN the
 // file. The open/read/load keyword is required so `python3 -c "note='.env
 // template'"` — merely mentioning the name — stays allowed (audit F4: the
@@ -154,7 +167,7 @@ function block(reason: string): never {
   throw new Error(`${GUARD_PREFIX} ${reason}`)
 }
 
-function guardCheck(tool: string, args: Record<string, unknown>) {
+function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "block" | "allow" = "block") {
   if (!tool) {
     // fail closed: scan the raw args as both command and path
     const raw = JSON.stringify(args ?? {})
@@ -167,6 +180,11 @@ function guardCheck(tool: string, args: Record<string, unknown>) {
   const filePath = typeof args.filePath === "string" ? args.filePath : ""
   if (filePath && WRITE_TOOLS.has(tool) && isSecretPath(filePath)) {
     block(`refusing to write/edit a secrets file (${filePath}). Secrets are vault/env references only — see .claude/rules/core/security.md.`)
+  }
+  // The guard's own toggle file is a human task — an agent that can edit it
+  // can grant itself secrets_read=allow, and the toggle would be theater.
+  if (filePath && WRITE_TOOLS.has(tool) && (filePath === ".qa-guard.json" || filePath.endsWith("/.qa-guard.json"))) {
+    block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
   }
 
   if (process.env.QA_ALLOW_GLOBAL_MCP !== "1") {
@@ -182,13 +200,34 @@ function guardCheck(tool: string, args: Record<string, unknown>) {
     const command = typeof args.command === "string" ? args.command : ""
     if (RM_RF.test(command)) block("refusing rm -rf / rm -fr — destructive command.")
     if (GIT_FORCE_PUSH.test(command)) block("refusing git push --force — see the git safety protocol before overriding this manually.")
+    if (GUARD_CFG_WRITER.test(command)) block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
     // Strip only the literal ".env.example" before the .env checks: the
     // template must stay writable; .env/.env.local/.env.playwright-secrets
     // still match in full.
     const noExample = command.replaceAll(".env.example", "")
-    if (ENV_READER.test(noExample)) block("refusing a command that reads/copies a .env* file — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status.")
-    if (ENV_INTERPRETER.test(noExample)) block("refusing a command that appears to read a .env* file via an interpreter — secrets never enter chat or context. To check which keys exist: resolve-secrets.sh --status.")
+    if (ENV_RM.test(noExample)) block("refusing to delete a .env* file — removing a secrets file is a human task (blocked regardless of secrets_read).")
+    if (ENV_MOVER.test(noExample)) block("refusing to copy/move a .env* file — secrets never leave their protected file (blocked regardless of secrets_read).")
+    if (ENV_INPLACE.test(noExample)) block("refusing an in-place edit of a .env* file — sed -i / awk -i is a write, not a read (blocked regardless of secrets_read).")
+    // READER_CORE follows the secrets_read toggle (tdd §7); default: block.
+    if (secretsRead !== "allow" && ENV_READER.test(noExample)) block("refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it).")
+    // Interpreters do NOT follow the toggle (tdd §10/§11): a regex cannot
+    // tell open('.env') from open('.env','w') — allowing this class would
+    // open a secret-WRITE hole, so it fails closed in both states.
+    if (ENV_INTERPRETER.test(noExample)) block("refusing a command that appears to read a .env* file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status.")
     if (ENV_REDIRECT.test(noExample)) block("refusing a command that writes into a .env* file directly — use the vault/secrets workflow instead.")
+  }
+}
+
+// secrets_read toggle (0.11.0, tdd §7): read per call from the QA home's
+// .qa-guard.json, like the bash guard — a human can flip it mid-session.
+// Anything but the exact string "allow" (missing file, missing key, invalid
+// JSON, other value) fails closed to "block".
+async function secretsReadMode(home: string): Promise<"block" | "allow"> {
+  try {
+    const cfg = JSON.parse(await readFile(join(home, ".qa-guard.json"), "utf8")) as Record<string, unknown>
+    return cfg.secrets_read === "allow" ? "allow" : "block"
+  } catch {
+    return "block"
   }
 }
 
@@ -627,12 +666,16 @@ export function scanMcpServers(servers: Record<string, Record<string, unknown>>)
   // Contract flags apply to the LOCAL server; a remote playwright is the
   // consumer's own setup, not a contract violation.
   const pwLocal = Boolean(pw) && pw?.type !== "remote"
+  // A playwright entry launched through qa-secrets.mjs mcp satisfies the
+  // secrets contract by construction (ephemeral mask file) — the literal
+  // --secrets flag is inside the wrapper, not the command args.
+  const wrapsQaSecrets = cmd.some((a) => String(a).includes("qa-secrets"))
   const at = servers.atlassian
   const env = ((at?.environment ?? at?.env ?? {}) as Record<string, unknown>) ?? {}
   const url = typeof env.JIRA_URL === "string" ? env.JIRA_URL : ""
   return {
     hasPw: Boolean(pw),
-    pwUnmasked: pwLocal && !cmd.includes("--secrets"),
+    pwUnmasked: pwLocal && !cmd.includes("--secrets") && !wrapsQaSecrets,
     pwNoOutdir: pwLocal && !cmd.includes("--output-dir"),
     pwNoImageomit: pwLocal && !cmd.some((a) => a === "--image-responses" || String(a).startsWith("--image-responses=")),
     hasAt: Boolean(at),
@@ -830,7 +873,7 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
       output: { args: Record<string, unknown> },
     ) => {
       const args = output?.args ?? {}
-      guardCheck(input?.tool ?? "", args)
+      guardCheck(input?.tool ?? "", args, await secretsReadMode(home))
 
       // Foreign MCP gate: never another project's servers or data.
       const foreign = await foreignMcpServer(directory, input?.tool ?? "")

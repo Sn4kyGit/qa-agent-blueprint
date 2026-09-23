@@ -33,6 +33,12 @@ template; if they ever disagree, the rule is right and the config is a bug.
    Point the user at their own way of setting it (shell, CI variable, direnv) — this
    blueprint does not load dotenv files, and a stage URL in a committed config is
    how someone eventually runs a suite against production.
+   **Credentials are different from the base URL**: specs read them from
+   `process.env` by key name, and the runner injects them — preferred:
+   `node .claude/scripts/qa-secrets.mjs run <KEY…> -- npx playwright test`
+   (loads only the named keys from the QA home's `.env`, redacts values in all
+   output). No wholesale `dotenv.config()` in the suite config: it would pull
+   every secret in the file into every worker for nothing.
 5. **Install and prove it runs**: `npm install && npx playwright install chromium`,
    then `npx playwright test`. A scaffold that has never executed is a promise, not
    a suite — the smoke spec exists precisely so the first run is a real run.
