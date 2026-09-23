@@ -197,15 +197,21 @@ function guardCheck(tool: string, args: Record<string, unknown>) {
 // --------------------------------------------------------------------------
 
 // D5 mapping: Claude matched `mcp__.*atlassian__.*(create|edit|…).*`; opencode
-// tool names are `<server>_<tool>` (verified in spike S6).
-const JIRA_WRITE = /^atlassian_.*(create|edit|add|transition|update|delete)/i
+// tool names are `<server>_<tool>` (verified in spike S6). executeWrite/
+// executeDestructive are the Atlassian v2 meta-tools for DEFERRED tools
+// (uploadAttachmentToJiraIssue & co.) — writes by definition; executeRead is
+// deliberately absent (read-only deferred tools must stay open).
+const JIRA_WRITE = /^atlassian_.*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)/i
 
 function issueKeyOf(args: Record<string, unknown> | undefined): string {
   for (const k of ["issueKey", "issue_key", "key", "id"]) {
     const v = args?.[k]
     if (typeof v === "string" && v) return v
   }
-  return "unknown"
+  // execute-wrapped calls nest the key in the inner tool's arguments — first
+  // ticket-shaped string wins (same regex as the bash hooks).
+  const m = /[A-Z][A-Z0-9]+-[0-9]+/.exec(JSON.stringify(args ?? {}))
+  return m ? m[0] : "unknown"
 }
 
 async function auditJiraWrite(directory: string, tool: string, args: Record<string, unknown> | undefined, ok: boolean) {
@@ -232,7 +238,7 @@ async function shadowGateBlocks(directory: string, tool: string, args: Record<st
     // fail closed: an unparsable call that looks like an Atlassian write is one.
     // `__?` mirrors the bash fallback (1–2 underscores: opencode tool names use
     // one, a raw Claude-style payload carries `atlassian__createJiraIssue`).
-    if (!/atlassian__?[a-z]*(create|edit|add|transition|update|delete)/i.test(JSON.stringify(args ?? {}))) return false
+    if (!/atlassian__?[a-z]*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)/i.test(JSON.stringify(args ?? {}))) return false
     tool = "atlassian_create"
   }
   if (!JIRA_WRITE.test(tool)) return false
@@ -608,12 +614,13 @@ export interface McpScan {
   hasPw: boolean
   pwUnmasked: boolean // playwright without --secrets — passwords unmasked in tool responses
   pwNoOutdir: boolean // playwright without --output-dir — artifacts never reach evidence/
+  pwNoImageomit: boolean // playwright without --image-responses omit — screenshots flood the context (~1-2k tokens each)
   hasAt: boolean
   dcHost: string // JIRA Data Center host from environment.JIRA_URL ("" when Cloud)
 }
 
 // Exported for the tests — the flags mirror the bash scan's HAS_PW/PW_UNMASKED/
-// PW_NO_OUTDIR/HAS_AT/AT_DC_HOST:<host> contract.
+// PW_NO_OUTDIR/PW_NO_IMAGEOMIT/HAS_AT/AT_DC_HOST:<host> contract.
 export function scanMcpServers(servers: Record<string, Record<string, unknown>>): McpScan {
   const pw = servers.playwright
   const cmd = Array.isArray(pw?.command) ? (pw.command as unknown[]) : []
@@ -627,6 +634,7 @@ export function scanMcpServers(servers: Record<string, Record<string, unknown>>)
     hasPw: Boolean(pw),
     pwUnmasked: pwLocal && !cmd.includes("--secrets"),
     pwNoOutdir: pwLocal && !cmd.includes("--output-dir"),
+    pwNoImageomit: pwLocal && !cmd.some((a) => a === "--image-responses" || String(a).startsWith("--image-responses=")),
     hasAt: Boolean(at),
     dcHost: url ? url.replace(/^https?:\/\//, "").split("/")[0] : "",
   }
@@ -708,6 +716,9 @@ export async function orientation(home: string, sessionDir: string = home): Prom
   }
   if (scan.pwNoOutdir) {
     lines.push("- WARNING: the playwright MCP config has no --output-dir flag — raw browser artifacts would not land in evidence/, breaking the evidence policy. Add `--output-dir evidence/.mcp-out` or use the blueprint-provided server.")
+  }
+  if (scan.pwNoImageomit) {
+    lines.push("- WARNING: the playwright MCP config has no --image-responses omit — every screenshot lands in the model context as an image (~1-2k tokens per shot). Add `--image-responses omit` or use the blueprint-provided server.")
   }
   // The two day-one failures (dead playwright, unauthorized atlassian) are not
   // detectable from here — turn the configured-state scan into a concrete

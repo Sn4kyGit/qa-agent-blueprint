@@ -1,18 +1,12 @@
 ---
 name: test-case-management
 description: >-
-  Author and maintain MANUAL and hybrid test cases and suites in TestRail, Xray (Jira),
-  Zephyr Scale, and Qase. Covers test-case anatomy (title, preconditions, steps, expected
-  results, test data), suite/section organization, bulk authoring from user stories and
-  acceptance criteria, ambiguous-step linting, CSV/API import-export payloads per tool,
-  requirement traceability and coverage gaps, review hygiene, and when a manual case should
-  graduate to automation.
-  Use when: "write a test case," "manual test case," "TestRail case," "Xray test," "Zephyr
-  Scale case," "Qase case," "import CSV into TestRail," "lint these steps," "traceability
-  report," "should this be automated."
-  Not for: Generating automated TEST CODE — that is ai-test-generation. Sprint-level
-  WHAT-to-test selection — that is test-planning.
-  Related: ai-test-generation, test-planning, exploratory-testing, qa-project-context.
+  Author and maintain MANUAL and hybrid test cases in TestRail, Xray (Jira),
+  Zephyr Scale, and Qase: case anatomy, suite organization, bulk authoring from
+  stories/ACs, step linting, CSV/API import-export, traceability, automation
+  graduation. Use when: write a test case, manual test case, TestRail/Xray/Zephyr/
+  Qase case, import CSV, lint these steps, traceability report. Not for generating
+  automated test code or sprint-level test selection.
 license: MIT
 metadata:
   author: kindlmann

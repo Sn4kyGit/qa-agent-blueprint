@@ -18,8 +18,8 @@ added without a decision, or a decision was never wired up.
 
 | Server | Why it is in the budget | Notes |
 |---|---|---|
-| `playwright` | The agent cannot test a web UI without a browser | Contract: name + `--secrets` + `--output-dir`; the rest is preference (`.playwright-mcp.config.json`) |
-| `atlassian` | Tickets in, results out — the entire premise is ticket-driven | Cloud: remote server, OAuth 2.1. Data Center: community server + PAT |
+| `playwright` | The agent cannot test a web UI without a browser | Contract: name + `--secrets` + `--output-dir` + `--image-responses omit`; the rest is preference (`.playwright-mcp.config.json`) |
+| `atlassian` | Tickets in, results out — the entire premise is ticket-driven | Cloud: remote server, OAuth 2.1 — default v2 URL (discovery/execute meta-tools), NEVER `?tools=all` (flat list = the whole Atlassian suite in every session and every subagent). Data Center: community server + PAT + `ENABLED_TOOLS` (Jira-only ~11, see AGENTS.md) |
 
 ## Scope: servers are per QA home, not per project
 
@@ -68,3 +68,19 @@ sources" before wiring one.
 Within Playwright MCP, prefer the accessibility snapshot over screenshots for
 navigation decisions — screenshots are for evidence, not for the agent to "read"
 the page (see `docs/rules/testing/playwright-mcp.md`).
+
+## Session hygiene (Claude Code)
+
+Habits that keep the subscription quota alive, per Anthropic's own guidance —
+nothing here is blueprint-specific, all of it compounds with the lookup policy:
+
+- **One ticket per session, `/clear` between tickets.** Evidence and learnings
+  live on disk, not in the chat — a fresh session loses nothing and stops
+  re-sending the previous ticket's whole transcript on every turn.
+- **`/usage` is the fuel gauge.** Check it when a session feels heavy; the
+  breakdown shows which MCP server or skill is eating the budget.
+- **API-only project?** Disable `playwright` for the session (`/mcp`) — its
+  tool schemas cost every turn even when never called.
+- **Don't switch model or effort mid-session** — it cold-starts the prompt
+  cache and re-reads everything. Set both before the first message.
+- Long pause ahead? `/compact` is far cheaper than letting the cache expire.

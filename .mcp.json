@@ -9,12 +9,14 @@
         "--secrets",
         ".env.playwright-secrets",
         "--output-dir",
-        "evidence/.mcp-out"
+        "evidence/.mcp-out",
+        "--image-responses",
+        "omit"
       ]
     },
     "atlassian": {
       "type": "http",
-      "url": "https://mcp.atlassian.com/v2/mcp?tools=all"
+      "url": "https://mcp.atlassian.com/v2/mcp"
     }
   }
 }

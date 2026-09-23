@@ -1,6 +1,6 @@
 ---
 name: test-automation
-description: Write or run deterministic automated test specs in the project's framework (Playwright or WebdriverIO) via the CLI runner — for regression, repeatable checks, and nightly-style suites. Use for "/test-automation", "automate this flow", "automatisiere diesen Ablauf", "write autotests", "Autotest schreiben", "run the regression suite", or when a flow is understood and worth repeating rather than re-exploring by hand each time.
+description: Write or run deterministic automated test specs (Playwright or WebdriverIO) via the CLI runner — for regression, repeatable checks, nightly-style suites. Use for "/test-automation", "automate this flow", "Autotest schreiben", "run the regression suite", or flows understood and worth repeating.
 ---
 
 # /test-automation — CLI-driven specs

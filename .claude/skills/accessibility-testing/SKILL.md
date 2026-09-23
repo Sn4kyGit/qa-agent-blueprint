@@ -1,14 +1,11 @@
 ---
 name: accessibility-testing
 description: >-
-  Test for WCAG 2.2 AA compliance with axe-core + Playwright, keyboard navigation audits,
-  screen reader testing, ARIA pattern validation, and legal compliance mapping (ADA, EAA,
-  Section 508). Automated tools catch 30-40% of issues — this skill covers automated and
-  manual testing together. Use when: "accessibility," "a11y," "WCAG," "screen reader," "axe,"
-  "keyboard navigation," "ARIA," "ADA compliance."
-  Not for: cookie-consent/GDPR compliance — use compliance-testing; pixel-diff visual
-  regression — use visual-testing.
-  Related: playwright-automation, compliance-testing, visual-testing, ci-cd-integration.
+  Test for WCAG 2.2 AA compliance: axe-core + Playwright, keyboard navigation,
+  screen reader, ARIA patterns, legal mapping (ADA, EAA, Section 508), automated
+  + manual. Use when: accessibility, a11y, WCAG, screen reader, axe, keyboard
+  navigation, ARIA, ADA compliance. Not for cookie/GDPR compliance or pixel-diff
+  visual regression.
 license: MIT
 metadata:
   author: kindlmann

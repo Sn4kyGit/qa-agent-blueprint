@@ -1,6 +1,6 @@
 ---
 name: failure-analysis
-description: Triage a failing test — is this a real product defect, or is the test case itself outdated because the product deliberately changed? Compares the failing assertion against the JIRA change record and the version window since the case last passed, classifies the cause, and proposes (never applies) a test change when the case is stale — and always names the other branch ("if you rule defect instead → bug-reporter with this analysis"), so the human ruling never has to ask. Use for "/failure-analysis", automatically on every FAIL before a bug is filed, or when someone asks "why did this fail", "is this test outdated", "Testgap", "did the product change", "warum ist der Test rot", "Test schlägt fehl", "ist der Test veraltet". Not for filing the bug once the cause is confirmed — that's /bug-report, invoked after this skill's classification.
+description: Triage a failing test — real product defect, or outdated test case after a deliberate product change? Classifies the cause from the JIRA change record and version window, proposes (never applies) test changes. Runs automatically on every FAIL before a bug is filed. Use for "/failure-analysis", "warum ist der Test rot", "is this test outdated". Not for filing the bug — /bug-report after classification.
 ---
 
 # /failure-analysis — why did this test fail?

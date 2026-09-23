@@ -1,6 +1,6 @@
 ---
 name: onboard-project
-description: Onboard a new project into projects/<KEY>/ — interactively fills PROJECT.md from the template, seeds learnings.md and the bug-report template, and adds it to memory/INDEX.md. Use for "/onboard-project", "Projekt einrichten", "neues Projekt onboarden", or whenever a ticket's project prefix has no existing projects/<KEY>/PROJECT.md. Not for adding a product to an already-onboarded project — that's /onboard-product.
+description: Onboard a new project into projects/<KEY>/ — fills PROJECT.md from the template, seeds learnings.md + bug-report template, adds it to memory/INDEX.md. Use for "/onboard-project", "Projekt einrichten", "neues Projekt onboarden", or when a ticket's prefix has no PROJECT.md. Not for adding a product — /onboard-product.
 ---
 
 # /onboard-project — teach the agent a new project

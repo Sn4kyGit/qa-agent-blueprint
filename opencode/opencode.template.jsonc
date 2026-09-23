@@ -1,4 +1,4 @@
-// blueprint-version: 0.9.1
+// blueprint-version: 0.10.0
 // opencode config template for the qa-agent-blueprint — merged into the
 // consumer's opencode.json(c) by `install.sh --mode opencode`. Contract:
 // docs/opencode-port-plan.md (D4 router via instructions, D5 tool-name
@@ -26,6 +26,8 @@
       "type": "local",
       // Contract flags: --config and --secrets are hard-fail on ENOENT, which
       // is why the plugin seeds both files on startup (bootstrap).
+      // --image-responses omit keeps screenshots out of the context — they
+      // land as evidence files in --output-dir and are read back on demand.
       "command": [
         "npx",
         "@playwright/mcp@latest",
@@ -34,18 +36,26 @@
         "--secrets",
         ".env.playwright-secrets",
         "--output-dir",
-        "evidence/.mcp-out"
+        "evidence/.mcp-out",
+        "--image-responses",
+        "omit"
       ]
     },
     "atlassian": {
       // Atlassian Cloud remote server (v2, HTTP transport — the v1 SSE
       // endpoint is sunset-bound); OAuth happens via the human /mcp-style
-      // flow. ?tools=all exposes the flat tool list because hooks and agents
-      // match on concrete tool names. Data Center deployments replace THIS
-      // entry with the local mcp-atlassian command — keeping the name
-      // `atlassian` (AGENTS.md).
+      // flow. The DEFAULT v2 URL exposes only the Primary tools directly
+      // (getJiraIssue, createJiraIssue, editJiraIssue, transitionJiraIssue,
+      // addOrEditJiraIssueComment, searchJiraIssuesUsingJql — the set this
+      // blueprint calls) plus discover/executeRead/executeWrite for the
+      // deferred catalogue — never append ?tools=all, which inflates the
+      // tool surface of every session AND every subagent spawn with the
+      // whole Atlassian suite. The guard treats executeWrite/executeDestructive
+      // as writes (shadow gate). Data Center deployments replace THIS entry
+      // with the local mcp-atlassian command — keeping the name `atlassian`
+      // (AGENTS.md).
       "type": "remote",
-      "url": "https://mcp.atlassian.com/v2/mcp?tools=all",
+      "url": "https://mcp.atlassian.com/v2/mcp",
       "enabled": true
     }
   },

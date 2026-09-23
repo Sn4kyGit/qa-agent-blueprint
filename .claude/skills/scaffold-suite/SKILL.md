@@ -1,6 +1,6 @@
 ---
 name: scaffold-suite
-description: Create the Playwright project a project or product is missing — package.json, a playwright.config.ts whose capture settings are the evidence policy expressed as config, and a first runnable smoke spec with a correct TC-ID. Use for "/scaffold-suite", or whenever PROJECT.md → "Test assets" says "none yet" and a ticket needs a repeatable check.
+description: Create the Playwright project a project/product is missing — package.json, a playwright.config.ts encoding the evidence policy, and a first runnable smoke spec with a correct TC-ID. Use for "/scaffold-suite", or when PROJECT.md → "Test assets" says "none yet" and a ticket needs a repeatable check.
 ---
 
 # /scaffold-suite — give the evidence promise a producer

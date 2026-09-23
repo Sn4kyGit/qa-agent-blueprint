@@ -1,20 +1,12 @@
 ---
 name: bug-reproduction
 description: >-
-  Turn a vague bug report into a VERIFIED minimal reproduction and then a failing
-  regression test, agent-driven end to end. Covers extracting the implicit repro from a
-  thin report (env, build, steps, data), the reproduce-minimize-isolate-capture loop,
-  git bisect to find the introducing commit, building a deterministic minimal repro
-  (fixed seeds, frozen time, stubbed network), writing the failing regression test BEFORE
-  the fix (red) and confirming it flips green, and writing repro evidence back
-  into the ticket.
-  Use when: "reproduce this bug," "minimal reproduction," "repro steps," "find the commit
-  that broke it," "git bisect," "make the repro deterministic," "write a failing test for
-  this bug," "regression test for a defect," "can't reproduce this bug."
-  Not for: Classifying/deduplicating/severity-routing existing failures without
-  reproducing them — that is ai-bug-triage. Generating tests from specs rather than from a
-  defect — that is ai-test-generation.
-  Related: ai-bug-triage, ai-test-generation.
+  Turn a vague bug report into a verified minimal reproduction and a failing
+  regression test: implicit repro extraction (env, build, steps, data),
+  reproduce-minimize-isolate-capture, git bisect, deterministic repro, red test
+  before the fix. Use when: reproduce this bug, minimal reproduction, repro steps,
+  git bisect, regression test for a defect, can't reproduce this bug. Not for
+  failure triage without reproducing, or spec-based test generation.
 license: MIT
 metadata:
   author: kindlmann

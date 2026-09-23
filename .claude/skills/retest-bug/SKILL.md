@@ -1,6 +1,6 @@
 ---
 name: retest-bug
-description: Focused re-test of a fixed bug plus a tight regression sweep around it — scoped from the product's `flow-map.md` (the area's Neighbors) when one exists, risk-based otherwise. Use for "/retest-bug <KEY-123>", "re-test <KEY-123>", "teste <KEY-123> nochmal", "gegentesten", or whenever a fix has landed on stage ("der Fix ist auf Stage", "fix is deployed — verify it"). Not for the first-time test of a ticket — use test-ticket.
+description: Focused re-test of a fixed bug plus a tight regression sweep — scoped from the product's flow-map.md Neighbors when available, risk-based otherwise. Use for "/retest-bug <KEY-123>", "teste <KEY-123> nochmal", "gegentesten", "der Fix ist auf Stage". Not for first-time tests — test-ticket.
 ---
 
 # /retest-bug — verify a fix + surrounding regression

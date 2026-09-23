@@ -102,17 +102,19 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
     expect(scan.hasPw).toBe(true)
     expect(scan.pwUnmasked).toBe(true)
     expect(scan.pwNoOutdir).toBe(true)
+    expect(scan.pwNoImageomit).toBe(true)
   })
 
-  test("blueprint playwright entry with --secrets and --output-dir is clean", () => {
+  test("blueprint playwright entry with the contract flags is clean", () => {
     const scan = scanMcpServers({
       playwright: {
         type: "local",
-        command: ["npx", "@playwright/mcp@latest", "--config", ".playwright-mcp.config.json", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out"],
+        command: ["npx", "@playwright/mcp@latest", "--config", ".playwright-mcp.config.json", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out", "--image-responses", "omit"],
       },
     })
     expect(scan.pwUnmasked).toBe(false)
     expect(scan.pwNoOutdir).toBe(false)
+    expect(scan.pwNoImageomit).toBe(false)
   })
 
   test("remote playwright is the consumer's own setup — never flagged", () => {
@@ -120,5 +122,6 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
     expect(scan.hasPw).toBe(true)
     expect(scan.pwUnmasked).toBe(false)
     expect(scan.pwNoOutdir).toBe(false)
+    expect(scan.pwNoImageomit).toBe(false)
   })
 })

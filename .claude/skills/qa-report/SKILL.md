@@ -1,6 +1,6 @@
 ---
 name: qa-report
-description: Aggregate the evidence directory into QA metrics — pass rate, P0/P1 trend, BLOCKED reasons, routing quality and learning throughput, per project and product. Use for "/qa-report", a weekly or sprint summary, "wie läuft's mit dem Testing", "QA-Bericht", "Testreport", "Wochenbericht", or whenever someone asks how testing is actually going. Not for a single ticket's verdict — this aggregates across the evidence directory; a one-ticket result comes from /report-to-jira.
+description: Aggregate the evidence directory into QA metrics — pass rate, P0/P1 trend, BLOCKED reasons, routing quality, learning throughput, per project and product. Use for "/qa-report", weekly/sprint summary, "QA-Bericht", "Testreport", "wie läuft's mit dem Testing". Not for a single ticket's verdict — /report-to-jira.
 ---
 
 # /qa-report — what the runs already know

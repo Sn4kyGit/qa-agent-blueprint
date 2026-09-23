@@ -1,6 +1,6 @@
 ---
 name: exploratory-testing
-description: Run a chartered, SBTM-style exploratory testing session via Playwright MCP — for new features, unclear behavior, or bug reproduction where no repeatable spec exists yet. Use for "/exploratory-testing", when a ticket needs first-look investigation, "schau dich um", "erkunde das neue Feature", "explorativ testen", or "reproduzier den Bug". Not for flows that are understood and worth repeating — use test-automation.
+description: Run a chartered, SBTM-style exploratory testing session via Playwright MCP — for new features, unclear behavior, or bug reproduction without a repeatable spec. Use for "/exploratory-testing", "erkunde das neue Feature", "explorativ testen", "reproduzier den Bug". Not for understood, repeatable flows — use test-automation.
 ---
 
 # /exploratory-testing — chartered session via Playwright MCP

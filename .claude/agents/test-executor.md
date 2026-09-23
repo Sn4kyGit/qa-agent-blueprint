@@ -38,7 +38,12 @@ acceptance criteria or repro steps, project context). Full usage rules:
   selector — the fix is probably already documented.
 - Re-snapshot after every navigation; never reuse a stale ref across a page
   transition (context rot — see the MCP rules file).
-- Capture console/network logs on any failure; screenshot every failure moment.
+- Capture console/network logs on any failure; screenshot every failure moment —
+  and **mark the culprit element first** (red outline + label via
+  `browser_evaluate`, pattern in `docs/rules/testing/playwright-mcp.md` →
+  "Mark the culprit"), so the screenshot speaks for itself in the bug report.
+  No visible culprit (console/network failure)? Say so instead of framing an
+  arbitrary element.
 
 ## Evidence
 

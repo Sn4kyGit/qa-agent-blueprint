@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
 # post-jira-audit.sh — PostToolUse hook (matcher: mcp__atlassian__.*(create|
-# edit|add|transition|update|delete).*). Append-only audit log of every JIRA/
-# Confluence write the agent makes, including headless CI runs. Never blocks;
-# logging only. Never logs secret values — only tool name and identifying
-# fields (issue key, action).
+# edit|add|transition|update|delete|executeWrite|executeDestructive).*). Append-only
+# audit log of every JIRA/Confluence write the agent makes, including headless
+# CI runs. Never blocks; logging only. Never logs secret values — only tool
+# name and identifying fields (issue key, action).
 #
 set -uo pipefail
 
@@ -33,10 +33,31 @@ while : ; do
   d="$(dirname "$d")"
 done
 TOOL_NAME="$(get_json 'print(d.get("tool_name") or "")')"
+# Direct tools carry the key at the top level (issueKey/issue_key/key/id); an
+# Atlassian v2 executeWrite/executeDestructive call nests it inside the inner
+# tool's arguments — fall back to the first ticket-shaped string anywhere in
+# the payload (same regex the shadow gate uses).
 ISSUE_KEY="$(get_json '
 ti = d.get("tool_input") or {}
-print(ti.get("issueKey") or ti.get("issue_key") or ti.get("key") or ti.get("id") or "")
+direct = ti.get("issueKey") or ti.get("issue_key") or ti.get("key") or ti.get("id") or ""
+if direct:
+    print(direct)
+else:
+    import re, json as j
+    m = re.search(r"[A-Z][A-Z0-9]+-[0-9]+", j.dumps(ti))
+    print(m.group(0) if m else "")
 ')"
+# For execute* meta-tools, note the inner tool name when it is visible under a
+# common parameter name — the audit line stays informative without a schema
+# dependency on Atlassian's exact execute shape.
+case "$TOOL_NAME" in
+  *executeWrite*|*executeDestructive*)
+    INNER="$(get_json '
+ti = d.get("tool_input") or {}
+print(ti.get("tool") or ti.get("toolName") or ti.get("tool_name") or ti.get("name") or "")
+')"
+    [ -n "$INNER" ] && TOOL_NAME="$TOOL_NAME($INNER)" ;;
+esac
 SUCCESS="$(get_json 'print("ok" if not (d.get("tool_response") or {}).get("error") else "error")')"
 
 TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

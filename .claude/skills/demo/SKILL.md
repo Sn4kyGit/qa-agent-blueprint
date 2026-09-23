@@ -1,6 +1,6 @@
 ---
 name: demo
-description: Present a bug reproduction or a finished test run to an audience — headed slow-motion replay via the CLI runner, a handover mode where the human takes over the prepared browser at a page.pause(), and screen recording (.webm) ONLY on explicit user request, never automatically. Use for "/demo <KEY-123>", "präsentier den Bug", "zeig die Repro", "zeig wie du getestet hast", "stell das Feature vor", "demo time", "lass mich probieren", "ich will selbst klicken", or "nimm das auf" / "record it" (recording variant). Not for testing something new — the presenter never tests; missing repro/evidence routes to bug-reproduction or test-ticket first.
+description: Present a bug reproduction or finished test run to an audience — headed slow-motion replay, handover mode at page.pause(), screen recording only on explicit request. Use for "/demo <KEY-123>", "präsentier den Bug", "zeig die Repro", "lass mich probieren", "nimm das auf". Not for testing something new.
 ---
 
 # /demo — presenter mode

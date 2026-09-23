@@ -127,7 +127,8 @@ seed_browser_config() {
   "browser": {
     "isolated": true,
     "launchOptions": { "headless": true }
-  }
+  },
+  "console": { "level": "warning" }
 }
 BROWSER_CONFIG
   SEEDED_BROWSER_CONFIG=1
@@ -320,6 +321,9 @@ if pw:
         flags.append("PW_UNMASKED")
     if not any("--output-dir" in (c.get("args") or []) for c in pw):
         flags.append("PW_NO_OUTDIR")
+    if not any(a == "--image-responses" or a.startswith("--image-responses=")
+               for c in pw for a in (c.get("args") or [])):
+        flags.append("PW_NO_IMAGEOMIT")
 at = servers.get("atlassian", [])
 if at:
     flags.append("HAS_AT")
@@ -344,7 +348,8 @@ PY
 # so turn the configured-state scan into a concrete hint instead of pretending to
 # know more: this is only printed while no project has been onboarded yet.
 # The MCP contract is: NAME (playwright/atlassian — hooks and skills match on
-# them) + --secrets + --output-dir. Everything else (headless/headful, isolated,
+# them) + --secrets + --output-dir + --image-responses omit. Everything else
+# (headless/headful, isolated,
 # viewport, browser channel) is the user's preference, exercised via
 # .playwright-mcp.config.json or their own flags — never a warning here.
 mcp_hint() {
@@ -373,6 +378,10 @@ mcp_hint() {
   case "$scan" in
     *PW_NO_OUTDIR*)
       printf '\n- WARNING: an existing playwright MCP config has no --output-dir flag — raw browser artifacts would not land in evidence/, breaking the evidence policy. Add `--output-dir evidence/.mcp-out` or use the blueprint-provided server.' ;;
+  esac
+  case "$scan" in
+    *PW_NO_IMAGEOMIT*)
+      printf '\n- WARNING: an existing playwright MCP config has no --image-responses omit — every screenshot lands in the model context as an image (~1-2k tokens per shot). Add `--image-responses omit` or use the blueprint-provided server.' ;;
   esac
   if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
     # Verified behavior: a project .mcp.json does NOT override a plugin-provided

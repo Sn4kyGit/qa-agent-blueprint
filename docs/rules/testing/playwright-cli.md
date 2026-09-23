@@ -23,6 +23,17 @@ categories" (e.g. `AUTH`, `CHK`, `CART`). IDs go in the test title
 (`test('TC-CHK-014: coupon applies discount', ...)`) so failures map directly to a
 reportable identifier.
 
+## Runner output — keep it out of the context
+
+- Default invocation: `npx playwright test --reporter=line` (single-line progress,
+  failures with detail at the end). The default `list` reporter prints one line
+  per test × retry — hundreds of context tokens for zero verdict value on a
+  green run.
+- HTML/JSON reports and traces still land on disk (per the suite's config);
+  open them only for failure triage, never print them into the chat.
+- Grep the output for the failure block when triaging; don't re-run with a
+  noisier reporter "to see more" — the detail is already in the failure section.
+
 ## Retries & flakes
 
 - Local: `--retries=0`. A flake must reproduce locally to be fixable — don't mask

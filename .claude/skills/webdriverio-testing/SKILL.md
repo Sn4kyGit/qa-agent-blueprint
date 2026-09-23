@@ -1,11 +1,10 @@
 ---
 name: webdriverio-testing
 description: >-
-  Write or run deterministic WebdriverIO specs (web, Selenium Grid remote, and mobile
-  via Appium) through the WDIO CLI runner. Not for direct invocation — this is loaded
-  by test-automation when a project's "Test assets" → Framework says webdriverio; route
-  user requests to /test-automation instead. Not for Playwright suites — those follow
-  docs/rules/testing/playwright-cli.md. Related: test-automation, test-reliability.
+  Write or run deterministic WebdriverIO specs (web, Selenium Grid remote, mobile
+  via Appium) through the WDIO CLI runner. Loaded by test-automation when the
+  project's "Test assets" → Framework says webdriverio; route user requests to
+  /test-automation. Not for Playwright suites.
 ---
 
 # WebdriverIO — spec conventions for the test-automator

@@ -1,15 +1,12 @@
 ---
 name: visual-testing
 description: >-
-  Implement visual regression testing with Playwright screenshots, Chromatic, Percy,
-  and Argos CI. Covers baseline management, diff threshold tuning, dynamic content
-  masking, responsive viewport testing, and review/approval workflows.
-  Use when: "visual test," "screenshot," "visual regression," "pixel diff," "snapshot diff,"
-  "update baselines," "Chromatic," "percy snapshot," "argos screenshot."
-  Not for: bulk baseline regeneration after a redesign broke many tests — use
-  selector-drift-recovery; cross-browser rendering matrices — use cross-browser-testing;
-  general Playwright test structure — use playwright-automation.
-  Related: playwright-automation, ci-cd-integration, cross-browser-testing.
+  Visual regression testing with Playwright screenshots, Chromatic, Percy, Argos:
+  baseline management, diff threshold tuning, dynamic-content masking, responsive
+  viewports, review/approval workflows. Use when: visual test, screenshot, visual
+  regression, pixel diff, snapshot diff, update baselines, Chromatic, percy
+  snapshot, argos screenshot. Not for bulk baseline regeneration after a redesign
+  or cross-browser rendering matrices.
 license: MIT
 metadata:
   author: kindlmann

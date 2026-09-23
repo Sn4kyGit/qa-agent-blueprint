@@ -1,16 +1,12 @@
 ---
 name: security-testing
 description: >-
-  Test application security against OWASP Top 10 (2025) with automated CI tooling: OWASP ZAP
-  (DAST), dependency/supply-chain scanning (OSV-Scanner, SBOM, provenance), Semgrep SAST,
-  auth/session tests (JWT, OAuth, RBAC), and XSS/CSRF/SQLi/SSRF Playwright patterns.
-  Use when: "security test," "OWASP," "vulnerability," "ZAP," "XSS," "SSRF," "dependency scan,"
-  "auth testing," "OWASP LLM Top 10." Scope is automated scanning + negative-path security tests in CI, not manual penetration testing.
-  Not for: mapping security controls to regulations (SOC 2, HIPAA, PCI, GDPR) — use compliance-testing;
-  pipeline stage wiring and deploy gating mechanics — use ci-cd-integration; purely functional API auth/input
-  tests with no attacker model — see api-testing; testing your product's own LLM features or defending the
-  agent itself (prompt-injection detector, indirect injection, jailbreak red-teaming) — use ai-system-testing.
-  Related: ci-cd-integration, compliance-testing, api-testing, shift-left-testing, ai-system-testing.
+  Test application security against OWASP Top 10 (2025) with automated CI tooling:
+  OWASP ZAP (DAST), dependency/SBOM scanning, Semgrep SAST, auth/session tests
+  (JWT, OAuth, RBAC), XSS/CSRF/SQLi/SSRF Playwright patterns. Use when: security
+  test, OWASP, vulnerability, ZAP, XSS, SSRF, dependency scan, auth testing. Not
+  for compliance-regulation mapping, manual penetration testing, or testing the
+  product's own LLM features (ai-system-testing).
 license: MIT
 metadata:
   author: kindlmann

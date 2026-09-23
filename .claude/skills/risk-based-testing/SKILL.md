@@ -1,16 +1,11 @@
 ---
 name: risk-based-testing
 description: >-
-  Produce a risk matrix or heatmap that quantifies what could break by business
-  impact × probability, runs failure mode analysis on the top items, and maps test
-  coverage to risk zones. Includes stakeholder interview frameworks and continuous
-  reassessment. Run this BEFORE test-strategy or test-planning. Use when: "risk
-  assessment," "risk matrix," "risk heatmap," "what could break," "critical paths,"
-  "failure modes," "where to focus testing."
-  Not for: multi-quarter QA direction — use test-strategy. Not for: a single
-  sprint/release test plan — use test-planning. Not for: hands-on session-based
-  bug hunting — use exploratory-testing.
-  Related: test-strategy, test-planning, release-readiness, qa-metrics.
+  Produce a risk matrix/heatmap (business impact × probability), failure mode
+  analysis on the top items, and test coverage mapped to risk zones. Run BEFORE
+  test-strategy or test-planning. Use when: risk assessment, risk matrix, risk
+  heatmap, what could break, critical paths, failure modes, where to focus
+  testing. Not for sprint test plans or hands-on session-based bug hunting.
 license: MIT
 metadata:
   author: kindlmann

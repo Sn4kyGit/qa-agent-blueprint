@@ -1,12 +1,11 @@
 ---
 name: api-testing
 description: >-
-  Test REST and GraphQL APIs with Playwright APIRequestContext, Supertest, or standalone
-  HTTP clients. Covers schema validation with Zod 4/AJV, auth flow testing, CRUD lifecycle
-  tests, error and header validation, pagination, and performance assertions. Use when:
-  "API test," "endpoint test," "REST test," "GraphQL test," "schema validation," "Postman replacement."
-  Not for: consumer-driven contract verification (Pact, broker) — use contract-testing; browser UI flows — use playwright-automation.
-  Related: contract-testing, test-data-management, ci-cd-integration, playwright-automation.
+  Test REST and GraphQL APIs: Playwright APIRequestContext, Supertest, HTTP clients;
+  schema validation (Zod 4/AJV), auth flows, CRUD lifecycle, error/header validation,
+  pagination, performance assertions. Use when: API test, endpoint test, REST test,
+  GraphQL test, schema validation, Postman replacement. Not for Pact contract
+  verification (contract-testing) or browser UI flows.
 license: MIT
 metadata:
   author: kindlmann

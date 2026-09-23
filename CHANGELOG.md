@@ -8,6 +8,55 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.10.0] — 2026-09-23
+
+Theme: **token diet.** Subscription quotas burn on context, not on thinking —
+this release shrinks what every session and every subagent spawn carries, and
+keeps screenshots and runner noise out of the model context entirely. No
+behavioral change to verdicts, evidence, or the learning loop.
+
+### Changed
+- **Playwright MCP contract gains `--image-responses omit`**: screenshots are
+  saved as evidence files but no longer returned into the context as images
+  (~1-2k tokens per shot). New installs ship it; the installer force-upgrades
+  existing playwright entries that miss it (integrate/opencode modes), and
+  session start warns on a custom config without it — same treatment as
+  `--secrets`/`--output-dir` (`session-start.sh` + opencode scan, both with
+  fixtures).
+- **Playwright console noise capped**: the seeded `.playwright-mcp.config.json`
+  sets `"console": { "level": "warning" }` — per-snapshot console chatter no
+  longer floods tool responses. Existing preference files are untouched (the
+  file is consumer-owned); the uninstall comparison accepts both generations.
+- **Atlassian Cloud switches to the v2 default URL (discovery/execute).**
+  `?tools=all` is gone from the shipped entry: the blueprint's working set
+  (get/search/create/edit/transition/comment) stays directly available as
+  Primary tools; deferred tools (attachment upload, changelogs) run via
+  `discover` + `executeRead`/`executeWrite` instead of every session carrying
+  the full Atlassian suite. The installer auto-strips a legacy `?tools=all`
+  URL on upgrade (fixture-proven). **Data Center** setups get the same diet
+  via `ENABLED_TOOLS` in the AGENTS.md example: the 11 Jira tools the flows
+  call, not all 98 (Jira attachment *upload* does not exist in
+  `mcp-atlassian` — evidence files are attached per the project's report
+  format).
+- **The shadow gate and the JIRA audit treat `executeWrite`/`executeDestructive`
+  as writes** in both harnesses: blocked under Shadow Mode, logged afterwards
+  with the nested issue key resolved from the inner arguments; `executeRead`
+  deliberately stays open. New guard fixtures + bun tests on both sides.
+- **Skill descriptions trimmed** (17.4k → 10.1k chars across the 28 skills,
+  trigger keywords kept) — ~1.8k tokens less per session start. Convention
+  noted in `THIRD_PARTY_NOTICES.md` so re-vendored skills get the same trim.
+- **`docs/rules/`**: `playwright-cli.md` defaults runner output to
+  `--reporter=line` (summary to the agent, full output to files);
+  `token-discipline.md` gains a Claude Code session-hygiene section
+  (`/clear` between tickets, `/usage` checks, no mid-session model switch).
+
+### Added
+- **Bug screenshots show the culprit**: before the failure screenshot, the
+  agent highlights the offending element via `browser_evaluate` and captures
+  the marked shot — that image leads the bug ticket's attachments. Norm in
+  `playwright-mcp.md`, wired into `test-executor`, `bug-reporter`, and the
+  evidence-policy capture matrix.
+
 ## [0.9.1] — 2026-09-22
 
 Fix: **no more dual evidence scaffolds.** Field report: a session started in

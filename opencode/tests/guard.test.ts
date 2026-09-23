@@ -154,6 +154,40 @@ describe("shadow gate (opencode)", () => {
     await expect(run(h, unknownBefore({ payload: "atlassian__createJiraIssue" }))).rejects.toThrow(/Shadow Mode is on/)
   })
 
+  // Atlassian v2 meta-tools (0.10.0): executeWrite/executeDestructive run
+  // DEFERRED tools and are writes by definition; executeRead stays open.
+  test("blocks executeWrite (deferred tool), shadow default", async () => {
+    const dir = await tempProject("# SHOP\nShadow mode: on\n")
+    const h = await hooksIn(dir)
+    const call: BeforeCall = {
+      input: { tool: "atlassian_executeWrite", sessionID: SESSION_ID, callID: "tool_exec" },
+      output: { args: { tool: "uploadAttachmentToJiraIssue", arguments: { issueKey: "SHOP-1" } } },
+    }
+    await expect(run(h, call)).rejects.toThrow(/Shadow Mode is on/)
+  })
+
+  test("executeWrite resolves the nested issue key for the audit log", async () => {
+    const dir = await tempProject("# SHOP\nShadow mode: off\n")
+    await stampPreflight(dir)
+    const h = await hooksIn(dir)
+    const call: BeforeCall = {
+      input: { tool: "atlassian_executeWrite", sessionID: SESSION_ID, callID: "tool_exec2" },
+      output: { args: { tool: "uploadAttachmentToJiraIssue", arguments: { issueKey: "SHOP-1" } } },
+    }
+    await expect(run(h, call)).resolves.toBeUndefined()
+  })
+
+  test("executeRead is not a write", async () => {
+    const dir = await tempProject("# SHOP\nShadow mode: on\n")
+    await stampPreflight(dir)
+    const h = await hooksIn(dir)
+    const call: BeforeCall = {
+      input: { tool: "atlassian_executeRead", sessionID: SESSION_ID, callID: "tool_execr" },
+      output: { args: { tool: "listJiraIssueChangelogs", arguments: { issueKey: "SHOP-1" } } },
+    }
+    await expect(run(h, call)).resolves.toBeUndefined()
+  })
+
   test("allows when PROJECT.md says 'Shadow mode: off'", async () => {
     const dir = await tempProject("# SHOP\nShadow mode: off\n")
     await stampPreflight(dir) // shadow-off fixtures still need the preflight gate open

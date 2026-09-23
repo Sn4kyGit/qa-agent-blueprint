@@ -83,8 +83,10 @@ You are an agent — act like one. Check and, with the user's OK, install:
 
 Ask the user: **is your JIRA Atlassian Cloud or self-hosted (Data Center)?**
 
-- **Cloud** — nothing to do; the plugin's `atlassian` entry fits. Auth happens
-  later via `/mcp` OAuth (a human step).
+- **Cloud** — nothing to do; the plugin's `atlassian` entry fits. It uses the
+  default v2 URL (discovery/execute meta-tools) — never append `?tools=all`,
+  which inflates every session and subagent spawn with the full Atlassian
+  suite. Auth happens later via `/mcp` OAuth (a human step).
 - **Data Center** — the plugin's default `atlassian` entry (Cloud remote
   server) will not reach their JIRA. Replace it in the consumer's
   `.mcp.json` yourself — keep the **name** `atlassian` (the audit and
@@ -94,9 +96,20 @@ Ask the user: **is your JIRA Atlassian Cloud or self-hosted (Data Center)?**
   "atlassian": {
     "command": "uvx",
     "args": ["mcp-atlassian"],
-    "env": { "JIRA_URL": "https://jira.<their-company>.tld" }
+    "env": {
+      "JIRA_URL": "https://jira.<their-company>.tld",
+      "ENABLED_TOOLS": "jira_get_issue,jira_search,jira_create_issue,jira_update_issue,jira_add_comment,jira_get_transitions,jira_transition_issue,jira_batch_get_changelogs,jira_get_project_issue_types,jira_get_create_fields,jira_download_attachments"
+    }
   }
   ```
+
+  `ENABLED_TOOLS` (since 0.10.0) shrinks the tool surface from 98 tools
+  (incl. the whole Confluence suite) to the 11 the blueprint's flows actually
+  call — tool schemas ride in every session AND every subagent spawn, so this
+  is the single biggest baseline saving on DC. Jira attachment **upload** does
+  not exist in this server (download/images only); evidence files are attached
+  per the project's report format, not via MCP. Add `confluence_*` tools back
+  only if a project genuinely documents in Confluence.
 
   Uses [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian)
   (Jira DC v8.14+). Auth is a **Personal Access Token** the human creates in

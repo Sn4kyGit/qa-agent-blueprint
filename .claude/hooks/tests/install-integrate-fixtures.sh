@@ -194,7 +194,7 @@ mkdir -p "$MTARGET"
 git -C "$MTARGET" init -q . 2>/dev/null
 # Existing .mcp.json: playwright WITHOUT the contract flags, an identical
 # atlassian, and an own server that must survive untouched.
-printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]},' '    "atlassian": {"type": "http", "url": "https://mcp.atlassian.com/v2/mcp?tools=all"},' '    "mine": {"command": "my-server"}' '  }' '}' > "$MTARGET/.mcp.json"
+printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]},' '    "atlassian": {"type": "http", "url": "https://mcp.atlassian.com/v2/mcp"},' '    "mine": {"command": "my-server"}' '  }' '}' > "$MTARGET/.mcp.json"
 OUTM="$("$INSTALL" --mode integrate --target "$MTARGET" --yes 2>&1)"
 printf '%s' "$OUTM" | grep -q "upgraded 'playwright'" \
   && pass "playwright upgraded to the blueprint config" \
@@ -215,13 +215,30 @@ printf '%s' "$OUTM" | grep -q "atlassian' already configured (identical)" \
   && pass "identical atlassian is SKIPPED, not WARN" \
   || fail "identical atlassian is SKIPPED, not WARN" "$(printf '%s' "$OUTM" | grep atlassian)"
 
+# …but the legacy ?tools=all URL (pre-0.10.0 default) is a contract violation:
+# the flat tool list inflates every session. Differing ONLY by that query →
+# auto-upgraded, not just warned about.
+QAURL="$WORK/mcp-toolsall"
+mkdir -p "$QAURL"
+git -C "$QAURL" init -q . 2>/dev/null
+printf '%s\n' '{' '  "mcpServers": {' '    "atlassian": {"type": "http", "url": "https://mcp.atlassian.com/v2/mcp?tools=all"}' '  }' '}' > "$QAURL/.mcp.json"
+OUTQ="$("$INSTALL" --mode integrate --target "$QAURL" --yes 2>&1)"
+printf '%s' "$OUTQ" | grep -q "upgraded 'atlassian'" \
+  && pass "?tools=all atlassian is upgraded" \
+  || fail "?tools=all atlassian is upgraded" "$(printf '%s' "$OUTQ" | grep atlassian)"
+if grep -q 'tools=all' "$QAURL/.mcp.json"; then
+  fail "?tools=all gone after upgrade" "query string still in .mcp.json"
+else
+  pass "?tools=all gone after upgrade"
+fi
+
 # A headful user config that carries the CONTRACT flags (secrets + output-dir)
 # but no --headless/--isolated must be KEPT — preferences are not a reason to
 # overwrite someone's setup (this was the v0.2.0 behavior: we clobbered it).
 KEEP="$WORK/mcp-headful"
 mkdir -p "$KEEP"
 git -C "$KEEP" init -q . 2>/dev/null
-printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out"]}' '  }' '}' > "$KEEP/.mcp.json"
+printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out", "--image-responses", "omit"]}' '  }' '}' > "$KEEP/.mcp.json"
 OUTK="$("$INSTALL" --mode integrate --target "$KEEP" --yes 2>&1)"
 printf '%s' "$OUTK" | grep -q "kept existing 'playwright'" \
   && pass "headful config with contract flags is kept" \

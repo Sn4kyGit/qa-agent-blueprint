@@ -94,11 +94,18 @@ check "JIRA write blocked, plugin-namespaced"   2 '{"tool_name":"mcp__plugin_qa-
 check "JIRA write, unresolvable key → blocked"  2 '{"tool_name":"mcp__atlassian__transitionJiraIssue","tool_input":{}}'
 check "unparsable atlassian write → blocked"    2 'garbage mcp__atlassian__createJiraIssue payload'
 check "JIRA read is not a write"                0 '{"tool_name":"mcp__atlassian__getJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"/tmp"}'
+# Atlassian v2 meta-tools (0.10.0): executeWrite/executeDestructive run
+# DEFERRED tools and are writes by definition; executeRead stays open.
+check "executeWrite blocked, shadow default"    2 '{"tool_name":"mcp__atlassian__executeWrite","tool_input":{"tool":"uploadAttachmentToJiraIssue","arguments":{"issueKey":"SHOP-123"}}}'
+check "executeDestructive blocked, shadow def." 2 '{"tool_name":"mcp__atlassian__executeDestructive","tool_input":{"tool":"deleteJiraIssue","arguments":{"issueKey":"SHOP-123"}}}'
+check "unparsable executeWrite → blocked"       2 'garbage mcp__atlassian__executeWrite payload'
+check "executeRead is not a write"              0 '{"tool_name":"mcp__atlassian__executeRead","tool_input":{"tool":"listJiraIssueChangelogs","arguments":{"issueKey":"SHOP-123"}},"cwd":"/tmp"}'
 # Shadow-off fixtures run against a temp project — which trips the preflight
 # gate unless a fresh pass artifact exists (the gate covers JIRA reads too).
 mkdir -p "$SHADOW_TMP/evidence/.preflight"
 printf '{"key":"SHOP","checked_at":%s,"ok":true}\n' "$(date +%s)" > "$SHADOW_TMP/evidence/.preflight/ok.json"
 check "shadow off via PROJECT.md"               0 '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"'"$SHADOW_TMP"'"}'
+check "executeWrite allowed when shadow off"    0 '{"tool_name":"mcp__atlassian__executeWrite","tool_input":{"tool":"uploadAttachmentToJiraIssue","arguments":{"issueKey":"SHOP-123"}},"cwd":"'"$SHADOW_TMP"'"}'
 
 printf '%s' '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"'"$SHADOW_TMP"'"}' | QA_AGENT_SHADOW=0 bash "$GUARD" >/dev/null 2>&1
 if [ $? -eq 0 ]; then

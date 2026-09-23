@@ -41,9 +41,9 @@ only enforcement once a fixture proves it".
 | SessionStart injects router verbatim in plugin mode | fixture: `session-start-fixtures.sh` |
 | SessionStart warns when a marketplace advertises a newer plugin version; silent when current/unknown | fixture: `session-start-fixtures.sh` (update notice block) |
 | plugin.json declares no component path that sits on a loader convention location (duplicate-load bug class) | fixture: `manifest-conventions.sh` |
-| Browser contract vs. preference: hook warns on missing `--secrets`/`--output-dir`, stays silent on headful; `.playwright-mcp.config.json` seeded once, never overwritten | fixture: `session-start-fixtures.sh` (MCP scan + browser blocks) |
+| Browser contract vs. preference: hook warns on missing `--secrets`/`--output-dir`/`--image-responses omit`, stays silent on headful; `.playwright-mcp.config.json` seeded once, never overwritten | fixture: `session-start-fixtures.sh` (MCP scan + browser blocks) + `opencode/tests/secrets.test.ts` (scan flags) |
 | Browser-driving subagents run sequentially, never in parallel (one MCP server = one shared browser tab; parallel runs contaminate — 0.6.1 field report) | **uncovered** — scheduling norm inside qa-manager; a case could only grade recitation. Candidate for a trace-aware runner: parallel `test-executor` spawns in one session must not occur |
-| Shadow Mode is mechanically enforced: PreToolUse guard blocks Atlassian write tools while shadow is on (fail-safe on unresolvable key/unreadable project file); unlock via `Shadow mode: off` or `QA_AGENT_SHADOW=0` | fixture: `guard-fixtures.sh` (shadow section) + `opencode/tests/guard.test.ts` (shadow gate) — 0.6.3, audit F1 |
+| Shadow Mode is mechanically enforced: PreToolUse guard blocks Atlassian write tools while shadow is on — including the Cloud v2 meta-tools `executeWrite`/`executeDestructive` (deferred tools are writes by definition; `executeRead` stays open) — fail-safe on unresolvable key/unreadable project file; unlock via `Shadow mode: off` or `QA_AGENT_SHADOW=0` | fixture: `guard-fixtures.sh` (shadow section, execute-meta-tool cases) + `opencode/tests/guard.test.ts` (shadow gate) — 0.6.3, audit F1; execute* cases 0.10.0 |
 | Installer keeps a user playwright config that carries the contract flags (preferences never trigger an overwrite) | fixture: `install-integrate-fixtures.sh` (headful-kept block) |
 
 ## `evidence-policy.md`
@@ -56,6 +56,7 @@ only enforcement once a fixture proves it".
 | Learnings: exactly one of `captured` / `none_because` | case: `learnings-declaration` |
 | Product fields conditional (never null) | case: `routing-absent` |
 | PII/secrets never in evidence artifacts | **uncovered** — needs an artifact-inspection mechanism; hook-side candidate (PostToolUse on evidence writes) rather than eval |
+| A bug-failure screenshot shows the culprit element visually marked (highlight before capture; the marked shot leads the bug ticket's attachments) | **uncovered** — behavioral norm in `docs/rules/testing/playwright-mcp.md` + `bug-reporter` + capture matrix; grading needs image/artifact inspection (does the failure screenshot carry a highlight), not answer text. Candidate for an artifact-aware runner (0.10.0) |
 
 ## `product-layer.md`
 
@@ -83,6 +84,9 @@ only enforcement once a fixture proves it".
 | Subagent policy: browser work delegated; no subagent for one-liners | **uncovered** — needs tool-call/trace inspection; revisit with a trace-aware runner |
 | Evidence never read back into context | **uncovered** — same reason (transcript-level norm) |
 | MCP budget (declared set) | see router row above |
+| Atlassian Cloud uses the v2 default URL (discovery/execute meta-tools) — never `?tools=all`; the installer auto-strips a legacy `?tools=all` entry instead of just warning. DC surface trimmed to the ~11 used Jira tools via `ENABLED_TOOLS` | fixture: `install-integrate-fixtures.sh` (tools=all upgrade block) for the mechanism; the DC/`ENABLED_TOOLS` half is config-time, verified at setup |
+| Playwright CLI runner output stays out of the context (`--reporter=line` default; failures summarized, full output to files) | **deliberately advisory** — a violation is immediately visible (context fills with runner noise) and self-corrects on the next run; an eval could only grade recitation (0.10.0) |
+| Session hygiene (Claude Code): `/clear` between tickets, `/usage` budget checks, no mid-session model switch, `/compact` over idle drift | **deliberately advisory** — session-management practice, not gradable from one answer; the mechanical half (MCP surface size) is covered by the rows above (0.10.0) |
 
 ## `qa-principles.md`
 

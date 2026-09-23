@@ -1,15 +1,11 @@
 ---
 name: qa-metrics
 description: >-
-  Define, track, and act on QA metrics: test coverage percentage, flakiness rate, defect
-  escape rate, MTTR, test execution time trends, automation ROI, quality gates, and SLAs
-  for test suites. Includes metric formulas, realistic targets by company stage, and the
-  action to take when each metric goes red.
-  Use when: "QA metrics," "test metrics," "quality KPIs," "test health," "flakiness rate,"
-  "defect escape rate."
-  Not for: building the dashboard UI (Allure/Grafana) — use qa-dashboard; measuring coverage
-  gaps and mutation score — use coverage-analysis.
-  Related: qa-dashboard, coverage-analysis, ci-cd-integration, release-readiness, quality-postmortem.
+  Define, track, and act on QA metrics: coverage %, flakiness rate, defect escape
+  rate, MTTR, execution time trends, automation ROI, quality gates, SLAs — with
+  formulas, realistic targets, and the action when a metric goes red. Use when:
+  QA metrics, test metrics, quality KPIs, test health, flakiness rate, defect
+  escape rate. Not for dashboard UIs or coverage-gap/mutation analysis.
 license: MIT
 metadata:
   author: kindlmann

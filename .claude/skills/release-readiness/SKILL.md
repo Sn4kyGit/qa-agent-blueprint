@@ -1,16 +1,11 @@
 ---
 name: release-readiness
 description: >-
-  Validate release readiness with evidence-based go/no-go decisions. Covers go/no-go
-  checklists, smoke test suite design, staged rollout validation, rollback criteria
-  and procedures, and post-deployment verification. Ensures release confidence comes
-  from data, not feelings. Use when: "release ready," "go/no-go," "smoke test,"
-  "release checklist," "rollback plan," "staged rollout," "canary deploy."
-  Not for: safe-release techniques (flags, canary, dark launch) applied during the
-  rollout itself — use testing-in-production; scheduled probes that run continuously
-  after release — use synthetic-monitoring; designing new tests from prod telemetry —
-  use observability-driven-testing.
-  Related: testing-in-production, qa-metrics, ci-cd-integration, ai-system-testing.
+  Evidence-based release go/no-go: checklists, smoke test suite design, staged
+  rollout validation, rollback criteria and procedures, post-deployment
+  verification. Use when: release ready, go/no-go, smoke test, release checklist,
+  rollback plan, staged rollout, canary deploy. Not for rollout-time techniques
+  (flags, dark launch), continuous synthetic probes, or prod-telemetry test design.
 license: MIT
 metadata:
   author: kindlmann

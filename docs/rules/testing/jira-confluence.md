@@ -19,12 +19,36 @@ DC consumer `.mcp.json` variant (no secrets in the file):
 "atlassian": {
   "command": "uvx",
   "args": ["mcp-atlassian"],
-  "env": { "JIRA_URL": "https://jira.example.local" }
+  "env": {
+    "JIRA_URL": "https://jira.example.local",
+    "ENABLED_TOOLS": "jira_get_issue,jira_search,jira_create_issue,jira_update_issue,jira_add_comment,jira_get_transitions,jira_transition_issue,jira_batch_get_changelogs,jira_get_project_issue_types,jira_get_create_fields,jira_download_attachments"
+  }
 }
 ```
 
 The blueprint's shipped default stays Cloud; a Data Center consumer replaces
-the `atlassian` entry with the variant above (name unchanged).
+the `atlassian` entry with the variant above (name unchanged). `ENABLED_TOOLS`
+keeps the DC server's surface at the 11 Jira tools the flows call instead of
+all 98 (see AGENTS.md → JIRA deployment).
+
+## Cloud v2: Primary vs. deferred tools (since 0.10.0)
+
+The shipped Cloud entry uses the default v2 URL (`/v2/mcp`, **never**
+`?tools=all`). The server exposes the blueprint's working set as **Primary**
+tools directly — `getJiraIssue`, `searchJiraIssuesUsingJql`, `createJiraIssue`,
+`editJiraIssue`, `transitionJiraIssue`, `addOrEditJiraIssueComment`. Everything
+else (attachment **upload** `uploadAttachmentToJiraIssue`, changelogs, project
+metadata) is **deferred**: call `discover` once to get the exact tool schema,
+then run it via `executeRead` (reads) or `executeWrite` (writes). Practical
+consequences:
+
+- Attachment upload and the failure-analyst's changelog reads go through
+  `executeWrite`/`executeRead` — expect one extra `discover` round trip per
+  deferred tool per session.
+- The shadow gate and the audit hook treat `executeWrite`/`executeDestructive`
+  as writes (blocked under Shadow Mode, logged after), `executeRead` stays open.
+- The FIRST call in any session stays `getAccessibleAtlassianResources` (every
+  tool needs a `cloudId`), then the direct Primary tools as before.
 
 ## Cloud: ADF constraints — the ones that actually bite
 

@@ -76,7 +76,7 @@ if [ -z "$TOOL_NAME" ]; then
   if printf '%s' "$INPUT" | sed 's/\.env\.example//g' | grep -qiE '\.env(\.|"|'"'"'|$)|\.pem|id_rsa|id_ed25519|secret|credential'; then
     block "refusing an unrecognized call touching a secrets path — failing closed."
   fi
-  if printf '%s' "$INPUT" | grep -qiE 'atlassian__?[a-z]*(create|edit|add|transition|update|delete)'; then
+  if printf '%s' "$INPUT" | grep -qiE 'atlassian__?[a-z]*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)'; then
     # Single underscore before `atlassian` — the shadow-gate regex expects the
     # namespace prefix to end in one `_` (the real plugin naming shape), and the
     # sentinel must pass through that gate to be blocked there.
@@ -198,7 +198,12 @@ fi
 # Same namespace-tolerant shape as the stop hook: the plugin-namespaced form is
 # mcp__plugin_<name>_<server>__<tool> — a SINGLE underscore joins plugin name
 # and server, so the prefix group ends in `_`, and `atlassian__` follows.
-if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?atlassian__.*(create|edit|add|transition|update|delete)'; then
+# executeWrite/executeDestructive are the Atlassian v2 meta-tools that run
+# DEFERRED tools (e.g. uploadAttachmentToJiraIssue) — writes by definition, so
+# the gate classifies them by name without parsing the inner tool (0.10.0).
+# executeRead is absent on purpose: it runs read-only deferred tools
+# (listJiraIssueChangelogs & co.) and must stay open.
+if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?atlassian__.*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)'; then
   if [ "${QA_AGENT_SHADOW:-1}" != "0" ]; then
     ISSUE_KEY="$(get_json 'import re; m = re.search(r"[A-Z][A-Z0-9]+-[0-9]+", json.dumps(d.get("tool_input") or {})); print(m.group(0) if m else "")')"
     PROJ="${ISSUE_KEY%%-*}"

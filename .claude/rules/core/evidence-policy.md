@@ -38,7 +38,7 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 
 | Artifact | Interactive | CI | Rule |
 |---|---|---|---|
-| Screenshot | only-on-failure + one final shot on PASS | same | PASS needs visual proof; failures need the moment |
+| Screenshot | only-on-failure + one final shot on PASS | same | PASS needs visual proof; failures need the moment, culprit element marked (red outline, see playwright-mcp.md) |
 | Video | retain-on-failure | retain-on-failure | full videos on pass waste storage/review time |
 | Trace | retain-on-failure | on-first-retry | CI retries exist to capture the flake's trace |
 | `execution_summary.json` | always | always | machine-readable verdict — this is the hard requirement |

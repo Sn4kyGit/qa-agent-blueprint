@@ -16,6 +16,11 @@ The playwright MCP server is governed by two layers with different owners:
 - `--output-dir evidence/.mcp-out`: raw MCP artifacts land in
   `evidence/.mcp-out/`; copy only the curated, relevant ones into the run's
   `evidence/<KEY>/<TICKET>/<ts>/` directory.
+- `--image-responses omit`: screenshots are written to files (output-dir or an
+  explicit path) but NOT returned as images into the context — each one would
+  cost ~1-2k tokens for zero decision value. Screenshots are evidence files,
+  never reading material. If a human genuinely asks "show me", Read the PNG
+  back deliberately — on demand, not by default.
 
 **Preference (yours — `.playwright-mcp.config.json` in the QA home, referenced
 via `--config`):**
@@ -25,9 +30,14 @@ via `--config`):**
   "browser": {
     "isolated": true,
     "launchOptions": { "headless": true }
-  }
+  },
+  "console": { "level": "warning" }
 }
 ```
+
+- `console.level`: `warning` (seeded default) keeps info/debug console noise out
+  of tool responses — errors still surface, and `browser_console_messages` can
+  ask for a lower level explicitly when a failure needs it.
 
 - `launchOptions.headless`: `true` (default) is CI-safe; `false` runs **headful**
   — a visible browser you can watch while the agent works. Evidence capture
@@ -80,7 +90,44 @@ Use the accessibility snapshot (`browser_snapshot`) to decide what to click/fill
 it's structured, cheap, and gives stable refs. Take an actual screenshot only for
 evidence capture (failure moment, final PASS shot), not as a way to "look at" the
 page before every action — that burns tokens and image budget for no decision
-value.
+value. With the contract flag `--image-responses omit` the screenshot never
+enters the context at all; it lands as a file and is referenced by path.
+
+## Mark the culprit before the failure screenshot
+
+A failure screenshot in a bug report must speak for itself: a developer opening
+the attachment sees WHAT is wrong WHERE, without reading the repro first. Before
+the failure shot, highlight the element that shows the defect (the broken field,
+the wrong price, the missing button) via `browser_evaluate` on its snapshot ref:
+
+```js
+(el) => {
+  el.scrollIntoView({ block: "center" });
+  el.style.outline = "3px solid #ff2d2d";
+  el.style.outlineOffset = "2px";
+  const r = el.getBoundingClientRect();
+  const tag = document.createElement("div");
+  tag.textContent = "BUG";
+  Object.assign(tag.style, {
+    position: "fixed", left: r.left + "px",
+    top: Math.max(0, r.top - 22) + "px",
+    background: "#ff2d2d", color: "#fff", padding: "2px 6px",
+    font: "bold 12px sans-serif", zIndex: 2147483647
+  });
+  document.body.appendChild(tag);
+}
+```
+
+Rules that follow:
+
+- Mark as the LAST action before the screenshot — the marking mutates the page,
+  so do it only once the failure is observed and no further assertions depend on
+  a pristine DOM. The PASS/final shot stays unmarked.
+- No visible culprit (console error, network failure, blank page)? Skip the
+  marking and say so in the run log — a red frame on an arbitrary element is
+  worse than none.
+- The shot is annotated by design; the pristine state is recoverable from the
+  trace/log artifacts in the same run dir.
 
 ## `browser_find` before assuming a selector
 

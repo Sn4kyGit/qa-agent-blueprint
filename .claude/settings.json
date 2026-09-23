@@ -53,7 +53,7 @@
         ]
       },
       {
-        "matcher": "mcp__.*atlassian__.*(create|edit|add|transition|update|delete).*",
+        "matcher": "mcp__.*atlassian__.*(create|edit|add|transition|update|delete|executeWrite|executeDestructive).*",
         "hooks": [
           {
             "type": "command",
@@ -82,7 +82,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__.*atlassian__.*(create|edit|add|transition|update|delete).*",
+        "matcher": "mcp__.*atlassian__.*(create|edit|add|transition|update|delete|executeWrite|executeDestructive).*",
         "hooks": [
           {
             "type": "command",

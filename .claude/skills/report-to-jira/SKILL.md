@@ -1,6 +1,6 @@
 ---
 name: report-to-jira
-description: Report a test verdict back to JIRA as a comment, with attachments and the correct workflow transition, per the active project's PROJECT.md format. Comment format follows the project's deployment — Cloud = ADF via MCP tools, Data Center = plain Markdown (never hand-written wiki syntax, never hand-rolled ADF). Use after a test run completes, on PASS, FAIL, BLOCKED, or NEEDS_REVIEW — also for "/report-to-jira", "melde das Ergebnis zurück", "kommentier das Ticket", or "post the verdict to JIRA". Not for composing the bug ticket itself — that's /bug-report; this only posts an already-produced verdict/comment.
+description: Report a test verdict back to JIRA per the active project's PROJECT.md — comment, attachments, workflow transition; Cloud = ADF, Data Center = plain Markdown. Use after a test run completes (PASS, FAIL, BLOCKED, NEEDS_REVIEW), "/report-to-jira", "melde das Ergebnis zurück", "kommentier das Ticket". Not for composing the bug ticket itself — /bug-report.
 ---
 
 # /report-to-jira — comment + attachments + transition
@@ -65,8 +65,11 @@ wrong channel for this project.
    to wiki markup) — deployment comes from `PROJECT.md` → "JIRA deployment";
    headings/lists, no pipe tables —
    `docs/rules/testing/jira-confluence.md`) via the Atlassian MCP server.
-   Attach evidence files (screenshots, not full logs unless the project asks for
-   them) via the attachment call.
+    Attach evidence files (screenshots, not full logs unless the project asks for
+    them) via the attachment call. On Cloud v2 the comment/transition tools are
+    Primary (direct); attachment upload is a DEFERRED tool — `discover` once,
+    then `executeWrite` with `uploadAttachmentToJiraIssue`
+    (`docs/rules/testing/jira-confluence.md` → "Cloud v2").
    On a project with **JIRA access: `browser`**, skip ADF/Markup entirely and post
    through the playwright-driven UI instead — comment, attachments and transition
    per `docs/rules/testing/jira-browser.md` → "Writing".

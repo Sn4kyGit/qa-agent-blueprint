@@ -154,6 +154,12 @@ M5CTX="$(context_for "$M5")"
 check_contains "playwright without --output-dir → warning" "$M5CTX" "no --output-dir flag"
 check_absent   "headful is a preference, not a warning" "$M5CTX" "--headless"
 
+# Same shape for the token contract: no --image-responses omit → every screenshot
+# lands in the context as an image → warning (0.10.0).
+M6="$WORK/mcp-no-imageomit"; mkdir -p "$M6/projects"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets","--output-dir","evidence/.mcp-out"]}}}' > "$M6/.mcp.json"
+check_contains "playwright without --image-responses omit → warning" "$(context_for "$M6")" "no --image-responses omit"
+
 # User scope (~/.claude.json) must be found too — via a fake HOME.
 M4="$WORK/mcp-userscope"; FAKEHOME="$WORK/fakehome"; mkdir -p "$M4/projects" "$FAKEHOME"
 printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets"]},"atlassian":{"type":"sse","url":"https://mcp.atlassian.com/v1/sse"}}}' > "$FAKEHOME/.claude.json"

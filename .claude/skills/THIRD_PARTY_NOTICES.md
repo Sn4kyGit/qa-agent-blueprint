@@ -9,6 +9,13 @@ upstream library has 50 skills covering a much broader surface (email/payment
 testing, chaos engineering, contract testing, and more) that this blueprint does
 not currently pull in.
 
+> **Local modification (0.10.0):** the `description:` frontmatter of ALL vendored
+> skills was trimmed to ~300-400 characters (trigger keywords kept, prose and
+> `Related:`/`Not for:` chains condensed) — descriptions ride in every session's
+> system prompt, and the set had grown to ~10k chars. Skill bodies are
+> unmodified. On an upstream re-vendor, re-apply the trim instead of taking the
+> upstream descriptions back.
+
 ## Vendored as-is
 
 | Skill | Upstream version | Why it's here |

@@ -1,6 +1,6 @@
 ---
 name: test-ticket
-description: Test a JIRA ticket end to end — read the ticket, route to the project, verify/deploy stage, execute the right test strategy, produce evidence, and report the verdict back to JIRA. Use for "/test-ticket <KEY-123>", "test ticket <KEY-123>", "teste <KEY-123>", "teste SHOP-123", "prüf das Ticket", "schau dir <KEY-123> an", or any request to verify that a ticket works. Not for re-testing an already-fixed bug (use retest-bug) or writing a repeatable spec (use test-automation).
+description: Test a JIRA ticket end to end — read the ticket, route to the project, verify/deploy stage, execute the test strategy, produce evidence, report the verdict to JIRA. Use for "/test-ticket <KEY-123>", "teste <KEY-123>", "prüf das Ticket", or any verify-a-ticket request. Not for re-testing fixed bugs (retest-bug) or writing repeatable specs (test-automation).
 ---
 
 # /test-ticket — full ticket workflow

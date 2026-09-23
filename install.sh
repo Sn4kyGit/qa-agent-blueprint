@@ -720,12 +720,14 @@ changed = False
 
 # The playwright config is part of the security model: --secrets masks passwords
 # in tool responses, and --output-dir keeps raw artifacts inside evidence/ (the
-# evidence policy depends on it). Those two are the CONTRACT — "existing wins"
-# would silently drop them, so for THIS server the blueprint config wins when a
-# contract flag is missing. Headless/headful and --isolated are deliberately NOT
+# evidence policy depends on it). --image-responses omit keeps screenshots out of
+# the model context (they are evidence files, not reading material — ~1-2k tokens
+# per shot saved). Those three are the CONTRACT — "existing wins" would silently
+# drop them, so for THIS server the blueprint config wins when a contract flag is
+# missing. Headless/headful and --isolated are deliberately NOT
 # contract: they are user preferences (exercised via .playwright-mcp.config.json
 # or the user's own flags), and a config missing only those is kept with a note.
-CONTRACT_FLAGS = ("--secrets", "--output-dir")
+CONTRACT_FLAGS = ("--secrets", "--output-dir", "--image-responses")
 PREFERENCE_FLAGS = ("--isolated", "--headless")
 
 def has_flag(cfg, flag):
@@ -742,13 +744,29 @@ for name, cfg in bp.get("mcpServers", {}).items():
             missing_prefs = [f for f in PREFERENCE_FLAGS if not has_flag(existing, f)]
             if not missing:
                 note = f" (preferences {', '.join(missing_prefs)} not set — your choice; defaults live in .playwright-mcp.config.json)" if missing_prefs else ""
-                print(f"SKIPPED|.mcp.json|kept existing 'playwright' — it carries the contract flags (--secrets, --output-dir){note}")
+                print(f"SKIPPED|.mcp.json|kept existing 'playwright' — it carries the contract flags (--secrets, --output-dir, --image-responses){note}")
             elif dry:
                 print(f"DRY-RUN|.mcp.json|would upgrade 'playwright' to the blueprint config (missing contract flags: {', '.join(missing)})")
             else:
                 servers[name] = cfg
                 changed = True
                 print(f"MERGED|.mcp.json|upgraded 'playwright' to the blueprint config — added {', '.join(missing)} (password masking / evidence output are part of the contract; your previous config is in the backup)")
+        elif name == "atlassian":
+            # The Cloud v2 default URL (discovery/execute) is part of the token
+            # contract too: ?tools=all inflates every session AND every subagent
+            # spawn with the full Atlassian suite. An existing entry that differs
+            # ONLY by that query string is upgraded; anything else (Data Center,
+            # proxies, own servers) keeps the "existing wins" WARN.
+            stripped = dict(existing, url=(existing.get("url") or "").split("?")[0])
+            if stripped == cfg:
+                if dry:
+                    print(f"DRY-RUN|.mcp.json|would upgrade 'atlassian' — drop ?tools=all (discovery/execute is the default)")
+                else:
+                    servers[name] = cfg
+                    changed = True
+                    print(f"MERGED|.mcp.json|upgraded 'atlassian' — dropped ?tools=all (the flat tool list inflates every session; previous config is in the backup)")
+            else:
+                print(f"WARN|.mcp.json|kept existing '{name}' server config (name already defined)")
         else:
             print(f"WARN|.mcp.json|kept existing '{name}' server config (name already defined)")
     else:
@@ -775,7 +793,7 @@ PY
     for name in $(jq -r '.mcpServers | keys[]' "$REPO_ROOT/.mcp.json"); do
       if jq -e --arg n "$name" '.mcpServers[$n]' "$t" >/dev/null 2>&1; then
         if [ "$name" = "playwright" ]; then
-          report WARN ".mcp.json" "kept existing 'playwright' — VERIFY it carries the contract flags: --secrets .env.playwright-secrets --output-dir evidence/.mcp-out (unmasked passwords / missing evidence otherwise). Headless/isolated are preferences, not contract."
+          report WARN ".mcp.json" "kept existing 'playwright' — VERIFY it carries the contract flags: --secrets .env.playwright-secrets --output-dir evidence/.mcp-out --image-responses omit (unmasked passwords / missing evidence / screenshot images in the context otherwise). Headless/isolated are preferences, not contract."
         else
           report WARN ".mcp.json" "kept existing '$name' server config (name already defined)"
         fi
@@ -998,7 +1016,8 @@ EOF
   "browser": {
     "isolated": true,
     "launchOptions": { "headless": true }
-  }
+  },
+  "console": { "level": "warning" }
 }
 EOF
     report ADDED ".playwright-mcp.config.json" "browser config created — headful = launchOptions.headless false (applies after restart)"
@@ -1312,10 +1331,21 @@ EOF
   fi
   # Same rule for the browser preference file: remove only the untouched
   # default; a user's own preferences (headful, profile) are theirs to keep.
+  # Both seed generations count as "unmodified": the pre-0.10.0 seed had no
+  # console block, the current one adds console.level warning.
   if [ -f "$TARGET/.playwright-mcp.config.json" ]; then
-    local bcfg
-    bcfg="$(mktemp)"
+    local bcfg bcfg_legacy
+    bcfg="$(mktemp)"; bcfg_legacy="$(mktemp)"
     cat > "$bcfg" <<'EOF'
+{
+  "browser": {
+    "isolated": true,
+    "launchOptions": { "headless": true }
+  },
+  "console": { "level": "warning" }
+}
+EOF
+    cat > "$bcfg_legacy" <<'EOF'
 {
   "browser": {
     "isolated": true,
@@ -1323,13 +1353,13 @@ EOF
   }
 }
 EOF
-    if cmp -s "$TARGET/.playwright-mcp.config.json" "$bcfg"; then
+    if cmp -s "$TARGET/.playwright-mcp.config.json" "$bcfg" || cmp -s "$TARGET/.playwright-mcp.config.json" "$bcfg_legacy"; then
       if [ "$DRY_RUN" -eq 1 ]; then report DRY-RUN ".playwright-mcp.config.json" "would remove (unmodified default)";
       else rm "$TARGET/.playwright-mcp.config.json"; report MERGED ".playwright-mcp.config.json" "removed (unmodified default)"; fi
     else
       report WARN ".playwright-mcp.config.json" "kept — holds your browser preferences"
     fi
-    rm -f "$bcfg"
+    rm -f "$bcfg" "$bcfg_legacy"
   fi
 
   next_step "Review remaining .bak-$TS files and delete them once satisfied"
@@ -1754,7 +1784,8 @@ SECRETS_TEMPLATE
   "browser": {
     "isolated": true,
     "launchOptions": { "headless": true }
-  }
+  },
+  "console": { "level": "warning" }
 }
 BROWSER_CONFIG
     report ADDED ".playwright-mcp.config.json" "headless + isolated defaults — edit for a visible browser"

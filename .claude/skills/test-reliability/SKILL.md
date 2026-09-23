@@ -2,16 +2,11 @@
 name: test-reliability
 description: >-
   Runtime per-test healing with evidence: multi-attribute selector healing,
-  environment-aware diagnosis, flake classification, quarantine management, and
-  confidence-scored auto-repair. Goes beyond simple locator fallbacks to cover
-  action-level healing, data healing, and observable repair workflows.
-  Use when: "flaky test," "test stability," "self-healing locator," "broken
-  locator recovery," "unreliable test," "quarantine flaky test."
-  Not for: bulk regenerating selectors after a planned UI refactor — use
-  selector-drift-recovery (this skill heals ONE test at runtime; that one
-  rewrites many tests offline). Not for: classifying/clustering CI failures into
-  bug reports — use ai-bug-triage.
-  Related: playwright-automation, selector-drift-recovery, ci-cd-integration, qa-metrics, ai-bug-triage.
+  environment-aware diagnosis, flake classification, quarantine management,
+  confidence-scored auto-repair. Use when: flaky test, test stability,
+  self-healing locator, broken locator recovery, unreliable test, quarantine flaky
+  test. Not for bulk selector regeneration after a refactor
+  (selector-drift-recovery) or CI failure clustering (ai-bug-triage).
 license: MIT
 metadata:
   author: kindlmann
