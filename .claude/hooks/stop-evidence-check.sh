@@ -156,7 +156,11 @@ has_recent_evidence() {
 }
 
 fresh_summaries() {
-  find "$CWD/evidence" -name execution_summary.json -newermt '-2 hours' 2>/dev/null
+  # -mmin -120 statt -newermt '-2 hours': relative Zeitstrings sind GNU-find-
+  # Syntax; bfs (hinter `find` in manchen Sandbox-Umgebungen) akzeptiert bei
+  # -newermt nur ISO-8601 und scheitert lautlos (stderr → /dev/null), sodass
+  # has_recent_evidence immer "nichts gefunden" liefert. -mmin ist portabel.
+  find "$CWD/evidence" -name execution_summary.json -mmin -120 2>/dev/null
 }
 
 # Second obligation, same firmness as the first: every fresh summary must DECLARE
@@ -199,7 +203,7 @@ missing_evidence_keys() {
     local k proj
     for k in $KEYS; do
       proj="${k%%-*}"
-      find "$CWD/evidence/$proj/$k" -name execution_summary.json -newermt '-2 hours' 2>/dev/null | grep -q . \
+      find "$CWD/evidence/$proj/$k" -name execution_summary.json -mmin -120 2>/dev/null | grep -q . \
         || printf '%s\n' "$k"
     done
   else

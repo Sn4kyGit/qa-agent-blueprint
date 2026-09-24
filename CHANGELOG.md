@@ -8,6 +8,19 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [Unreleased]
+
+### Fixed
+- **Stop hook found no evidence under `bfs`-backed `find`**
+  (`stop-evidence-check.sh`): `-newermt '-2 hours'` is GNU-find syntax; `bfs`
+  (which backs `find` as a shell function in some sandboxed environments)
+  accepts only ISO-8601 timestamps for `-newermt` and aborts with
+  `Invalid timestamp`. With stderr redirected to `/dev/null`, the check failed
+  silently and `has_recent_evidence` always reported "nothing found" — the
+  hook demanded evidence that was already correctly on disk, in every session.
+  Both lookups (global freshness + per-ticket) now use the portable
+  `-mmin -120`.
+
 ## [0.11.0] — 2026-09-23
 
 Theme: **secrets comfort without security loss.** Direct `.env` reads become a
