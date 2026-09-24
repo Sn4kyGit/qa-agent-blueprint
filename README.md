@@ -13,7 +13,7 @@ about *your* projects lives in plain Markdown files in your repo — reviewable,
 diffable, and shared with your team through Git.
 
 > **👉 [Check out the detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
-> the whole architecture rendered as a one-pager: five layers, 16 core skills,
+> the whole architecture rendered as a one-pager: five layers, 18 core skills,
 > five verdicts, and what is enforced rather than merely written down.
 
 > **This is a public blueprint.** It contains no credentials, no internal URLs, no
@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 29 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 317 fixture checks + 120 bun tests · 23 eval cases |
+| **Contents** | 29 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 421 fixture checks + 138 bun tests · 23 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
@@ -161,7 +161,7 @@ blueprint-side to change): in opencode, `/connect` → pick your provider
 opencode run "list your available skills"
 ```
 
-should show the 28 blueprint skills; `/test-ticket`, `/retest-bug`,
+should show the 29 blueprint skills; `/test-ticket`, `/retest-bug`,
 `/qa-report` etc. appear as commands.
 
 **Updating:** `cd ~/qa-blueprint && git pull` — live after a restart; if the

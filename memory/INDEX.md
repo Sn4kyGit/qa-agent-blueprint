@@ -9,6 +9,7 @@ lookups never require a full scan).
 | File | Contents |
 |---|---|
 | `learnings/_inbox.md` | Capture bank: raw session findings awaiting grooming (Capture step of retro-learn) |
+| `learnings/_rejected.md` | Retired/overruled learnings with reason + re-proposal condition — groom checks it before re-capturing (created on first rejection) |
 | `learnings/selector-failures.md` | Unstable selectors and working alternatives (data-testid-first, paste-event traps) |
 | `learnings/flaky-tests.md` | Known flakes, root causes, retry/quarantine strategies |
 | `learnings/env-gotchas.md` | Environment pitfalls: caches, feature flags, sandboxes, shared-stage rules |

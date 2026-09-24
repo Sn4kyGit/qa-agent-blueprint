@@ -8,6 +8,33 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [Unreleased]
+
+Theme: **the learning loop gets a validation gate.** Three upgrades to
+`/retro-learn`, adapted from the ideas behind microsoft/SkillOpt (rejected-edit
+buffer, validation-gated self-modification) — the replay/nightly-cycle tooling
+deliberately not adopted: QA verdicts have no auto-scorable correctness signal,
+replays would hit real stage/JIRA systems, and transcript mining conflicts with
+the data boundary.
+
+### Changed — retro-learn
+- **Rejected-edit buffer** (`memory/learnings/_rejected.md`, created on first
+  use): stale entries are retired there with reason + "do not re-propose
+  unless" condition instead of being deleted, and grooming checks it before
+  re-capturing — ends loop amnesia (a discarded learning silently restarting
+  its `seen:` counter months later).
+- **Promotions into blueprint rules/skills are validation-gated**: the touched
+  norm gets/updates its `evals/COVERAGE.md` row in the same pass, the mapped
+  eval cases run (only those — cost discipline), and a red case reverts the
+  edit with an annotation in the learnings file. Consumer-side promotions
+  (PROJECT.md/PRODUCT.md/flow-map.md/learnings files) keep the plain
+  `seen: 2` gate.
+- **Promoted routing rows are re-measured once**: promotion leaves a dated
+  pending line in the project's learnings file; the next groom pass confirms
+  or contradicts it via `product_routed_by` in later evidence summaries —
+  a row that again needed human/default resolution becomes a learning, not a
+  confident lie in the registry.
+
 ## [0.12.0] — 2026-09-24
 
 Theme: **who sits at the wheel.** Execution becomes a per-project choice —

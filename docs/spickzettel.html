@@ -299,10 +299,10 @@
     liefert Beweise, meldet das Ergebnis zurück nach JIRA — und lernt dazu.
   </p>
   <div class="stats">
-    <div class="stat"><div class="n">28</div><div class="l">Fähigkeiten (Skills)</div></div>
+    <div class="stat"><div class="n">29</div><div class="l">Fähigkeiten (Skills)</div></div>
     <div class="stat"><div class="n">5</div><div class="l">Spezialisten (Subagents)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Türsteher (Hooks)</div></div>
-    <div class="stat"><div class="n">147</div><div class="l">Selbsttests (Fixtures)</div></div>
+    <div class="stat"><div class="n">421</div><div class="l">Selbsttests (Fixtures)</div></div>
     <div class="stat"><div class="n">5</div><div class="l">Verdikte</div></div>
   </div>
   <nav class="toc">
@@ -335,6 +335,7 @@
         <li><strong>Bug gegentesten</strong> (<code>/retest-bug</code>): Repro-Schritte nachspielen + enger Regressionssweep um die Fundstelle</li>
         <li><strong>Explorativ testen</strong> (<code>/exploratory-testing</code>): neue Features &amp; unklares Verhalten im Browser erkunden</li>
         <li><strong>Autotests schreiben</strong> (<code>/test-automation</code>): was verstanden ist, wird wiederholbar</li>
+        <li><strong>Vorher aufklären</strong> (<code>/recon</code>): echte Selektoren &amp; Konsolenfehler als <code>recon.json</code> — keine blind geratene Spec mehr</li>
       </ul>
       <ul class="tight">
         <li><strong>Bug melden</strong> (<code>/bug-report</code>): Fund exakt im Bug-Template des Projekts, mit Duplikat-Check</li>
@@ -398,10 +399,11 @@
   <section>
     <h2>Was kostet das?</h2>
     <ul class="tight">
-      <li><strong>Das Plugin ist kostenlos</strong> (MIT) — und telefoniert nie nach Hause: Nach der Installation läuft alles lokal, Netzwerk geht nur zu <strong>deinem JIRA</strong> und <strong>deiner Stage</strong>. Das Repo wird nur bei Install und Update angefasst.</li>
-      <li><strong>Die echten Kosten sind Modell-Tokens</strong> — deshalb ist Sparsamkeit eingebaut: Das Handbuch (~7.800 Tokens) ist per Test gedeckelt, Fachbücher laden nur bei Bedarf, Beweisfotos kommen nie in den Kopf, Projektwissen wird gezielt geholt statt gescannt.</li>
+      <li><strong>Das Plugin ist kostenlos</strong> — und telefoniert nie nach Hause: Nach der Installation läuft alles lokal, Netzwerk geht nur zu <strong>deinem JIRA</strong> und <strong>deiner Stage</strong>. Das Repo wird nur bei Install und Update angefasst.</li>
+      <li><strong>Die echten Kosten sind Modell-Tokens</strong> — deshalb ist Sparsamkeit eingebaut: Das Handbuch (~8.300 Tokens) ist per Test gedeckelt, Fachbücher laden nur bei Bedarf, Beweisfotos kommen nie in den Kopf, Projektwissen wird gezielt geholt statt gescannt.</li>
       <li><strong>Größenordnung pro Ticket-Test</strong> (explorativ, ~25 Browser-Schritte): <strong>~0,4–0,6 Mio. Tokens</strong> mit Blueprint vs. <strong>~0,6–1,1 Mio.</strong> mit nacktem Claude Code — dort wird Projektwissen jede Session neu erkundet und Irrwege kommen dazu. Zu API-Preisen grob 1–2 $ statt 2–4 $; im Abo ist es Quota statt Euro.</li>
       <li><strong>Der zweite Lauf ist der günstige:</strong> Existiert ein Autotest, kostet der Re-Test nur noch ~50k Tokens — ein Zehntel.</li>
+      <li><strong>Neu: drei Execution Modes.</strong> Pro Projekt wählbar, wer am Steuer sitzt: <code>mcp-only</code> (alles live, tiefste Befunde), <code>hybrid</code> (Standard: Probe → Autotest → kurzer Live-Check — nahe Live-Tiefe zu mittleren Kosten), <code>cli-first</code> (nur Suite, CI-tauglich). Jeder JIRA-Report zeigt den Modus — man sieht, ob beobachtet oder nur assertiert wurde.</li>
     </ul>
   </section>
 </div>
@@ -444,7 +446,7 @@
     <table>
       <tr><th>Schublade</th><th>Analogie</th><th>Inhalt</th></tr>
       <tr><td>1 · Handbuch</td><td>Immer dabei</td><td>Nur die Regeln (~7.500 Wörter): Was ist Pflicht, was ist verboten</td></tr>
-      <tr><td>2 · Fachbücher</td><td>Nur bei Bedarf geöffnet</td><td>28 Fähigkeiten — z. B. Accessibility, Security, API-Tests</td></tr>
+      <tr><td>2 · Fachbücher</td><td>Nur bei Bedarf geöffnet</td><td>29 Fähigkeiten — z. B. Accessibility, Security, API-Tests</td></tr>
       <tr><td>3 · Projektakte</td><td>Nur das aktive Projekt</td><td>Umgebungen, Testuser, Deploy-Runbook, Report-Format, Flow-Map</td></tr>
       <tr><td>4 · Lerntagebuch</td><td>Wächst, wird aufgeräumt</td><td>Überraschungen; beim 2. Auftreten wandern sie ins Handbuch</td></tr>
       <tr><td>5 · Beweisfotos</td><td>Nie im Kopf, nur als Pfad</td><td>Screenshots &amp; Logs unter <code>evidence/</code> — Basis für den Wochenreport</td></tr>
@@ -480,7 +482,7 @@
     </div>
     <div class="callout">
       <strong>Ernst gemeint:</strong> Ein Türsteher zählt erst, wenn ein Selbsttest beweist, dass er
-      blockt — <strong>317 Fixture-Checks</strong> tun genau das. Einer hatte monatelang still <em>nichts</em>
+      blockt — <strong>421 Fixture-Checks</strong> tun genau das. Einer hatte monatelang still <em>nichts</em>
       blockiert — und in der Review sah alles korrekt aus.
     </div>
   </section>
@@ -565,14 +567,14 @@ evidence/SHOP/SHOP-1234/&lt;ts&gt;/  <span class="c">← Artefakte, nie</span>
       <tr><th>Entscheidung</th><th>Konsequenz</th></tr>
       <tr><td><strong>Plugin-Modus ohne Drift</strong></td><td>Plugins laden kein <code>CLAUDE.md</code> — der Session-Start-Hook injiziert es <strong>wortwörtlich</strong>. Ein Router-Text für beide Installationsarten.</td></tr>
       <tr><td><strong>MCP = Vertrag über Namen</strong></td><td>Hooks/Skills matchen auf <code>playwright</code>/<code>atlassian</code>; Pflicht-Flags <code>--secrets</code> + <code>--output-dir</code>; der Rest ist frei wählbar (<code>.playwright-mcp.config.json</code>).</td></tr>
-      <tr><td><strong>Secrets nie im Transkript</strong></td><td>Keychain-Resolver schreibt <code>.env.playwright-secrets</code>, Werte erscheinen nirgends; der Guard-Hook blockt zusätzlich jeden Schreibzugriff auf <code>.env*</code>-Pfade.</td></tr>
-      <tr><td><strong>Kontext-Budget gemessen</strong></td><td>Immer geladene Ebene: 7.491 von 7.500 Token — ein Test schlägt fehl, wenn sie wächst; alles andere lädt bei Bedarf.</td></tr>
+      <tr><td><strong>Secrets nie im Transkript</strong></td><td>Keychain-Resolver schreibt <code>.env.playwright-secrets</code>, Werte erscheinen nirgends; <code>qa-secrets.mjs</code> injiziert sie wertefrei in Runner und MCP-Server; der Guard-Hook blockt jeden Schreibzugriff auf <code>.env*</code>-Pfade, direktes Lesen ist ein menschlicher Opt-in.</td></tr>
+      <tr><td><strong>Kontext-Budget gemessen</strong></td><td>Immer geladene Ebene: 8.268 von 8.400 Token — ein Test schlägt fehl, wenn sie wächst; alles andere lädt bei Bedarf.</td></tr>
     </table>
   </section>
 </div>
 
 <footer>
-  <p>QA Agent Blueprint · MIT · Stand: 14. September 2026 (v0.5.1) · Alle drei Spickzettel in einem Dokument —
+  <p>QA Agent Blueprint · Stand: 24. September 2026 (v0.12.0) · Alle drei Spickzettel in einem Dokument —
   Teil 1: „Was ist das?" · Teil 2: „Wie funktioniert er — einfach erklärt" · Teil 3: „Technical Deep Dive".
   Quelle der Wahrheit: das Repo (README.md, overview.html).</p>
 </footer>

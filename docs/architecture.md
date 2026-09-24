@@ -100,10 +100,15 @@ Capture → Groom → Promote, run by the `retro-learn` skill:
 
 - **Capture** (every session): unexpected findings → `memory/learnings/_inbox.md`,
   dated, Problem/Cause/Solution, with a candidate promotion target.
-- **Groom** (weekly/on demand): dedupe via Grep, bump `seen:` counters, delete stale
-  entries.
+- **Groom** (weekly/on demand): dedupe via Grep, bump `seen:` counters, retire
+  stale entries into `memory/learnings/_rejected.md` (reason + re-proposal
+  condition — the buffer against re-proposing what was already thrown out).
 - **Promote** (gate: ≥ 2 sessions): into rules, skills, or `projects/<KEY>/` — from
-  then on it is loaded automatically and never explained again. Flow knowledge
+  then on it is loaded automatically and never explained again. Promotions into
+  the blueprint's own rules/skills are additionally validation-gated: the mapped
+  eval cases from `evals/COVERAGE.md` must stay green, a red case reverts.
+  Promoted routing rows are re-measured once against later evidence
+  (`product_routed_by`). Flow knowledge
   (which flows exist, their selectors, their neighbors) promotes into
   `flow-map.md` — curated, never appended to by runs directly; `retest-bug`
   scopes regression sweeps from it.

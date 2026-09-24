@@ -51,6 +51,13 @@ still goes into `_inbox.md` in the capture format above.
    class plus an overlapping keyword is the dedupe candidate; different pattern
    classes solving the same symptom still merge, under the class of the older
    entry:
+   - Previously rejected → before classifying, `grep` `memory/learnings/_rejected.md`
+     for the same pattern + keyword overlap. If this was retired or overruled
+     before and its "do not re-propose unless" condition still holds, drop the
+     inbox entry and append the new date to the rejected entry. Loop amnesia —
+     re-proposing what was already thrown out — is the failure that file exists
+     to prevent; a rejected entry whose condition *has* changed is a normal new
+     capture, and its history is worth a line in the Cause field.
    - Duplicate found → bump its `seen:` counter, append the new date, delete the
      inbox entry (don't keep both).
    - Genuinely new → classify with three questions, first hit wins: true for a
@@ -64,8 +71,19 @@ still goes into `_inbox.md` in the capture format above.
      from (`seen: 2 — STOREFRONT, ADMIN`) — two *different* products is the signal
      to widen from the product file up to the project's. There is only ever one
      `_inbox.md`: scope is decided here, at groom time, when the information exists.
-3. Delete stale entries that no longer hold (env changed, bug actually got fixed
-   upstream) — outdated learnings mislead more than missing ones.
+3. Retire stale entries that no longer hold (env changed, bug actually got fixed
+   upstream) — outdated learnings mislead more than missing ones. But retiring
+   is not deleting: move the entry to `memory/learnings/_rejected.md` (create
+   the file on first use) so a later groom recognizes the repeat instead of
+   restarting the `seen:` counter from zero. Format:
+
+       ## YYYY-MM-DD — <pattern> — <short title>
+       - Retired/rejected because: <why it does not hold, or who overruled it>
+       - Origin: <ticket(s)/dates it was seen>
+       - Do not re-propose unless: <what would have to change>
+
+   The same file takes entries whose promotion a human rejected — an overruled
+   proposal is a rejection with information, capture it the same way.
 4. Clear graduated/deduped entries out of `_inbox.md`.
 
 ## Promote (gate: seen in ≥ 2 sessions)
@@ -88,6 +106,25 @@ permanent knowledge — move it into whichever candidate target it named:
   `steps_executed`. Flow knowledge does not need the `seen: 2` gate when a run
   just *executed* the flow — that run IS the confirmation; stamp it
   `last confirmed: <date> (<ticket>)`.
+
+**Promotions into the blueprint itself are validation-gated.** When the
+candidate target is a rule under `.claude/rules/` or a skill's `SKILL.md` —
+blueprint development, not a consumer's project files — the promotion is a
+normative edit and follows the repo's own discipline:
+
+1. `evals/COVERAGE.md` gets the row for the touched norm in the same pass
+   ("when you change a rule, you change this file") — added if the norm is new.
+2. Run the eval cases the matrix maps to that norm — only those, per the cost
+   discipline in `evals/README.md`; the full gate stays a pre-release step.
+3. A red case reverts the edit. The learning goes back to its learnings file
+   annotated `promotion reverted <date>: broke <case>` — that annotation is
+   what separates "rejected by evidence" from "never tried", and it stops the
+   next groom from retrying the same edit blindly.
+
+Promotions into consumer-side files (`PROJECT.md`, `PRODUCT.md`,
+`flow-map.md`, learnings files) keep the plain `seen: 2` gate — a consumer
+home has no eval suite, and the second sighting remains the right signal
+there.
 
 **Projects without a flow map** (onboarded before flow maps existed) get their
 initial seed from `/re-board`, which drafts areas/flows from existing
@@ -114,6 +151,19 @@ generalized it — do not make them say it twice). A single case waits for the n
 row; it belongs in "Routing overrides" if it recurs. Same for anything that had to
 fall back to a secondary signal or a default: capture it so the table gains a real
 entry instead of leaning on a weak one forever.
+
+A promoted routing row gets re-measured once, so a wrong generalization does
+not rot authoritatively in the registry: on promotion, add a dated line to
+`projects/<KEY>/learnings.md` under `## Routing confirmations pending` —
+`- YYYY-MM-DD — `<signal>` → <PRODUCT> (promoted at seen: 2)`. On the next
+groom pass, check `product_routed_by` in the evidence summaries newer than
+that date: a run routing this signal via the table confirms the row — remove
+the pending line. A run that needed `user`, `default` or `secondary` for the
+same signal means the row does not hold — capture that as a learning (5-Whys:
+wrong column? too narrow? exception, not a rule?) instead of leaving a
+confident lie in the registry. The same signal at scope level is
+`/qa-report`'s `weak_or_manual` count: a promotion that never moves it was
+decoration.
 
 **Failure-analysis upkeep — the two rulings that matter.** When a human rules on a
 `NEEDS_REVIEW` failure (`.claude/skills/failure-analysis/`):
