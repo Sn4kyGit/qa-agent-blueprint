@@ -8,7 +8,12 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [Unreleased]
+## [0.12.0] — 2026-09-24
+
+Theme: **who sits at the wheel.** Execution becomes a per-project choice —
+live MCP observation, CLI specs, or the tactical mix — with the quality rules
+that keep the cheap modes honest (recon before specs, red check, observation
+pass). User-facing explainer: `docs/execution-modes.md`.
 
 ### Added — execution modes (pipeline)
 - **Three execution modes, configured per project** (`PROJECT.md` → "Execution

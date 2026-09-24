@@ -673,11 +673,13 @@ runs it.
 | Document | Contents |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | The five layers and why they are token-efficient |
+| [docs/execution-modes.md](docs/execution-modes.md) | **Deutsch, für Anwender**: die drei Execution Modes (mcp-only / hybrid / cli-first), was sie bringen, wie man umstellt |
+| [docs/pipeline/](docs/pipeline/) | The phase knowledge behind the modes: contracts, red check, observation pass, escalation |
 | [docs/quickstart-plugin.md](docs/quickstart-plugin.md) | Plugin on a fresh machine: JIRA + stage URL only, no app repo — CLI, clone, or manual wiring |
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |
-| [evals/README.md](evals/README.md) | Behavioral conformance — 21 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
+| [evals/README.md](evals/README.md) | Behavioral conformance — 23 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
 | [docs/pilot-briefing.md](docs/pilot-briefing.md) | **Read before the first real onboarding**: what to collect, shadow mode, what is known unfinished |
 | [docs/rules/](docs/rules/) | The detail behind each always-loaded rule, read on demand |
 | [docs/runbooks/stage-deploy-general.md](docs/runbooks/stage-deploy-general.md) | Generic stage-deploy scaffold |
