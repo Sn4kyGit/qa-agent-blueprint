@@ -53,6 +53,15 @@ more than it saves.
 - Long `memory/learnings/*.md` files are meant to be grepped, not read end-to-end,
   once they exceed a screenful — that's the trigger for `/retro-learn` to consolidate.
 
+## Never idle-wait
+
+`sleep`-polling a deploy, pipeline, or long suite run burns turns for zero
+information — background jobs announce their own completion. While a long job
+runs, do non-colliding work in parallel: lint/typecheck the changed files, run
+a read-only check, draft the report. The boundary stays: browser-driving
+subagents and writers on a shared stage run strictly sequentially
+(`docs/rules/core/cicd.md` → "Waiting productively").
+
 ## Details, read when the topic comes up
 
 `docs/rules/core/token-discipline.md` — MCP budget. Read it when someone proposes adding, removing or configuring an MCP server.

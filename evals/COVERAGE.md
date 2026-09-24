@@ -46,6 +46,7 @@ only enforcement once a fixture proves it".
 | Shadow Mode is mechanically enforced: PreToolUse guard blocks Atlassian write tools while shadow is on — including the Cloud v2 meta-tools `executeWrite`/`executeDestructive` (deferred tools are writes by definition; `executeRead` stays open) — fail-safe on unresolvable key/unreadable project file; unlock via `Shadow mode: off` or `QA_AGENT_SHADOW=0` | fixture: `guard-fixtures.sh` (shadow section, execute-meta-tool cases) + `opencode/tests/guard.test.ts` (shadow gate) — 0.6.3, audit F1; execute* cases 0.10.0 |
 | Installer keeps a user playwright config that carries the contract flags (preferences never trigger an overwrite) | fixture: `install-integrate-fixtures.sh` (headful-kept block) |
 | Execution mode routing: PROJECT.md → "Execution mode" steers the run (`mcp-only`/`hybrid`/`cli-first`); hybrid = recon-first + spec via CLI + red check + observation pass; escalation rules override every mode; "test is red" alone never escalates | case: `mode-routing` (pipeline-modes feature) |
+| Never idle-wait: no sleep-polling on deploys/pipelines; the wait window is filled with non-colliding parallel work (lint/typecheck, read-only checks, report drafting); browser verification and stage writes still wait for the deploy | case: `no-idle-wait` |
 
 ## Pipeline (`docs/pipeline/`)
 

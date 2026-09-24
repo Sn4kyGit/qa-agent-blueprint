@@ -84,3 +84,8 @@ nothing here is blueprint-specific, all of it compounds with the lookup policy:
 - **Don't switch model or effort mid-session** — it cold-starts the prompt
   cache and re-reads everything. Set both before the first message.
 - Long pause ahead? `/compact` is far cheaper than letting the cache expire.
+- **Never idle-wait on a long job.** `sleep`-polling burns a turn per
+  iteration; background jobs announce themselves. Fill the window with
+  non-colliding work instead (lint/typecheck, read-only checks, report
+  drafting) — details and the collision boundary:
+  `docs/rules/core/cicd.md` → "Waiting productively".

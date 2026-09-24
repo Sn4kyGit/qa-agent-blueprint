@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 29 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 317 fixture checks + 120 bun tests · 22 eval cases |
+| **Contents** | 29 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 317 fixture checks + 120 bun tests · 23 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 

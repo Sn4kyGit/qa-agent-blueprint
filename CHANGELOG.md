@@ -39,6 +39,13 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
   projects; routers, `docs/architecture.md`, `playwright-cli.md`,
   `webdriverio-testing` and the EXAMPLE project updated; opencode parity via
   `commands/recon.md`. Eval: new case `mode-routing`, COVERAGE matrix rows.
+- **"Never idle-wait" is now a norm, not luck** (field report: the behavior
+  emerged in a session — background the long job, run lint+typecheck and a
+  read-only suite in parallel — but nothing prescribed it). Always-loaded rule
+  in `.claude/rules/core/token-discipline.md`, detail in
+  `docs/rules/core/cicd.md` → "Waiting productively" (no sleep-polling; the
+  collision boundary stays: browser subagents and stage writers are
+  sequential). Eval: new case `no-idle-wait`.
 
 ### Fixed
 - **Stop hook found no evidence under `bfs`-backed `find`**

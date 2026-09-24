@@ -65,6 +65,24 @@ When this blueprint runs unattended (e.g. a nightly-regression pipeline invoking
   would turn "the test is probably outdated" into a green build, which is the one
   outcome the whole classification is designed not to buy.
 
+## Waiting productively
+
+A deploy or pipeline that takes minutes is not a reason to idle. Never
+`sleep`-poll a status endpoint in a loop — a background job reports its own
+completion, and a polling loop burns one turn per iteration for zero new
+information. Instead, fill the window with work that **cannot collide** with
+the running job:
+
+- lint/format/typecheck the changed files
+- a read-only suite run against an environment the job does not mutate
+- drafting the report skeleton from what is already known
+
+Colliding work still waits: browser-driving subagents are strictly sequential
+(one MCP server = one shared tab), and nothing writes to a shared stage while a
+deploy to it is in flight. When nothing non-colliding remains, end the turn
+with the job backgrounded and state what you are waiting for — that is a
+visible status, not a stall.
+
 ## What the agent never does in CI/CD
 
 - Never edits pipeline definitions (`.github/workflows/*`, `.gitlab-ci.yml`, etc.)
