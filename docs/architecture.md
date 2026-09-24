@@ -32,6 +32,21 @@ Layer 5 – Evidence (never in context, only referenced)
 
 Tooling underneath: Playwright MCP + Playwright CLI, Atlassian MCP, hooks.
 
+## Execution modes — who sits at the wheel
+
+`docs/pipeline/` holds the phase knowledge (intake → recon → planning →
+execution → verification → reporting, file contracts in the run dir). The
+project file's "Execution mode" picks the driver:
+
+- `mcp-only` — the model drives the browser live; deepest findings, highest cost
+- `hybrid` (default) — probe recon (real selectors), spec via CLI, red check +
+  short live verification pass; near-MCP quality at medium cost
+- `cli-first` — suite only, MCP on unclear failure; CI-cheap
+
+Escalation rules (visual ticket, high risk, missing recon, unclear failure,
+non-assertable AC) raise any mode to live observation. The mode travels into
+every JIRA report — a verdict must say whether it was observed or asserted.
+
 ## The QA home — one per customer workspace
 
 All data layers (3–5) live in ONE folder per customer: the **QA home**, holding
@@ -106,7 +121,8 @@ User: "Test SHOP-1234"
        ↳ has products? component "Admin" → products/ADMIN/PRODUCT.md + learnings.md
          (no Products section → skip; ambiguous → ask, headless BLOCKED)
   → fix on stage?  no → deploy-to-stage (runbook from PROJECT.md)
-  → strategy: re-test (bug) or full test (story)
+  → strategy: PROJECT.md "Execution mode" (mcp-only | hybrid | cli-first)
+    + re-test (bug) or full test (story); escalation rules may force live observation
   → test-executor (exploratory, MCP) and/or test-automator (specs, CLI)
   → evidence: evidence/SHOP/SHOP-1234/<ts>/ (+ Stop hook enforcement)
   → PASS → report-to-jira: comment + final screenshot + transition "Verify"

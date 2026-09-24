@@ -56,3 +56,10 @@ reportable identifier.
 Check `projects/<KEY>/PROJECT.md` → "Test assets" for whether one already exists
 for this flow — extend, don't duplicate. Check `memory/learnings/selector-failures.md`
 and `flaky-tests.md` before choosing selectors or wait strategies.
+
+**Never write a spec blind** (pipeline norm, `docs/pipeline/04-execution.md`):
+selectors come from a `/recon` run's `recon.json`, assertions are positive and
+specific, every title carries the AC-ID next to the TC-ID. New specs pass the
+**red check** before their green counts (`docs/pipeline/05-verification.md`),
+and every run collects the **observation channel** (console errors, responses
+≥ 400, end-of-test screenshot) even when fully green.

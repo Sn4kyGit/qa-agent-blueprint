@@ -71,7 +71,10 @@ Same policy as everywhere: copy run artifacts (reports, failure screenshots from
 
 Check "Test assets" for whether a spec already covers this flow — extend, don't
 duplicate. Check `memory/learnings/selector-failures.md` and `flaky-tests.md`
-before choosing selectors or wait strategies. Scaffolding a brand-new WDIO suite
+before choosing selectors or wait strategies. Never write a spec blind: run
+`/recon` first — WDIO suites use the probe variant `recon.wdio.spec.js` (same
+`recon.json` contract as the Playwright probe; console/network capture needs a
+devtools session and stays empty otherwise). Scaffolding a brand-new WDIO suite
 from nothing is **not** covered here (`scaffold-suite` is Playwright-only) —
 flag it to the user instead of improvising a project layout.
 

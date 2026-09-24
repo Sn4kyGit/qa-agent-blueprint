@@ -38,6 +38,7 @@ project recognized → project knowledge applied → tested → evidence produce
 | Re-test a fixed bug | Skill `retest-bug` — sweep from the flow map's Neighbors |
 | Exploratory testing, bug reproduction | Skill `exploratory-testing` via subagent `test-executor` (Playwright MCP) |
 | Regression, repeatable checks, spec maintenance | Skill `test-automation` via subagent `test-automator` (suite's framework: Playwright or WebdriverIO) |
+| Recon before a spec — real selectors, console errors, screenshots | Skill `recon` (probe script; pipeline phase 2, `docs/pipeline/`) |
 | Test failed — real defect, or is the test case outdated? | Skill `failure-analysis` via subagent `failure-analyst` — automatic on FAIL, **before** `bug-report` |
 | Bug found | Skill `bug-report` via subagent `bug-reporter` — template from the project file |
 | Report result to JIRA | Skill `report-to-jira` — format per `PROJECT.md` |
@@ -100,6 +101,7 @@ just detail that would otherwise cost every session:
 | `docs/rules/testing/playwright-cli.md` | writing or running specs via the CLI runner |
 | `docs/rules/testing/jira-confluence.md` | composing anything that gets written into JIRA/Confluence |
 | `docs/rules/core/cicd.md` | pipelines, quality gates, headless runs (`opencode run`, `claude -p`), nightly/suite runs |
+| `docs/pipeline/00-overview.md` (+ 01–06) | execution modes (`mcp-only`/`hybrid`/`cli-first`), phase contracts, red check, observation pass, escalation — whenever PROJECT.md → "Execution mode" steers a run |
 | `docs/rules/core/<same name>.md` | the companion detail of an always-loaded rule — each one names its own trigger at the top |
 
 If a question is about a topic above, read the file. Answering from the one-line

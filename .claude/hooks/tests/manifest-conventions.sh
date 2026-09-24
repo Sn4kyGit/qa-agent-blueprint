@@ -259,7 +259,7 @@ else:
 ENTRY_POINTS = [
     "bug-report", "deploy-to-stage", "exploratory-testing", "failure-analysis",
     "onboard-product", "onboard-project", "qa-help", "qa-report", "re-board",
-    "report-to-jira", "retest-bug", "retro-learn", "scaffold-suite",
+    "recon", "report-to-jira", "retest-bug", "retro-learn", "scaffold-suite",
     "test-automation", "test-ticket", "whats-new",
 ]
 skills = {os.path.basename(os.path.dirname(p)) for p in glob.glob(os.path.join(root, ".claude", "skills", "*", "SKILL.md"))}

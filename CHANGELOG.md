@@ -10,6 +10,36 @@ claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 
 ## [Unreleased]
 
+### Added — execution modes (pipeline)
+- **Three execution modes, configured per project** (`PROJECT.md` → "Execution
+  mode", default `hybrid`): `mcp-only` = live browser observation for
+  everything; `hybrid` = probe recon → spec via CLI → red check → short live
+  verification pass; `cli-first` = suite only, MCP on unclear failure.
+  Sub-fields: `Verification pass`, `Red check required`, `Escalate at risk`,
+  `Plan approval` (default `yes` for hybrid/mcp-only; headless runs proceed
+  and flag). Mode travels into every JIRA report — a verdict says whether it
+  was observed or asserted.
+- **`docs/pipeline/` — the phase knowledge** (00 overview → 06 reporting):
+  six phases with file contracts (`intake.json`, `recon.json`, `testplan.md`,
+  `run.json`, `verdict.json` in the run dir; `execution_summary.json` stays
+  the Stop-hook-enforced artifact), the four hybrid quality rules (never blind
+  specs, positive+specific assertions, red check, observation channel), and
+  the escalation list that raises any mode to live observation (high risk,
+  visual ticket, missing recon, unclear failure, non-assertable AC,
+  non-reproducible bug — never merely because a test is red).
+- **New skill `/recon`** + probe templates in `scaffold-suite/templates/probes/`:
+  `recon.spec.ts` (Playwright), `recon.wdio.spec.js` (WebdriverIO, same
+  `recon.json` contract), `merge-recon.mjs`. A probe run observes pages and
+  returns the **real** selectors for a fraction of MCP tokens — the fix for
+  blindly written specs. Only the merge summary enters the context.
+- Wiring: `test-ticket` reads the mode and passes it to `qa-manager` (phase
+  sequence + escalation ownership); `test-automation` gains the recon-first /
+  red-check / observation-channel norms; `onboard-project` asks the mode (one
+  question, hybrid recommended), `re-board` offers the section to existing
+  projects; routers, `docs/architecture.md`, `playwright-cli.md`,
+  `webdriverio-testing` and the EXAMPLE project updated; opencode parity via
+  `commands/recon.md`. Eval: new case `mode-routing`, COVERAGE matrix rows.
+
 ### Fixed
 - **Stop hook found no evidence under `bfs`-backed `find`**
   (`stop-evidence-check.sh`): `-newermt '-2 hours'` is GNU-find syntax; `bfs`

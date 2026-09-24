@@ -20,7 +20,10 @@ offer only the delta, confirm each change individually, and re-stamp. Expect
    (`projects/_template/`, in plugin mode under `$CLAUDE_PLUGIN_ROOT/`) and the
    installed blueprint version (`.claude-plugin/plugin.json`):
    - **Missing fields** the template has and the project file lacks (e.g.
-     `Blueprint version`, `Secrets source`, `Framework`). Compare by field
+     `Blueprint version`, `Secrets source`, `Framework`, the whole
+     **Execution mode** section — a project without it runs `hybrid` with the
+     template defaults; offer the section with `Mode` as the one real question,
+     sub-fields defaulted). Compare by field
      name, not by section text — a renamed heading is not a missing field.
    - **Missing files**: `flow-map.md` (project and each product). For each,
      offer to draft a seed from the project's history: read the recent

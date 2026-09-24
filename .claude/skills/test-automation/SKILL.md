@@ -22,6 +22,21 @@ description: Write or run deterministic automated test specs (Playwright or Webd
    the ticket.
 3. Check `memory/learnings/flaky-tests.md` and `selector-failures.md` first —
    don't rediscover a known flake or a known-bad selector pattern.
+3b. **Never write a spec blind.** When the flow was not observed yet, run
+    `/recon` first and take selectors from its `recon.json` (roles + accessible
+    names), never from guesses. Assertions are positive and specific (what
+    should be visible — concrete text/value/state), negative ones only
+    supplementary. Every test title carries the AC-ID next to the TC-ID
+    (`'AC2 / TC-CHK-014: …'`). Full rules: `docs/pipeline/04-execution.md`.
+3c. **Red check for new specs** (PROJECT.md → "Execution mode" → `Red check
+    required`, default yes): before a new spec's green counts as evidence,
+    prove it red once — violate the expectation via data/state, or briefly
+    invert the assertion. A spec that survives its own red check attempt does
+    not check what it claims (`docs/pipeline/05-verification.md`).
+3d. **Observation channel on every run**: console errors, responses ≥ 400, load
+    times over threshold, end-of-test screenshot — collected independently of
+    the assertions and reported as *Observations*, even on a fully green run.
+    That is the part of the live eye a spec otherwise lacks.
 4. Produce evidence (report, trace-on-failure, `execution_summary.json`) per
    `.claude/rules/core/evidence-policy.md` — including `test_cases[]`, which the CLI
    runner is the only source of and which every later failure analysis depends on.

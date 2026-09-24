@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 28 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 317 fixture checks + 120 bun tests · 21 eval cases |
+| **Contents** | 29 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 317 fixture checks + 120 bun tests · 22 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
@@ -335,7 +335,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>17 core skills</b> — the ticket workflow</summary>
+<summary><b>18 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
@@ -344,6 +344,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 | `/retest-bug` | Focused re-test of a fixed bug + a tight regression sweep |
 | `/exploratory-testing` | Chartered SBTM session via Playwright MCP |
 | `/test-automation` | Write/run deterministic specs via the CLI runner |
+| `/recon` | Recon before the spec: probe run writes `recon.json` with the real selectors (pipeline phase 2) |
 | `/failure-analysis` | A failing test triaged: real defect, or is the test case itself outdated? Proposes, never applies |
 | `/bug-report` | A bug report exactly per the project's (or product's) template |
 | `/report-to-jira` | Comment + attachments + the correct workflow transition |
@@ -373,7 +374,7 @@ than by guesswork.
 
 Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
 by `/test-automation` when a project's declared framework is webdriverio (not
-invoked directly; see its SKILL.md). 17 + 10 + 1 = the 28 skills from the header.
+invoked directly; see its SKILL.md). 18 + 10 + 1 = the 29 skills from the header.
 
 </details>
 
@@ -622,7 +623,7 @@ at install, and when you explicitly update. Everything else is local.
 
 The real cost is **model tokens**, and the architecture is built to keep them
 down: the always-loaded layer is measured (~7.8k tokens) and capped by a test,
-the 28 skills load on demand, subagents isolate browser transcripts from the
+the 29 skills load on demand, subagents isolate browser transcripts from the
 main context, evidence is referenced by path instead of read back, and project
 knowledge is found via `memory/INDEX.md` instead of full-repo scans.
 

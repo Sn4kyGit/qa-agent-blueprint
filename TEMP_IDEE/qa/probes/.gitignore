@@ -1,0 +1,6 @@
+# Wegwerf-Probes bleiben lokal. recon.spec.ts und merge-recon.mjs sind Infrastruktur.
+*
+!.gitignore
+!README.md
+!recon.spec.ts
+!merge-recon.mjs

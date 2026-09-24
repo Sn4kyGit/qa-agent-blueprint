@@ -72,11 +72,19 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
      one (`gh workflow run …`, `glab ci run …`, a curl, or "manual — ask X") and
      record it; `/deploy-to-stage` preflights it and reports BLOCKED when it is
      missing.
-   - **Test assets — framework first.** Ask which framework the suite uses
-     (`playwright` or `webdriverio`) before asking where it lives;
-     `test-automator` reads the framework field to pick its conventions. A suite
-     that doesn't exist yet is "none yet" — do not guess a framework for a
-     hypothetical future suite.
+    - **Test assets — framework first.** Ask which framework the suite uses
+      (`playwright` or `webdriverio`) before asking where it lives;
+      `test-automator` reads the framework field to pick its conventions. A suite
+      that doesn't exist yet is "none yet" — do not guess a framework for a
+      hypothetical future suite.
+    - **Execution mode.** One question with a recommended default: `hybrid`
+      (recon → spec via CLI → short live verification pass). Offer `mcp-only`
+      for brand-new projects without a suite or heavily visual products, and
+      `cli-first` for mature suites in pipeline operation. Explain in one
+      sentence what each costs; the four sub-fields (`Verification pass`,
+      `Red check required`, `Escalate at risk`, `Plan approval`) take the
+      template defaults unless the user objects — do not interview them
+      individually. Background: `docs/pipeline/00-overview.md`.
 4. Leave any field the user can't answer yet as `TODO:` — never fill a guess.
    Flag TODOs clearly at the end so they get resolved before the first real test.
 5. Seed `projects/<KEY>/learnings.md` from the template (empty, ready for

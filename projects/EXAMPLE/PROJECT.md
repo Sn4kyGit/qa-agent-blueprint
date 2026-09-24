@@ -133,6 +133,17 @@ in the product files — note that they carry a product segment in the key, so t
 - **Transition on FAIL**: `Reopen`
 - **On BLOCKED**: comment only, no transition; ping the user
 
+## Execution mode
+
+- **Mode**: `hybrid` — recon via probe, spec via CLI, short live verification
+  pass afterwards. Exploratory charters and visual tickets escalate to live
+  observation anyway (docs/pipeline/00-overview.md).
+- **Verification pass**: `yes`
+- **Red check required**: `yes`
+- **Escalate at risk**: `high`
+- **Plan approval**: `yes` — the test plan lands in the run dir and is
+  confirmed before execution; headless runs proceed and flag it.
+
 ## Test assets
 
 - **Framework**: playwright

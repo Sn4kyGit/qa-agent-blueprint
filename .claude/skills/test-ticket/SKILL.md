@@ -36,6 +36,22 @@ subagent, which follows `docs/architecture.md` → "End-to-end ticket flow".
    Never guess a project's process. Same for products: a product named in the
    registry whose `products/<PRODUCT>/` directory doesn't exist (or the reverse) is
    a half-registered product → stop and run `onboard-product`, never test it.
+3b. **Execution mode.** The routed project file's "Execution mode" decides who
+    sits at the wheel during the run (phases and contracts:
+    `docs/pipeline/00-overview.md`):
+    - `mcp-only` — today's behavior: everything observed live via
+      `test-executor` (Playwright MCP).
+    - `hybrid` (default) — recon first (`/recon` probe, real selectors), then a
+      spec written from `recon.json` + `testplan.md` and run by
+      `test-automator`, red check before its green counts, and a short live
+      observation pass (`Verification pass: yes`) over the main flow when the
+      CLI run is green.
+    - `cli-first` — existing suite only; MCP enters solely to classify an
+      unclear failure.
+    The escalation rules in `docs/pipeline/00-overview.md` override every mode
+    (high risk, visual ticket, missing recon, unclear failure, non-assertable
+    AC, non-reproducible bug → observe live). Pass the mode to `qa-manager`
+    with the ticket; it owns the phase sequence.
 4. After the ticket is reported, run `retro-learn`'s capture step for anything
    unexpected (env oddity, selector break, format surprise, a product you could not
    route on your own) — append to `memory/learnings/_inbox.md` — and declare the

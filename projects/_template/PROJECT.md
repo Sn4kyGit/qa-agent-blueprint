@@ -122,6 +122,30 @@ the file stays the single source, values never enter the agent context
 - **Transition on FAIL**: `<exact workflow transition name, e.g. Reopen>`
 - **On BLOCKED**: <comment only / specific transition>
 
+## Execution mode
+
+How tickets of this project are executed — who sits at the wheel during a run:
+the model live via Playwright MCP, or a pre-written spec via the CLI runner.
+Phases, contracts and escalation rules: `docs/pipeline/`.
+
+- **Mode**: `hybrid` ← `mcp-only` | `hybrid` | `cli-first`. `mcp-only` = live
+  observation for everything (new projects, exploratory work, visual tickets).
+  `hybrid` (default) = probe-based recon, spec via CLI, short live verification
+  pass. `cli-first` = existing suite only, MCP only on unclear failure.
+- **Verification pass**: `yes` ← hybrid only: a short MCP observation run over
+  the ticket's main flow after a green CLI run, explicitly looking for what the
+  assertions do not cover.
+- **Red check required**: `yes` ← hybrid/cli-first: a new spec counts as
+  evidence only after it was once proven red (deliberately violated
+  expectation) — a spec that never failed proves nothing.
+- **Escalate at risk**: `high` ← `medium` | `high`: tickets at or above this
+  risk are always observed live, regardless of mode.
+- **Plan approval**: `yes` ← `yes` | `no`: on `yes` the test plan
+  (`testplan.md` in the run dir) is shown and confirmed before execution
+  starts. Two minutes of human review against the most expensive error class:
+  thoroughly testing the wrong thing. Headless runs treat `yes` as "proceed and
+  flag the plan in the report" — a pipeline cannot wait.
+
 ## Test assets
 
 - **Framework**: <playwright | webdriverio — or "none yet">. `test-automator`

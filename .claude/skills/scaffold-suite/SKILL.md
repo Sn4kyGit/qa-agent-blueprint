@@ -29,6 +29,10 @@ template; if they ever disagree, the rule is right and the config is a bug.
    - `<KEY>`, `<PRODUCT>` — for the header comments and the package name,
    - `<CAT>` — a TC category from the effective project file ("Test assets" → TC
      categories); the product's namespace when a product was routed.
+   Also copy `templates/probes/` — the recon probe is the producer for pipeline
+   phase 2 (`docs/pipeline/02-recon.md`), and the hybrid/cli-first modes have no
+   non-blind spec source without it. WDIO suites take `recon.wdio.spec.js`
+   instead of `recon.spec.ts` (same contract; `merge-recon.mjs` is shared).
 4. **Wire the base URL.** `baseURL` comes from `STAGE_BASE_URL`, never a literal.
    Point the user at their own way of setting it (shell, CI variable, direnv) — this
    blueprint does not load dotenv files, and a stage URL in a committed config is

@@ -1,0 +1,41 @@
+# QA-Pipeline Konfiguration
+# Wird von allen Werkzeugen gelesen (Claude Code, OpenCode).
+# Aenderungen hier wirken sofort, ohne dass Skills angepasst werden muessen.
+
+# Betriebsmodus: mcp-only | hybrid | cli-first
+mode: hybrid
+
+mcp:
+  max_turns: 20                  # harte Obergrenze je Browser-Session
+  screenshot_policy: key-steps   # all | key-steps | on-failure
+  viewport: [1440, 900]
+
+cli:
+  command: "npx playwright test"
+  reporter: line
+  spec_dir: tests/e2e
+  probe_dir: qa/probes
+
+hybrid:
+  verification_pass: true        # kurze MCP-Beobachtung nach gruenem CLI-Lauf
+  require_red_check: true        # Rotprobe erzwingen, bevor Gruen als Nachweis zaehlt
+  escalate_at_risk: high         # ab diesem Risiko immer live beobachten
+
+evidence:
+  dir: qa/evidence
+  runs_dir: qa/runs
+  timestamp_format: "%Y-%m-%dT%H%M"
+
+# Faehigkeitsstufen. Werte sind werkzeugabhaengig:
+#   Claude Code : opus | sonnet | haiku
+#   OpenCode    : provider/modell-id, z.B. anthropic/claude-sonnet-4-6
+models:
+  planning: opus
+  authoring: sonnet
+  execution: haiku
+  observation: sonnet
+  reporting: sonnet
+
+environments:
+  default: stage
+  forbidden: [prod, production]

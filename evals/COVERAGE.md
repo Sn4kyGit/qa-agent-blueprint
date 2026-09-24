@@ -45,6 +45,16 @@ only enforcement once a fixture proves it".
 | Browser-driving subagents run sequentially, never in parallel (one MCP server = one shared browser tab; parallel runs contaminate — 0.6.1 field report) | **uncovered** — scheduling norm inside qa-manager; a case could only grade recitation. Candidate for a trace-aware runner: parallel `test-executor` spawns in one session must not occur |
 | Shadow Mode is mechanically enforced: PreToolUse guard blocks Atlassian write tools while shadow is on — including the Cloud v2 meta-tools `executeWrite`/`executeDestructive` (deferred tools are writes by definition; `executeRead` stays open) — fail-safe on unresolvable key/unreadable project file; unlock via `Shadow mode: off` or `QA_AGENT_SHADOW=0` | fixture: `guard-fixtures.sh` (shadow section, execute-meta-tool cases) + `opencode/tests/guard.test.ts` (shadow gate) — 0.6.3, audit F1; execute* cases 0.10.0 |
 | Installer keeps a user playwright config that carries the contract flags (preferences never trigger an overwrite) | fixture: `install-integrate-fixtures.sh` (headful-kept block) |
+| Execution mode routing: PROJECT.md → "Execution mode" steers the run (`mcp-only`/`hybrid`/`cli-first`); hybrid = recon-first + spec via CLI + red check + observation pass; escalation rules override every mode; "test is red" alone never escalates | case: `mode-routing` (pipeline-modes feature) |
+
+## Pipeline (`docs/pipeline/`)
+
+| Norm | Coverage |
+|---|---|
+| Never write a spec blind — recon (`/recon` probe) before any spec, selectors from `recon.json` | case: `mode-routing` (hybrid sequence) — **write-side uncovered**: that the automator actually refuses a blind spec needs a writing scenario, candidate case |
+| Red check before a new spec's green counts; observation pass after green CLI run on `Verification pass: yes` | case: `mode-routing` (stated in the flow) — execution fidelity uncovered (needs a run-trace grader) |
+| Mode field is mandatory in every report (observed vs. asserted must be visible) | **uncovered** — grading needs report-artifact inspection, not answer text; candidate for an artifact-aware runner |
+| Plan approval: `yes` waits for human confirmation; headless proceeds and flags | **uncovered** — interactive gate; a case could only grade recitation |
 
 ## `evidence-policy.md`
 

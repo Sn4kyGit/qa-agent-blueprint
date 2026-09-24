@@ -21,6 +21,7 @@ mode they are namespaced: `/qa-agent-blueprint:<name>`.
 | `/retest-bug <KEY-123>` | Re-plays the original repro steps of a fixed bug, then a tight regression sweep around the spot. |
 | `/exploratory-testing` | Chartered, timeboxed exploratory session via Playwright MCP — for new features or unclear behavior with no repeatable spec yet. |
 | `/test-automation` | Writes or runs deterministic specs in the project's framework (Playwright or WebdriverIO) once a flow is understood and worth repeating. |
+| `/recon <KEY-123>` | Observes the ticket's pages before any spec is written: probe run writes `recon.json` (real selectors, console errors, screenshots) into the run dir. |
 
 ## React to a result
 
