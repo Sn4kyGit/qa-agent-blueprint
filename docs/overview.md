@@ -5,6 +5,8 @@ Claude Code & opencode · Repo-Blaupause
 Macht Claude Code oder opencode zu einem ticketgetriebenen QA-Manager und Tester: JIRA-Ticket rein,
 getestetes Ticket raus — mit Pflicht-Evidence, projekt- und produktspezifischem Wissen
 und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
+Neu hier? Unten beantwortet die Rubrik **Häufige Fragen** in einfacher
+Sprache, wie Gedächtnis, Kosten und Sicherheit funktionieren.
 
 29
 
@@ -464,6 +466,103 @@ der Blueprint macht den Browser nicht billiger, er streicht den *wiederholbaren*
 Verbrauch: keine Neu-Erkundung, keine Tests gegen eine Umgebung ohne den Fix, und
 Re-Tests mit Spec kosten ein Zehntel. Im Subscription-Modell ist das Quota statt Euro;
 zu API-Preisen liegt ein explorativer Ticket-Test bei grob 1–2 $ statt 2–4 $.
+
+## Häufige Fragen
+
+Die Fragen, die im Gespräch immer kommen — beantwortet ohne Fachjargon.
+
+#### ?Wie funktioniert das Gedächtnis?
+
+Gar nicht im Kopf — alles liegt als normale Textdateien in deinem Projektordner,
+einsehbar und per Git teilbar. Fünf Schubladen: das **Handbuch** (immer dabei,
+nur die Regeln), die **Fachbücher** (29 Skills, laden nur bei Bedarf), die
+**Projektakte** (Umgebungen, Testuser, Runbooks — einmal eingerichtet), das
+**Lerntagebuch** (Überraschungen aus Läufen) und die **Beweise**
+(Screenshots, Logs — als Datei, nie im Gedächtnis). Der Clou: Am Ende jeder Session
+*muss* der Agent deklarieren, was er gelernt hat — ein Hook blockt das Session-Ende
+sonst. Was zweimal vorkam, wandert ins Handbuch und muss nie wieder erklärt werden; was
+verworfen wurde, landet im Rejected-Buffer und wird nicht erneut vorgeschlagen.
+
+#### ?Verbrennt das ständige Lesen und Lernen nicht selbst Tokens?
+
+Ja — aber erstaunlich wenige, und es spart ein Vielfaches. Die Rechnung im Detail:
+**Lernen kostet** pro Lauf nur die Learning-Deklaration im Protokoll plus ein
+kurzer Eintrag ins Lerntagebuch (~100–300 Tokens). Das wöchentliche Aufräumen
+(`/retro-learn`) liest gezielt per Grep statt ganzer Dateien — ein paar tausend
+Tokens, nur auf Zuruf. **Lesen kostet** wenig, weil nie alles gelesen wird:
+Der Session-Start lädt nur das Handbuch (~8.300 Tokens) plus ein Inhaltsverzeichnis
+(`memory/INDEX.md`); in die Schubladen wird nur bei Bedarf geschaut, Beweise
+werden nie zurückgelesen. **Die Gegenrechnung:** Ohne dieses Gedächtnis
+erkundet ein Agent das Projekt in *jeder* Session neu — Umgebungen, Logins,
+Deploy-Wege, Fallstricke. Das sind locker 50.000–100.000 Tokens pro Ticket, plus die
+Irrwege, die eine vergessene Falle auslöst. Gemessen: ~0,4–0,6 Mio. Tokens pro Ticket-Test
+mit Gedächtnis gegenüber ~0,6–1,1 Mio. ohne — und ein Re-Test mit gelerntem Autotest liegt
+bei ~50.000. Lernen kostet also grob 1 % des Laufs und verhindert den teuersten Teil:
+das Neu-Entdecken dessen, was schon bekannt war.
+
+#### ?Wie effizient ist eine Session?
+
+Die immer geladene Ebene ist ~8.300 Tokens (gemessen, per Test gedeckelt). Browser-Arbeit
+läuft in abgeschotteten Teil-Sessions — das 30-Schritte-Klickprotokoll flutet nie den
+Hauptkontext, zurück kommt nur das Ergebnis. Pro Ticket-Test: **~0,4–0,6 Mio. Tokens**
+statt ~0,6–1,1 Mio. ohne Blueprint, weil Projektwissen nicht jede Session neu erkundet wird.
+Mit vorhandenem Autotest sinkt der Re-Test auf **~50.000 Tokens** — ein Zehntel.
+Und die Execution Modes lassen dich wählen, wo sich die teure Live-Beobachtung lohnt.
+
+#### ?Brauche ich zwingend JIRA?
+
+Der Blueprint ist ticketgetrieben — der Ticket-Schlüssel ist der Eingang, über den der
+Agent alles findet. Gelesen wird über den Atlassian-MCP-Server (Cloud oder Data Center);
+nutzt ein Projekt JIRA nur per Weboberfläche, geht es notfalls auch über den Browser.
+Ohne JIRA ergäbe das Routing keinen Sinn — aber die Skills (exploratives Testen,
+Accessibility, Security, Autotests) funktionieren auch ticketlos.
+
+#### ?Läuft das auch ohne Claude Code?
+
+Ja — derselbe Blueprint läuft unter **opencode** (modell-offen, das Modell
+ist deine Wahl) und wird dort per Symlink-Install verdrahtet. Ein Router-Text für beide
+Welten, keine Drift: der Session-Start-Hook injiziert ihn im Plugin-Modus wortwörtlich.
+Hooks, Skills und Guardrails sind auf beiden Seiten dieselben, die Fixture-Batterie läuft
+für beide.
+
+#### ?Was passiert mit meinen Daten?
+
+Nach der Installation läuft alles lokal. Netzwerk geht nur zu **deinem JIRA**
+und **deiner Stage** — keine Telemetrie, keine Lizenz-Checks, das Repo wird nur
+bei Install und Update angefasst. Passwörter sieht der Agent nie: Testuser-Logins und der
+JIRA-Token liegen im macOS-Schlüsselbund, er sieht nur „6/6 Logins vorhanden". Direkte
+Secret-Lesungen sind ein Opt-in, das nur ein Mensch erteilen kann.
+
+#### ?Was, wenn der Agent sich irrt?
+
+Dafür gibt es eingebaute Ehrlichkeit statt Nachsicht: Bei jedem FAIL klärt ein eigener
+Prüfer (ohne Schreibrechte), ob das Produkt kaputt oder der Test veraltet ist. Unsicherheit
+wird zu **NEEDS\_REVIEW** — ein Vorschlag an einen Menschen, kein Bug-Ticket,
+kein Statuswechsel. Und wenn ein Mensch den Agenten überstimmt, ist das die wertvollste
+Learning im ganzen System: Sie wandert mit Ursachenanalyse ins Regelwerk, damit derselbe
+Fehlgriff nicht zweimal passiert.
+
+#### ?Kann er auch in Produktion testen?
+
+Nein — niemals, egal wer fragt oder wie es formuliert ist. Nur Stage. Verlangt ein Ticket
+eine Prod-Verifizierung, meldet der Agent BLOCKED mit Grund, statt kreativ zu werden.
+Deploys darf er nur auf Stage und nur, wenn das Projekt es ausdrücklich erlaubt; MRs
+kommentieren oder mergen darf er nie.
+
+#### ?Muss ich programmieren können?
+
+Nein. Du schreibst ganz normal: „Teste SHOP-1234", „Der Fix ist auf Stage, prüf das",
+„Wie läuft's mit dem Testing?" — deutsch oder englisch. Die Einrichtung ist ein geführtes
+Interview (~30–60 Minuten pro Projekt). Einzige Menschen-Aufgaben: JIRA-Zugang einrichten,
+Testuser-Passwörter einmal in den Schlüsselbund legen, und am Anfang die Shadow-Modus-Vorschläge
+prüfen, bis du ihm Schreibrechte gibst.
+
+#### ?Wie fange ich an?
+
+Zwei Befehle (siehe Installation oben), Claude Code neu starten, JIRA einmal per OAuth
+verbinden — dann `/onboard-project` und das Interview beantworten. Danach heißt
+es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Agent testet
+vollständig, postet aber nichts, bis du es freigibst.
 
 QA Agent Blueprint · Stand: 24. September 2026 (0.12.0) —
 aktualisiert auf Repo-Stand (29 Skills, 5 Subagents, 421 Fixture-Checks + 138 bun-Tests, 23 Eval-Cases,
