@@ -8,6 +8,19 @@ description: Capture, groom, and promote learnings — the session-end step when
 The learning loop behind `docs/architecture.md` → "Layer 4". Three distinct
 operations; know which one you're doing.
 
+## Auto-trigger — groom without being asked
+
+The session-start orientation prints an **AUTO-GROOM** directive when the
+inbox crosses the threshold (≥ 5 entries or the oldest entry is older than
+14 days). When that directive is present, grooming is not optional and does
+not wait for a `/retro-learn` command: run Groom + Promote at the end of the
+session, then report in one sentence what was promoted. Users who never type
+slash commands are exactly who this exists for — the loop must not depend on
+anyone remembering one. All gates apply unchanged: `seen: 2`, the
+`_rejected.md` buffer, the validation gate for blueprint-side promotions,
+the routing re-measurement. Below the threshold the directive stays a hint
+to the human, and this skill waits to be called as before.
+
 ## Capture (every session with a surprise)
 
 Append to `memory/learnings/_inbox.md` in the fixed format:

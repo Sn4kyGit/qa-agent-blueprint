@@ -443,6 +443,41 @@ QCTX2="$(plug_ctx_for "$QSUB2")"
 check_contains "marker-only home resolves from two levels down" "$QCTX2" "QA home: $QH2"
 
 echo
+echo "== ungroomed-learnings backlog: hint below the auto-groom threshold, directive above =="
+# The auto-groom threshold (5+ entries or oldest entry > 14 days) turns the
+# human hint into an agent directive — users who never type /retro-learn must
+# not lose the grooming loop. Dates computed relative to today, so the fixture
+# never rots.
+RECENT="$(python3 -c 'import datetime; print((datetime.date.today() - datetime.timedelta(days=3)).isoformat())')"
+OLD="$(python3 -c 'import datetime; print((datetime.date.today() - datetime.timedelta(days=30)).isoformat())')"
+
+# A small, fresh backlog stays a hint to the human.
+G1="$WORK/groom-hint"; mkdir -p "$G1/projects" "$G1/memory/learnings"
+printf '# Inbox\n\n## %s — one\n\n## %s — two\n' "$RECENT" "$RECENT" > "$G1/memory/learnings/_inbox.md"
+G1CTX="$(context_for "$G1")"
+check_contains "2 fresh entries → human hint" "$G1CTX" "2 ungroomed learnings"
+check_absent   "2 fresh entries → no directive" "$G1CTX" "AUTO-GROOM"
+
+# Five fresh entries cross the count threshold on their own.
+G2="$WORK/groom-count"; mkdir -p "$G2/projects" "$G2/memory/learnings"
+{ printf '# Inbox\n\n'; for i in 1 2 3 4 5; do printf '## %s — entry %s\n\n' "$RECENT" "$i"; done; } > "$G2/memory/learnings/_inbox.md"
+G2CTX="$(context_for "$G2")"
+check_contains "5 fresh entries → AUTO-GROOM directive" "$G2CTX" "AUTO-GROOM: 5 ungroomed learnings"
+check_contains "directive orders end-of-session grooming" "$G2CTX" "at the end of this session"
+
+# Two entries, but the oldest is over 14 days — the age trigger fires alone.
+G3="$WORK/groom-age"; mkdir -p "$G3/projects" "$G3/memory/learnings"
+printf '# Inbox\n\n## %s — stale\n\n## %s — fresh\n' "$OLD" "$RECENT" > "$G3/memory/learnings/_inbox.md"
+G3CTX="$(context_for "$G3")"
+check_contains "2 entries with stale oldest → directive" "$G3CTX" "AUTO-GROOM: 2 ungroomed learnings"
+check_contains "directive names the oldest entry date" "$G3CTX" "oldest: $OLD"
+
+# A single entry is never a backlog — even a stale one stays silent.
+G4="$WORK/groom-silent"; mkdir -p "$G4/projects" "$G4/memory/learnings"
+printf '# Inbox\n\n## %s — the one example\n' "$OLD" > "$G4/memory/learnings/_inbox.md"
+check_absent "single entry stays silent" "$(context_for "$G4")" "ungroomed learnings"
+
+echo
 if [ "$fails" -eq 0 ]; then
   echo "all fixtures passed"
 else

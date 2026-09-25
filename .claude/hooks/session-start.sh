@@ -261,14 +261,33 @@ SECRETS_TEMPLATE
 # The Stop hook forces learnings to be CAPTURED; nothing forces them to be groomed,
 # so an inbox quietly grows until it is useless. Count ungroomed entries (capture
 # headers, "## YYYY-MM-DD — ...") and say so once per session. Counting only, no
-# file content in the context, and silent at zero.
+# file content in the context, and silent at zero. Past the auto-groom threshold
+# (5+ entries or oldest entry older than 14 days) the hint to the human becomes a
+# directive to the agent: groom without waiting for a /retro-learn command —
+# people who never type slash commands are exactly who this is for.
 inbox_status() {
-  local inbox="$CWD/memory/learnings/_inbox.md" n
+  local inbox="$CWD/memory/learnings/_inbox.md" n oldest overdue=0
   [ -f "$inbox" ] || return 0
   n="$(grep -cE '^## [0-9]{4}-[0-9]{2}-[0-9]{2} ' "$inbox" 2>/dev/null || echo 0)"
   # The template ships one illustrative example entry; one is not a backlog.
   [ "${n:-0}" -gt 1 ] || return 0
-  printf '\n- %s ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).' "$n"
+  oldest="$(grep -oE '^## [0-9]{4}-[0-9]{2}-[0-9]{2} ' "$inbox" 2>/dev/null \
+    | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort | head -1)"
+  if [ -n "$oldest" ]; then
+    overdue="$(python3 -c "
+import datetime, sys
+try:
+    d = datetime.date.fromisoformat('$oldest')
+    print(1 if (datetime.date.today() - d).days > 14 else 0)
+except Exception:
+    print(0)
+" 2>/dev/null || echo 0)"
+  fi
+  if [ "${n:-0}" -ge 5 ] || [ "$overdue" = "1" ]; then
+    printf '\n- AUTO-GROOM: %s ungroomed learnings in memory/learnings/_inbox.md (oldest: %s) — over the auto-groom threshold (5 entries or 14 days). Without waiting for a command: groom and promote them via the retro-learn skill at the end of this session, then report in one sentence what was promoted. All gates apply as usual (seen: 2, _rejected.md, routing re-measurement).' "$n" "${oldest:-unknown}"
+  else
+    printf '\n- %s ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).' "$n"
+  fi
 }
 
 # A hook cannot ask an MCP server whether it started — but it CAN see what is

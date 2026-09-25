@@ -549,13 +549,17 @@ eine Prod-Verifizierung, meldet der Agent BLOCKED mit Grund, statt kreativ zu we
 Deploys darf er nur auf Stage und nur, wenn das Projekt es ausdrücklich erlaubt; MRs
 kommentieren oder mergen darf er nie.
 
-#### ?Muss ich programmieren können?
+#### ?Muss ich programmieren können oder Befehle kennen?
 
 Nein. Du schreibst ganz normal: „Teste SHOP-1234", „Der Fix ist auf Stage, prüf das",
-„Wie läuft's mit dem Testing?" — deutsch oder englisch. Die Einrichtung ist ein geführtes
-Interview (~30–60 Minuten pro Projekt). Einzige Menschen-Aufgaben: JIRA-Zugang einrichten,
-Testuser-Passwörter einmal in den Schlüsselbund legen, und am Anfang die Shadow-Modus-Vorschläge
-prüfen, bis du ihm Schreibrechte gibst.
+„Wie läuft's mit dem Testing?" — deutsch oder englisch. Auch das Lernen läuft von allein:
+Jede Session *muss* deklarieren, was sie gelernt hat (ein Hook erzwingt es), und
+wächst der Stapel ungeprüfter Learnings über die Schwelle (5 Einträge oder 14 Tage alt),
+räumt der Agent ihn am Session-Ende **von selbst** auf und berichtet in einem
+Satz, was daraus wurde. Die Einrichtung ist ein geführtes Interview (~30–60 Minuten pro
+Projekt). Einzige Menschen-Aufgaben: JIRA-Zugang einrichten, Testuser-Passwörter einmal
+in den Schlüsselbund legen, und am Anfang die Shadow-Modus-Vorschläge prüfen, bis du ihm
+Schreibrechte gibst.
 
 #### ?Wie fange ich an?
 

@@ -18,6 +18,14 @@ replays would hit real stage/JIRA systems, and transcript mining conflicts with
 the data boundary.
 
 ### Changed — retro-learn
+- **Auto-groom: the learning loop no longer depends on anyone typing
+  `/retro-learn`.** The session-start inbox hint becomes an agent directive
+  once the backlog crosses the threshold (≥ 5 entries or the oldest entry
+  older than 14 days): groom and promote at the end of the session, report in
+  one sentence. Below the threshold everything stays as before. Both harnesses
+  (session-start.sh + opencode orientation), fixtures on both sides; all gates
+  (`seen: 2`, `_rejected.md`, validation gate, routing re-measurement) apply
+  unchanged.
 - **Rejected-edit buffer** (`memory/learnings/_rejected.md`, created on first
   use): stale entries are retired there with reason + "do not re-propose
   unless" condition instead of being deleted, and grooming checks it before

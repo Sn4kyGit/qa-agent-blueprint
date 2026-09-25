@@ -143,11 +143,40 @@ describe("orientation (opencode)", () => {
     // a single entry (the shipped example) stays silent
     await writeFile(join(dir, "memory", "learnings", "_inbox.md"), "# Inbox\n\n## 2026-09-01 — the one example\n")
     expect(await orientation(dir)).not.toContain("ungroomed learnings")
+    const recent = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10)
     await writeFile(
       join(dir, "memory", "learnings", "_inbox.md"),
-      "# Inbox\n\n## 2026-09-01 — one\n\n## 2026-09-02 — two\n\n## 2026-09-03 — three\n",
+      `# Inbox\n\n## ${recent} — one\n\n## ${recent} — two\n`,
     )
-    expect(await orientation(dir)).toContain("3 ungroomed learnings in memory/learnings/_inbox.md")
+    const hint = await orientation(dir)
+    expect(hint).toContain("2 ungroomed learnings in memory/learnings/_inbox.md")
+    expect(hint).not.toContain("AUTO-GROOM")
+  })
+
+  test("auto-groom threshold turns the hint into an agent directive", async () => {
+    await init()
+    const inbox = join(dir, "memory", "learnings", "_inbox.md")
+    const recent = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10)
+    const stale = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+
+    // count trigger: five fresh entries
+    await writeFile(
+      inbox,
+      `# Inbox\n\n${[1, 2, 3, 4, 5].map((i) => `## ${recent} — entry ${i}`).join("\n\n")}\n`,
+    )
+    const byCount = await orientation(dir)
+    expect(byCount).toContain("AUTO-GROOM: 5 ungroomed learnings")
+    expect(byCount).toContain("at the end of this session")
+
+    // age trigger: two entries, but the oldest is over 14 days old
+    await writeFile(inbox, `# Inbox\n\n## ${stale} — stale\n\n## ${recent} — fresh\n`)
+    const byAge = await orientation(dir)
+    expect(byAge).toContain("AUTO-GROOM: 2 ungroomed learnings")
+    expect(byAge).toContain(`oldest: ${stale}`)
+
+    // a single entry is never a backlog, even a stale one
+    await writeFile(inbox, `# Inbox\n\n## ${stale} — the one example\n`)
+    expect(await orientation(dir)).not.toContain("ungroomed learnings")
   })
 
   test("flags a playwright entry without the contract flags", async () => {

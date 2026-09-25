@@ -713,13 +713,21 @@ async function listProjects(directory: string): Promise<string[]> {
 
 // The Stop gate forces learnings to be CAPTURED; nothing forces them to be
 // groomed — count ungroomed inbox entries and say so once per session (the
-// template ships one illustrative entry; one is not a backlog).
-async function ungroomedLearnings(directory: string): Promise<number> {
+// template ships one illustrative entry; one is not a backlog). Past the
+// auto-groom threshold (5+ entries or oldest entry older than 14 days) the
+// hint to the human becomes a directive to the agent: groom without waiting
+// for a /retro-learn command.
+async function ungroomedLearnings(directory: string): Promise<{ count: number; oldest: string | null }> {
   try {
     const text = await readFile(join(directory, "memory", "learnings", "_inbox.md"), "utf8")
-    return text.split("\n").filter((l) => /^## \d{4}-\d{2}-\d{2} /.test(l)).length
+    const dates = text
+      .split("\n")
+      .map((l) => /^## (\d{4}-\d{2}-\d{2}) /.exec(l)?.[1])
+      .filter((d): d is string => Boolean(d))
+      .sort()
+    return { count: dates.length, oldest: dates[0] ?? null }
   } catch {
-    return 0
+    return { count: 0, oldest: null }
   }
 }
 
@@ -780,9 +788,16 @@ export async function orientation(home: string, sessionDir: string = home): Prom
   if (foreignMcp.length) {
     lines.push(`- Global MCP servers visible but NOT declared in this project — the guard blocks them until declared here (they may belong to another project): ${foreignMcp.join(", ")}`)
   }
-  const n = await ungroomedLearnings(home)
-  if (n > 1) {
-    lines.push(`- ${n} ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).`)
+  const { count: ungroomed, oldest: oldestLearning } = await ungroomedLearnings(home)
+  if (ungroomed > 1) {
+    const overdue =
+      oldestLearning !== null &&
+      (Date.now() - Date.parse(oldestLearning)) / 86_400_000 > 14
+    if (ungroomed >= 5 || overdue) {
+      lines.push(`- AUTO-GROOM: ${ungroomed} ungroomed learnings in memory/learnings/_inbox.md (oldest: ${oldestLearning ?? "unknown"}) — over the auto-groom threshold (5 entries or 14 days). Without waiting for a command: groom and promote them via the retro-learn skill at the end of this session, then report in one sentence what was promoted. All gates apply as usual (seen: 2, _rejected.md, routing re-measurement).`)
+    } else {
+      lines.push(`- ${ungroomed} ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).`)
+    }
   }
   return lines.join("\n")
 }
