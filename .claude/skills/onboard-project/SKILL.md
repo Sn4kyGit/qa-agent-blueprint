@@ -111,8 +111,8 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    `resolve-secrets.sh` once (plugin mode:
    `bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh`, integrate mode:
    the namespaced copy under `.claude/hooks/qa-blueprint/`). It prints only key
-   names. Offer the two assisted storage paths before handing over manual
-   commands: `--import` migrates values the user already hand-filled into
+   names. Offer the two assisted storage paths before handing over the manual
+   command: `--import` migrates values the user already hand-filled into
    `.env.playwright-secrets` into the keychain (declared keys only, values
    never surface); `--capture` asks the user for each missing key through a
    native macOS hidden-answer dialog — they type into a GUI box, never into

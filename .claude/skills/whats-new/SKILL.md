@@ -32,6 +32,17 @@ and the user runs it next. **Answer in the user's language.**
      version-stamp field itself, Secrets source, flow maps, and similar
      schema changes always qualify; pure plugin-internal changes (hooks,
      evals, docs) get "no project action needed".
+
+   Example shape (German user, one project):
+
+   ```
+   SHOP: onboarded at 0.11.0, blueprint ist 0.12.0
+
+   **0.12.0 — wer am Steuer sitzt**
+   - Ausführungsmodus pro Projekt wählbar (mcp-only / hybrid / cli-first) —
+     betrifft projects/SHOP/PROJECT.md → /re-board SHOP bringt es auf Stand.
+   - Neue Pipeline-Doku + /recon-Skill — kein Projekt-Eingriff nötig.
+   ```
 5. Nothing to show (all stamps current): say so in one line and stop.
 
 ## What this skill never does

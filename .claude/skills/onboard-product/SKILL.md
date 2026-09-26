@@ -29,7 +29,7 @@ differs from the project. Every question defaults to "same as the project", and 
 4. **Copy the scaffold**: `projects/_template/products/_template/` →
    `projects/<KEY>/products/<PRODUCT>/`. In plugin mode the scaffold lives in the
    plugin — read it from `$CLAUDE_PLUGIN_ROOT/projects/_template/products/_template/`
-   and write only into the consumer's repo (same fallback `onboard-project` uses).
+   and write only into the consumer's repo.
 5. **Routing.** Ask which JIRA components and/or labels identify this product's
    tickets. **Fetch the project's real component list via the Atlassian MCP** and
    let the user pick existing values instead of typing from memory — a dead routing
