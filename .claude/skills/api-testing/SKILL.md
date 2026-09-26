@@ -5,7 +5,7 @@ description: >-
   schema validation (Zod 4/AJV), auth flows, CRUD lifecycle, error/header validation,
   pagination, performance assertions. Use when: API test, endpoint test, REST test,
   GraphQL test, schema validation, Postman replacement. Not for Pact contract
-  verification (contract-testing) or browser UI flows.
+  verification (Pact) or browser UI flows.
 license: MIT
 metadata:
   author: kindlmann
@@ -19,7 +19,7 @@ A response that adds a nullable field or quietly drops one slips past `toHavePro
 
 ## Discovery Questions
 
-Check `.agents/qa-project-context.md` first — if it exists, use it and skip anything already answered there. Then:
+Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if it exists, use it and skip anything already answered there. Then:
 
 1. **REST, GraphQL, or both?** REST-only suites use standard HTTP assertions. GraphQL needs query/mutation builders and benefits from an introspection-diff snapshot.
 2. **Auth mechanism?** JWT, API key, OAuth 2.0, or session cookies — each needs a different fixture strategy.
@@ -146,7 +146,7 @@ PUT and DELETE should be idempotent. Test that calling them twice produces the s
 - Auth flow tested as its own describe block: successful login, invalid credentials, expired token, and permission boundary (403).
 - Schema validation assertions on response shape using Zod 4 or AJV — not just `toHaveProperty` spot-checks.
 - Header assertions exist for at least `content-type` and any cache/rate-limit headers the API sets, asserted unconditionally.
-- Contract tests in place for any endpoint consumed by a different team or service (shared schema file; for consumer-driven verification use `contract-testing`).
+- Contract tests in place for any endpoint consumed by a different team or service (a shared schema file is the baseline; consumer-driven Pact verification is not vendored in this blueprint — propose it as tooling when a cross-team API needs it).
 - Genuine third-party calls (payment gateways, external SaaS) are mocked or virtualized; the API and its database run for real.
 - CI job for the suite exits 0 (green) against the test environment.
 
@@ -158,7 +158,6 @@ PUT and DELETE should be idempotent. Test that calling them twice produces the s
 
 ## Related Skills
 
-- **contract-testing** — Consumer-driven contract verification with Pact/broker; go there when a separate team consumes your API and you need guaranteed compatibility, not just a shared schema.
-- **playwright-automation** — Browser-based E2E testing, Page Object Model, and combined browser + API patterns.
-- **ci-cd-integration** — Running API test suites in CI pipelines, parallelization, and environment management.
-- **test-strategy** — Deciding what to test at the API layer vs. unit vs. E2E.
+- **test-automation** — Browser-based E2E testing and combined browser + API patterns.
+- Contract verification with Pact/a broker is not vendored into this blueprint — when a separate team consumes the API and needs guaranteed compatibility, flag it as a tooling proposal instead of improvising one.
+- What to test at the API layer vs. unit vs. E2E is a strategy call: `risk-based-testing` scores the areas, the product's feature matrix routes them.

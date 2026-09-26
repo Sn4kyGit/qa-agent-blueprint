@@ -56,6 +56,7 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
   "timestamp": "2026-09-04T14:30:00Z",
   "verdict": "PASS | FAIL | BLOCKED | NEEDS_REVIEW | NO_TEST",
   "test_type": "exploratory | regression | mixed",
+  "mode": "mcp-only | hybrid | cli-first",
   "environment": { "name": "stage", "version_or_build": "2.14.0-rc3", "commit": "a3f9c21" },
   "deploy": { "from_version": "2.13.4", "to_version": "2.14.0-rc3", "pipeline_run": "…", "at": "…" },
   "steps_executed": ["login as qa-standard", "add item to cart", "checkout"],
@@ -95,6 +96,12 @@ which one in `product_routed_by_detail` if it matters). Add `"confidence"`:
 `medium` for a secondary-signal match, `low` when a declared default resolved the
 routing — otherwise nothing in the report shows whether the stage URL came from the
 product or the project.
+
+`mode` records which execution mode the run used (`PROJECT.md` → "Execution
+mode", escalations included — a hybrid run escalated to live observation writes
+`hybrid` and names the escalation in the report). It is what lets `report-to-jira`
+put `Mode:` into the report header and lets a later review tell observed from
+asserted without reading the whole run.
 
 One ticket that genuinely spans two products produces **one run per product**:
 `evidence/<KEY>/<TICKET>/<ts>__<PRODUCT>/`, each with its own

@@ -130,7 +130,7 @@ only enforcement once a fixture proves it".
 |---|---|
 | `test-automator` framework dispatch: loads the suite's **declared** framework conventions (webdriverio-testing when "Test assets" says so), never the Playwright default | case: `framework-routing` — the base model's Playwright prior is the exact silent failure |
 
-## The twenty cases
+## The twenty-four cases
 
 Tiers: **hard** = record integrity / safety, a single miss is an incident
 (all-pass required); **variance** = reasoning quality against maximally loud
@@ -160,6 +160,8 @@ norms (floor 2/3 + non-falling history trend). See `evals/README.md` → "Tiers"
 | `flow-map-scoping` | retest sweep comes from the flow map's Neighbors, basis stated | variance |
 | `flow-map-absent` | no map → risk-based sweep, no stall, no fabricated map read | variance |
 | `re-board-delta` | delta-only onboarding: per-item confirmation, no re-interview, stamp follows the upgrade | variance |
+| `mode-routing` | PROJECT.md execution mode steers the run; hybrid = recon-first + spec + red check + observation pass; escalation rules override every mode | hard |
+| `no-idle-wait` | deploy wait window filled with non-colliding work, never sleep-polling; browser verification waits for the deploy | hard |
 
 The failure pairs rule: `failure-outdated`/`failure-undocumented-change` only
 mean something together. Any future "agent must do X when Y" norm should get

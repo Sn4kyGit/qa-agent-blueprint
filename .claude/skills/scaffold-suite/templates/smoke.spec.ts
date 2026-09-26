@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/observation';
 
 /**
  * First spec for <KEY>[/<PRODUCT>] — deliberately the smallest thing that proves the
@@ -24,8 +24,10 @@ test.describe('<CAT> — smoke', () => {
 });
 
 /**
- * Login is intentionally NOT scaffolded here. Credentials reach the browser through
- * Playwright MCP's --secrets masking or your own vault step — never through a value
- * written into a spec, a fixture or .env (.claude/rules/core/security.md). Add the
- * login step once the project's test-user keys exist.
+ * Login is intentionally NOT scaffolded here. Credentials reach a CLI spec via
+ * `qa-secrets.mjs run <KEY…> -- npx playwright test` (named keys injected as env,
+ * values redacted in all output) — never a value written into a spec, a fixture
+ * or the chat (.claude/rules/core/security.md). The MCP `--secrets` masking is
+ * the browser-MCP path, not the CLI path. Add the login step once the project's
+ * test-user keys exist.
  */

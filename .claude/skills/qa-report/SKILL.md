@@ -32,7 +32,7 @@ that is already there.
    - **Routing needed a human** — every `user`, `default` or `secondary` resolution
      is a missing component/label row in the project's registry. Propose the rows;
      `retro-learn` promotes them (`.claude/rules/core/product-layer.md`).
-   - **Awaiting ruling** — every `test-outdated` failure still waiting on a human is
+   - **Awaiting ruling** — every `test-outdated` or `test-brittle` failure still waiting on a human is
      a test the suite is currently lying about. One or two is normal traffic; a
      number that grows week over week means the suite is drifting away from the
      product, and the fix is a grooming session with the test owners, not a metric.

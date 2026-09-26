@@ -5,7 +5,8 @@ description: >-
   rate, MTTR, execution time trends, automation ROI, quality gates, SLAs — with
   formulas, realistic targets, and the action when a metric goes red. Use when:
   QA metrics, test metrics, quality KPIs, test health, flakiness rate, defect
-  escape rate. Not for dashboard UIs or coverage-gap/mutation analysis.
+  escape rate. Not for dashboard UIs, coverage-gap/mutation analysis, or
+  aggregating this blueprint's run evidence — that is /qa-report.
 license: MIT
 metadata:
   author: kindlmann
@@ -16,6 +17,17 @@ metadata:
 <objective>
 A suite with 4,000 tests where 800 are disabled and 200 are flaky looks healthy on a slide and lies in production. This skill defines the metrics that actually change behavior — each one with a formula, a target, an owner, and a concrete action when it goes red — so the dashboard becomes a feedback loop instead of decoration.
 </objective>
+
+> **Blueprint scope — these formulas are for wiring CI/tool analytics, not for this
+> blueprint's own run evidence.** Numbers about the blueprint's test runs (pass rate,
+> flake rate, routing quality, learning throughput) come from `/qa-report`, which
+> aggregates `execution_summary.json` with its own, deliberately different
+> denominators (PASS / decided runs; BLOCKED and NO_TEST excluded; flake = pass-on-retry
+> per case, not per run). When both exist in one conversation, `/qa-report` is the
+> source of truth for run data, this skill for definition and target-setting. Metrics
+> the evidence schema cannot feed (defect escape rate, code coverage) are exactly the
+> ones `/qa-report` prints as "not computable" — they need the CI/tracker data sources
+> this skill describes.
 
 ## Quick Route
 
@@ -28,13 +40,13 @@ A suite with 4,000 tests where 800 are disabled and 200 are flaky looks healthy 
 | Justifying automation spend | automation ROI | Process Metrics |
 | Picking targets for our stage | company-stage table | Setting Realistic Targets |
 | Leadership wants delivery + quality | DORA + escape rate | Engineering Quality Metrics (DORA) |
-| Building the dashboard view | (go to `qa-dashboard`) | — |
+| Building the dashboard view | (a dashboard UI is out of this blueprint's scope — this skill defines what to measure) | — |
 
 ---
 
 ## Discovery Questions
 
-Check `.agents/qa-project-context.md` first — if it exists, use it as the foundation and skip anything already answered there. Then:
+Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if it exists, use it as the foundation and skip anything already answered there. Then:
 
 ### Current State
 - What metrics are you tracking today? (Even "we glance at CI pass rate sometimes" counts.)
@@ -99,7 +111,7 @@ Branch coverage = (branches executed by tests / total branches) × 100
 
 **When it goes red:** Coverage drops on PR: block merge or flag. Low in critical module: create targeted tasks. Plateaus: check for dead code vs. genuinely untested logic.
 
-**Warning:** Coverage measures execution, not assertion quality. Pair it with mutation testing (StrykerJS v9.6+, mutmut) for a truer picture. Stryker's Vitest runner tracks recent Vitest releases — check the runner's peer-dependency before pinning a Vitest version. Use `incremental: true` in monorepo CI to keep mutation runs cheap. For deep coverage/mutation analysis, see `coverage-analysis`.
+**Warning:** Coverage measures execution, not assertion quality. Pair it with mutation testing (StrykerJS v9.6+, mutmut) for a truer picture. Stryker's Vitest runner tracks recent Vitest releases — check the runner's peer-dependency before pinning a Vitest version. Use `incremental: true` in monorepo CI to keep mutation runs cheap. Deep coverage/mutation analysis tooling is not vendored in this blueprint — propose it when mutation scores become a gate.
 
 #### Requirement Coverage Percentage
 ```
@@ -271,7 +283,7 @@ TIA selects which tests to run based on which code changed (using coverage data)
 - **% of tests skipped per PR via TIA** — higher means cheaper CI; if it climbs without coverage falling, TIA is paying off.
 - **Escaped defects from skipped tests** — the safety check. If non-zero, narrow the TIA selection or expand the always-run set.
 
-Hosted: Datadog Test Optimization (TIA), CloudBees Smart Tests, NCrunch (in-IDE). Self-built: derive from coverage data + git diff. See `coverage-analysis`.
+Hosted: Datadog Test Optimization (TIA), CloudBees Smart Tests, NCrunch (in-IDE). Self-built: derive from coverage data + git diff.
 
 ---
 
@@ -339,10 +351,9 @@ The whole point is a working feedback loop — prove the data actually flows bef
 
 ## Related Skills
 
-- **qa-dashboard** — builds the Allure/Grafana/SaaS dashboard UI that surfaces these metrics; go there for the rendering, here for what to measure.
-- **coverage-analysis** — coverage gaps and mutation score in depth; the assertion-quality input to the coverage metric here.
-- **ci-cd-integration** — configures the CI pipelines that generate the raw data these metrics depend on, including Test Impact Analysis as a cost lever.
+- **qa-report** — the blueprint's own aggregator over `evidence/`; the source of truth for
+  run-level numbers (pass rate, routing quality, learning throughput). This skill defines the
+  metrics and targets; qa-report computes what the evidence can feed.
 - **release-readiness** — consumes quality gates and DORA Change Failure Rate / Failed Deployment Recovery Time for go/no-go decisions.
 - **test-reliability** — runtime per-test healing for the flaky tests the flakiness rate flags.
-- **quality-postmortem** — action-item-closure-rate pairs with escape rate as the postmortem-side metric.
-- **qa-project-context** — feeds targets and baselines into metrics tracking.
+- The bridge file `.agents/qa-project-context/<KEY>.md` feeds targets and baselines into metrics tracking.

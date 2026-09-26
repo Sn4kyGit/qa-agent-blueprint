@@ -30,8 +30,18 @@ repro from the original report.
 2. Verify stage actually has the fix deployed (version check per the project
    file) before testing — retesting against the pre-fix build produces a false
    FAIL. If not deployed, run `deploy-to-stage` (if allowed) or report BLOCKED.
-3. Delegate to subagent `test-executor`: **re-execute the exact original repro
-   steps** first. This is the primary check — did the specific reported behavior
+   Read `PROJECT.md` → "Execution mode" now — it decides who executes step 3:
+   - **`cli-first` / `hybrid`** — if a spec covers the bug's flow, the re-test IS
+     the spec: run it via `test-automator` (the bug should have graduated into a
+     spec after the first fix — the exploration-to-automation pipeline). No spec
+     yet and selectors unknown → `/recon` probe first, then the spec. MCP enters
+     only to classify an unclear CLI failure.
+   - **`mcp-only`**, or an escalation trigger (the bug is not reproducible, the
+     fix is visual, the flow can't be asserted without observing it) → live via
+     `test-executor` as below. Never escalate merely because a test is red.
+3. Execute the re-test: **re-execute the exact original repro
+   steps** first (spec or live, per the mode above). This is the primary check —
+   did the specific reported behavior
    change? `bug-reproduction`'s red-before-fix discipline applies here in reverse:
    if you have access to the pre-fix build/commit, confirming the repro still
    failed there (and now passes on the fix) is stronger evidence than testing the
@@ -45,7 +55,9 @@ repro from the original report.
    in the evidence ("sweep scoped from flow map, area Checkout"). No flow map →
    risk-based as before, per `.claude/rules/core/qa-principles.md`. A flow map
    whose `last confirmed` dates are old narrows nothing — then prefer fresh
-   judgment over stale neighbors.
+   judgment over stale neighbors. The sweep runs in the same mode as step 3 —
+   in `cli-first`/`hybrid` that means the neighboring specs via CLI, live only
+   for what no spec covers and an escalation trigger names.
 5. **If anything fails, analyse before concluding "not fixed".** Run
    `failure-analysis` (subagent `failure-analyst`) on the failing cases. A re-test is
    where the two cheap wrong answers live: the fix was never deployed (class

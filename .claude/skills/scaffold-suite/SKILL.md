@@ -25,14 +25,19 @@ template; if they ever disagree, the rule is right and the config is a bug.
    app (`../<key>-web-tests/`), not inside this blueprint repo — the blueprint holds
    knowledge, the app repo holds tests. Never guess this; it decides who reviews the
    specs.
-3. **Copy the three templates** from `templates/` into that location and substitute:
+3. **Copy the templates** from `templates/` into that location and substitute:
    - `<KEY>`, `<PRODUCT>` — for the header comments and the package name,
    - `<CAT>` — a TC category from the effective project file ("Test assets" → TC
      categories); the product's namespace when a product was routed.
+   Keep the layout: `smoke.spec.ts` and `tests/fixtures/observation.ts` land
+   under `tests/` (the fixture wires the observation channel —
+   `docs/pipeline/04-execution.md` — into every spec that imports `test`/`expect`
+   from it instead of `@playwright/test`).
    Also copy `templates/probes/` — the recon probe is the producer for pipeline
    phase 2 (`docs/pipeline/02-recon.md`), and the hybrid/cli-first modes have no
-   non-blind spec source without it. WDIO suites take `recon.wdio.spec.js`
-   instead of `recon.spec.ts` (same contract; `merge-recon.mjs` is shared).
+   non-blind spec source without it. (Variant selection — Playwright probe vs.
+   `recon.wdio.spec.js` — belongs to `/recon`; scaffolding from scratch here is
+   Playwright-only. WDIO suites get probes via `/recon` step 4.)
 4. **Wire the base URL.** `baseURL` comes from `STAGE_BASE_URL`, never a literal.
    Point the user at their own way of setting it (shell, CI variable, direnv) — this
    blueprint does not load dotenv files, and a stage URL in a committed config is
@@ -65,7 +70,8 @@ template; if they ever disagree, the rule is right and the config is a bug.
 
 ## What this skill never does
 
-Write a credential into a spec, a fixture or a config — logins go through the
-`--secrets` masking or the project's vault step (`.claude/rules/core/security.md`).
+Write a credential VALUE into a spec, a fixture, a config or the chat — CLI specs
+get credentials via `qa-secrets.mjs run <KEY…>` injection, browser-MCP sessions
+via the `--secrets` masking (`.claude/rules/core/security.md`).
 Point `baseURL` at production. Scaffold on top of an existing suite. Or claim the
 suite works before `npx playwright test` has actually passed once.

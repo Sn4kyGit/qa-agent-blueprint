@@ -6,7 +6,7 @@ description: >-
   (JWT, OAuth, RBAC), XSS/CSRF/SQLi/SSRF Playwright patterns. Use when: security
   test, OWASP, vulnerability, ZAP, XSS, SSRF, dependency scan, auth testing. Not
   for compliance-regulation mapping, manual penetration testing, or testing the
-  product's own LLM features (ai-system-testing).
+  product's own LLM features.
 license: MIT
 metadata:
   author: kindlmann
@@ -25,7 +25,7 @@ gates that fail the build when a category regresses.
 
 ## Discovery Questions
 
-Check `.agents/qa-project-context.md` first — if it exists, use it and skip anything already answered there (auth mechanism, compliance requirements, infrastructure). Then:
+Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if it exists, use it and skip anything already answered there (auth mechanism, compliance requirements, infrastructure). Then:
 
 1. **Threat model:** Has the team identified key assets, threat actors, and attack surfaces? If not, do a lightweight threat model before writing tests — it tells you which categories matter most.
 2. **Auth mechanism:** Session cookies, JWT, OAuth 2.0/OIDC, API keys, or MFA? Each has distinct negative-path tests (alg confusion, session fixation, state tampering).
@@ -44,7 +44,7 @@ Check `.agents/qa-project-context.md` first — if it exists, use it and skip an
 
 3. **Defense in depth — no single tool catches everything.** ZAP misses auth-logic bugs, SCA misses your custom code, Semgrep misses runtime issues. Layer DAST + SCA + SAST + auth tests + secret scanning. When one layer's blind spot is another layer's coverage, a regression has to beat all of them. SCA earns its layer because most of the shipped code is third-party — known CVEs in dependencies are the lowest-effort attack vector, so scan on every build.
 
-4. **Shift-left.** Catch each class at the earliest stage: SAST and secret scanning on commit, dependency/supply-chain checks on the PR, DAST in staging, custom auth tests on every run. See `shift-left-testing` for the dev-QA workflow this rides on.
+4. **Shift-left.** Catch each class at the earliest stage: SAST and secret scanning on commit, dependency/supply-chain checks on the PR, DAST in staging, custom auth tests on every run.
 
 5. **Test the attacker, not the user.** Happy-path auth proves login works. Security tests prove logout invalidates the session, an expired token is rejected, role escalation fails, and a malformed payload fails closed. The negative path IS the test.
 
@@ -126,12 +126,12 @@ New in 2025. Errors and unexpected states are an attack surface — fail-open de
 
 ## OWASP LLM Top 10 (2025)
 
-If your app embeds an LLM (chatbot, RAG, agent, copilot), the classic Top 10 above does not cover its failure modes — use the OWASP Gen AI Security Project's separate list (genai.owasp.org/llm-top-10/). This is the security/CI-gate view: one-line "what to test" per category. For the DEEP behavioral coverage of LLM01 and LLM02 — indirect injection via tool/RAG data, defend-the-tester technique, jailbreak red-teaming, and the runnable injection detector — hand off to `ai-system-testing`; do not duplicate it here.
+If your app embeds an LLM (chatbot, RAG, agent, copilot), the classic Top 10 above does not cover its failure modes — use the OWASP Gen AI Security Project's separate list (genai.owasp.org/llm-top-10/). This is the security/CI-gate view: one-line "what to test" per category. Deep behavioral LLM testing (indirect injection via tool/RAG data, jailbreak red-teaming, injection detectors) is not vendored in this blueprint — when the product ships LLM features, flag it as a tooling/skill proposal instead of improvising.
 
 | ID | Category | What to test |
 |----|----------|--------------|
-| **LLM01** | Prompt Injection | Direct + indirect injection (instructions hidden in retrieved docs, tool output, file content) override system intent. → DEEP coverage in `ai-system-testing`. |
-| **LLM02** | Sensitive Information Disclosure | Model leaks PII, secrets, other tenants' data, or training data via crafted prompts. → DEEP coverage (detector, scoped tests) in `ai-system-testing`. |
+| **LLM01** | Prompt Injection | Direct + indirect injection (instructions hidden in retrieved docs, tool output, file content) override system intent. |
+| **LLM02** | Sensitive Information Disclosure | Model leaks PII, secrets, other tenants' data, or training data via crafted prompts. |
 | **LLM03** | Supply Chain | Provenance of models, adapters, datasets, and plugins; pinned/verified weights; poisoned third-party model or LoRA. |
 | **LLM04** | Data and Model Poisoning | Training/fine-tune/RAG-ingest data integrity; backdoors and bias injected via tainted sources. |
 | **LLM05** | Improper Output Handling | LLM output reaching a downstream interpreter unsanitized — XSS, SSRF, SQLi, command injection from generated text. |
@@ -219,7 +219,7 @@ Prove the assertions actually fire — a security suite that passes vacuously (w
 
 ## Done When
 
-- A committed `owasp-coverage.md` (or a CI job asserting it) maps every OWASP 2025 category to at least one tagged test, or to a recorded "mitigated / accepted risk" entry with justification — no category is silently absent.
+- A committed `owasp-coverage.md` (or a CI job asserting it) maps every OWASP 2025 category to at least one tagged test, or to a recorded "mitigated / accepted risk" entry with justification — no category is silently absent. It lives next to the test suite as suite documentation; a ticket RUN's findings still land in `evidence/<KEY>/<TICKET>/<ts>/` + `execution_summary.json` — the coverage map is never a substitute for run evidence.
 - OSV-Scanner (or equivalent) runs in CI and the job exits non-zero on high/critical vulnerabilities — verified by the planted-vuln check in Verification.
 - Semgrep `p/owasp-top-ten` runs in CI and reports zero unresolved findings on the main branch (ESLint security plugins may run as a secondary, non-gating signal).
 - ZAP baseline scan runs against staging and uploads its report as a CI artifact on every run (`if: always()`).
@@ -229,13 +229,9 @@ Prove the assertions actually fire — a security suite that passes vacuously (w
 
 ## Related Skills
 
-- **ci-cd-integration** — pipeline stage wiring and deploy gating mechanics; go there for *how* to run these steps, here for *what* they assert.
-- **compliance-testing** — mapping security controls to regulations (SOC 2, HIPAA, PCI, GDPR); this skill proves the controls work, that one proves you have the right ones.
-- **ai-system-testing** — your product's own LLM features. Owns the deep OWASP LLM Top 10 work: indirect prompt injection, the injection detector, sensitive-info-disclosure tests, jailbreak red-teaming. This skill names the LLM categories for CI gating; that one defends the agent.
 - **api-testing** — functional REST/GraphQL auth, input, and rate-limit tests without an attacker model; go there when there's no threat being simulated.
-- **shift-left-testing** — the dev-QA workflow, TDD, and definition-of-done that the shift-left principle here rides on.
-- **test-environments** — secure test-environment config, secret management, network isolation.
-- **database-testing** — data integrity and access control at the database level.
+- Compliance mapping (SOC 2, HIPAA, PCI, GDPR) and deep LLM-behavioral testing are not vendored in this blueprint — flag them as tooling/skill proposals when needed.
+- Secure test-environment config (secret management, network isolation) follows the blueprint's own rules: `.claude/rules/core/security.md` and `qa-secrets.mjs`.
 
 ## Reference Files (in `references/`)
 

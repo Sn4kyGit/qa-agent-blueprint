@@ -29,7 +29,9 @@ These promotion ceilings are the inverse of the rollback triggers in `SKILL.md` 
 
 ## Verification Commands
 
-Quick checks you can run right after deployment:
+Quick checks to run right after deployment — in this blueprint these are executed
+by a human or the project's runbook automation against production (the agent
+prepares the list and can run the same checks against staging):
 
 ```bash
 # Check application health

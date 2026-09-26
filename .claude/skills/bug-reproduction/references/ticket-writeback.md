@@ -5,6 +5,15 @@ When the reproduction is done and the regression test is committed, the ticket m
 walkthrough, and do not just write "reproduced, closing." Replace the original vague
 report with a structured block.
 
+> **Blueprint flow — this block is content, not a write path.** Compose the block
+> below, then hand it to `report-to-jira` (or `bug-report` when it becomes a bug
+> ticket): they compose per the active project's report format (Cloud = ADF,
+> Data Center = wiki markup), read transitions from `PROJECT.md`, and post per
+> shadow mode — a proposal in the evidence dir by default, a real write only when
+> the project has granted it. Never edit the ticket or move its workflow state
+> directly from this skill. Logs/screenshots/traces land in the run's evidence
+> directory (`evidence/<KEY>/<TICKET>/<ts>/`); the ticket comment references them.
+
 ## What goes in, and in what structure
 
 ```markdown
@@ -55,8 +64,10 @@ next person:
 
 ## Status, not just close
 
-If the bug reproduced and the fix is verified, move the ticket to *fix verified / ready to
-close* and link the merged fix. If it did **not** reproduce, do not silently close as
-"cannot reproduce" — record what you tried (which environments, how many runs, what data)
-and classify it (flaky vs environment-specific vs genuinely not-reproducible) so the next
-person starts from your evidence, not from zero.
+If the bug reproduced and the fix is verified, the writeback says so and links the merged
+fix — the transition (e.g. *fix verified / ready to close*) is applied by `report-to-jira`,
+using the exact transition name from `PROJECT.md`, never guessed. If it did **not**
+reproduce, do not silently close as "cannot reproduce" — record what you tried (which
+environments, how many runs, what data) and classify it (flaky vs environment-specific vs
+genuinely not-reproducible) so the next person starts from your evidence, not from zero.
+That classification feeds `failure-analysis`, which owns the verdict class.

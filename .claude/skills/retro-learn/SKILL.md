@@ -26,7 +26,7 @@ to the human, and this skill waits to be called as before.
 Append to `memory/learnings/_inbox.md` in the fixed format:
 
 ```
-## YYYY-MM-DD — <TICKET or context>
+## YYYY-MM-DD — <TICKET or context> (<KEY>/<PRODUCT>, if a product was routed)
 - Problem: <what happened, 1 sentence>
 - Cause: <why, if known — otherwise "unknown">
 - Working solution: <what actually worked>
@@ -56,7 +56,7 @@ same firmness the evidence rule has always had, because fifteen prose reminders 
 The declaration is a pointer, not the entry: the full Problem → Cause → Solution
 still goes into `_inbox.md` in the capture format above.
 
-## Groom (weekly or on demand)
+## Groom (weekly, on demand, or when AUTO-GROOM fires)
 
 1. Read `_inbox.md` top to bottom.
 2. For each entry, `grep` the relevant `memory/learnings/*.md` or
@@ -167,15 +167,21 @@ entry instead of leaning on a weak one forever.
 
 A promoted routing row gets re-measured once, so a wrong generalization does
 not rot authoritatively in the registry: on promotion, add a dated line to
-`projects/<KEY>/learnings.md` under `## Routing confirmations pending` —
-`- YYYY-MM-DD — `<signal>` → <PRODUCT> (promoted at seen: 2)`. On the next
+`projects/<KEY>/learnings.md` under `## Routing confirmations pending` (create
+the heading on first use — templates don't ship it):
+
+```
+- YYYY-MM-DD — <signal> → <PRODUCT> (promoted at seen: 2)
+```
+
+On the next
 groom pass, check `product_routed_by` in the evidence summaries newer than
 that date: a run routing this signal via the table confirms the row — remove
 the pending line. A run that needed `user`, `default` or `secondary` for the
 same signal means the row does not hold — capture that as a learning (5-Whys:
 wrong column? too narrow? exception, not a rule?) instead of leaving a
 confident lie in the registry. The same signal at scope level is
-`/qa-report`'s `weak_or_manual` count: a promotion that never moves it was
+`/qa-report`'s `weak_or_manual` count (the "Routing needed a human" column): a promotion that never moves it was
 decoration.
 
 **Failure-analysis upkeep — the two rulings that matter.** When a human rules on a

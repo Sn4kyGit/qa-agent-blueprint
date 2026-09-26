@@ -127,6 +127,8 @@ test('checkout requires valid email - regression for BUG-456', async ({ page }) 
 
   // Should show validation error, not proceed
   await expect(page.getByText('Email is required')).toBeVisible();
+  // Supplementary only — a negative assertion never carries a verdict on its
+  // own (evidence policy); the positive check above is the assertion.
   await expect(page).not.toHaveURL(/.*confirmation/);
 });
 ```

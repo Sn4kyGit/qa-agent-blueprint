@@ -399,7 +399,7 @@ CI=true npx playwright test path/to/fixed.spec.ts --repeat-each=50 --workers=4
      },
    }, async ({ page }) => { /* ... */ });
    ```
-3. Update the ticket (BUG-1234) with the fix details
+3. Report the fix details on the ticket (BUG-1234) via the `report-to-jira` skill — composed per the project's report format, posted per shadow mode (proposal by default), never a direct write
 4. Verify the test runs in the `stable` project, not `quarantine`
 5. Monitor for 1 week after release — if it flakes again, re-quarantine
 

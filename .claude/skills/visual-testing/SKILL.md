@@ -32,7 +32,7 @@ Catch visual regressions that functional tests miss. A button that works perfect
 
 ## Discovery Questions
 
-Check `.agents/qa-project-context.md` first — if it exists, use it and skip anything answered there.
+Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if it exists, use it and skip anything answered there.
 
 ### Tool selection
 - **Playwright built-in or dedicated tool?** `toHaveScreenshot` is free, stores baselines in-repo (git/LFS cost is on you). Dedicated tools (Chromatic, Percy, Argos) store artifacts off-repo, add review workflows, browser farms, historical tracking, and — since late 2025 — AI diff triage. Choose on team size, review needs, and whether you want artifacts in your repo or theirs.
@@ -317,8 +317,7 @@ A clean first run that writes `*-snapshots/*.png` files, plus a second run that 
 
 ## Related Skills
 
-- **playwright-automation** — foundation for Playwright-based visual tests; Page Object Model, fixtures, and test structure apply here too.
-- **ci-cd-integration** — pipeline config for running visual tests, uploading artifacts, and wiring review workflows.
-- **cross-browser-testing** — when the goal is a rendering matrix across browsers rather than baseline diffs of one render; viewport/project config overlaps.
-- **selector-drift-recovery** — when a redesign broke many baselines at once and you need bulk regeneration, not per-test visual diffs.
-- **qa-project-context** — captures which pages are visually critical and what dynamic content exists.
+- **test-automation** — foundation for Playwright-based visual tests; fixtures and test structure apply here too.
+- The bridge file `.agents/qa-project-context/<KEY>.md` captures which pages are visually critical and what dynamic content exists.
+- A redesign that broke many baselines at once needs bulk regeneration, not per-test visual diffs — do it deliberately with the suite owner, not test by test.
+- Cross-browser rendering matrices are out of this blueprint's skill set — Playwright projects (chromium/webkit/firefox) in the suite config cover the basics.

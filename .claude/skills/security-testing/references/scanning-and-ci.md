@@ -27,7 +27,7 @@ security-scan:
 
 For API scanning, use `zap-api-scan.py` with your OpenAPI spec. For full scans, use `zap-full-scan.py` via Docker (`ghcr.io/zaproxy/zaproxy:stable`).
 
-**ZAP MCP Server (April 2026):** Lets coding agents (Claude Code, Codex, Cursor) drive spider/active-scan/alert-analysis during development — useful for "scan the diff" workflows and AI-augmented security review. Pair with `ai-qa-review` for agent-driven triage. **OWASP PTK** is now bundled with ZAP-launched browsers; PTK findings surface as ZAP alerts, giving one-tool DAST + SAST + SCA flow.
+**ZAP MCP Server (April 2026):** Lets coding agents (Claude Code, Codex, Cursor) drive spider/active-scan/alert-analysis during development — useful for "scan the diff" workflows and AI-augmented security review. **Not wired in this blueprint** — it declares exactly two MCP servers (playwright, atlassian) and a new server is a human decision, never an agent's; use the ZAP CLI/CI path here. **OWASP PTK** is now bundled with ZAP-launched browsers; PTK findings surface as ZAP alerts, giving one-tool DAST + SAST + SCA flow.
 
 If you build MCP servers, note the separate `action-mcp-scan` GitHub Action / MCP add-on (2026-05-21) scans an MCP server as a *target* (prompt-injection, tool-poisoning, exposed tools) — a different capability from ZAP's MCP-driven scanning above.
 
@@ -106,7 +106,7 @@ module.exports = {
 };
 ```
 
-For real multi-language SAST, run Semgrep (`semgrep/semgrep-action@v1`) with rulesets `p/owasp-top-ten`, `p/javascript`, `p/typescript` — this is the gate that should fail the build. Re-validate the `p/owasp-top-ten` ruleset against the 2025 list before relying on it. **Semgrep MCP** (2026) exposes `semgrep_findings` for agent-driven triage — pair with `ai-qa-review` when reviewing AI-authored code.
+For real multi-language SAST, run Semgrep (`semgrep/semgrep-action@v1`) with rulesets `p/owasp-top-ten`, `p/javascript`, `p/typescript` — this is the gate that should fail the build. Re-validate the `p/owasp-top-ten` ruleset against the 2025 list before relying on it. **Semgrep MCP** (2026) exposes `semgrep_findings` for agent-driven triage — **not wired in this blueprint** (two declared MCP servers only); the CI gate above is the path here.
 
 ## Secret Scanning
 

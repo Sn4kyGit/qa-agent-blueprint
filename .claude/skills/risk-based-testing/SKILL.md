@@ -3,7 +3,7 @@ name: risk-based-testing
 description: >-
   Produce a risk matrix/heatmap (business impact × probability), failure mode
   analysis on the top items, and test coverage mapped to risk zones. Run BEFORE
-  test-strategy or test-planning. Use when: risk assessment, risk matrix, risk
+  or sprint planning. Use when: risk assessment, risk matrix, risk
   heatmap, what could break, critical paths, failure modes, where to focus
   testing. Not for sprint test plans or hands-on session-based bug hunting.
 license: MIT
@@ -14,7 +14,7 @@ metadata:
 ---
 
 <objective>
-Equal coverage across all features wastes effort on low-risk areas while leaving critical paths under-tested — a 90% coverage target on a settings page is effort stolen from checkout. This skill discovers risk, quantifies it as impact × probability, maps test density to risk zones, and keeps the assessment current as the product evolves. Output is a scored risk matrix that feeds `test-strategy` and `test-planning`.
+Equal coverage across all features wastes effort on low-risk areas while leaving critical paths under-tested — a 90% coverage target on a settings page is effort stolen from checkout. This skill discovers risk, quantifies it as impact × probability, maps test density to risk zones, and keeps the assessment current as the product evolves. Output is a scored risk matrix that feeds the project's test strategy and sprint planning.
 </objective>
 
 ## Quick Route
@@ -31,7 +31,7 @@ Equal coverage across all features wastes effort on low-risk areas while leaving
 
 ## Discovery Questions
 
-Check `.agents/qa-project-context.md` first — if it exists, use it as the foundation and skip questions already answered there. Gather the rest from stakeholders across engineering, product, and operations.
+Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if it exists, use it as the foundation and skip questions already answered there (flow-map.md and learnings.md are phase-1 inputs too, not parallel stores). Gather the rest from stakeholders across engineering, product, and operations.
 
 ### Revenue-Critical Flows
 - Which user flows directly generate revenue? (checkout, subscription, billing, upgrades)
@@ -171,7 +171,7 @@ Failure Mode 3: Inventory not reserved during checkout
 For AI/LLM features, classify against these CT-GenAI classes and score Impact and Probability independently like any other risk. The mitigation is the existence of an automated **eval suite**, not a single manual test.
 
 > **AI/LLM-specific failure classes** (from ISTQB CT-GenAI v1.1, effective 27 April 2026):
-> - **Hallucination / reasoning error** — Impact: moderate to major; Probability: high without explicit prompt-eval coverage. Detection: golden-dataset evals, fact-check assertions (see `ai-system-testing`).
+> - **Hallucination / reasoning error** — Impact: moderate to major; Probability: high without explicit prompt-eval coverage. Detection: golden-dataset evals, fact-check assertions.
 > - **Bias** — Impact: catastrophic in regulated industries (finance, healthcare, hiring). Probability: dataset-dependent. Detection: counterfactual evals, demographic-parity checks.
 > - **Prompt injection / jailbreak** — Impact: major (data exfiltration, prompt extraction). Probability: high for any externally-facing LLM feature. Detection: Garak, PyRIT, Promptfoo redteam.
 > - **Privacy leak** — Impact: catastrophic under GDPR/CCPA/EU AI Act. Probability: dataset-dependent. Detection: PII scanning of training data and prompts.
@@ -304,7 +304,7 @@ Severity is how bad a failure is; priority is how urgently to test it. A catastr
 
 Prove the matrix is real and aligned before calling it done — smallest check first:
 
-- **Artifact exists and is tracked:** `git ls-files | grep -E 'risk-matrix|qa-project-context'` returns the file. An untracked draft on someone's laptop is not a risk model.
+- **Artifact exists and is tracked:** `git ls-files | grep -E 'risk-matrix'` returns the file. An untracked draft on someone's laptop is not a risk model.
 - **Every in-scope feature is scored:** grep the artifact for rows missing an impact or probability number. A feature with a name but no score is a gap, not a low risk.
 - **Top items have failure mode analysis:** every item scoring ≥ 10 has a block with all five fields (Trigger, Blast Radius, Detection Method, Current Mitigation, Gap). A failure mode with an empty Gap line was not actually analyzed.
 - **Coverage aligns to the heatmap:** for each CRITICAL/HIGH feature, confirm the prescribed coverage from the Phase-5 table actually exists (run the suite, check the coverage report's per-module numbers against the target). If the heatmap says CRITICAL but the module has 40% branch coverage and no E2E, the exercise was Risk Theater.
@@ -312,7 +312,7 @@ Prove the matrix is real and aligned before calling it done — smallest check f
 
 ## Done When
 
-- A scored risk matrix exists as a tracked artifact (`.agents/qa-project-context.md` risk section or a committed `risk-matrix.md`), with every in-scope feature scored on impact (1-5) and probability (1-5)
+- A scored risk matrix exists as a tracked artifact at `projects/<KEY>/risk-matrix.md` — never inside the bridge file `.agents/qa-project-context/<KEY>.md`, which is a regenerated projection (hand-edits get silently overwritten); the projection picks the matrix up at regeneration — with every in-scope feature scored on impact (1-5) and probability (1-5)
 - Each feature's composite score places it in a named zone (CRITICAL, HIGH, MEDIUM, or LOW) with a corresponding testing action assigned
 - Every feature scoring ≥ 10 has a completed failure mode analysis with trigger, blast radius, detection method, current mitigation, and gap documented
 - Coverage requirements per zone are mapped against current coverage, with each gap assigned a Priority (P0-P3), an Owner, and a Target Sprint
@@ -324,9 +324,8 @@ Prove the matrix is real and aligned before calling it done — smallest check f
 
 ## Related Skills
 
-- **test-strategy** — The multi-quarter QA strategy this risk matrix feeds into; risk assessment is one input to a broader strategy.
-- **test-planning** — Single-sprint/release planning uses risk priorities to decide what to test this iteration.
 - **release-readiness** — Go/no-go decisions reference the heatmap to confirm critical areas are covered.
 - **qa-metrics** — Defect escape rate and defect clustering feed back into risk reassessment.
-- **ai-system-testing** — Building the eval suites that mitigate the Phase-3 AI/LLM failure classes.
-- **qa-project-context** — Captures the critical flows, fragile areas, and dependencies this skill consumes and writes the risk matrix back into.
+- **test-ticket** — the qa-manager strategy consults this matrix when a ticket's risk decides the test depth.
+- The bridge file `.agents/qa-project-context/<KEY>.md` (generated by `/onboard-project`) carries the critical flows and dependencies this skill consumes; the matrix itself lives at `projects/<KEY>/risk-matrix.md`.
+- Building eval suites for AI/LLM failure classes is not vendored in this blueprint — flag it as a tooling proposal when the product ships LLM features.

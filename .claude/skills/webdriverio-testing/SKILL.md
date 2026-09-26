@@ -23,7 +23,7 @@ remote hub or mobile capabilities.
   separate repo checkout with its own `wdio.conf.ts`). Products may override.
 - One `describe` per flow; `beforeEach` for login/setup, matching the patterns
   already proven in `memory/learnings/flaky-tests.md`.
-- Element access via `browser`, `$`, `$$`. Assertions via `expectwdio`
+- Element access via `browser`, `$`, `$$`. Assertions via `expect-webdriverio`
   (`await expect($('#cart')).toBeDisplayed()`, `await expect(browser).toHaveUrl(...)`).
 - Waiting is explicit and condition-based: `waitForDisplayed()`,
   `waitForEnabled()`, `browser.waitUntil()`. `browser.pause()` is the documented
@@ -85,7 +85,10 @@ flag it to the user instead of improvising a project layout.
   down at the harness level (`CONNECTION_CLOSED` et al.) cannot be retried into
   health (field report 2026-09: 11 cases lost overnight to exactly that).
   Report BLOCKED with the reason and stop; reconnecting (`/mcp`, restart) is a
-  human step. Resource contention counts too: one Appium/simulator pipeline per
+  human step. (The general preflight norm — `preflight.sh <KEY>` plus the
+  PreToolUse gate — lives in `docs/rules/testing/preflight.md` and
+  `test-automation`; this bullet is the device-specific addendum.)
+  Resource contention counts too: one Appium/simulator pipeline per
   machine at a time — two in parallel crash-loop WebDriverAgent.
 - **Environment second.** A clean tenant and a fresh redeploy beat a midnight
   run against clutter — leftover test data degrades the environment until

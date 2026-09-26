@@ -43,6 +43,44 @@ the data boundary.
   a row that again needed human/default resolution becomes a learning, not a
   confident lie in the registry.
 
+### Changed — skill coherence pass (all 29 skills)
+- **The ten vendored qa-skills are now blueprint-adapted, not byte-identical.**
+  Where upstream behavior conflicted with blueprint norms, the bodies were
+  adjusted: secrets flow everywhere via `qa-secrets.mjs run` (test-case-management
+  curls use env-by-key-name, never inline credentials), ticket writebacks route
+  through `report-to-jira`/`bug-report` (bug-reproduction, test-reliability),
+  ZAP/Semgrep *MCP* mentions annotated as not-wired (two declared MCP servers
+  only), `release-readiness` gained a scope note (the agent prepares, humans
+  execute against production — rollback/prod smoke are human/runbook steps).
+  All dangling upstream "Related Skills" pointers removed or mapped to existing
+  skills. `THIRD_PARTY_NOTICES.md` rewritten with the per-skill change list —
+  an upstream re-vendor is now a manual merge.
+- **`execution_summary.json` gains a `mode` field** (evidence-policy schema);
+  `report-to-jira` renders it as a Mode header line (a verdict says whether it
+  was observed or asserted); `retest-bug` is mode-aware (cli-first/hybrid sweep
+  via spec through the automator; recon before touching the suite).
+- **opencode parity**: `qa-manager` regained the 0.12.0 norm blocks (diff vs.
+  the Claude version is frontmatter/namespace only); `test-executor` and
+  `bug-reporter` got the missing secrets-leak and culprit-marking norms; the
+  missing `/demo` command added.
+- **scaffold-suite ships the observation-channel fixture**
+  (`templates/tests/fixtures/observation.ts`): console errors + responses ≥ 400
+  per test into `<evidence>/observations/`, auto-attached — the file pipeline
+  phase 4 always said the templates ship.
+- **Shipped `_inbox.md` is a template again**: the three blueprint self-review
+  entries were absorbed into rules long ago (WebMCP probe, hook-fixture
+  discipline, `.claudeignore` limitation); leaving them shipped would trip the
+  new auto-groom on every consumer's first session.
+- Smaller fixes: deploy-to-stage references "Waiting productively" (no idle
+  wait), qa-report's awaiting-ruling counts `test-brittle` too, re-board reads
+  the blueprint version via `claude plugin details` in plugin mode,
+  webdriverio-testing `expect-webdriverio` typo + preflight cross-reference,
+  retro-learn capture format synced with the inbox template (scope marker in
+  the header, `flow-map.md` candidate).
+- **Eval inventory corrected to 24 cases**: `mode-routing` and `no-idle-wait`
+  were missing from the COVERAGE case table ("The twenty-four cases");
+  README/overview counts updated (24 evals, 139 bun tests).
+
 ## [0.12.0] — 2026-09-24
 
 Theme: **who sits at the wheel.** Execution becomes a per-project choice —

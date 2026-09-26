@@ -14,7 +14,10 @@ finished comment and the transition you would have applied to
 `evidence/<KEY>/<TICKET>/<ts>/proposed-report.md`, set `"reported_to_jira": false`
 and `"shadow": true` in the summary, and tell the user it is waiting for review.
 No comment, no transition, no attachment — see `.claude/rules/core/security.md` →
-"Shadow mode".
+"Shadow mode". While shadow is on, the PreToolUse guard **mechanically blocks**
+the atlassian write tools (including the Cloud v2 meta-tools `executeWrite` /
+`executeDestructive`) — a blocked call is the guard working as designed, not a
+JIRA error and never a reason to retry or route around it.
 
 ## NO_TEST posts nothing
 
@@ -43,6 +46,12 @@ wrong channel for this project.
    definition (`.claude/rules/core/product-layer.md`). A product may override the
    bug template and the severity mapping, nothing else here.
 2. Compose the comment:
+   - The header line carries the run's coordinates: verdict, environment/build,
+     and **`Mode: <mcp-only|hybrid|cli-first>`** from the run's
+     `execution_summary.json` → `mode` (mandatory since 0.12.0 — whoever reads
+     the report later must know whether the result was observed live or only
+     asserted; an escalated run names its mode and the escalation, per
+     `docs/pipeline/06-reporting.md`).
    - When a product was routed, **name it in the first line** — a verdict without
      the product is ambiguous once a project has several. A ticket covering two
      products gets one aggregated comment naming both
@@ -64,7 +73,7 @@ wrong channel for this project.
    simple Markdown on a **Data Center** deployment (the community server converts
    to wiki markup) — deployment comes from `PROJECT.md` → "JIRA deployment";
    headings/lists, no pipe tables —
-   `docs/rules/testing/jira-confluence.md`) via the Atlassian MCP server.
+   `docs/rules/testing/jira-confluence.md` — via the Atlassian MCP server.
     Attach evidence files (screenshots, not full logs unless the project asks for
     them) via the attachment call. On Cloud v2 the comment/transition tools are
     Primary (direct); attachment upload is a DEFERRED tool — `discover` once,

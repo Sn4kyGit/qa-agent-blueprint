@@ -6,7 +6,7 @@ description: >-
   confidence-scored auto-repair. Use when: flaky test, test stability,
   self-healing locator, broken locator recovery, unreliable test, quarantine flaky
   test. Not for bulk selector regeneration after a refactor
-  (selector-drift-recovery) or CI failure clustering (ai-bug-triage).
+  or CI failure clustering.
 license: MIT
 metadata:
   author: kindlmann
@@ -32,7 +32,7 @@ A retried test that still flakes will eventually fail 3-of-3 during your most cr
 
 ## Discovery Questions
 
-Check `.agents/qa-project-context.md` first — it carries known flaky areas, selector strategy, and CI environment details. Skip any question it already answers.
+Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — it carries known flaky areas, selector strategy, and CI environment details. Skip any question it already answers.
 
 - **What is your current flaky test rate?** Check CI failure stats over the last 30 days. Below 2% is healthy; 2-5% needs attention; above 5% is eroding team trust.
 - **Where is the pain concentrated?** Locator breakage? Timing? Test data? Environment? If unknown, instrument first (see Flake Classification).
@@ -270,7 +270,7 @@ Score each repair candidate on six dimensions (weighted sum, 0.0-1.0):
 
 ### Repair Evidence
 
-Every repair produces an evidence record containing: test file, test name, failure type, original locator, candidate replacements (each with confidence, evidence string, and intent-preserved flag), which candidate was selected, timestamp, approval path, rollback trigger, **and a `screencast.webm` recording of the repair run** (Playwright 1.59+ `page.screencast` with `showActions` annotations — the "agentic video receipt"). Without the screencast, a Level-3/4 healed test asks reviewers to trust a JSON record; with it, the diff and the runtime are both inspectable.
+Every repair produces an evidence record containing: test file, test name, failure type, original locator, candidate replacements (each with confidence, evidence string, and intent-preserved flag), which candidate was selected, timestamp, approval path, rollback trigger, **and a `screencast.webm` recording of the repair run** (Playwright 1.59+ `page.screencast` with `showActions` annotations — the "agentic video receipt"). Without the screencast, a Level-3/4 healed test asks reviewers to trust a JSON record; with it, the diff and the runtime are both inspectable. In this blueprint the record lands in the run's evidence directory (`evidence/<KEY>/<TICKET>/<ts>/`); durable flake knowledge (root cause, stable alternative) belongs to `memory/learnings/flaky-tests.md` via `retro-learn`.
 
 ### Buy vs Build
 
@@ -395,8 +395,6 @@ Tests sit in quarantine for months. Quarantine is a temporary state, not a perma
 
 ## Related Skills
 
-- **selector-drift-recovery** — go there to bulk-regenerate many selectors offline after a planned UI refactor; this skill heals one test at runtime.
-- **playwright-automation** — full Playwright setup, Page Object Model, fixtures, and CI integration that the patterns here build on.
-- **ci-cd-integration** — pipeline configuration, parallel execution, and the quarantine job wiring referenced above.
+- **test-automation** — full Playwright/WebdriverIO setup, fixtures, and CLI-runner integration that the patterns here build on; bulk selector regeneration after a planned UI refactor happens there, this skill heals one test at runtime.
 - **qa-metrics** — track flaky rate, mean-time-to-heal, quarantine size, and selector stability over time.
-- **ai-bug-triage** — when flake investigation reveals a real app bug, hand the failure to the triage pipeline to classify and report it.
+- **failure-analysis** — when flake investigation reveals a real app bug, the failure goes back to failure-analysis for classification (product-defect) and then to bug-report.

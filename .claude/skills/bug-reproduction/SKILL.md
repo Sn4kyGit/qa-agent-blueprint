@@ -39,9 +39,10 @@ and confirm the fix flips it green — and that reverting the fix turns it red a
 
 ## Discovery Questions
 
-First, check `.agents/qa-project-context.md` in the project root — it carries the tech
+First, check the project bridge file `.agents/qa-project-context/<KEY>.md` — it carries the tech
 stack, test runner, known-flaky areas, and environment matrix. Pass over any question it
-already answers. If it is missing, suggest creating one with the `qa-project-context` skill.
+already answers. If it is missing, suggest `/onboard-project` (or `/re-board`) — the bridge
+file is generated there, never hand-written.
 
 - **What is the report, verbatim?** The thinner it is, the more you must extract before
   touching code — a one-line report sets the whole intake agenda (Step 1).
@@ -387,16 +388,16 @@ user's environment and data and use `--repeat-each` before judging (Step 7).
 
 ## Related Skills
 
-- **`ai-bug-triage`** — Classify, deduplicate, and severity-route *existing* failures.
-  Triage decides *whether and where* a failure matters; come here to actually *reproduce*
-  one and write the failing test. Triage hands off; bug-reproduction picks up.
-- **`ai-test-generation`** — Generate tests from specs/PRDs/stories. Use it when the source
-  is a requirement; use this skill when the source is a *defect* and the test must first go
-  red against the bug.
+- **`failure-analysis`** — Classify a failing test (product defect vs. outdated test).
+  Classification decides *what* a failure is; come here to actually *reproduce* a defect
+  and write the failing test. Classification hands off; bug-reproduction picks up.
+- **`test-automation`** — Generate deterministic specs from understood flows. Use it when
+  the source is a requirement; use this skill when the source is a *defect* and the test
+  must first go red against the bug.
 - **`test-reliability`** — Runtime self-healing and quarantine for a flaky test. When Step 7
   diagnoses true flakiness, go there to stabilize or quarantine; here you only diagnose.
-- **`qa-project-context`** — Stack, test runner, environment matrix, and known-flaky areas
-  that shape every step above. Check it first.
+- The bridge file `.agents/qa-project-context/<KEY>.md` — stack, test runner, environment
+  matrix, and known-flaky areas that shape every step above. Check it first.
 - **systematic-debugging** (`superpowers:systematic-debugging`) — The general root-cause
   debugging loop once you have a deterministic repro; this skill produces that repro and
   the failing test that guards the eventual fix.

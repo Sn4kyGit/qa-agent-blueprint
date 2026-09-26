@@ -65,7 +65,27 @@ the ticket done.
 3. **Check stage**: is the fix actually deployed? Use the project's version-check
    method. If not deployed and the project allows agent-triggered deploys, invoke
    the `deploy-to-stage` skill; otherwise report BLOCKED and ask.
-4. **Decide strategy**:
+4. **Decide strategy — mode first.** Read `projects/<KEY>/PROJECT.md` →
+   "Execution mode" (a routed product may override it): `mcp-only`, `hybrid`
+   (default) or `cli-first`. The mode decides who sits at the wheel during
+   execution; the six pipeline phases and their file contracts
+   (`intake.json` → `recon.json` → `testplan.md` → `run.json` → `verdict.json`,
+   all in the run dir) are `docs/pipeline/00-overview.md` — follow them, they
+   add structure to the steps below, not a second process:
+   - **`mcp-only`** — as before: everything observed live via `test-executor`.
+   - **`hybrid`** — recon before any spec (`/recon` probe → real selectors, or
+     an MCP recon session when the interaction itself is unclear); planning
+     produces `testplan.md` and, on `Plan approval: yes`, waits for human
+     confirmation (headless: proceed and flag); execution via `test-automator`;
+     verification adds the red check for new specs and, on `Verification pass:
+     yes`, one short live pass over the main flow after a green run.
+   - **`cli-first`** — the existing suite runs; `recon.json` is reused, MCP
+     enters only to classify an unclear failure.
+   - **Escalation overrides every mode** (full list: `docs/pipeline/00-overview.md`):
+     risk at/above the project's `Escalate at risk`, visual/design tickets, no
+     `recon.json` for the area, unclear CLI failure, an AC that cannot be
+     asserted without shortening it, a non-reproducible bug → observe live.
+     Never escalate merely because a test is red.
    - **If a product was routed, its "Feature & test-method matrix" is the strategy
      input** — read it instead of guessing which test types a ticket needs. A
      feature marked `Applies: yes` brings its mandatory test types and its
@@ -76,8 +96,10 @@ the ticket done.
      silent override.
    - Bug ticket, already has a known repro → re-test focus (equivalent to
      `retest-bug`): verify the fix, then a tight regression sweep around it.
-   - Story/new feature → full test: map acceptance criteria to checks, exploratory
-     first, convert to a regression spec if the flow is worth repeating.
+   - Story/new feature → full test: map acceptance criteria to checks (numbered
+     `AC1`, `AC2`, … per `docs/pipeline/01-intake.md` — the IDs travel into spec
+     titles, run records and the report), exploratory first, convert to a
+     regression spec if the flow is worth repeating.
    - Unclear which areas deserve the most attention, or a release/epic with many
      tickets → pull in the `risk-based-testing` skill first to score areas by
      impact×probability before deciding depth per area.
@@ -157,7 +179,10 @@ that mechanically, not apologetically:
    Then report via the `report-to-jira` skill, which picks the transition from the
    class — including "no transition at all" for a stale test.
 8. **On PASS** — report via `report-to-jira` (comment + final screenshot +
-   transition to the project's PASS transition).
+   transition to the project's PASS transition). Every report carries the run's
+   **mode** (`Mode: <mcp-only|hybrid|cli-first>` in the header per
+   `docs/pipeline/06-reporting.md`) — whoever evaluates the result later must
+   know whether it was observed live or only asserted.
 9. **On BLOCKED** — comment explaining why (env down, missing test data, no
    deploy permission) and ping the user; do not transition unless the project file
    says BLOCKED has its own transition.

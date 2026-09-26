@@ -31,6 +31,9 @@ description: Execute the active project's stage-deploy runbook, with safety chec
 5. Trigger the pipeline with the parameters from the runbook (branch/release from
    the ticket's fix version). Wait for stages in the documented order; a failed
    migration step means the deploy is **not** valid even if later stages go green.
+   The wait is not idle — never `sleep`-poll the status; fill the window with
+   non-colliding work (`docs/rules/core/cicd.md` → "Waiting productively"),
+   browser verification only after the deploy has finished.
 6. Run post-deploy steps exactly as listed (cache flush, feature flags).
 7. **Verify before handing back**: version-check method matches the expected
    version, AND a smoke probe passes (homepage/login as the project's standard

@@ -18,7 +18,9 @@ offer only the delta, confirm each change individually, and re-stamp. Expect
    exist, this is not a re-board — say so and route to `/onboard-project`.
 2. Build the **delta list** by comparing against the current template
    (`projects/_template/`, in plugin mode under `$CLAUDE_PLUGIN_ROOT/`) and the
-   installed blueprint version (`.claude-plugin/plugin.json`):
+   installed blueprint version (in the blueprint repo: `.claude-plugin/plugin.json`;
+   in plugin mode: `claude plugin details qa-agent-blueprint` — the file lives in
+   the plugin cache, not the consumer repo):
    - **Missing fields** the template has and the project file lacks (e.g.
      `Blueprint version`, `Secrets source`, `Framework`, the whole
      **Execution mode** section — a project without it runs `hybrid` with the

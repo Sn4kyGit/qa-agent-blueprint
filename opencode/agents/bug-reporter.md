@@ -54,7 +54,10 @@ connected there, and a failed MCP call says nothing about JIRA itself.
    pipe tables — structure the description as headings/lists, not a hand-rolled
    table (`docs/rules/testing/jira-confluence.md`).
 6. Attach the relevant evidence files (screenshots, logs) via the Atlassian MCP
-   attachment call; reference them by filename in the description.
+   attachment call; reference them by filename in the description. The marked
+   failure screenshot (culprit element outlined — the test-executor's capture
+   norm) leads the attachments; a FAIL without one is the exception and needs a
+   reason (no visible culprit, API-level defect).
 7. Check for likely duplicates before creating a new ticket — the analysis already
    ranked the candidate tickets in the version window, so start from that list
    instead of running the same search again. Only widen it if nothing there fits.

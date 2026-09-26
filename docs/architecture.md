@@ -100,7 +100,7 @@ Capture → Groom → Promote, run by the `retro-learn` skill:
 
 - **Capture** (every session): unexpected findings → `memory/learnings/_inbox.md`,
   dated, Problem/Cause/Solution, with a candidate promotion target.
-- **Groom** (weekly/on demand): dedupe via Grep, bump `seen:` counters, retire
+- **Groom** (weekly, on demand, or when the AUTO-GROOM directive fires): dedupe via Grep, bump `seen:` counters, retire
   stale entries into `memory/learnings/_rejected.md` (reason + re-proposal
   condition — the buffer against re-proposing what was already thrown out).
 - **Promote** (gate: ≥ 2 sessions): into rules, skills, or `projects/<KEY>/` — from

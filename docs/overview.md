@@ -24,11 +24,11 @@ Regeln (immer / on demand)
 
 Hooks
 
-421+138
+421+139
 
 Fixture-Checks + bun-Tests
 
-23
+24
 
 Eval-Cases
 
@@ -211,9 +211,9 @@ Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptk
 | /qa-report | Liest alle `execution_summary.json` zurück: Pass-Rate pro Produkt, P0/P1, BLOCKED- und NO\_TEST-Gründe, Routing-Qualität, Learning-Durchsatz. Nennt ausdrücklich, was das Schema nicht hergibt. | „Wie läuft's?", Wochen- oder Sprintbericht |
 | /retro-learn | Capture → Groom → Promote. Klassifiziert eine Überraschung nach Reichweite (Projekt, Produkt, projektübergreifend) und befördert sie beim zweiten Auftreten in eine Regel oder Projektdatei. | Session-Ende, oder wöchentlich zum Verdichten |
 
-### Die 10 Spezialisten — vendored
+### Die 10 Spezialisten — vendored & blueprint-adapted
 
-Aus `petrkindlmann/qa-skills` übernommen und unverändert gelassen. Sie gelten für
+Aus `petrkindlmann/qa-skills` übernommen und überall dort angepasst, wo Upstream-Verhalten den Blueprint-Regeln widerspricht (Secrets-Fluss, Shadow-Disziplin, Stage-only, Report-Routing — die Änderungsliste steht in THIRD\_PARTY\_NOTICES.md). Sie gelten für
 jedes onboardete Produkt; ihren Kontext bekommen sie über eine vorgemergte Bridge-Datei pro
 Projekt und Produkt. qa-manager zieht einen davon, wenn die Feature-Matrix des Produkts es
 vorgibt — nicht nach Gefühl.
@@ -409,7 +409,7 @@ Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gl
 | Hooks (Guard, Stop, SessionStart) | 189 Fixtures — jede Regel mit eigenem Fall |
 | Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption) | 119 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses |
 | Kontextkosten | gemessen — Budget-Check, 8.268 von 8.400 Token belegt |
-| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 23 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
+| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 24 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
 | Ein echtes Projekt, ein echtes Ticket | **nie** — genau das ist der Pilot |
 
 Der erste gelaufene Eval-Case war lehrreich: die Antwort war präziser als der Grader — sie
@@ -569,7 +569,7 @@ es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Age
 vollständig, postet aber nichts, bis du es freigibst.
 
 QA Agent Blueprint · Stand: 24. September 2026 (0.12.0) —
-aktualisiert auf Repo-Stand (29 Skills, 5 Subagents, 421 Fixture-Checks + 138 bun-Tests, 23 Eval-Cases,
+aktualisiert auf Repo-Stand (29 Skills, 5 Subagents, 421 Fixture-Checks + 139 bun-Tests, 24 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
 Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,

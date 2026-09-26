@@ -12,6 +12,19 @@ path on Xray Cloud. Copy from the correct tool's section below.
 | Zephyr Scale Cloud | `https://api.zephyrscale.smartbear.com/v2` | Bearer JWT | `POST /testcases` then `/testcases/{key}/teststeps` | separate `teststeps` call |
 | Qase | `https://api.qase.io/v1` | Header `Token: <key>` (NOT Bearer) | `POST /case/{CODE}/bulk` | `steps[]` `{action, expected_result, data}` |
 
+> **Blueprint auth model — never a credential value in a command, chat or file.**
+> The examples below show auth as environment variables (`$TESTRAIL_API_KEY`,
+> `$XRAY_CLIENT_ID`, …). Keys live in the project's declared secret source and
+> reach the shell via value-free injection:
+>
+> ```bash
+> qa-secrets.mjs run TESTRAIL_USER TESTRAIL_API_KEY -- bash -c 'curl -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" …'
+> ```
+>
+> The agent sees key NAMES, never values (`.claude/rules/core/security.md`). Writes
+> to these tools follow the same discipline as JIRA under shadow mode: compose the
+> payload, post only when shadow is off.
+
 ---
 
 ## TestRail — `add_case` with separated steps
@@ -25,7 +38,7 @@ will NOT give you per-step expected results.
 Auth is HTTP Basic with `email:api_key` (or `email:password`), not a bearer token.
 
 ```bash
-curl -u "qa@example.com:YOUR_API_KEY" \
+curl -u "$TESTRAIL_USER:$TESTRAIL_API_KEY" \
   -H "Content-Type: application/json" \
   -X POST "https://example.testrail.io/index.php?/api/v2/add_case/432" \
   -d '{
@@ -63,7 +76,7 @@ because it is more powerful than the REST helpers.
 ```bash
 TOKEN=$(curl -s -H "Content-Type: application/json" \
   -X POST "https://xray.cloud.getxray.app/api/v2/authenticate" \
-  -d '{ "client_id": "CLIENT_ID", "client_secret": "CLIENT_SECRET" }' | tr -d '"')
+  -d '{ "client_id": "'"$XRAY_CLIENT_ID"'", "client_secret": "'"$XRAY_CLIENT_SECRET"'" }' | tr -d '"')
 ```
 
 Do NOT use Jira username/password basic auth for the Xray API — that authenticates against
@@ -121,7 +134,7 @@ in the create-case body. Test steps are a **separate call**: `POST /testcases/{c
 ### Step 1 — create the test case (no steps in this body)
 
 ```bash
-curl -H "Authorization: Bearer YOUR_JWT" -H "Content-Type: application/json" \
+curl -H "Authorization: Bearer $ZEPHYR_JWT" -H "Content-Type: application/json" \
   -X POST "https://api.zephyrscale.smartbear.com/v2/testcases" \
   -d '{
     "projectKey": "WEB",
@@ -139,7 +152,7 @@ The response returns the new test case `key` (e.g. `WEB-T42`). Use it in step 2.
 ### Step 2 — add named steps with `mode: APPEND` and `inline` items
 
 ```bash
-curl -H "Authorization: Bearer YOUR_JWT" -H "Content-Type: application/json" \
+curl -H "Authorization: Bearer $ZEPHYR_JWT" -H "Content-Type: application/json" \
   -X POST "https://api.zephyrscale.smartbear.com/v2/testcases/WEB-T42/teststeps" \
   -d '{
     "mode": "APPEND",
@@ -165,7 +178,7 @@ single most common Qase mistake. Use the bulk endpoint `POST /case/{PROJECT_CODE
 `action`, `expected_result`, and `data` (input data).
 
 ```bash
-curl -H "Token: YOUR_API_KEY" -H "Content-Type: application/json" \
+curl -H "Token: $QASE_API_KEY" -H "Content-Type: application/json" \
   -X POST "https://api.qase.io/v1/case/CHK/bulk" \
   -d '{
     "cases": [

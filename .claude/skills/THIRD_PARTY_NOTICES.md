@@ -1,43 +1,56 @@
 # Third-Party Notices
 
-Several skills in this directory are vendored, unmodified (unless noted), from
+Ten skills in this directory originate from
 [petrkindlmann/qa-skills](https://github.com/petrkindlmann/qa-skills)
-(qa-skills.com), pinned at commit `b3bb61bd268b147476252c6ed5a0440c87b97441`,
-under the MIT license below. They were selected as the highest-impact subset for
-this blueprint's ticket-driven QA flow (see `docs/architecture.md`) — the full
-upstream library has 50 skills covering a much broader surface (email/payment
-testing, chaos engineering, contract testing, and more) that this blueprint does
-not currently pull in.
+(qa-skills.com), vendored at upstream commit `b3bb61bd268b147476252c6ed5a0440c87b97441`
+under the MIT license below — thank you, Petr. They were selected as the
+highest-impact subset for this blueprint's ticket-driven QA flow (see
+`docs/architecture.md`) — the full upstream library has 50 skills covering a much
+broader surface (email/payment testing, chaos engineering, contract testing, and
+more) that this blueprint does not currently pull in.
 
-> **Local modification (0.10.0):** the `description:` frontmatter of ALL vendored
-> skills was trimmed to ~300-400 characters (trigger keywords kept, prose and
-> `Related:`/`Not for:` chains condensed) — descriptions ride in every session's
-> system prompt, and the set had grown to ~10k chars. Skill bodies are
-> unmodified. On an upstream re-vendor, re-apply the trim instead of taking the
-> upstream descriptions back.
+> **Adapted for this blueprint's rules and purposes (0.12.x):** the bodies are no
+> longer byte-identical with upstream. After a full review against the blueprint's
+> norms, each skill was adjusted where upstream behavior would conflict with them —
+> see the per-skill list below. The `description:` frontmatter of all vendored
+> skills was additionally trimmed to ~300-400 characters already in 0.10.0
+> (trigger keywords kept; descriptions ride in every session's system prompt).
+> Consequence for updates: an upstream re-vendor is now a **manual merge** — diff
+> upstream against the pinned commit, then re-apply the adaptations below, never
+> copy-overwrite.
 
-## Vendored as-is
+## What was adapted, per skill
 
-| Skill | Upstream version | Why it's here |
-|---|---|---|
-| `bug-reproduction/` | 1.0 | Repro-before-fix discipline (bisect, determinism, red-before-fix) for `retest-bug` — **description trimmed** 1140 → 1008 chars (dropped one sentence and two `Related:` entries) to satisfy the opencode 1024-char description limit; body unmodified, consider upstreaming |
-| `risk-based-testing/` | 2.0 | Impact×probability risk matrix feeding test-strategy decisions |
-| `api-testing/` | — | REST/GraphQL testing — a gap this blueprint had zero coverage for |
-| `accessibility-testing/` | — | WCAG/axe-core testing |
-| `security-testing/` | — | OWASP Top 10, deeper than the smoke check in `qa-principles.md` |
-| `visual-testing/` | — | Visual regression (Playwright screenshots, Percy/Chromatic/Argos) |
-| `test-reliability/` | — | Flaky-test root-causing and quarantine, complements `memory/learnings/flaky-tests.md` |
-| `qa-metrics/` | — | Coverage/flakiness/MTTR formulas and dashboards |
-| `test-case-management/` | — | Manual test cases in TestRail/Xray/Zephyr/Qase — relevant since this blueprint is JIRA-based |
-| `release-readiness/` | — | Go/no-go checklists, smoke suite design, rollback criteria |
+| Skill | Upstream version | Why it's here | Blueprint adaptations |
+|---|---|---|---|
+| `bug-reproduction/` | 1.0 | Repro-before-fix discipline (bisect, determinism, red-before-fix) for `retest-bug` | Description trimmed 1140 → 1008 chars (opencode limit). Ticket writeback (`references/ticket-writeback.md`) routes through `report-to-jira`/`bug-report` — project report format, shadow mode, transitions from `PROJECT.md`, never direct ticket edits. Related-Skills section mapped to existing skills (`failure-analysis`, `test-automation`). |
+| `risk-based-testing/` | 2.0 | Impact×probability risk matrix feeding strategy decisions | Risk matrix home is `projects/<KEY>/risk-matrix.md`, never the bridge file (a regenerated projection). Related-Skills mapped; flow-map/learnings named as phase-1 inputs. |
+| `api-testing/` | — | REST/GraphQL testing — a gap this blueprint had zero coverage for | Secrets flow (`qa-secrets.mjs run`, env-by-key-name) and the stage-only anti-pattern. Contract-testing pointers reworded (Pact not vendored — propose as tooling). |
+| `accessibility-testing/` | — | WCAG/axe-core testing | Related-Skills mapped; formal compliance documentation (VPAT/EAA) explicitly flagged as out-of-blueprint. |
+| `security-testing/` | — | OWASP Top 10, deeper than the smoke check in `qa-principles.md` | `owasp-coverage.md` clarified as suite documentation (never a substitute for run evidence). ZAP/Semgrep **MCP** mentions annotated: not wired — this blueprint declares exactly two MCP servers (playwright, atlassian), CLI/CI paths are the way. LLM deep-testing handoff → "flag as proposal". |
+| `visual-testing/` | — | Visual regression (Playwright screenshots, Percy/Chromatic/Argos) | Related-Skills mapped; cross-browser matrices and bulk baseline regeneration scoped. |
+| `test-reliability/` | — | Flaky-test root-causing and quarantine, complements `memory/learnings/flaky-tests.md` | Repair evidence lands in the run's evidence dir; durable flake knowledge → `flaky-tests.md`. Ticket updates go via `report-to-jira` (shadow discipline). |
+| `qa-metrics/` | — | Coverage/flakiness/MTTR formulas and dashboards | Scope note: run-level numbers come from `/qa-report` with its own denominators (PASS/decided runs); this skill's CI-based formulas are for wiring CI analytics. Description disambiguates against `/qa-report`. |
+| `test-case-management/` | — | Manual test cases in TestRail/Xray/Zephyr/Qase — relevant since this blueprint is JIRA-based | Credentials never inline: all tool auth via `qa-secrets.mjs run <KEY…>` env injection (values never in commands/chat/files); writes follow shadow discipline. Graduation handoff → `test-automation`, with tool-key ↔ TC-ID mapping recorded. |
+| `release-readiness/` | — | Go/no-go checklists, smoke suite design, rollback criteria | **Scope note added (the agent prepares, humans execute against production):** production/post-deploy smoke runs, rollback execution (kill switch, code/DB rollback), and prod verification commands are human/runbook work; the agent assembles evidence, checklists and the rollback plan, executes smoke against staging, and asks. Stage-only is the hard rule. |
 
-## Adapted (merged into an existing skill, not a straight copy)
+All vendored skills: dangling upstream "Related Skills" pointers
+(`contract-testing`, `playwright-automation`, `ai-test-generation`,
+`selector-drift-recovery`, `qa-dashboard`, `coverage-analysis`,
+`quality-postmortem`, `ai-bug-triage`, `test-planning`, `ci-cd-integration`,
+`ai-system-testing`, `shift-left-testing`, `test-environments`, `database-testing`,
+`ai-qa-review`, `cross-browser-testing`, `synthetic-monitoring`,
+`testing-in-production`, `compliance-testing`, `test-strategy`,
+`qa-project-context` the skill) were removed or mapped to the blueprint's
+existing skills, so no reference leads into the void.
+
+## Merged (not a straight copy)
 
 | File | Source | What changed |
 |---|---|---|
 | `exploratory-testing/SKILL.md` | upstream `exploratory-testing/SKILL.md` (v2.0) | Charter model, HICCUPS/FEW HICCUPS heuristics, and the exploration-to-automation pipeline were merged into this blueprint's own skill (which delegates to the `test-executor` subagent) rather than kept as a separate skill, to avoid a name collision. |
-| `exploratory-testing/references/heuristics-and-automation.md` | upstream, same path | Vendored unmodified |
-| `exploratory-testing/references/session-templates.md` | upstream, same path | Vendored unmodified |
+| `exploratory-testing/references/heuristics-and-automation.md` | upstream, same path | Content vendored; the worked example marks its negative assertion as supplementary-only. |
+| `exploratory-testing/references/session-templates.md` | upstream, same path | Vendored. |
 
 ## Bridging `.agents/qa-project-context.md`
 
@@ -55,23 +68,22 @@ product's deltas resolved). The vendored skills must never inherit anything
 themselves: they read one flat, self-contained file. Both carry a `generated_from` /
 `source_sha` frontmatter so `qa-manager` can verify freshness mechanically.
 
-The vendored skills themselves are left unmodified (still say to check the
-generic path) — this blueprint's own orchestration (`CLAUDE.md` → project
-routing, `qa-manager`, `retest-bug`) is responsible for pointing every
-invocation at the correct `<KEY>` (or `<KEY>/<PRODUCT>`) file explicitly rather
-than relying on the skill to find it on its own. `PROJECT.md` (plus `PRODUCT.md`)
-stays the source of truth; regenerate a projection when its sources change
-materially. See `.claude/skills/onboard-project/SKILL.md` and
+The skills' Discovery sections were adapted to name the keyed path directly; the
+orchestration (`CLAUDE.md` → project routing, `qa-manager`, `retest-bug`)
+additionally passes the correct `<KEY>` (or `<KEY>/<PRODUCT>`) file explicitly.
+`PROJECT.md` (plus `PRODUCT.md`) stays the source of truth; regenerate a
+projection when its sources change materially. See
+`.claude/skills/onboard-project/SKILL.md` and
 `.claude/skills/onboard-product/SKILL.md`.
 
 ## Updating
 
-To pull a newer version of a vendored skill, re-download the corresponding
-`skills/<name>/SKILL.md` (and `references/`) from the upstream repo at a chosen
-commit, diff against the local copy, and update the "Upstream version"/commit
-reference in this file. Do not hand-edit a vendored file's content — if this
-blueprint needs a behavior change, either take it upstream (it's MIT, PRs
-welcome) or move the file to the "Adapted" table above and note the change.
+To pull a newer upstream version of a vendored skill, download the corresponding
+`skills/<name>/` from the upstream repo at a chosen commit, diff upstream against
+the pinned commit `b3bb61b`, and **merge**: re-apply the per-skill adaptations from
+the table above and the description trim. Then update the commit reference in this
+file. A copy-overwrite silently drops the blueprint adaptations — that is the one
+thing never to do.
 
 ## License (MIT)
 

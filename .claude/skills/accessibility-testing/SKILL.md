@@ -23,7 +23,7 @@ scan plus the keyboard, screen reader, and ARIA-state testing that catch the oth
 
 ## Discovery Questions
 
-Check `.agents/qa-project-context.md` first — if it exists, use it as the foundation and skip
+Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if it exists, use it as the foundation and skip
 anything already answered.
 
 **Requirements and compliance** (sets the target level and audit obligations)
@@ -283,8 +283,7 @@ Prove the suite actually exercises the page — an a11y test that passes vacuous
 
 ## Related Skills
 
-- **playwright-automation** — the test runner for both axe scans and keyboard/ARIA snapshot tests; this skill adds the accessibility-specific patterns on top.
-- **compliance-testing** — legal/regulatory testing including cookie consent (GDPR/CMP), VPAT generation, and EAA/Section 508 reporting. Go there for consent banners and formal compliance documentation; stay here for WCAG conformance testing.
+- **test-automation** — the test runner for both axe scans and keyboard/ARIA snapshot tests; this skill adds the accessibility-specific patterns on top.
 - **visual-testing** — pixel-diff screenshot regression. Use it for visual rendering changes; use this skill's ARIA snapshots for semantic-tree regressions and contrast for the a11y-specific color thresholds.
-- **ci-cd-integration** — running a11y tests in CI and blocking merges on violations.
 - **risk-based-testing** — prioritizes which pages and components to audit first.
+- Formal compliance documentation (VPAT, EAA/Section 508 reports, cookie-consent audits) is out of this blueprint's skill set — flag it to the team when a ticket needs it.

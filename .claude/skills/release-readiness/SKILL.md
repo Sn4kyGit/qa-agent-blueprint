@@ -17,11 +17,21 @@ metadata:
 "I think it's fine" ships the bug that the rollback you never practiced can't undo at 6 PM on a Friday. This skill turns "ready to ship" into something measurable: a go/no-go checklist with evidence for each item, a sub-5-minute smoke suite, a staged rollout with metric-gated promotion, rollback thresholds defined before deploy, and post-deployment verification. Every section gives concrete criteria, not aspirations.
 </objective>
 
+> **Blueprint scope — the agent prepares, humans execute against production.**
+> In this blueprint the agent assembles go/no-go EVIDENCE, checklists, smoke-suite
+> designs, promotion criteria, and the rollback PLAN. Execution against production —
+> production/post-deploy smoke runs, the rollback itself, post-deploy verification
+> commands — is performed by a human or the project's runbook automation, never by
+> the agent. Stage-only is the hard rule (`.claude/rules/core/security.md`): if a
+> ticket demands production execution, report BLOCKED and ask. Smoke execution
+> against **staging** stays allowed. Every "run this" below reads as "the agent
+> prepares this and hands it to the human/runbook."
+
 ---
 
 ## Discovery Questions
 
-Check `.agents/qa-project-context.md` first — if it exists, use it and skip anything answered there. Then ask only what's missing.
+Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if it exists, use it and skip anything answered there. Then ask only what's missing.
 
 **Release cadence and process:**
 - How often do you release, and who makes the go/no-go call? (Continuous/daily/weekly vs engineering lead/QA lead/release manager — sets how heavyweight the checklist should be.)
@@ -143,18 +153,18 @@ Target: **under 5 minutes** for the entire smoke suite.
 - Can test with feature flags in upcoming release configuration
 - Can test database migrations
 
-**Production smoke tests:**
+**Production smoke tests (designed here, executed by a human or runbook automation):**
 - Subset of staging smoke tests (3-5 tests)
 - Use synthetic test accounts (clearly labeled, won't affect analytics)
 - Never test with real payment transactions (use sandbox mode or skip)
 - Focus on: app loads, auth works, core read operations work, API responds
 
-**Post-deployment smoke tests:**
+**Post-deployment smoke tests (the agent assembles the suite and the run instructions; a human or the project's automation runs them and reports back):**
 - Run immediately after deploy completes (within 60 seconds)
 - Same as production smoke tests
-- If any fail, trigger alert and begin rollback evaluation
+- If any fail, trigger alert and begin rollback evaluation — the agent evaluates the evidence and recommends; the rollback decision and execution are human
 
-Staging is not production: it has different data volumes, traffic patterns, third-party configurations, and infrastructure scale. That gap is exactly why production and post-deployment smoke tests exist on top of staging verification.
+Staging is not production: it has different data volumes, traffic patterns, third-party configurations, and infrastructure scale. That gap is exactly why production and post-deployment smoke tests exist on top of staging verification — as a designed artifact the agent hands off, not something the agent runs.
 
 ---
 
@@ -236,7 +246,7 @@ AI features need a distinct rollout pattern: prompt versions and model IDs are c
 4. Cost guardrail: a budget circuit breaker that fails the feature open (graceful fallback) when a model's per-request cost spikes.
 5. Kill switch: a single flag that disables the AI path and routes to a deterministic fallback or a "feature unavailable" state — testable in staging before launch.
 
-See `ai-system-testing` for prompt-level eval test patterns and `testing-in-production` for canary metric design.
+Prompt-level eval test patterns and canary metric design are not vendored in this blueprint — flag them as tooling/skill proposals when releasing AI features.
 
 ---
 
@@ -244,15 +254,18 @@ See `ai-system-testing` for prompt-level eval test patterns and `testing-in-prod
 
 ### Automated Rollback Triggers
 
-Define these thresholds BEFORE deployment. When any trigger fires, rollback begins automatically. All thresholds are relative to the measured baseline, not absolute ceilings.
+Define these thresholds BEFORE deployment, as part of the rollback plan the team
+adopts. When any trigger fires, the project's automation rolls back — or the
+on-call human does. The agent never executes a rollback itself; it drafts these
+thresholds and, when handed monitoring evidence, evaluates them and recommends.
 
 | Metric | Threshold | Action |
 |--------|-----------|--------|
-| Error rate (5xx) | >2x baseline for 5 min | Auto-rollback |
-| P95 latency | >3x baseline for 5 min | Auto-rollback |
-| Health check | 3 consecutive failures | Auto-rollback |
-| Crash rate (mobile) | >0.5% | Auto-rollback |
-| Error budget | >50% burned in 1 hour | Auto-rollback |
+| Error rate (5xx) | >2x baseline for 5 min | Auto-rollback (runbook automation / human) |
+| P95 latency | >3x baseline for 5 min | Auto-rollback (runbook automation / human) |
+| Health check | 3 consecutive failures | Auto-rollback (runbook automation / human) |
+| Crash rate (mobile) | >0.5% | Auto-rollback (runbook automation / human) |
+| Error budget | >50% burned in 1 hour | Auto-rollback (runbook automation / human) |
 
 ### Manual Rollback Triggers
 
@@ -266,18 +279,23 @@ These require human judgment but should have clear guidelines:
 
 ### Rollback Procedure
 
+The agent's part of this procedure is writing it down as the project's rollback
+plan, tailored to its tooling, before the release — and evaluating evidence when
+a trigger fires. Steps 1–5 are executed by the on-call human or the project's
+automation.
+
 **Step 1: Decide (< 2 minutes)**
 - Is the trigger automated or manual?
 - If manual: does the issue meet rollback criteria? If yes, proceed. Don't debate.
 
-**Step 2: Execute rollback (< 5 minutes)**
+**Step 2: Execute rollback (< 5 minutes) — human/runbook execution**
 - **Kill switch (fastest, prefer if available):** Flip the dedicated kill-switch flag for the affected feature. Distinct from a full code rollback — disables one capability without redeploy. Test the kill switch in staging before every release; an untested switch is not a switch.
 - **Feature flag rollback:** Disable the feature flag for the new code path. Slower than a kill switch when both exist (rollout flag vs kill switch are different concerns).
 - **Code rollback:** Revert to the previous deployment (re-deploy previous image/artifact). Use when the issue is not contained to a single flagged feature.
 - **Database rollback:** Run backward migration if applicable. If migration is irreversible, skip this step and handle data separately.
 - **Cache invalidation:** Clear CDN and application caches if the old version would serve stale/incorrect data.
 
-**Step 3: Verify (< 5 minutes)**
+**Step 3: Verify (< 5 minutes) — human/runbook execution, agent assembles the checklist**
 - Run production smoke tests
 - Verify error rate returns to baseline
 - Check that the rolled-back version serves correctly
@@ -394,7 +412,10 @@ Standard A/B fails on marketplaces, ride-share, ad auctions, and other systems w
 
 ## Verification
 
-Run these immediately after the deploy completes, smallest check first. Expand the error-tracker queries in `references/rollout-automation.md`.
+These run immediately after the deploy completes, smallest check first — executed
+by a human or the project's runbook automation against production; the agent
+prepares this checklist (and can run the same checks against **staging**). Expand
+the error-tracker queries in `references/rollout-automation.md`.
 
 ```bash
 # Health endpoint returns healthy
@@ -428,11 +449,7 @@ Pass criteria: health returns `healthy`, status is `200` within your latency bud
 
 ## Related Skills
 
-- `testing-in-production` — Overlaps directly with progressive rollout. Go there for the safe-release *techniques* (flags, canary, dark launch, guardrail metrics) applied while shipping; come here for the go/no-go *decision* that gates the release.
-- `synthetic-monitoring` — Scheduled probes that run continuously after release. Release-readiness covers the one-shot post-deploy verification window; synthetic-monitoring covers ongoing SLA validation.
 - `qa-metrics` — Source of the DORA evidence (change failure rate, MTTR) and error/pass-rate numbers you cite in go/no-go decisions and rollback thresholds.
-- `ci-cd-integration` — The CI pipeline must be green as a prerequisite; go there to build the pipeline, come here to gate on it.
-- `ai-system-testing` — When releasing AI/LLM features: prompt-version eval tests and kill-switch design. The rollout pattern here points at it.
-- `compliance-testing` — EU AI Act / EAA / GDPR requirements that may legally gate a release before go/no-go.
-- `playwright-automation` — Smoke tests are often implemented here; go there for the test structure, come here for which journeys are smoke-critical.
-- `quality-postmortem` — When a release goes wrong, the postmortem feeds the missing check back into this go/no-go checklist.
+- `qa-report` — the blueprint's own run-evidence aggregator; the run-level numbers behind a go/no-go.
+- `test-automation` — Smoke tests are implemented here; go there for the test structure, come here for which journeys are smoke-critical.
+- Rollout-time techniques (flags, canary, dark launch, synthetic probes), compliance gating (EU AI Act / EAA / GDPR) and release postmortems are not vendored in this blueprint — flag them as tooling/skill proposals when a release needs them. The go/no-go *decision* this skill gates feeds the human; execution stays with humans/runbooks (see the Blueprint scope note above).
