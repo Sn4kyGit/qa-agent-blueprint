@@ -12,7 +12,9 @@ report with a structured block.
 > shadow mode — a proposal in the evidence dir by default, a real write only when
 > the project has granted it. Never edit the ticket or move its workflow state
 > directly from this skill. Logs/screenshots/traces land in the run's evidence
-> directory (`evidence/<KEY>/<TICKET>/<ts>/`); the ticket comment references them.
+> directory locally; the ticket comment references them **by filename only**
+> (attached to the ticket) — never as a local `evidence/...` path
+> (`docs/pipeline/06-reporting.md` → "Two output channels").
 
 ## What goes in, and in what structure
 
@@ -46,7 +48,8 @@ report with a structured block.
   - Network stubbed: pricing API fulfilled from fixture (no live calls)
   - `TZ=UTC`, locale pinned to de-DE
 
-**Evidence:** <link to Playwright trace / failing-run logs / screenshot of the wrong total>
+**Evidence:** <filenames of the attached artifacts — trace.zip / failing-run logs /
+  screenshot of the wrong total; attached to this ticket, no local paths>
 ```
 
 ## The seven required elements

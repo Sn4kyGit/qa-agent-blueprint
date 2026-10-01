@@ -66,5 +66,6 @@ brackets.
 ---
 
 **Checklist before posting:** priority justified · steps reproducible by a stranger ·
-feature-flag state stated · no secrets/PII · no pipe tables · all referenced files
-actually attached.
+feature-flag state stated · no secrets/PII · no pipe tables · no local paths
+(`evidence/...`, absolute machine paths — filenames only, files attached) ·
+all referenced files actually attached.

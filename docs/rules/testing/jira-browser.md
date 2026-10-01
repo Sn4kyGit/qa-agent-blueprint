@@ -53,8 +53,9 @@ With shadow off, per `report-to-jira`:
    no pipe tables.
 2. **Attachments**: the known-hard part. Use the attachment flow ("Attach files"
    dialog / drag-drop zone) with the MCP file-upload capability. Attach the
-   decisive screenshot(s) — not the whole evidence directory; the run dir path is
-   referenced in the comment either way.
+   decisive screenshot(s) — not the whole evidence directory; the comment
+   references them by filename only, never by local path
+   (`docs/pipeline/06-reporting.md` → "Two output channels").
 3. **Transition**: click the workflow button bearing the exact name from
    `PROJECT.md` → "Reporting" (`Transition on PASS` / `on FAIL`). Never infer a
    transition from what the UI happens to show — an unexpected button set means

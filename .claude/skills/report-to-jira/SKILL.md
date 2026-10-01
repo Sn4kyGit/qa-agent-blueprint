@@ -57,10 +57,11 @@ wrong channel for this project.
      products gets one aggregated comment naming both
      (`PASS (STOREFRONT) / BLOCKED (ADMIN)`, never a bare PASS) and **at most one
      transition**, chosen by the worst verdict: `FAIL > BLOCKED > NEEDS_REVIEW > PASS`.
-   - **PASS**: one-line verdict, bullet list of what was checked, final
-     confirming screenshot attached, evidence directory noted.
-   - **FAIL**: reference the bug ticket created via `bug-report` rather than
-     re-describing the finding inline; keep this comment short.
+    - **PASS**: one-line verdict, bullet list of what was checked, final
+      confirming screenshot attached, evidence files referenced by filename
+      (attached to the ticket).
+    - **FAIL**: reference the bug ticket created via `bug-report` rather than
+      re-describing the finding inline; keep this comment short.
    - **BLOCKED**: explain exactly why (env down, missing test data, no deploy
      permission) and what's needed to unblock — this is often the most useful
      comment for a human to act on quickly.
@@ -101,10 +102,29 @@ wrong channel for this project.
    remain sealed to `PROJECT.md` — this decides **whether** to transition, never
    **which** name to use.
 5. This write goes through the `PostToolUse` JIRA-write audit hook automatically
-   — no action needed from you beyond making the actual MCP call.
+    — no action needed from you beyond making the actual MCP call.
+
+## Two output channels, two reference rules
+
+Applies to every block this skill composes (comment, bug description, proposal):
+`docs/pipeline/06-reporting.md` → "Two output channels". In short:
+
+- **Into the ticket** (anything posted or handed to the user for copy-paste):
+  never a local path — no `evidence/...` run dir, no absolute machine path, no
+  `file://`. Evidence = filenames + "attached to this ticket". Repo-relative
+  spec paths stay allowed.
+- **Into the chat summary to the user:** evidence files with their **absolute
+  path**, one per line — absolute paths are clickable in the harness UI,
+  relative ones lead nowhere half the time. The JIRA comment itself never
+  carries these paths. Afterwards, on interactive macOS sessions, open the run
+  dir in Finder (`open "<absolute run-dir>"`) so the evidence is one preview
+  away — rule and guards (skip on Linux/CI/headless):
+  `docs/pipeline/06-reporting.md` → "Finder auto-open".
 
 ## What you never do
 
 Post real credentials, internal URLs, or PII in a JIRA comment. Transition a
 ticket to a state not defined for this project without checking first. Attach raw
 `evidence/` directory contents wholesale — attach the specific relevant files.
+Put a local path (`evidence/...`, absolute machine path, `file://`) into the
+comment or description — filenames only, the paths belong in the chat summary.

@@ -47,10 +47,14 @@ ACTUAL
 <what happened, precisely — a number, a message, a status code>
 
 EVIDENCE
-<Filenames only; the files travel as attachments or a linked directory.>
+<Filenames only; the files travel as attachments. Never a local path
+(evidence/..., absolute machine path, file://) — pasted into a tracker it
+resolves for nobody. Two output channels, two rules —
+docs/pipeline/06-reporting.md → "Two output channels".>
 - <TICKET>_<step>_fail.png
-- logs/console.log, logs/network.log <when the failure produced them>
-- Run directory: evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
+- console.log, network.log <when the failure produced them>
+
+(All files attached to this issue.)
 
 SCOPE
 - Reproducible: <always | intermittent — N of M attempts>

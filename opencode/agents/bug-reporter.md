@@ -43,7 +43,9 @@ connected there, and a failed MCP call says nothing about JIRA itself.
    filed in the same project or elsewhere.
 3. Fill the template from the actual test run: environment, exact repro steps
    (numbered, one action each), expected vs. actual, evidence file references
-   (never inline screenshot data — reference the `evidence/` path/filename). Carry
+   (never inline screenshot data — reference by **filename only**; never a
+   local `evidence/` path or absolute machine path in the ticket text —
+   `docs/pipeline/06-reporting.md` → "Two output channels"). Carry
    the analysis through rather than re-deriving it: the version window (`this case
    last passed on 2.13.4, fails on 2.14.0-rc3`), the class and confidence, and any
    acceptance criterion it quoted. A developer who can see what shipped in between

@@ -65,7 +65,11 @@ consequences for how reports are structured.
   list, multiple heading levels for a short comment) tend to mangle in the
   converter — flatten instead.
 - Attachments (screenshots, logs) are uploaded separately via the attachment
-  endpoint, then referenced by filename in the comment — not inlined as data.
+  endpoint, then referenced by filename in the comment — not inlined as data,
+  and never referenced by local path (`evidence/...`, absolute machine path):
+  pasted into JIRA, a local path resolves for nobody. The full reference rule
+  split (ticket vs. chat summary): `docs/pipeline/06-reporting.md` → "Two
+  output channels".
 
 ## Report structure (per `report-to-jira`)
 

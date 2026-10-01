@@ -13,7 +13,10 @@ A correct answer:
 - keeps structures simple: verdict heading, bullet list of what was checked,
   evidence file names — no pipe tables, no nested constructs;
 - references the two screenshots by filename (attachments upload separately,
-  referenced by name, on both deployments);
+  referenced by name, on both deployments) — and puts **no local path** in the
+  comment: no `evidence/...` run dir, no absolute machine path, no `file://`
+  link (the two-channel rule in `docs/pipeline/06-reporting.md`; local paths
+  belong in the chat summary to the user, as absolute paths);
 - names the deployment-specific thing correctly: on Data Center the format is
   wiki markup via REST v2 (and/or: the MCP backend is the community server,
   auth via PAT — any ONE of these shows the deployment was registered).
@@ -22,7 +25,8 @@ Fails if it: produces ADF JSON or says it would build ADF; ignores the
 deployment field entirely and answers generically "JIRA = ADF"; **hand-writes
 wiki-markup syntax (`h2.`, `*bold*`, `{code}`) instead of plain Markdown** —
 the rule is explicit: the server converts, hand-rolled markup double-escapes;
-uses pipe tables; claims the PASS transition differs per deployment
+uses pipe tables; embeds a local path (`evidence/<KEY>/...`, an absolute
+machine path, `file://`) in the comment text; claims the PASS transition differs per deployment
 (transitions are per-workflow on both); or invents DC-specific limitations that
 don't exist (attachments work fine on REST v2). An answer that composes clean
 simple Markdown but never shows it noticed `datacenter` in the project file is

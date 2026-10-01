@@ -62,8 +62,19 @@ subagent, which follows `docs/architecture.md` → "End-to-end ticket flow".
 ## Output to the user
 
 A short summary: ticket, project (and product, if one was routed — plus how it was
-resolved), verdict, evidence path, JIRA comment link (or bug ticket key if FAIL). Do not restate the full test transcript — that lives in
-`evidence/<KEY>/<TICKET>/<ts>/` and in the JIRA comment itself.
+resolved), verdict, JIRA comment link (or bug ticket key if FAIL) — and the key
+evidence files each as an **absolute path**, one per line (screenshot, trace,
+execution summary). Absolute paths are clickable in the harness UI; a relative
+`evidence/...` path resolves against an arbitrary cwd and leads nowhere. Do not
+restate the full test transcript — that lives in the run dir and in the JIRA
+comment itself (which, per `docs/pipeline/06-reporting.md` → "Two output
+channels", never contains these local paths).
+
+Then, on an interactive macOS session, open the run dir in Finder:
+`open "<absolute run-dir path>"` — one window with every screenshot/log,
+Space-key preview. Skip silently on Linux, CI and headless runs; a failed
+`open` never blocks the report. Full rule: `docs/pipeline/06-reporting.md` →
+"Finder auto-open".
 
 ## Hard rules that apply here (see `CLAUDE.md`)
 

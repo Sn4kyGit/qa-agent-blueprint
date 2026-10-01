@@ -8,7 +8,7 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [Unreleased]
+## [0.13.0] — 2026-10-01
 
 Theme: **the learning loop gets a validation gate.** Three upgrades to
 `/retro-learn`, adapted from the ideas behind microsoft/SkillOpt (rejected-edit
@@ -80,6 +80,29 @@ the data boundary.
 - **Eval inventory corrected to 24 cases**: `mode-routing` and `no-idle-wait`
   were missing from the COVERAGE case table ("The twenty-four cases");
   README/overview counts updated (24 evals, 139 bun tests).
+
+### Changed — reporting: two output channels, two reference rules
+- **Ticket/GitHub text never carries local paths anymore.** Field feedback:
+  report blocks pasted into JIRA referenced `evidence/<KEY>/...` run dirs and
+  other local paths that resolve for nobody but the machine that ran the test.
+  The comment block (`docs/pipeline/06-reporting.md`) now ends with
+  `Attachments: <filenames> (attached to this ticket)`; the "Run directory"
+  line is gone from both bug templates; `report-to-jira`, `bug-reporter`
+  (both harnesses), `ticket-writeback`, `proposal-template`, `jira-browser`
+  and `jira-confluence` all state the rule: filenames only, repo-relative
+  spec paths stay allowed, local paths belong exclusively in the chat
+  summary. The MR-comment norm in `PROJECT.md` says the same (verdict + JIRA
+  link, no local paths).
+- **Chat summary references evidence by absolute path**, one file per line —
+  clickable in the harness UI, where relative `evidence/...` paths resolved
+  against an arbitrary cwd and led nowhere half the time.
+- **Finder auto-open (macOS, interactive only)**: after the chat summary the
+  run dir opens in Finder (`open <abs path>`) — every screenshot one
+  Space-key preview away, replacing the poor in-transcript image viewing.
+  Single screenshots in Preview on request. Skipped silently on Linux, CI
+  and headless runs; a failed `open` never blocks the report.
+- Eval gate updated: `jira-format-datacenter` grades "no local path in the
+  comment" as a fail criterion; `COVERAGE.md` gained both norm rows.
 
 ## [0.12.0] — 2026-09-24
 

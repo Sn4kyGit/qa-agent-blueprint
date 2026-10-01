@@ -25,7 +25,8 @@ any of them is not ready to send:
 **Do not apply this. It needs a human ruling.**
 
 - Test case:   TC-CHK-014 "coupon applies discount after address change"
-- Spec file:   ../shop-web-tests/specs/checkout/coupon.spec.ts:42
+- Spec file:   specs/checkout/coupon.spec.ts:42  (repo-relative — never a local
+  or `../`-relative path; the reader resolves it against the app repo)
 - Last passed: 2026-08-29, version 2.13.4
 - Failing now: version 2.14.0-rc3 (deployed 2026-09-05, from 2.13.4)
 
@@ -33,7 +34,8 @@ any of them is not ready to send:
   await expect(page.getByTestId('order-total')).toHaveText('80.10 EUR');
 
 **What the app did**
-  90.00 EUR  — screenshot SHOP-1234_checkout-total_fail.png
+  90.00 EUR  — screenshot SHOP-1234_checkout-total_fail.png (attached to this
+  ticket; filename only, never a local evidence path)
 
 **What changed, per JIRA**
   SHOP-1310 "Vouchers no longer stack with campaign discounts", fixVersion 2.14.0,

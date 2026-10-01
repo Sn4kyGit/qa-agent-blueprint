@@ -57,13 +57,16 @@ reads only this section must understand whether to drop what they are doing.>
 
 ### Evidence
 
-<Filenames only, referencing the run directory — the files are attached to the
-ticket, not pasted into it.>
+<Filenames only — the files are attached to the ticket, not pasted into it.
+Never a local path (`evidence/...`, absolute machine path, `file://`): pasted
+into JIRA it resolves for nobody. Two output channels, two rules —
+`docs/pipeline/06-reporting.md` → "Two output channels".>
 
 - `<TICKET>_<step>_fail.png`
-- `logs/console.log`, `logs/network.log` <when the failure produced them>
-- `traces/trace.zip` <on a spec run>
-- Run directory: `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/`
+- `console.log`, `network.log` <when the failure produced them>
+- `trace.zip` <on a spec run>
+
+(All files attached to this issue.)
 
 ### Scope and Regression Check
 

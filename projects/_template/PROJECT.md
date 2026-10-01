@@ -106,7 +106,11 @@ the file stays the single source, values never enter the agent context
 ## MR process
 
 - Feature work via MR/PR against `<main-branch>`; review by <team>.
-- Agent may comment test results on MRs: <yes/no — if yes: in which format>
+- Agent may comment test results on MRs: <yes/no — if yes: in which format.
+  Same reference rule as JIRA comments: no local paths (`evidence/...`,
+  absolute machine paths) in the MR text — verdict + link to the JIRA ticket,
+  which carries the evidence references
+  (`docs/pipeline/06-reporting.md` → "Two output channels")>
 - Agent never merges, never approves.
 
 ## Reporting

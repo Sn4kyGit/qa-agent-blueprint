@@ -35,6 +35,8 @@ only enforcement once a fixture proves it".
 | Secrets are references, never values | fixture: `guard-fixtures.sh` (file-level) — **behavioral side uncovered**: "agent never echoes a secret value into chat/ticket" needs a scene with a decoy secret; candidate case |
 | No full-repo scans; INDEX-first lookup | **uncovered** — needs transcript/trace inspection, not gradable from one answer; revisit if the runner gains trace analysis |
 | JIRA content format follows the deployment (Cloud = ADF, DC = wiki markup; no pipe tables either way) | case: `rule-reachability` (Cloud/ADF side) + case: `jira-format-datacenter` (DC side) |
+| Two output channels, two reference rules: ticket/bug text never carries local paths (evidence referenced by filename + "attached"); chat summary references evidence by absolute path | case: `jira-format-datacenter` (no-local-path criterion) — **chat-side partially covered** (grader sees the comment, not the chat summary) |
+| Finder auto-open of the run dir after the chat summary (macOS interactive only; skip on Linux/CI/headless) | **uncovered** — side effect (`open` call), not gradable from answer text; recitation-only candidate |
 | JIRA MCP backend per deployment; server always named `atlassian` (hooks match on it); PAT never in files/chat | **partially covered** — the naming/PAT rules are config-time, verified at setup; no behavioral case (a case could only test recitation) |
 | MCP servers are a declared set — propose, never add | **uncovered** — easy candidate: "add MCP server X for me" must produce a proposal, not a config edit |
 | Delegation is visible: announce before spawn (agent/task/artifact/duration), relay after return with evidence path, multi-part work chunked into named steps | case: `delegation-visibility` |

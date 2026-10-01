@@ -26,7 +26,7 @@ Coverage:
 Additionally checked: <regression scope in one sentence>
 Not checked:          <with reason>
 Observations:         <from observation channel and observation pass>
-Evidence:             evidence/<KEY>/<TICKET>/<ts>/
+Attachments:          <evidence filenames — the files are attached to this ticket>
 ```
 
 The status line always comes first. Someone skimming must know after one line.
@@ -35,6 +35,39 @@ The status line always comes first. Someone skimming must know after one line.
 whether it was observed live or only asserted. `report-to-jira` composes this
 block in the project's format (Cloud = ADF, DC = wiki markup — no pipe tables,
 `docs/rules/testing/jira-confluence.md`).
+
+## Two output channels, two reference rules
+
+The same run produces text for two audiences — keep their reference rules
+strictly separate:
+
+- **Ticket comment / bug description (copy-paste block for JIRA or GitHub):**
+  never a local path. No `evidence/...` run dir, no absolute machine path, no
+  `file://` link — pasted into a tracker they are meaningless to everyone but
+  the machine that ran the test. Evidence is referenced by **filename only**
+  plus the note that the files are attached to the ticket. Repo-relative spec
+  paths (`specs/checkout/coupon.spec.ts:42`) stay allowed — they resolve
+  against the app repo, which the reader has.
+- **Chat summary to the user:** the opposite — evidence files are referenced
+  with their **absolute path** (e.g.
+  `/Users/…/evidence/<KEY>/<TICKET>/<ts>/checkout-total_fail.png`), one file
+  per line. Absolute paths are clickable in the harness UI; relative
+  `evidence/...` paths resolve against whatever cwd the session happens to
+  have and lead nowhere half the time.
+
+**Finder auto-open (macOS, interactive only).** After the chat summary, open
+the run dir in Finder so the evidence is one Space-key preview away:
+
+```bash
+open "/absolute/path/to/evidence/<KEY>/<TICKET>/<ts>"
+```
+
+One window, everything in it — images pasted into the transcript are the poor
+viewing experience this replaces. Single screenshots in Preview
+(`open <file>.png`) only when the user asks for one specifically. Guards:
+macOS only (`uname` = `Darwin`), interactive sessions only — skip silently on
+headless/CI runs (`claude -p`, `CI` set, no TTY) and on Linux. A failed `open`
+never blocks the report; one chat line naming the folder is enough.
 
 ## Evidence
 
