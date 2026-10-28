@@ -19,8 +19,8 @@ The playwright MCP server is governed by two layers with different owners:
 - `--image-responses omit`: screenshots are written to files (output-dir or an
   explicit path) but NOT returned as images into the context — each one would
   cost ~1-2k tokens for zero decision value. Screenshots are evidence files,
-  never reading material. If a human genuinely asks "show me", Read the PNG
-  back deliberately — on demand, not by default.
+  never reading material. Raw-image reads are denied by the harness permissions;
+  reference the path in the report and let the human open the file directly.
 
 **Preference (yours — `.playwright-mcp.config.json` in the QA home, referenced
 via `--config`):**
@@ -55,7 +55,9 @@ The file is seeded with defaults on first session start / by `install.sh`, and
 **the server reads it at launch: edits apply after a restart of Claude Code**
 (`/reload-plugins` keeps the live connection while the server args are
 unchanged, so it does not pick up file edits). Seeding never overwrites — once
-the file exists, it is yours.
+the file exists, it is yours. An existing file without `console.level: warning`
+gets a concrete, non-destructive warning at session start / install; change it
+manually so other browser preferences stay untouched.
 
 Your own playwright server instead of the blueprint's? A same-named entry in
 the project `.mcp.json` does **not** override the plugin's server — Claude Code

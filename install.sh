@@ -18,7 +18,7 @@
 #               (interactive prompt unless --yes).
 #
 # Usage:
-#   ./install.sh [--mode integrate|plugin|opencode] [--target <path>]
+#   ./install.sh [--mode integrate|plugin|opencode|shared] [--target <path>]
 #                [--dry-run] [--yes] [--uninstall] [--move <new-target>]
 #                [--non-interactive] [-h|--help]
 #
@@ -85,8 +85,8 @@ while [ $# -gt 0 ]; do
 done
 
 case "$MODE" in
-  ""|integrate|plugin|opencode) ;;
-  *) err "Invalid --mode '$MODE' (expected integrate|plugin|opencode)"; exit 1 ;;
+  ""|integrate|plugin|opencode|shared) ;;
+  *) err "Invalid --mode '$MODE' (expected integrate|plugin|opencode|shared)"; exit 1 ;;
 esac
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -223,7 +223,7 @@ ns_hooks = os.environ["QA_NS_HOOKS"]   # .claude/hooks/qa-blueprint
 subs = [
     (r'\.claude/rules/(?!qa-blueprint/)', ns_rules + "/"),
     (r'\.claude/hooks/(?!qa-blueprint/)', ns_hooks + "/"),
-    (r'docs/(?!qa-blueprint/)(architecture\.md|integration\.md|artifact-strategy\.md|memory-layers\.md|runbooks/|rules/)',
+    (r'docs/(?!qa-blueprint/)(architecture\.md|integration\.md|artifact-strategy\.md|memory-layers\.md|runbooks/|rules/|pipeline/)',
      r'docs/qa-blueprint/\1'),
 ]
 
@@ -579,6 +579,12 @@ integrate_dot_claude() {
     copy_tree "$REPO_ROOT/.claude/hooks" "$TARGET/$NS_HOOKS" "hooks"
   fi
 
+  if [ -d "$TARGET/.claude/scripts" ] && source_dir_matches_installed "$REPO_ROOT/.claude/scripts" "$TARGET/.claude/scripts"; then
+    report SKIPPED "scripts" ".claude/scripts already integrated (identical)"
+  else
+    copy_tree "$REPO_ROOT/.claude/scripts" "$TARGET/.claude/scripts" "scripts"
+  fi
+
   # Skills → per-skill collision check
   local s name
   if [ ! -d "$REPO_ROOT/.claude/skills" ]; then
@@ -722,27 +728,77 @@ changed = False
 # in tool responses, and --output-dir keeps raw artifacts inside evidence/ (the
 # evidence policy depends on it). --image-responses omit keeps screenshots out of
 # the model context (they are evidence files, not reading material — ~1-2k tokens
-# per shot saved). Those three are the CONTRACT — "existing wins" would silently
-# drop them, so for THIS server the blueprint config wins when a contract flag is
-# missing. Headless/headful and --isolated are deliberately NOT
-# contract: they are user preferences (exercised via .playwright-mcp.config.json
-# or the user's own flags), and a config missing only those is kept with a note.
-CONTRACT_FLAGS = ("--secrets", "--output-dir", "--image-responses")
+# per shot saved). Together with --config they are the CONTRACT. Local entries
+# are upgraded additively so their command, channel, preferences, secrets source
+# and wrappers survive; remote entries are left alone. Headless/headful and
+# --isolated are deliberately NOT contract: they are user preferences
+# (exercised via .playwright-mcp.config.json or the user's own flags).
+CONTRACT_DEFAULTS = {
+    "--config": ".playwright-mcp.config.json",
+    "--secrets": ".env.playwright-secrets",
+    "--output-dir": "evidence/.mcp-out",
+    "--image-responses": "omit",
+}
 PREFERENCE_FLAGS = ("--isolated", "--headless")
 
+def args_of(cfg):
+    return [str(a) for a in (cfg.get("args") or [])]
+
 def has_flag(cfg, flag):
-    args = cfg.get("args") or []
+    args = args_of(cfg)
     return any(a == flag or a.startswith(flag + "=") for a in args)
 
 def uses_qa_secrets_wrapper(cfg):
-    # A playwright entry launched through .claude/scripts/qa-secrets.mjs mcp
-    # satisfies the secrets contract by construction (ephemeral mask file) —
-    # and is a deliberate, hand-built consumer setup. Force-upgrading it with
-    # the blueprint entry would destroy the wrapper, so it is KEPT with a
-    # note to verify the forwarded flags, never rewritten.
-    args = [str(a) for a in (cfg.get("args") or [])]
+    args = args_of(cfg)
     cmd = str(cfg.get("command") or "")
     return any("qa-secrets" in a for a in args) or "qa-secrets" in cmd
+
+def is_remote(cfg):
+    return cfg.get("type") in ("http", "sse", "remote") or bool(cfg.get("url") and not cfg.get("command"))
+
+def flag_value(args, flag, start=0):
+    value = None
+    i = start
+    while i < len(args):
+        arg = args[i]
+        if arg == flag:
+            value = args[i + 1] if i + 1 < len(args) else None
+            i += 1
+        elif arg.startswith(flag + "="):
+            value = arg.split("=", 1)[1]
+        i += 1
+    return value
+
+def output_dir_ok(value):
+    if not value or value.startswith("--"):
+        return False
+    evidence_root = os.path.realpath(os.path.join(os.path.dirname(tp), "evidence"))
+    candidate = os.path.realpath(os.path.join(os.path.dirname(tp), value))
+    try:
+        return os.path.commonpath((evidence_root, candidate)) == evidence_root
+    except ValueError:
+        return False
+
+def ensure_flag(args, flag, default, start=0):
+    value = flag_value(args, flag, start)
+    valid = output_dir_ok(value) if flag == "--output-dir" else bool(value and not value.startswith("--"))
+    if flag == "--image-responses":
+        valid = value == "omit"
+    if valid:
+        return False
+    matches = [i for i in range(start, len(args)) if args[i] == flag or args[i].startswith(flag + "=")]
+    if matches:
+        i = matches[-1]
+        if args[i] == flag:
+            if i + 1 < len(args) and not args[i + 1].startswith("--"):
+                args[i + 1] = default
+            else:
+                args.insert(i + 1, default)
+        else:
+            args[i] = flag + "=" + default
+        return True
+    args.extend([flag, default])
+    return True
 
 for name, cfg in bp.get("mcpServers", {}).items():
     if name in servers:
@@ -750,20 +806,31 @@ for name, cfg in bp.get("mcpServers", {}).items():
         if existing == cfg:
             print(f"SKIPPED|.mcp.json|server '{name}' already configured (identical)")
         elif name == "playwright":
-            if uses_qa_secrets_wrapper(existing):
-                print(f"SKIPPED|.mcp.json|kept existing 'playwright' — qa-secrets wrapper detected (secrets contract satisfied by the ephemeral mask file). VERIFY the wrapped command forwards --output-dir evidence/.mcp-out and --image-responses omit to the server.")
+            if is_remote(existing):
+                print(f"SKIPPED|.mcp.json|kept existing remote 'playwright' — local CLI contract flags do not apply")
                 continue
-            missing = [f for f in CONTRACT_FLAGS if not has_flag(existing, f)]
+            upgraded = dict(existing)
+            args = args_of(existing)
+            upgraded["args"] = args
+            wrapped = uses_qa_secrets_wrapper(existing)
+            start = args.index("--") + 1 if wrapped and "--" in args else 0
+            fixes = []
+            for flag, default in CONTRACT_DEFAULTS.items():
+                if flag == "--secrets" and wrapped:
+                    continue
+                if ensure_flag(args, flag, default, start):
+                    fixes.append(flag)
             missing_prefs = [f for f in PREFERENCE_FLAGS if not has_flag(existing, f)]
-            if not missing:
+            if not fixes:
                 note = f" (preferences {', '.join(missing_prefs)} not set — your choice; defaults live in .playwright-mcp.config.json)" if missing_prefs else ""
-                print(f"SKIPPED|.mcp.json|kept existing 'playwright' — it carries the contract flags (--secrets, --output-dir, --image-responses){note}")
+                wrapper_note = "; qa-secrets wrapper and secrets source preserved" if wrapped else ""
+                print(f"SKIPPED|.mcp.json|kept existing 'playwright' — it carries the contract values (--config, --secrets, --output-dir, --image-responses omit){wrapper_note}{note}")
             elif dry:
-                print(f"DRY-RUN|.mcp.json|would upgrade 'playwright' to the blueprint config (missing contract flags: {', '.join(missing)})")
+                print(f"DRY-RUN|.mcp.json|would additively upgrade 'playwright' (contract fixes: {', '.join(fixes)}; command, preferences and wrapper preserved)")
             else:
-                servers[name] = cfg
+                servers[name] = upgraded
                 changed = True
-                print(f"MERGED|.mcp.json|upgraded 'playwright' to the blueprint config — added {', '.join(missing)} (password masking / evidence output are part of the contract; your previous config is in the backup)")
+                print(f"MERGED|.mcp.json|additively upgraded 'playwright' — fixed {', '.join(fixes)} (command, custom preferences, channel and wrapper preserved; previous config is in the backup)")
         elif name == "atlassian":
             # The Cloud v2 default URL (discovery/execute) is part of the token
             # contract too: ?tools=all inflates every session AND every subagent
@@ -977,6 +1044,23 @@ integrate_gitignore() {
   report MERGED ".gitignore" "managed block appended with ${#missing[@]} missing entries (${missing[*]})"
 }
 
+check_browser_console_level() {
+  local f="$1" note
+  [ -f "$f" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  note="$(python3 - "$f" <<'PY' 2>/dev/null
+import json, sys
+try:
+    cfg = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+if cfg.get("console", {}).get("level") != "warning":
+    print('console.level is not warning — set `"console": { "level": "warning" }` manually to keep info/debug noise out of tool responses; existing preferences were left untouched')
+PY
+)"
+  [ -z "$note" ] || report WARN ".playwright-mcp.config.json" "$note"
+}
+
 # --- evidence/ memory/ projects/ + env files -------------------------------------------
 integrate_dirs() {
   local d
@@ -1020,6 +1104,7 @@ EOF
   # playwright MCP entry (--config). Seed the defaults; never overwrite — the
   # file is the user's dial for headful/headless, persistent profile, viewport.
   if [ -f "$TARGET/.playwright-mcp.config.json" ]; then
+    check_browser_console_level "$TARGET/.playwright-mcp.config.json"
     report SKIPPED ".playwright-mcp.config.json" "exists — left untouched (your browser preferences)"
   elif [ "$DRY_RUN" -eq 1 ]; then
     report DRY-RUN ".playwright-mcp.config.json" "would create browser config with defaults (headless, isolated)"
@@ -1155,6 +1240,21 @@ uninstall_integrate() {
       fi
     fi
   done
+  if [ -d "$TARGET/.claude/scripts" ]; then
+    local bf rel
+    while IFS= read -r -d '' bf; do
+      rel="${bf#"$REPO_ROOT/.claude/scripts"/}"
+      if [ -f "$TARGET/.claude/scripts/$rel" ] && source_matches_installed "$bf" "$TARGET/.claude/scripts/$rel"; then
+        if [ "$DRY_RUN" -eq 1 ]; then report DRY-RUN "scripts" "would remove .claude/scripts/$rel";
+        else rm "$TARGET/.claude/scripts/$rel"; report MERGED "scripts" "removed .claude/scripts/$rel"; fi
+      elif [ -f "$TARGET/.claude/scripts/$rel" ]; then
+        report WARN "scripts" "kept .claude/scripts/$rel — modified after install"
+      fi
+    done < <(find "$REPO_ROOT/.claude/scripts" -type f -print0)
+    if [ "$DRY_RUN" -eq 0 ]; then
+      find "$TARGET/.claude/scripts" -type d -empty -delete 2>/dev/null || true
+    fi
+  fi
 
   # 5. settings.json — remove hook entries pointing at our namespace.
   #    Permission entries are removed only when they are blueprint entries AND
@@ -1461,8 +1561,10 @@ if dupes:
           "remove the local entr" + ("y" if len(dupes) == 1 else "ies") + " to dedupe "
           "(the plugin's playwright carries --secrets/--isolated; yours likely does not)")
 pw = servers.get("playwright") or {}
-args = pw.get("args") or []
-if pw and "--secrets" not in args and not any(a.startswith("--secrets=") for a in args):
+args = [str(a) for a in (pw.get("args") or [])]
+wrapped = any("qa-secrets" in a for a in args) or "qa-secrets" in str(pw.get("command") or "")
+remote = pw.get("type") in ("http", "sse", "remote") or bool(pw.get("url") and not pw.get("command"))
+if pw and not remote and not wrapped and "--secrets" not in args and not any(a.startswith("--secrets=") for a in args):
     print("WARN|.mcp.json|local 'playwright' has no --secrets flag — passwords would appear unmasked in tool responses while it stays registered")
 PY
   consume_report_lines < <(QA_TARGET_MCP="$t" python3 "$_py2")
@@ -1788,6 +1890,7 @@ SECRETS_TEMPLATE
     fi
   fi
   if [ -e "$cfg" ]; then
+    check_browser_console_level "$cfg"
     report SKIPPED ".playwright-mcp.config.json" "exists — it is your preference dial (headful: launchOptions.headless false)"
   elif [ "$DRY_RUN" -eq 1 ]; then
     dry "seed .playwright-mcp.config.json (headless + isolated defaults)"
@@ -1807,13 +1910,40 @@ BROWSER_CONFIG
 
 # Merge opencode/opencode.template.jsonc into the target's opencode.json.
 # Semantics (same spirit as the .mcp.json merge): existing mcp server NAMES
-# win — except the playwright contract flags, which are force-upgraded because
+# win — except local playwright contract flags, which are fixed additively because
 # the hooks/agents hard-reference them. instructions union, subagent_depth
 # raised to 2, permission denies deep-merged with existing keys winning.
 # No file yet → the template is copied verbatim (keeps its comments and the
 # blueprint-version stamp).
+opencode_config_preflight() {
+  local cfg="$TARGET/opencode.json" legacy="$TARGET/opencode.jsonc"
+  if { [ -e "$cfg" ] || [ -L "$cfg" ]; } && { [ -e "$legacy" ] || [ -L "$legacy" ]; }; then
+    err "BLOCKED: both opencode.json and opencode.jsonc exist in $TARGET; merge them manually into opencode.json and remove opencode.jsonc before re-running"
+    next_step "Resolve the dual opencode config collision manually; the installer will not choose one or write either file"
+    return 1
+  fi
+  return 0
+}
+
 opencode_merge_config() {
-  local tpl="$REPO_ROOT/opencode/opencode.template.jsonc" cfg="$TARGET/opencode.json"
+  local tpl="$REPO_ROOT/opencode/opencode.template.jsonc" cfg="$TARGET/opencode.json" legacy="$TARGET/opencode.jsonc"
+  opencode_config_preflight || return 1
+  if [ ! -f "$cfg" ] && [ -f "$legacy" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      report DRY-RUN "opencode.jsonc" "would back up and migrate opencode.jsonc to opencode.json, then merge the template"
+      return 0
+    fi
+    QA_JSONC_CHECK="$REPO_ROOT/.claude/scripts/agentswitch-check.py" python3 - "$legacy" <<'PY'
+import importlib.util, os, sys
+spec = importlib.util.spec_from_file_location("qa_jsonc_check", os.environ["QA_JSONC_CHECK"])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.read_json(sys.argv[1], jsonc=True)
+PY
+    backup_file "$legacy"
+    mv "$legacy" "$cfg"
+    report MERGED "opencode.jsonc" "migrated to opencode.json; original backup kept"
+  fi
   if [ ! -f "$cfg" ]; then
     if [ "$DRY_RUN" -eq 1 ]; then dry "write opencode.json from template"; return 0; fi
     cp "$tpl" "$cfg"
@@ -1823,28 +1953,64 @@ opencode_merge_config() {
   if [ "$DRY_RUN" -eq 1 ]; then dry "merge template into existing opencode.json"; return 0; fi
   backup_file "$cfg"
   python3 - "$tpl" "$cfg" <<'PY'
-import json, sys
+import json, os, sys
 
 def parse_jsonc(text):
-    # strip // and /* */ comments, never inside quoted strings (the template
-    # carries URLs and globs like **/evidence/** that contain /* and */)
-    out, i, n, in_str = [], 0, len(text), False
-    while i < n:
-        c = text[i]
-        if in_str:
-            out.append(c)
-            if c == '"': in_str = False
+    out = []
+    i = 0
+    in_string = False
+    escaped = False
+    while i < len(text):
+        char = text[i]
+        if in_string:
+            out.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
             i += 1
-        elif c == '"':
-            in_str = True; out.append(c); i += 1
-        elif c == "/" and i + 1 < n and text[i+1] == "/":
-            while i < n and text[i] != "\n": i += 1
-        elif c == "/" and i + 1 < n and text[i+1] == "*":
+        elif char == '"':
+            in_string = True
+            out.append(char)
+            i += 1
+        elif char == "/" and i + 1 < len(text) and text[i + 1] == "/":
+            i += 2
+            while i < len(text) and text[i] != "\n":
+                i += 1
+        elif char == "/" and i + 1 < len(text) and text[i + 1] == "*":
             end = text.find("*/", i + 2)
-            i = n if end == -1 else end + 2
+            i = len(text) if end < 0 else end + 2
         else:
-            out.append(c); i += 1
-    return json.loads("".join(out))
+            out.append(char)
+            i += 1
+    cleaned = []
+    in_string = False
+    escaped = False
+    for char in "".join(out):
+        if in_string:
+            cleaned.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+            cleaned.append(char)
+        elif char == ",":
+            cleaned.append(char)
+        elif char in "]}":
+            while cleaned and cleaned[-1].isspace():
+                cleaned.pop()
+            if cleaned and cleaned[-1] == ",":
+                cleaned.pop()
+            cleaned.append(char)
+        else:
+            cleaned.append(char)
+    return json.loads("".join(cleaned))
 
 tpl = parse_jsonc(open(sys.argv[1]).read())
 cfg = parse_jsonc(open(sys.argv[2]).read())
@@ -1860,15 +2026,75 @@ cfg["instructions"] = instr
 if not isinstance(cfg.get("subagent_depth"), int) or cfg["subagent_depth"] < 2:
     cfg["subagent_depth"] = 2
 
-# mcp: existing names win; playwright contract flags force-upgraded
+# mcp: existing names win; local playwright contract values are fixed additively
+CONTRACT_DEFAULTS = {
+    "--config": ".playwright-mcp.config.json",
+    "--secrets": ".env.playwright-secrets",
+    "--output-dir": "evidence/.mcp-out",
+    "--image-responses": "omit",
+}
+
+def flag_value(args, flag, start=0):
+    value = None
+    i = start
+    while i < len(args):
+        arg = args[i]
+        if arg == flag:
+            value = args[i + 1] if i + 1 < len(args) else None
+            i += 1
+        elif arg.startswith(flag + "="):
+            value = arg.split("=", 1)[1]
+        i += 1
+    return value
+
+def output_dir_ok(value):
+    if not value or value.startswith("--"):
+        return False
+    evidence_root = os.path.realpath(os.path.join(os.path.dirname(sys.argv[2]), "evidence"))
+    candidate = os.path.realpath(os.path.join(os.path.dirname(sys.argv[2]), value))
+    try:
+        return os.path.commonpath((evidence_root, candidate)) == evidence_root
+    except ValueError:
+        return False
+
+def ensure_flag(args, flag, default, start=0):
+    value = flag_value(args, flag, start)
+    valid = output_dir_ok(value) if flag == "--output-dir" else bool(value and not value.startswith("--"))
+    if flag == "--image-responses":
+        valid = value == "omit"
+    if valid:
+        return False
+    matches = [i for i in range(start, len(args)) if args[i] == flag or args[i].startswith(flag + "=")]
+    if matches:
+        i = matches[-1]
+        if args[i] == flag:
+            if i + 1 < len(args) and not args[i + 1].startswith("--"):
+                args[i + 1] = default
+            else:
+                args.insert(i + 1, default)
+        else:
+            args[i] = flag + "=" + default
+        return True
+    args.extend([flag, default])
+    return True
+
 mcp = cfg.setdefault("mcp", {})
 for name, entry in (tpl.get("mcp") or {}).items():
     if name not in mcp:
         mcp[name] = entry
     elif name == "playwright":
         existing = mcp[name]
-        if isinstance(existing, dict):
-            existing["command"] = entry["command"]  # contract flags are load-bearing
+        if isinstance(existing, dict) and isinstance(existing.get("command"), list):
+            remote = existing.get("type") == "remote" or bool(existing.get("url") and not existing.get("command"))
+            if not remote:
+                args = [str(a) for a in existing["command"]]
+                wrapped = any("qa-secrets" in a for a in args)
+                start = args.index("--") + 1 if wrapped and "--" in args else 0
+                for flag, default in CONTRACT_DEFAULTS.items():
+                    if flag == "--secrets" and wrapped:
+                        continue
+                    ensure_flag(args, flag, default, start)
+                existing["command"] = args
             if "type" not in existing:
                 existing["type"] = entry.get("type", "local")
 
@@ -1893,7 +2119,7 @@ with open(sys.argv[2], "w") as fh:
     json.dump(cfg, fh, indent=2)
     fh.write("\n")
 PY
-  report MERGED "opencode.json" "template merged (existing mcp names kept, playwright flags upgraded, comments flattened — backup kept)"
+  report MERGED "opencode.json" "template merged (existing mcp names kept, local playwright contract flags fixed additively, comments flattened — backup kept)"
 }
 
 opencode_uninstall() {
@@ -1928,6 +2154,7 @@ run_opencode_mode() {
     err "Target is the blueprint repo itself — opencode mode installs INTO a consumer project (--target <path>)."
     exit 1
   fi
+  opencode_config_preflight || exit 1
   # The blueprint's own surface (router, ported agents/commands, plugin)
   opencode_link "$TARGET/.opencode/ROUTER.md" "$REPO_ROOT/opencode/ROUTER.md"
   opencode_link "$TARGET/.opencode/agents"    "$REPO_ROOT/opencode/agents"
@@ -1975,7 +2202,7 @@ run_opencode_move() {
 
   # 1. data (dirs + seed files + merged config)
   local item
-  for item in projects memory evidence .env.playwright-secrets .playwright-mcp.config.json opencode.json; do
+  for item in projects memory evidence .env.playwright-secrets .playwright-mcp.config.json opencode.json opencode.jsonc; do
     [ -e "$old/$item" ] || continue
     if [ -e "$new/$item" ]; then
       report SKIPPED "$item" "exists in $new — left in both places; merge by hand"
@@ -1996,6 +2223,537 @@ run_opencode_move() {
   next_step "Restart opencode in $new — projects/, memory/ and evidence/ moved with you"
 }
 
+shared_link_is() {
+  [ -L "$1" ] && [ "$(readlink "$1")" = "$2" ]
+}
+
+shared_preflight() {
+  local collisions=() item src whole_claude=0
+  opencode_config_preflight || return 1
+  if [ -L "$TARGET/.claude" ]; then
+    if shared_link_is "$TARGET/.claude" "$REPO_ROOT/.claude"; then
+      whole_claude=1
+    else
+      collisions+=(".claude")
+    fi
+  elif [ -e "$TARGET/.claude" ] && [ ! -d "$TARGET/.claude" ]; then
+    collisions+=(".claude")
+  fi
+  if [ -d "$TARGET/.claude" ] && [ ! -L "$TARGET/.claude" ] && [ "$whole_claude" -eq 0 ]; then
+    for item in rules skills agents hooks scripts; do
+      if [ -e "$TARGET/.claude/$item" ] || [ -L "$TARGET/.claude/$item" ]; then
+        shared_link_is "$TARGET/.claude/$item" "$REPO_ROOT/.claude/$item" || collisions+=(".claude/$item")
+      fi
+    done
+  fi
+  for item in .opencode/ROUTER.md .opencode/agents .opencode/commands .opencode/plugins docs .claude-plugin CHANGELOG.md projects/_template projects/EXAMPLE; do
+    case "$item" in
+      .opencode/*) src="$REPO_ROOT/opencode/${item#.opencode/}" ;;
+      *) src="$REPO_ROOT/$item" ;;
+    esac
+    if [ -e "$TARGET/$item" ] || [ -L "$TARGET/$item" ]; then
+      shared_link_is "$TARGET/$item" "$src" || collisions+=("$item")
+    fi
+  done
+  for item in .agents projects memory evidence; do
+    if [ -e "$TARGET/$item" ] || [ -L "$TARGET/$item" ]; then
+      if [ "$item" = ".agents" ] && shared_link_is "$TARGET/$item" "$REPO_ROOT/.agents"; then
+        continue
+      fi
+      if [ ! -d "$TARGET/$item" ] || [ -L "$TARGET/$item" ]; then
+        collisions+=("$item")
+      fi
+    fi
+  done
+  if [ -L "$TARGET/CLAUDE.md" ]; then
+    collisions+=("CLAUDE.md")
+  fi
+  if { [ -e "$TARGET/.qa-home" ] || [ -L "$TARGET/.qa-home" ]; } && [ ! -f "$TARGET/.qa-home" ]; then
+    collisions+=(".qa-home")
+  fi
+  if [ "${#collisions[@]}" -gt 0 ]; then
+    for item in "${collisions[@]}"; do
+      err "BLOCKED: $item exists and is not the expected shared-mode symlink; move or migrate it by hand, then re-run --mode shared"
+    done
+    next_step "Resolve the BLOCKED paths without deleting project data; shared mode never replaces real rules, skills, agents, hooks, scripts, docs, manifests or changelogs"
+    return 1
+  fi
+  return 0
+}
+
+shared_prepare_claude() {
+  if shared_link_is "$TARGET/.claude" "$REPO_ROOT/.claude"; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      report DRY-RUN ".claude/" "would replace the opencode compatibility link with a real directory and selective links"
+    else
+      rm "$TARGET/.claude"
+      mkdir "$TARGET/.claude"
+      report MERGED ".claude/" "opencode compatibility link migrated to a real directory"
+    fi
+  elif [ -d "$TARGET/.claude" ]; then
+    report SKIPPED ".claude/" "real consumer directory kept"
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    report DRY-RUN ".claude/" "would create a real consumer directory"
+  else
+    mkdir -p "$TARGET/.claude"
+    report ADDED ".claude/" "real consumer directory created"
+  fi
+}
+
+shared_scaffold() {
+  local d
+  if shared_link_is "$TARGET/.agents" "$REPO_ROOT/.agents"; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      report DRY-RUN ".agents/" "would replace the opencode compatibility link with a real consumer directory"
+    else
+      rm "$TARGET/.agents"
+      mkdir "$TARGET/.agents"
+      cp -R "$REPO_ROOT/.agents/." "$TARGET/.agents/"
+      report MERGED ".agents/" "opencode compatibility link migrated to consumer-owned data; existing bridge files preserved"
+    fi
+  fi
+  for d in projects evidence .agents; do
+    if [ -d "$TARGET/$d" ]; then
+      report SKIPPED "$d/" "exists — consumer data left untouched"
+    elif [ "$DRY_RUN" -eq 1 ]; then
+      report DRY-RUN "$d/" "would create a real consumer directory"
+    else
+      mkdir -p "$TARGET/$d"
+      report ADDED "$d/" "real consumer directory created"
+    fi
+  done
+  if [ -d "$TARGET/memory" ]; then
+    report SKIPPED "memory/" "exists — consumer data left untouched"
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    report DRY-RUN "memory/" "would seed the blueprint memory scaffold"
+  else
+    cp -r "$REPO_ROOT/memory" "$TARGET/memory"
+    report ADDED "memory/" "blueprint memory scaffold seeded"
+  fi
+  if [ -e "$TARGET/.qa-home" ]; then
+    report SKIPPED ".qa-home" "exists — left untouched"
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    report DRY-RUN ".qa-home" "would create the QA home marker"
+  else
+    printf 'qa-agent-blueprint home — resolved by walk-up from any subfolder\n' > "$TARGET/.qa-home"
+    report ADDED ".qa-home" "QA home marker created"
+  fi
+}
+
+shared_surface_links() {
+  local item
+  for item in rules skills agents hooks scripts; do
+    opencode_link "$TARGET/.claude/$item" "$REPO_ROOT/.claude/$item"
+  done
+  opencode_link "$TARGET/.opencode/ROUTER.md" "$REPO_ROOT/opencode/ROUTER.md"
+  opencode_link "$TARGET/.opencode/agents" "$REPO_ROOT/opencode/agents"
+  opencode_link "$TARGET/.opencode/commands" "$REPO_ROOT/opencode/commands"
+  opencode_link "$TARGET/.opencode/plugins" "$REPO_ROOT/opencode/plugins"
+  opencode_link "$TARGET/docs" "$REPO_ROOT/docs"
+  opencode_link "$TARGET/projects/_template" "$REPO_ROOT/projects/_template"
+  opencode_link "$TARGET/projects/EXAMPLE" "$REPO_ROOT/projects/EXAMPLE"
+  opencode_link "$TARGET/.claude-plugin" "$REPO_ROOT/.claude-plugin"
+  opencode_link "$TARGET/CHANGELOG.md" "$REPO_ROOT/CHANGELOG.md"
+}
+
+shared_claude_md() {
+  local f="$TARGET/CLAUDE.md"
+  if [ ! -e "$f" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      report DRY-RUN "CLAUDE.md" "would copy the full shared blueprint router"
+    else
+      cp -p "$REPO_ROOT/CLAUDE.md" "$f"
+      report ADDED "CLAUDE.md" "full shared blueprint router copied"
+    fi
+    return 0
+  fi
+  if cmp -s "$f" "$REPO_ROOT/CLAUDE.md"; then
+    report SKIPPED "CLAUDE.md" "full shared blueprint router already present"
+    return 0
+  fi
+  if [ "$DRY_RUN" -eq 1 ]; then
+    report DRY-RUN "CLAUDE.md" "would insert or replace the managed block with the full shared blueprint router"
+    return 0
+  fi
+  local _py_shared_router
+  _py_shared_router="$(mktemp)"
+  cat > "$_py_shared_router" <<'PY'
+import os, shutil
+path = os.environ["QA_SHARED_CLAUDE"]
+source = os.environ["QA_SHARED_ROUTER"]
+start = os.environ["QA_BLOCK_START"]
+end = os.environ["QA_BLOCK_END"]
+backup = os.environ["QA_BACKUP"]
+text = open(path).read()
+router = open(source).read().rstrip()
+block = start + "\n\n" + router + "\n\n" + end
+if start in text:
+    before, rest = text.split(start, 1)
+    if end not in rest:
+        print("WARN|CLAUDE.md|managed block has no end marker — left untouched; repair it by hand")
+        raise SystemExit(0)
+    after = rest.split(end, 1)[1]
+    out = before + block + after
+else:
+    out = text.rstrip() + "\n\n" + block + "\n"
+if out == text:
+    print("SKIPPED|CLAUDE.md|managed full shared router is current")
+else:
+    shutil.copy2(path, backup)
+    print(f"BACKUP|backup|{path} → {backup}")
+    with open(path, "w") as fh:
+        fh.write(out)
+    print("MERGED|CLAUDE.md|managed block now contains the full shared blueprint router; foreign content kept")
+PY
+  consume_report_lines < <(QA_SHARED_CLAUDE="$f" QA_SHARED_ROUTER="$REPO_ROOT/CLAUDE.md" QA_BLOCK_START="$CLAUDE_BLOCK_START" QA_BLOCK_END="$CLAUDE_BLOCK_END" QA_BACKUP="$f.bak-$TS" python3 "$_py_shared_router")
+  rm -f "$_py_shared_router"
+}
+
+shared_disable_project_plugin() {
+  local f="$TARGET/.claude/settings.json"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    report DRY-RUN "settings.json" "would set the qa-agent-blueprint project plugin entry to false"
+    return 0
+  fi
+  local _py_shared_plugin
+  _py_shared_plugin="$(mktemp)"
+  cat > "$_py_shared_plugin" <<'PY'
+import json, os, shutil
+path = os.environ["QA_SHARED_SETTINGS"]
+backup = os.environ["QA_BACKUP"]
+key = "qa-agent-blueprint@qa-agent-blueprint-marketplace"
+try:
+    cfg = json.load(open(path))
+except Exception as exc:
+    print(f"WARN|settings.json|cannot disable the project plugin entry ({exc}) — left untouched")
+    raise SystemExit(0)
+plugins = cfg.setdefault("enabledPlugins", {})
+if plugins.get(key) is False:
+    print("SKIPPED|settings.json|qa-agent-blueprint plugin already disabled at project scope")
+else:
+    if not os.path.exists(backup):
+        shutil.copy2(path, backup)
+        print(f"BACKUP|backup|{path} → {backup}")
+    plugins[key] = False
+    with open(path, "w") as fh:
+        json.dump(cfg, fh, indent=2)
+        fh.write("\n")
+    print("MERGED|settings.json|qa-agent-blueprint plugin disabled at project scope; marketplace metadata and other plugins kept")
+PY
+  consume_report_lines < <(QA_SHARED_SETTINGS="$f" QA_BACKUP="$f.bak-$TS" python3 "$_py_shared_plugin")
+  rm -f "$_py_shared_plugin"
+}
+
+shared_settings_json() {
+  local NS_HOOKS=".claude/hooks"
+  integrate_settings_json
+  shared_disable_project_plugin
+}
+
+shared_check_user_scope_plugin() {
+  local f="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json" enabled
+  [ -f "$f" ] || return 0
+  enabled="$(python3 - "$f" <<'PY' 2>/dev/null
+import json, sys
+try:
+    cfg = json.load(open(sys.argv[1]))
+except Exception:
+    raise SystemExit(0)
+if cfg.get("enabledPlugins", {}).get("qa-agent-blueprint@qa-agent-blueprint-marketplace") is True:
+    print("1")
+PY
+)"
+  if [ "$enabled" = "1" ]; then
+    report WARN "user-scope plugin" "$f enables qa-agent-blueprint globally — left untouched; disable that user-scope entry manually if double loading occurs"
+    next_step "Human step: review the qa-agent-blueprint enabledPlugins entry in $f; shared mode never edits global config"
+  else
+    report SKIPPED "user-scope plugin" "no enabled qa-agent-blueprint user-scope entry in $f"
+  fi
+}
+
+shared_uninstall_router() {
+  local f="$TARGET/CLAUDE.md"
+  [ -f "$f" ] || return 0
+  if cmp -s "$f" "$REPO_ROOT/CLAUDE.md"; then
+    backup_file "$f"
+    if [ "$DRY_RUN" -eq 1 ]; then
+      report DRY-RUN "CLAUDE.md" "would remove the exact fresh blueprint router copy"
+    else
+      rm "$f"
+      report REMOVED "CLAUDE.md" "exact fresh blueprint router copy removed"
+    fi
+  elif grep -qF "$CLAUDE_BLOCK_START" "$f"; then
+    backup_file "$f"
+    if [ "$DRY_RUN" -eq 1 ]; then
+      report DRY-RUN "CLAUDE.md" "would remove the managed shared router block"
+    else
+      remove_block "$f" "$CLAUDE_BLOCK_START" "$CLAUDE_BLOCK_END"
+      strip_trailing_blank_lines "$f"
+      report MERGED "CLAUDE.md" "managed shared router block removed; foreign content kept"
+    fi
+  else
+    report SKIPPED "CLAUDE.md" "no exact fresh copy or managed shared block found"
+  fi
+}
+
+shared_uninstall_settings() {
+  local f="$TARGET/.claude/settings.json" _py
+  [ -f "$f" ] || return 0
+  _py="$(mktemp)"
+  cat > "$_py" <<'PY'
+import glob, json, os, shutil
+path = os.environ["QA_SHARED_SETTINGS"]
+bp = json.load(open(os.environ["QA_BP_SETTINGS"]))
+backup = os.environ["QA_BACKUP"]
+dry = os.environ["QA_DRY"] == "1"
+try:
+    cfg = json.load(open(path))
+except Exception as exc:
+    print(f"WARN|settings.json|cannot clean shared references ({exc}) — left untouched")
+    raise SystemExit(0)
+pre = None
+for candidate in sorted(glob.glob(path + ".bak-*")):
+    try:
+        pre = json.load(open(candidate))
+        break
+    except Exception:
+        continue
+fresh_seed = pre == {"permissions": bp.get("permissions", {}), "hooks": bp.get("hooks", {})}
+def hook_pairs(config):
+    return {(ev, entry.get("matcher"), hook.get("command")) for ev, entries in config.get("hooks", {}).items() for entry in entries for hook in entry.get("hooks", [])}
+pre_pairs = hook_pairs(pre) if isinstance(pre, dict) else set()
+bp_pairs = hook_pairs(bp)
+removed_hooks = 0
+hooks = cfg.get("hooks", {})
+new_hooks = {}
+for ev, entries in hooks.items():
+    kept_entries = []
+    for entry in entries:
+        original = entry.get("hooks", [])
+        kept = [hook for hook in original if (ev, entry.get("matcher"), hook.get("command")) not in bp_pairs or ((ev, entry.get("matcher"), hook.get("command")) in pre_pairs and not fresh_seed)]
+        removed_hooks += len(original) - len(kept)
+        if kept or not original:
+            cleaned = dict(entry)
+            if kept != original:
+                cleaned["hooks"] = kept
+            kept_entries.append(cleaned)
+    if kept_entries:
+        new_hooks[ev] = kept_entries
+if new_hooks != hooks:
+    if new_hooks:
+        cfg["hooks"] = new_hooks
+    else:
+        cfg.pop("hooks", None)
+removed_permissions = 0
+pre_permissions = pre.get("permissions", {}) if isinstance(pre, dict) else {}
+perms = cfg.get("permissions", {})
+for kind in ("deny", "allow"):
+    if kind not in perms:
+        continue
+    blueprint_entries = set(bp.get("permissions", {}).get(kind, []))
+    preexisting = set(pre_permissions.get(kind, []))
+    kept = [entry for entry in perms[kind] if entry not in blueprint_entries or pre is None or (entry in preexisting and not fresh_seed)]
+    removed_permissions += len(perms[kind]) - len(kept)
+    if kept:
+        perms[kind] = kept
+    else:
+        perms.pop(kind, None)
+if "permissions" in cfg and not cfg["permissions"]:
+    cfg.pop("permissions")
+if not removed_hooks and not removed_permissions:
+    print("SKIPPED|settings.json|no shared blueprint hook pairs or permission entries found")
+    raise SystemExit(0)
+print(f"{'DRY-RUN' if dry else 'MERGED'}|settings.json|{'would remove' if dry else 'removed'} {removed_hooks} blueprint hook pair(s) and {removed_permissions} permission entr{'y' if removed_permissions == 1 else 'ies'}; foreign settings and enabledPlugins kept")
+if not dry:
+    shutil.copy2(path, backup)
+    print(f"BACKUP|backup|{path} → {backup}")
+    with open(path, "w") as fh:
+        json.dump(cfg, fh, indent=2)
+        fh.write("\n")
+PY
+  consume_report_lines < <(QA_SHARED_SETTINGS="$f" QA_BP_SETTINGS="$REPO_ROOT/.claude/settings.json" QA_BACKUP="$f.bak-$TS" QA_DRY="$DRY_RUN" python3 "$_py")
+  rm -f "$_py"
+}
+
+shared_uninstall_opencode_config() {
+  local f="$TARGET/opencode.json" _py
+  [ -f "$f" ] || return 0
+  _py="$(mktemp)"
+  cat > "$_py" <<'PY'
+import glob, json, os, shutil
+path = os.environ["QA_SHARED_OPENCODE"]
+template = os.environ["QA_OPENCODE_TEMPLATE"]
+backup = os.environ["QA_BACKUP"]
+dry = os.environ["QA_DRY"] == "1"
+def parse_jsonc(text):
+    out = []
+    i = 0
+    in_string = False
+    escaped = False
+    while i < len(text):
+        char = text[i]
+        if in_string:
+            out.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            i += 1
+        elif char == '"':
+            in_string = True
+            out.append(char)
+            i += 1
+        elif char == "/" and i + 1 < len(text) and text[i + 1] == "/":
+            i += 2
+            while i < len(text) and text[i] != "\n":
+                i += 1
+        elif char == "/" and i + 1 < len(text) and text[i + 1] == "*":
+            end = text.find("*/", i + 2)
+            i = len(text) if end < 0 else end + 2
+        else:
+            out.append(char)
+            i += 1
+    cleaned = []
+    in_string = False
+    escaped = False
+    for char in "".join(out):
+        if in_string:
+            cleaned.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+        elif char == '"':
+            in_string = True
+            cleaned.append(char)
+        elif char == ",":
+            cleaned.append(char)
+        elif char in "]}":
+            while cleaned and cleaned[-1].isspace():
+                cleaned.pop()
+            if cleaned and cleaned[-1] == ",":
+                cleaned.pop()
+            cleaned.append(char)
+        else:
+            cleaned.append(char)
+    return json.loads("".join(cleaned))
+try:
+    cfg = parse_jsonc(open(path).read())
+    tpl = parse_jsonc(open(template).read())
+except Exception as exc:
+    print(f"WARN|opencode.json|cannot clean shared instructions ({exc}) — left untouched")
+    raise SystemExit(0)
+owned = set(tpl.get("instructions", []))
+pre = None
+for candidate in sorted(glob.glob(path + ".bak-*")):
+    try:
+        pre = parse_jsonc(open(candidate).read())
+        break
+    except Exception:
+        continue
+pre_instructions = set(pre.get("instructions", [])) if isinstance(pre, dict) and isinstance(pre.get("instructions", []), list) else set()
+fresh_seed = pre_instructions == owned
+instructions = cfg.get("instructions")
+if not isinstance(instructions, list):
+    print("SKIPPED|opencode.json|no shared blueprint instructions found")
+    raise SystemExit(0)
+kept = [entry for entry in instructions if entry not in owned or (entry in pre_instructions and not fresh_seed)]
+removed = len(instructions) - len(kept)
+if not removed:
+    print("SKIPPED|opencode.json|no shared blueprint instructions found")
+    raise SystemExit(0)
+print(f"{'DRY-RUN' if dry else 'MERGED'}|opencode.json|{'would remove' if dry else 'removed'} {removed} blueprint instruction(s); other config and MCP entries kept")
+if dry:
+    raise SystemExit(0)
+if kept:
+    cfg["instructions"] = kept
+else:
+    cfg.pop("instructions", None)
+shutil.copy2(path, backup)
+print(f"BACKUP|backup|{path} → {backup}")
+with open(path, "w") as fh:
+    fh.write("// merged by qa-agent-blueprint install.sh (opencode mode)\n")
+    json.dump(cfg, fh, indent=2)
+    fh.write("\n")
+PY
+  consume_report_lines < <(QA_SHARED_OPENCODE="$f" QA_OPENCODE_TEMPLATE="$REPO_ROOT/opencode/opencode.template.jsonc" QA_BACKUP="$f.bak-$TS" QA_DRY="$DRY_RUN" python3 "$_py")
+  rm -f "$_py"
+}
+
+shared_uninstall() {
+  info "shared uninstall: removing only symlinks that point into $REPO_ROOT"
+  local item link
+  for item in .claude/rules .claude/skills .claude/agents .claude/hooks .claude/scripts .opencode/ROUTER.md .opencode/agents .opencode/commands .opencode/plugins docs projects/_template projects/EXAMPLE .claude-plugin CHANGELOG.md; do
+    link="$TARGET/$item"
+    [ -L "$link" ] || continue
+    case "$(readlink "$link")" in
+      "$REPO_ROOT"|"$REPO_ROOT/"*)
+        if [ "$DRY_RUN" -eq 1 ]; then
+          report DRY-RUN "$item" "would remove the shared symlink"
+        else
+          rm "$link"
+          report REMOVED "$item" "shared symlink removed"
+        fi
+        ;;
+      *) report SKIPPED "$item" "symlink points elsewhere — left untouched" ;;
+    esac
+  done
+  shared_uninstall_settings
+  shared_uninstall_opencode_config
+  shared_uninstall_router
+  report SKIPPED "consumer config" ".mcp.json, seed files and enabledPlugins=false left untouched"
+  report SKIPPED "consumer data" "projects/, memory/, evidence/, .agents/ and .qa-home left untouched"
+  next_step "Re-enable qa-agent-blueprint@qa-agent-blueprint-marketplace manually if you want to return to plugin mode; shared uninstall leaves the project false entry unchanged"
+}
+
+check_prereqs_shared() {
+  check_prereqs_opencode
+  local claude_bin="" c
+  if command -v claude >/dev/null 2>&1; then
+    claude_bin="$(command -v claude)"
+  else
+    for c in "${CLAUDE_CODE_EXECPATH:-}" "$HOME/.local/bin/claude" "$HOME/.claude/local/claude" "/usr/local/bin/claude" "/opt/homebrew/bin/claude"; do
+      [ -n "$c" ] && [ -x "$c" ] && { claude_bin="$c"; break; }
+    done
+  fi
+  if [ -n "$claude_bin" ]; then
+    report FOUND "claude CLI" "$("$claude_bin" --version 2>/dev/null || echo 'version unknown')"
+  else
+    report MISSING "claude CLI" "not found — install: npm install -g @anthropic-ai/claude-code"
+    exit 1
+  fi
+}
+
+run_shared_mode() {
+  info "shared mode: Claude Code and opencode use one QA home without the Claude plugin"
+  if [ "$TARGET" = "$REPO_ROOT" ]; then
+    err "Target is the blueprint repo itself — shared mode installs INTO a consumer project (--target <path>)."
+    exit 1
+  fi
+  shared_preflight || exit 1
+  shared_prepare_claude
+  shared_scaffold
+  shared_surface_links
+  shared_claude_md
+  shared_settings_json
+  integrate_mcp_json
+  opencode_seed_files
+  if cmp -s "$TARGET/opencode.json" "$REPO_ROOT/opencode/opencode.template.jsonc"; then
+    report SKIPPED "opencode.json" "already matches the shared template"
+  else
+    opencode_merge_config
+  fi
+  integrate_gitignore
+  shared_check_user_scope_plugin
+  next_step "Restart Claude Code and opencode in $TARGET; existing projects need no re-onboarding"
+  next_step "JIRA auth: Claude /mcp; opencode Cloud via opencode mcp auth atlassian, Data Center via PAT (AGENTS.md)"
+  next_step "Shadow mode is ON by default — JIRA reports are composed, not posted, until you opt out"
+}
+
 # =================================================================================
 # MAIN
 # =================================================================================
@@ -2003,14 +2761,14 @@ run_opencode_move() {
 autodetect_mode
 [ "$DRY_RUN" -eq 1 ] && info "DRY RUN — actions are reported, nothing is written."
 
-if [ "$UNINSTALL" -eq 1 ] && [ "$MODE" != "integrate" ] && [ "$MODE" != "opencode" ]; then
-  err "--uninstall only makes sense with --mode integrate or --mode opencode."
+if [ "$UNINSTALL" -eq 1 ] && [ "$MODE" != "integrate" ] && [ "$MODE" != "opencode" ] && [ "$MODE" != "shared" ]; then
+  err "--uninstall only makes sense with --mode integrate, --mode opencode or --mode shared."
   exit 1
 fi
 
 if [ -n "$MOVE_TO" ]; then
   if [ "$MODE" != "opencode" ]; then
-    err "--move only makes sense with --mode opencode (plugin/integrate: just install into the new target)."
+    err "--move only makes sense with --mode opencode (shared is not movable; plugin/integrate: install into the new target)."
     exit 1
   fi
   if [ "$UNINSTALL" -eq 1 ]; then
@@ -2021,6 +2779,8 @@ fi
 
 if [ "$MODE" = "opencode" ]; then
   check_prereqs_opencode
+elif [ "$MODE" = "shared" ]; then
+  check_prereqs_shared
 else
   check_prereqs
 fi
@@ -2028,6 +2788,10 @@ fi
 case "$MODE" in
   integrate)  run_integrate ;;
   plugin)     run_plugin_mode ;;
+  shared)
+    if [ "$UNINSTALL" -eq 1 ]; then shared_uninstall
+    else run_shared_mode; fi
+    ;;
   opencode)
     if [ "$UNINSTALL" -eq 1 ]; then opencode_uninstall
     elif [ -n "$MOVE_TO" ]; then run_opencode_move

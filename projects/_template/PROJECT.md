@@ -47,6 +47,10 @@
 
 - **Version check on stage**: <method — e.g. `GET <url>/version` returns build, or
   footer build stamp>
+- **Build verification**: `required` ← `required` | `unavailable`. Use
+  `unavailable` only when no version source exists; readiness then records the
+  residual risk and reports `Build: unverified (project-configured)` instead of
+  blocking forever. An observed build mismatch always blocks.
 - **Who deploys to stage**: <pipeline name / team / agent-allowed yes-no>
 
 ## Test users
@@ -102,9 +106,16 @@ the file stays the single source, values never enter the agent context
 - **Gate overrides** (defaults in `.claude/rules/core/qa-principles.md`):
   pass rate ≥ <80>%, P0 = 0, P1 ≤ <5>, coverage ≥ <80>%
 - **Nightly regression**: <exists? where results land>
+- **Readiness statuses**: <exact JIRA statuses in which stage testing may start>
+- **Readiness API/CLI**: <queries/commands for unresolved blockers, linked MR/PR
+  state and deployment/build state — API/CLI preferred; stage version check above
+  remains the build source>
 
 ## MR process
 
+- **Merge requirement**: `when-linked` ← `when-linked` | `always` | `not-required`.
+  `when-linked` checks every linked MR/PR is merged but needs no link; `always`
+  requires one; `not-required` skips only the merge check, never status/blockers/build.
 - Feature work via MR/PR against `<main-branch>`; review by <team>.
 - Agent may comment test results on MRs: <yes/no — if yes: in which format.
   Same reference rule as JIRA comments: no local paths (`evidence/...`,

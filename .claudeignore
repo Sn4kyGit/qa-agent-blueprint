@@ -1,14 +1,24 @@
-# Declares intent: test evidence is referenced by path in reports, never loaded
-# wholesale into context. See docs/artifact-strategy.md and
-# .claude/rules/core/token-discipline.md.
+# Declares intent: raw test artifacts are referenced by path in reports, while
+# execution summaries, curated reports and structured JSON/Markdown stay readable.
+# See docs/artifact-strategy.md and .claude/rules/core/token-discipline.md.
 #
 # NOTE: Claude Code does not currently enforce .claudeignore for tool reads
 # (verified 2026-09-05: a file under evidence/ was still readable via the Read
-# tool). This file documents the policy; the enforced mechanisms are the
-# permissions denylist in .claude/settings.json and the PreToolUse guard. For a
-# hard boundary on artifacts, add Read(evidence/**) to permissions.deny.
-evidence/
-!evidence/README.md
+# tool). This file documents the policy; the enforced boundary is the raw-artifact
+# permissions denylist in .claude/settings.json, not a blanket evidence/ deny.
+evidence/.mcp-out/
+**/evidence/.mcp-out/
+**/evidence/**/*.png
+**/evidence/**/*.jpg
+**/evidence/**/*.jpeg
+**/evidence/**/*.gif
+**/evidence/**/*.webp
+**/evidence/**/*.bmp
+**/evidence/**/*.webm
+**/evidence/**/*.mp4
+**/evidence/**/*.mov
+**/evidence/**/*.zip
+**/evidence/**/*.har
 
 # Secrets — defense in depth alongside .gitignore and the permissions denylist
 .env

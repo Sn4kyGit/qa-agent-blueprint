@@ -23,7 +23,8 @@ tokens an MCP session costs. Full phase contract: `docs/pipeline/02-recon.md`.
    standalone, create a fresh one. Never overwrite an existing `recon.json` in
    a reused dir — note the refresh in `progress.md` instead.
 3. **Paths.** From `intake.json` → `affected_paths` when present; else from the
-   ticket plus `flow-map.md`. Never derive paths by scanning the app source.
+   ticket plus confirmed Areas in `flow-map.md`. Never derive paths by scanning
+   the app source or treat Unconfirmed candidates as established routes.
 4. **Ensure the probe exists.** Templates ship with `scaffold-suite`
    (`templates/probes/`). Suite has no `probes/` copy yet → copy the matching
    variant there (it is infrastructure, commit it; part files and recon output

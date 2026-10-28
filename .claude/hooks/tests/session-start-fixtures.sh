@@ -135,8 +135,11 @@ check_contains "unmasked playwright config → warning" "$(context_for "$M2")" "
 # …but an entry launched through qa-secrets.mjs mcp satisfies the secrets
 # contract by construction (ephemeral mask file) — no warning there.
 M7="$WORK/mcp-wrapper"; mkdir -p "$M7/projects"
-printf '%s' '{"mcpServers":{"playwright":{"command":"node","args":[".claude/scripts/qa-secrets.mjs","mcp","STAGE_PASSWORD","--","npx","@playwright/mcp@latest"]}}}' > "$M7/.mcp.json"
-check_absent "qa-secrets wrapper entry → no unmasked warning" "$(context_for "$M7")" "no --secrets flag"
+printf '%s' '{"mcpServers":{"playwright":{"command":"node","args":[".claude/scripts/qa-secrets.mjs","mcp","STAGE_PASSWORD","--","npx","@playwright/mcp@latest","--output-dir","evidence/.mcp-out","--image-responses=omit"]}}}' > "$M7/.mcp.json"
+M7CTX="$(context_for "$M7")"
+check_absent "qa-secrets wrapper entry → no unmasked warning" "$M7CTX" "no --secrets flag"
+check_absent "wrapped output-dir is analyzed" "$M7CTX" "no --output-dir flag"
+check_absent "wrapped image-responses=omit is analyzed" "$M7CTX" "no --image-responses omit"
 
 # Plugin mode + a local duplicate → duplicate warning (verified behavior: a
 # project .mcp.json does NOT override a plugin server of the same name).
@@ -162,9 +165,42 @@ check_absent   "headful is a preference, not a warning" "$M5CTX" "--headless"
 
 # Same shape for the token contract: no --image-responses omit → every screenshot
 # lands in the context as an image → warning (0.10.0).
-M6="$WORK/mcp-no-imageomit"; mkdir -p "$M6/projects"
+M6="$WORK/mcp-no-imageomit"; mkdir -p "$M6/projects/SHOP"
 printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets","--output-dir","evidence/.mcp-out"]}}}' > "$M6/.mcp.json"
-check_contains "playwright without --image-responses omit → warning" "$(context_for "$M6")" "no --image-responses omit"
+check_contains "onboarded project without --image-responses omit → warning" "$(context_for "$M6")" "no --image-responses omit"
+
+MIMGALLOW="$WORK/mcp-image-allow"; mkdir -p "$MIMGALLOW/projects"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets","--output-dir","evidence/.mcp-out","--image-responses","allow"]}}}' > "$MIMGALLOW/.mcp.json"
+check_contains "--image-responses allow is a contract violation" "$(context_for "$MIMGALLOW")" "no --image-responses omit"
+
+MIMGEQ="$WORK/mcp-image-equals"; mkdir -p "$MIMGEQ/projects"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets","--output-dir=evidence/custom","--image-responses=omit"]}}}' > "$MIMGEQ/.mcp.json"
+MIMGEQCTX="$(context_for "$MIMGEQ")"
+check_absent "--image-responses=omit satisfies the contract" "$MIMGEQCTX" "no --image-responses omit"
+check_absent "custom evidence output-dir satisfies the contract" "$MIMGEQCTX" "no --output-dir flag"
+
+MOUTBAD="$WORK/mcp-output-outside"; mkdir -p "$MOUTBAD/projects"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets","--output-dir","/tmp/pw-out","--image-responses","omit"]}}}' > "$MOUTBAD/.mcp.json"
+check_contains "output-dir outside evidence is a contract violation" "$(context_for "$MOUTBAD")" "no --output-dir flag"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets","--output-dir","evidence/../outside","--image-responses","omit"]}}}' > "$MOUTBAD/.mcp.json"
+check_contains "output-dir traversal is a contract violation" "$(context_for "$MOUTBAD")" "no --output-dir flag"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets","--output-dir","/tmp/evidence","--image-responses","omit"]}}}' > "$MOUTBAD/.mcp.json"
+check_contains "foreign absolute evidence root is a contract violation" "$(context_for "$MOUTBAD")" "no --output-dir flag"
+
+MCOMP="$WORK/mcp-complementary"; MCOMPHOME="$WORK/mcp-complementary-home"; mkdir -p "$MCOMP/projects" "$MCOMPHOME"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--secrets",".env.playwright-secrets"]}}}' > "$MCOMPHOME/.claude.json"
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--output-dir","evidence/.mcp-out","--image-responses","omit"]}}}' > "$MCOMP/.mcp.json"
+MCOMPCTX="$(printf '{"cwd":"%s"}' "$MCOMP" | HOME="$MCOMPHOME" bash "$HOOK" 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])')"
+check_contains "complementary entries do not share secrets health" "$MCOMPCTX" "no --secrets flag"
+check_contains "complementary entries do not share output health" "$MCOMPCTX" "no --output-dir flag"
+check_contains "complementary entries do not share image health" "$MCOMPCTX" "no --image-responses omit"
+
+MREMOTE="$WORK/mcp-remote"; mkdir -p "$MREMOTE/projects"
+printf '%s' '{"mcpServers":{"playwright":{"type":"http","url":"https://pw.example.invalid/mcp"}}}' > "$MREMOTE/.mcp.json"
+MREMOTECTX="$(context_for "$MREMOTE")"
+check_absent "remote playwright gets no secrets warning" "$MREMOTECTX" "no --secrets flag"
+check_absent "remote playwright gets no output-dir warning" "$MREMOTECTX" "no --output-dir flag"
+check_absent "remote playwright gets no image warning" "$MREMOTECTX" "no --image-responses omit"
 
 # User scope (~/.claude.json) must be found too — via a fake HOME.
 M4="$WORK/mcp-userscope"; FAKEHOME="$WORK/fakehome"; mkdir -p "$M4/projects" "$FAKEHOME"
@@ -213,6 +249,9 @@ echo "== browser preference file: seeded once, mode rendered, never overwritten 
   || { printf 'FAIL  %s\n' "plugin bootstrap seeds .playwright-mcp.config.json"; fails=$((fails + 1)); }
 check_contains "browser mode rendered in preamble" "$PCTX" "Browser: headless, isolated"
 check_contains "freshly seeded → transparent note" "$PCTX" "Created .playwright-mcp.config.json"
+python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("console",{}).get("level") == "warning" else 1)' "$CONSUMER/.playwright-mcp.config.json" \
+  && printf 'ok    %s\n' "browser config seed sets console warning" \
+  || { printf 'FAIL  %s\n' "browser config seed sets console warning"; fails=$((fails + 1)); }
 # A user-edited file (headful) must survive the next session start untouched,
 # and the mode line must follow the user's choice.
 printf '%s' '{"browser":{"isolated":true,"launchOptions":{"headless":false}}}' > "$CONSUMER/.playwright-mcp.config.json"
@@ -226,6 +265,7 @@ except Exception:
 check_contains "headful choice rendered" "$PCTX2" "Browser: headful (visible)"
 check_absent   "existing config not re-seeded" "$PCTX2" "Created .playwright-mcp.config.json"
 check_contains "user file content untouched" "$(cat "$CONSUMER/.playwright-mcp.config.json")" '"headless":false'
+check_contains "existing config without console warning gets a non-destructive hint" "$PCTX2" 'Set `"console": { "level": "warning" }` manually'
 
 echo
 echo "== plugin update notice: offline, newer-only, silent on doubt =="
@@ -444,10 +484,9 @@ check_contains "marker-only home resolves from two levels down" "$QCTX2" "QA hom
 
 echo
 echo "== ungroomed-learnings backlog: hint below the auto-groom threshold, directive above =="
-# The auto-groom threshold (5+ entries or oldest entry > 14 days) turns the
-# human hint into an agent directive — users who never type /retro-learn must
-# not lose the grooming loop. Dates computed relative to today, so the fixture
-# never rots.
+# The auto-groom threshold (5+ entries, oldest entry > 14 days, or 16 KB) turns
+# the human hint into an agent directive. Dates computed relative to today, so
+# the fixture never rots.
 RECENT="$(python3 -c 'import datetime; print((datetime.date.today() - datetime.timedelta(days=3)).isoformat())')"
 OLD="$(python3 -c 'import datetime; print((datetime.date.today() - datetime.timedelta(days=30)).isoformat())')"
 
@@ -472,10 +511,19 @@ G3CTX="$(context_for "$G3")"
 check_contains "2 entries with stale oldest → directive" "$G3CTX" "AUTO-GROOM: 2 ungroomed learnings"
 check_contains "directive names the oldest entry date" "$G3CTX" "oldest: $OLD"
 
-# A single entry is never a backlog — even a stale one stays silent.
-G4="$WORK/groom-silent"; mkdir -p "$G4/projects" "$G4/memory/learnings"
-printf '# Inbox\n\n## %s — the one example\n' "$OLD" > "$G4/memory/learnings/_inbox.md"
-check_absent "single entry stays silent" "$(context_for "$G4")" "ungroomed learnings"
+# One real entry counts; the retired dated template example does not.
+G4="$WORK/groom-single"; mkdir -p "$G4/projects" "$G4/memory/learnings"
+printf '# Inbox\n\n## %s — one real entry\n' "$RECENT" > "$G4/memory/learnings/_inbox.md"
+check_contains "single fresh entry gets a hint" "$(context_for "$G4")" "1 ungroomed learnings"
+printf '# Inbox\n\n## %s — one stale entry\n' "$OLD" > "$G4/memory/learnings/_inbox.md"
+check_contains "single stale entry triggers grooming" "$(context_for "$G4")" "AUTO-GROOM: 1 ungroomed learnings"
+printf '# Inbox\n\n## 2026-09-05 — SHOP-1234\n' > "$G4/memory/learnings/_inbox.md"
+check_absent "legacy dated template example stays silent" "$(context_for "$G4")" "ungroomed learnings"
+
+G5="$WORK/groom-bytes"; mkdir -p "$G5/projects" "$G5/memory/learnings"
+python3 -c 'import sys; open(sys.argv[1], "w").write("# Inbox\n\n## '"$RECENT"' — one\n\n" + "x" * 17000 + "\n\n## '"$RECENT"' — two\n")' "$G5/memory/learnings/_inbox.md"
+check_contains "16 KB with fewer than five entries triggers grooming" "$(context_for "$G5")" "AUTO-GROOM: 2 ungroomed learnings"
+check_contains "directive includes the byte threshold" "$(context_for "$G5")" "16 KB"
 
 echo
 if [ "$fails" -eq 0 ]; then

@@ -1,0 +1,406 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-agent-blueprint.local/schemas/context-capsule.schema.json",
+  "title": "QA run context capsule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run",
+    "intake",
+    "readiness",
+    "routing",
+    "effective_config",
+    "knowledge",
+    "field_sources",
+    "sources",
+    "integrity"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "qa-run-context/v1"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ticket", "project", "scope", "revision", "created_at"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+        },
+        "ticket": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*-[0-9]+$"
+        },
+        "project": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "product": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "scope": {
+          "enum": ["project", "product"]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "product"
+              }
+            },
+            "required": ["scope"]
+          },
+          "then": {
+            "required": ["product"]
+          },
+          "else": {
+            "not": {
+              "required": ["product"]
+            }
+          }
+        }
+      ]
+    },
+    "intake": {
+      "type": "object",
+      "required": ["ticket", "acceptance_criteria"],
+      "properties": {
+        "ticket": {
+          "type": "string"
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "required": ["ticket", "ready"],
+      "properties": {
+        "ticket": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean"
+        }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_path"],
+      "properties": {
+        "project_path": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "product_path": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "product_routed_by": {
+          "enum": ["component", "label", "secondary", "default", "user", "project-wide"]
+        },
+        "confidence": {
+          "enum": ["medium", "low"]
+        }
+      }
+    },
+    "effective_config": {
+      "type": "object",
+      "required": ["jira", "execution", "stage", "test_users", "test_assets", "features"],
+      "properties": {
+        "jira": {
+          "type": "object",
+          "required": ["access", "shadow"],
+          "properties": {
+            "access": {
+              "enum": ["mcp", "browser"]
+            },
+            "shadow": {
+              "type": "boolean"
+            },
+            "transitions": true,
+            "readiness_statuses": true,
+            "merge_requirement": true,
+            "report_format": true
+          }
+        },
+        "execution": {
+          "type": "object",
+          "required": ["mode"],
+          "properties": {
+            "mode": {
+              "enum": ["mcp-only", "hybrid", "cli-first"]
+            },
+            "red_check_required": {
+              "type": "boolean"
+            },
+            "verification_pass": {
+              "type": "boolean"
+            },
+            "plan_approval": {
+              "type": "boolean"
+            }
+          }
+        },
+        "stage": {
+          "type": "object",
+          "required": ["url"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "pattern": "^https?://"
+            },
+            "build_verification": {
+              "enum": ["required", "unavailable"]
+            },
+            "expected_build": {
+              "type": "string"
+            }
+          }
+        },
+        "test_users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role"],
+            "properties": {
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "purpose": {
+                "type": "string"
+              },
+              "secret_key": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]*$"
+              },
+              "vault_path": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "anyOf": [
+              {
+                "required": ["secret_key"]
+              },
+              {
+                "required": ["vault_path"]
+              }
+            ]
+          }
+        },
+        "test_assets": {
+          "type": "object",
+          "required": ["framework"],
+          "properties": {
+            "framework": {
+              "enum": ["playwright", "webdriverio", "none"]
+            },
+            "location": {
+              "type": "string"
+            },
+            "config": {
+              "type": "string"
+            },
+            "tc_categories": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["feature", "applies"],
+            "properties": {
+              "feature": {
+                "type": "string",
+                "minLength": 1
+              },
+              "applies": {
+                "type": "boolean"
+              },
+              "test_types": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "reporting": true,
+        "deploy": true,
+        "evidence": true,
+        "security": true,
+        "mcp": true
+      }
+    },
+    "knowledge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["learnings", "confirmed_areas", "bridge"],
+      "properties": {
+        "learnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["excerpt", "source"],
+            "properties": {
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "source": {
+                "$ref": "#/$defs/sourcePath"
+              }
+            }
+          }
+        },
+        "confirmed_areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status", "source"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "const": "confirmed"
+              },
+              "last_confirmed": {
+                "type": "string"
+              },
+              "anchors": true,
+              "neighbors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "source": {
+                "$ref": "#/$defs/sourcePath"
+              }
+            }
+          }
+        },
+        "bridge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "sha256"],
+          "properties": {
+            "path": {
+              "$ref": "#/$defs/sourcePath"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      }
+    },
+    "field_sources": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {
+            "$ref": "#/$defs/sourcePath"
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonicalization", "payload_sha256"],
+      "properties": {
+        "canonicalization": {
+          "const": "RFC8785"
+        },
+        "payload_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sourcePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))[^\\\\]+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

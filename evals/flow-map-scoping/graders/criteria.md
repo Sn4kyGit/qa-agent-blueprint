@@ -15,8 +15,9 @@ A correct answer:
   legitimate adjacency judgment; what matters is that the map's neighbors
   anchor the sweep;
 - keeps it to 2–4 flows — not the whole store;
-- states the basis ("scoped from the flow map" or equivalent) so the evidence
-  can say where the sweep came from.
+- states both levels of provenance: the sweep came from the confirmed Checkout
+  Area, and that Area's Neighbors carry a verified cross-flow `basis:` (shared
+  totals/confirmation specs); unsourced candidates would not be binding.
 
 Fails if it: invents generic e-commerce neighbors without demonstrating the
 map read; misses most of the map's named Checkout neighbors in favor of

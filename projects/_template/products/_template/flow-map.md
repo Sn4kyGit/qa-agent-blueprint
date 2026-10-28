@@ -13,19 +13,31 @@
 
 - One section per **area** (a screen cluster or feature area, e.g. "Checkout",
   "Order management"). Areas, not pages — pages shift, areas stay.
-- Each flow is one line: name, the path through the app, the anchors that
-  survived runs (stable selectors, test data), and when it was last confirmed.
-- **Neighbors** per area: the flows a change here most plausibly affects —
-  that is the list `retest-bug` scopes its regression sweep from.
-- Every entry carries `last confirmed: YYYY-MM-DD (<TICKET>)`. An entry long
-  unconfirmed is a retest candidate, not a truth.
+- Each confirmed flow is one line: name, path, anchors, their concrete
+  `source:`, and when the flow itself was last executed.
+- `steps_executed` supports only a candidate/coarse path. Anchors come only
+  from `recon.json`, verified spec steps, or explicit human confirmation.
+- **Neighbors** per area are the confirmed regression scope. Each list needs a
+  `basis:` — verified cross-flow spec/recon evidence or explicit human
+  confirmation. Never infer it from keywords or coarse steps; without a basis,
+  use `none — unconfirmed`.
+- `last confirmed: YYYY-MM-DD (<TICKET>)` means this flow actually executed,
+  not merely that a recon probe or similar flow ran. An old stamp is a retest
+  candidate, not a truth.
 - Delete flows the product removed. A map of ghosts misleads worse than none.
 
 ## Areas
 
 ### <Area name>
 
-- **Flows**: <flow name> (<path through the app>); anchors: <selectors / test data>; last confirmed: <date> (<ticket>)
-- **Neighbors**: <flow>, <flow>
+- **Flows**: <flow name> (<path through the app>); anchors: <selectors / test data>; source: <recon.json run | verified spec path | human confirmation date>; last confirmed: <date> (<ticket>)
+- **Neighbors**: <flow>, <flow> — or `none — unconfirmed`; basis: <verified cross-flow evidence | explicit human confirmation>
+
+## Unconfirmed candidates
+
+Candidates here are not binding map knowledge and never enter bridge or
+retest scope. Promote them only when the evidence gate above is met.
+
+- <candidate> (<coarse path>); candidate source: <steps_executed run>; anchors: unconfirmed; neighbors: none — unconfirmed
 
 <!-- areas below -->

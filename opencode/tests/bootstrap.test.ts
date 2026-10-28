@@ -87,6 +87,7 @@ describe("bootstrap (opencode)", () => {
     const cfg = JSON.parse(await readFile(join(dir, ".playwright-mcp.config.json"), "utf8"))
     expect(cfg.browser?.launchOptions?.headless).toBe(true)
     expect(cfg.browser?.isolated).toBe(true)
+    expect(cfg.console?.level).toBe("warning")
   })
 
   gitTest("gitignores the secrets file when the consumer is a git repo and it is not ignored", async () => {
@@ -127,6 +128,14 @@ describe("orientation (opencode)", () => {
     expect(text).toContain("- Browser: headless, isolated")
   })
 
+  test("warns non-destructively when an existing browser config lacks console warning", async () => {
+    await writeFile(join(dir, ".playwright-mcp.config.json"), '{"browser":{"launchOptions":{"headless":false}}}')
+    const before = await readFile(join(dir, ".playwright-mcp.config.json"), "utf8")
+    const text = await orientation(dir)
+    expect(text).toContain('Set `"console": { "level": "warning" }` manually')
+    expect(await readFile(join(dir, ".playwright-mcp.config.json"), "utf8")).toBe(before)
+  })
+
   test("lists onboarded projects with their products inline", async () => {
     await mkdir(join(dir, "projects", "SHOP", "products", "STOREFRONT"), { recursive: true })
     await mkdir(join(dir, "projects", "SHOP", "products", "ADMIN"), { recursive: true })
@@ -138,12 +147,13 @@ describe("orientation (opencode)", () => {
     expect(text).not.toContain("First run")
   })
 
-  test("counts ungroomed learnings; one entry is not a backlog", async () => {
+  test("counts real ungroomed learnings and ignores the legacy dated example", async () => {
     await init() // seeds memory/ from the blueprint
-    // a single entry (the shipped example) stays silent
-    await writeFile(join(dir, "memory", "learnings", "_inbox.md"), "# Inbox\n\n## 2026-09-01 — the one example\n")
+    await writeFile(join(dir, "memory", "learnings", "_inbox.md"), "# Inbox\n\n## 2026-09-05 — SHOP-1234\n")
     expect(await orientation(dir)).not.toContain("ungroomed learnings")
     const recent = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10)
+    await writeFile(join(dir, "memory", "learnings", "_inbox.md"), `# Inbox\n\n## ${recent} — one real entry\n`)
+    expect(await orientation(dir)).toContain("1 ungroomed learnings")
     await writeFile(
       join(dir, "memory", "learnings", "_inbox.md"),
       `# Inbox\n\n## ${recent} — one\n\n## ${recent} — two\n`,
@@ -174,9 +184,13 @@ describe("orientation (opencode)", () => {
     expect(byAge).toContain("AUTO-GROOM: 2 ungroomed learnings")
     expect(byAge).toContain(`oldest: ${stale}`)
 
-    // a single entry is never a backlog, even a stale one
-    await writeFile(inbox, `# Inbox\n\n## ${stale} — the one example\n`)
-    expect(await orientation(dir)).not.toContain("ungroomed learnings")
+    await writeFile(inbox, `# Inbox\n\n## ${stale} — one stale entry\n`)
+    expect(await orientation(dir)).toContain("AUTO-GROOM: 1 ungroomed learnings")
+
+    await writeFile(inbox, `# Inbox\n\n## ${recent} — one\n\n${"x".repeat(17_000)}\n\n## ${recent} — two\n`)
+    const bySize = await orientation(dir)
+    expect(bySize).toContain("AUTO-GROOM: 2 ungroomed learnings")
+    expect(bySize).toContain("16 KB")
   })
 
   test("flags a playwright entry without the contract flags", async () => {

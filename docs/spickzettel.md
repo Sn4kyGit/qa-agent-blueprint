@@ -6,7 +6,7 @@ Spickzettel · Alle drei Teile
 Ein KI-QA-Kollege als Plugin für Claude Code: Er testet Tickets selbstständig,
 liefert Beweise, meldet das Ergebnis zurück nach JIRA — und lernt dazu.
 
-29
+30
 
 Fähigkeiten (Skills)
 
@@ -18,7 +18,7 @@ Spezialisten (Subagents)
 
 Türsteher (Hooks)
 
-421
+400+
 
 Selbsttests (Fixtures)
 
@@ -95,9 +95,8 @@ damit Menschen die Urteile fällen.
 ## Was kostet das?
 
 - **Das Plugin ist kostenlos** — und telefoniert nie nach Hause: Nach der Installation läuft alles lokal, Netzwerk geht nur zu **deinem JIRA** und **deiner Stage**. Das Repo wird nur bei Install und Update angefasst.
-- **Die echten Kosten sind Modell-Tokens** — deshalb ist Sparsamkeit eingebaut: Das Handbuch (~8.300 Tokens) ist per Test gedeckelt, Fachbücher laden nur bei Bedarf, Beweisfotos kommen nie in den Kopf, Projektwissen wird gezielt geholt statt gescannt.
-- **Größenordnung pro Ticket-Test** (explorativ, ~25 Browser-Schritte): **~0,4–0,6 Mio. Tokens** mit Blueprint vs. **~0,6–1,1 Mio.** mit nacktem Claude Code — dort wird Projektwissen jede Session neu erkundet und Irrwege kommen dazu. Zu API-Preisen grob 1–2 $ statt 2–4 $; im Abo ist es Quota statt Euro.
-- **Der zweite Lauf ist der günstige:** Existiert ein Autotest, kostet der Re-Test nur noch ~50k Tokens — ein Zehntel.
+- **Die echten Kosten sind Modell-Tokens** — deshalb laden Fachbücher nur bei Bedarf, Learnings werden gezielt durchsucht, Rohbeweise kommen nie in den Kopf, einfache Tickets überspringen den Manager und eine Run-Capsule verhindert erneutes Projektlesen pro Spawn. Claude Code nutzt Sonnet für die Ausführung; opencode lässt die Wahl bei `/models`.
+- **Browser-Verlauf bleibt der Haupttreiber:** Sonnet ändert den Preis, nicht die Tokenmenge. Readiness verhindert Tests auf altem Build, vorhandene Autotests laufen günstig per CLI. Für 0.15.0 gibt es kein neues Kostenbenchmark — miss mit `/usage` statt alter Schätzwerte.
 - **Neu: drei Execution Modes.** Pro Projekt wählbar, wer am Steuer sitzt: `mcp-only` (alles live, tiefste Befunde), `hybrid` (Standard: Probe → Autotest → kurzer Live-Check — nahe Live-Tiefe zu mittleren Kosten), `cli-first` (nur Suite, CI-tauglich). Jeder JIRA-Report zeigt den Modus — man sieht, ob beobachtet oder nur assertiert wurde.
 
 Teil 2 · Technik — einfach erklärt
@@ -164,7 +163,7 @@ Jede Rolle hat ihre *eigene Aktenmappe* (eigenes Gedächtnis): Ein 30-Schritte-B
 | JIRA-Audit | Unsichtbare Schreibzugriffe: jeder landet im Protokoll |
 
 **Ernst gemeint:** Ein Türsteher zählt erst, wenn ein Selbsttest beweist, dass er
-blockt — **421 Fixture-Checks** tun genau das. Einer hatte monatelang still *nichts*
+blockt — **400+ Fixture-Checks** tun genau das. Einer hatte monatelang still *nichts*
 blockiert — und in der Review sah alles korrekt aus.
 
 ## Zwei Sicherheitsideen zum Mitnehmen
@@ -239,8 +238,8 @@ evidence/SHOP/SHOP-1234/<ts>/  ← Artefakte, nie
 | **Plugin-Modus ohne Drift** | Plugins laden kein `CLAUDE.md` — der Session-Start-Hook injiziert es **wortwörtlich**. Ein Router-Text für beide Installationsarten. |
 | **MCP = Vertrag über Namen** | Hooks/Skills matchen auf `playwright`/`atlassian`; Pflicht-Flags `--secrets` + `--output-dir`; der Rest ist frei wählbar (`.playwright-mcp.config.json`). |
 | **Secrets nie im Transkript** | Keychain-Resolver schreibt `.env.playwright-secrets`, Werte erscheinen nirgends; `qa-secrets.mjs` injiziert sie wertefrei in Runner und MCP-Server; der Guard-Hook blockt jeden Schreibzugriff auf `.env*`-Pfade, direktes Lesen ist ein menschlicher Opt-in. |
-| **Kontext-Budget gemessen** | Immer geladene Ebene: 8.268 von 8.400 Token — ein Test schlägt fehl, wenn sie wächst; alles andere lädt bei Bedarf. |
+| **Kontext-Budget gemessen** | Immer geladene Ebene: 8.372 von 8.400 Token — ein Test schlägt fehl, wenn sie wächst; alles andere lädt bei Bedarf. |
 
-QA Agent Blueprint · Stand: 24. September 2026 (v0.12.0) · Alle drei Spickzettel in einem Dokument —
+QA Agent Blueprint · Stand: 28. Oktober 2026 (v0.15.0) · Alle drei Spickzettel in einem Dokument —
 Teil 1: „Was ist das?" · Teil 2: „Wie funktioniert er — einfach erklärt" · Teil 3: „Technical Deep Dive".
 Quelle der Wahrheit: das Repo (README.md, overview.html).

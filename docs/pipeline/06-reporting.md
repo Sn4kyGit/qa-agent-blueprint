@@ -15,7 +15,7 @@ project file's rules apply unchanged.
 
 ```
 Test result: PASS | FAIL | BLOCKED | NEEDS_REVIEW
-Environment: <env> | Build: <version> | Mode: <mcp-only|hybrid|cli-first>
+Environment: <env> | Build: <version|unverified (project-configured)> | Mode: <mcp-only|hybrid|cli-first>
 Tested as: <role/test user> | Date: <…>
 
 Coverage:
@@ -76,7 +76,7 @@ Location and naming per `.claude/rules/core/evidence-policy.md`
 files to the same run dir:
 
 ```
-<intake.json>  <recon.json>  <testplan.md>  <run.json>  <verdict.json>
+<intake.json>  <readiness.json>  <recon.json>  <testplan.md>  <run.json>  <verdict.json>
 execution_summary.json   ← the enforced artifact; verdict.json feeds it
 screenshots/ logs/ traces/ progress.md
 ```

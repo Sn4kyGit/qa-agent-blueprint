@@ -8,7 +8,7 @@ und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
 Neu hier? Unten beantwortet die Rubrik **Häufige Fragen** in einfacher
 Sprache, wie Gedächtnis, Kosten und Sicherheit funktionieren.
 
-29
+30
 
 Skills
 
@@ -24,11 +24,11 @@ Regeln (immer / on demand)
 
 Hooks
 
-421+139
+Fixtures+145
 
 Fixture-Checks + bun-Tests
 
-24
+39
 
 Eval-Cases
 
@@ -53,8 +53,9 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
 ```
 
 Unter **opencode** (modell-agnostisch, Modell = deine `/models`-Wahl): `install.sh --mode opencode --target <projekt> --yes` vom Clone aus — Details: [Quickstart opencode](https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md).
+Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: `install.sh --mode shared` — beide bleiben ohne Re-Onboarding startbereit, `/agentswitch` prüft read-only.
 
-Ende-zu-Ende verifiziert (claude 2.1.263): registriert 29 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
+Ende-zu-Ende verifiziert (claude 2.1.263): registriert 30 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
 
 ## Der Ablauf
 
@@ -151,7 +152,7 @@ Router plus fünf Regeldateien: alles, was binden muss, bevor irgendein Skill ge
 Das Detail dahinter liegt in `docs/rules/` und wird gelesen, wenn sein Thema kommt —
 jede Datei nennt ihren Auslöser oben.
 
-CLAUDE.md + .claude/rules/core/ · gemessen 8.268 Token, Budget 8.400
+CLAUDE.md + .claude/rules/core/ · gemessen 8.372 Token, Budget 8.400
 
 #### 2Skills & Subagents
 
@@ -408,8 +409,8 @@ Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gl
 | --- | --- |
 | Hooks (Guard, Stop, SessionStart) | 189 Fixtures — jede Regel mit eigenem Fall |
 | Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption) | 119 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses |
-| Kontextkosten | gemessen — Budget-Check, 8.268 von 8.400 Token belegt |
-| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 24 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
+| Kontextkosten | gemessen — Budget-Check, 8.372 von 8.400 Token belegt |
+| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 39 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
 | Ein echtes Projekt, ein echtes Ticket | **nie** — genau das ist der Pilot |
 
 Der erste gelaufene Eval-Case war lehrreich: die Antwort war präziser als der Grader — sie
@@ -447,25 +448,25 @@ Installation und beim expliziten Update. Alles andere läuft lokal; die einzigen
 Netzwerk-Ziele im Betrieb sind **dein JIRA** und **deine Stage**.
 Keine Telemetrie, keine Lizenz-Checks.
 
-Die echten Kosten sind **Modell-Tokens** — und genau dafür ist die Architektur
-gebaut: Die immer geladene Ebene ist gemessen (~8.300 Tokens) und per Test gedeckelt,
-die 29 Skills laden erst bei Bedarf, Subagents halten Browser-Transkripte aus dem
-Hauptkontext, Evidence wird als Pfad referenziert statt eingelesen, und Projektwissen
-wird über `memory/INDEX.md` gefunden statt per Vollscan.
+Die echten Kosten sind **Modell-Tokens**. Die immer geladene Ebene ist gemessen
+(~8.300 Tokens) und gedeckelt; Skills und Detailregeln laden bei Bedarf. Learnings
+werden ticketbezogen durchsucht, rohe Evidence nicht eingelesen, und einfache
+Tickets überspringen die Manager-Ebene. Eine versiegelte Run-Capsule ersetzt bei
+jedem weiteren Agenten-Spawn das erneute Lesen und Mergen des Projektkontexts.
+Claude Code nutzt Sonnet für die beiden
+Ausführungsrollen; opencode lässt die Modellwahl bei `/models`.
 
-| Ein Ticket-Test (explorativ, ~25 Browser-Schritte) | Mit Blueprint | Nacktes Claude Code |
-| --- | --- | --- |
-| Browser-Transkript | ~350–500k Tokens (der Subagent zahlt es auch) | ~350–500k Tokens |
-| Projektwissen, Evidence-Rücklesen, Irrwege | nahe null (Runbooks, Routing, Evidence-Policy) | wird jede Session neu erkundet |
-| **Summe pro Ticket** | **~0,4–0,6 Mio. Tokens** | **~0,6–1,1 Mio. Tokens** |
-| Re-Test mit vorhandenem Spec | ~50k (CLI-Runner) | wieder voller Preis |
-| **Hybrid-Modus (0.12.0)** | Probe liefert echte Selektoren für einen Bruchteil der MCP-Kosten, Spec läuft per CLI, danach ein kurzer Live-Check — nahe MCP-Tiefe zu mittleren Kosten; `cli-first` drückt Re-Tests Richtung CI-Niveau | |
+| Kostentreiber | Gegenmaßnahme |
+| --- | --- |
+| Browser-Snapshot-Verlauf | isolierter Execution-Subagent; bei Claude Code standardmäßig Sonnet |
+| wiederholtes Intake/Routing | Fast Path bzw. Manager-Handoff mit fertigen Artefakten |
+| Tests auf altem/fehlendem Build | Readiness vor jeder Stage-Aktion |
+| wachsende Lern- und Rohdaten | 16-KB-Grooming, verdichtete Promotion, Raw-Read-Denys |
+| wiederholte Flows | vorhandene Specs über den CLI-Runner |
 
-**Ehrlichkeit:** Die Browser-Snapshots dominieren die Kosten in beiden Fällen —
-der Blueprint macht den Browser nicht billiger, er streicht den *wiederholbaren*
-Verbrauch: keine Neu-Erkundung, keine Tests gegen eine Umgebung ohne den Fix, und
-Re-Tests mit Spec kosten ein Zehntel. Im Subscription-Modell ist das Quota statt Euro;
-zu API-Preisen liegt ein explorativer Ticket-Test bei grob 1–2 $ statt 2–4 $.
+**Ehrlichkeit:** Sonnet verändert den Preis der Browser-Tokens, nicht ihre Menge.
+Für 0.15.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
+sind deshalb keine Zusage. Miss deine eigenen Abläufe mit `/usage` und den Session-Logs.
 
 ## Häufige Fragen
 
@@ -475,7 +476,7 @@ Die Fragen, die im Gespräch immer kommen — beantwortet ohne Fachjargon.
 
 Gar nicht im Kopf — alles liegt als normale Textdateien in deinem Projektordner,
 einsehbar und per Git teilbar. Fünf Schubladen: das **Handbuch** (immer dabei,
-nur die Regeln), die **Fachbücher** (29 Skills, laden nur bei Bedarf), die
+nur die Regeln), die **Fachbücher** (30 Skills, laden nur bei Bedarf), die
 **Projektakte** (Umgebungen, Testuser, Runbooks — einmal eingerichtet), das
 **Lerntagebuch** (Überraschungen aus Läufen) und die **Beweise**
 (Screenshots, Logs — als Datei, nie im Gedächtnis). Der Clou: Am Ende jeder Session
@@ -485,29 +486,20 @@ verworfen wurde, landet im Rejected-Buffer und wird nicht erneut vorgeschlagen.
 
 #### ?Verbrennt das ständige Lesen und Lernen nicht selbst Tokens?
 
-Ja — aber erstaunlich wenige, und es spart ein Vielfaches. Die Rechnung im Detail:
-**Lernen kostet** pro Lauf nur die Learning-Deklaration im Protokoll plus ein
-kurzer Eintrag ins Lerntagebuch (~100–300 Tokens). Das wöchentliche Aufräumen
-(`/retro-learn`) liest gezielt per Grep statt ganzer Dateien — ein paar tausend
-Tokens, nur auf Zuruf. **Lesen kostet** wenig, weil nie alles gelesen wird:
-Der Session-Start lädt nur das Handbuch (~8.300 Tokens) plus ein Inhaltsverzeichnis
-(`memory/INDEX.md`); in die Schubladen wird nur bei Bedarf geschaut, Beweise
-werden nie zurückgelesen. **Die Gegenrechnung:** Ohne dieses Gedächtnis
-erkundet ein Agent das Projekt in *jeder* Session neu — Umgebungen, Logins,
-Deploy-Wege, Fallstricke. Das sind locker 50.000–100.000 Tokens pro Ticket, plus die
-Irrwege, die eine vergessene Falle auslöst. Gemessen: ~0,4–0,6 Mio. Tokens pro Ticket-Test
-mit Gedächtnis gegenüber ~0,6–1,1 Mio. ohne — und ein Re-Test mit gelerntem Autotest liegt
-bei ~50.000. Lernen kostet also grob 1 % des Laufs und verhindert den teuersten Teil:
-das Neu-Entdecken dessen, was schon bekannt war.
+Ja — deshalb ist der Lernkreislauf begrenzt: Capture dedupliziert sofort, Grooming
+arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätestens bei
+16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
+stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
+Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
+Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.15.0 steht noch aus.
 
 #### ?Wie effizient ist eine Session?
 
 Die immer geladene Ebene ist ~8.300 Tokens (gemessen, per Test gedeckelt). Browser-Arbeit
-läuft in abgeschotteten Teil-Sessions — das 30-Schritte-Klickprotokoll flutet nie den
-Hauptkontext, zurück kommt nur das Ergebnis. Pro Ticket-Test: **~0,4–0,6 Mio. Tokens**
-statt ~0,6–1,1 Mio. ohne Blueprint, weil Projektwissen nicht jede Session neu erkundet wird.
-Mit vorhandenem Autotest sinkt der Re-Test auf **~50.000 Tokens** — ein Zehntel.
-Und die Execution Modes lassen dich wählen, wo sich die teure Live-Beobachtung lohnt.
+läuft in abgeschotteten Teil-Sessions; einfache Tickets gehen direkt an genau einen
+Execution-Agenten, komplexe übergeben fertiges Intake und Readiness an den Manager.
+Vorhandene Specs laufen über den CLI-Runner. Die Execution Modes bestimmen, wo sich
+teure Live-Beobachtung lohnt; gemessen wird mit `/usage`, nicht mit alten Schätzwerten.
 
 #### ?Brauche ich zwingend JIRA?
 
@@ -554,7 +546,7 @@ kommentieren oder mergen darf er nie.
 Nein. Du schreibst ganz normal: „Teste SHOP-1234", „Der Fix ist auf Stage, prüf das",
 „Wie läuft's mit dem Testing?" — deutsch oder englisch. Auch das Lernen läuft von allein:
 Jede Session *muss* deklarieren, was sie gelernt hat (ein Hook erzwingt es), und
-wächst der Stapel ungeprüfter Learnings über die Schwelle (5 Einträge oder 14 Tage alt),
+wächst der Stapel ungeprüfter Learnings über eine Schwelle (5 Einträge, 14 Tage alt oder 16 KB),
 räumt der Agent ihn am Session-Ende **von selbst** auf und berichtet in einem
 Satz, was daraus wurde. Die Einrichtung ist ein geführtes Interview (~30–60 Minuten pro
 Projekt). Einzige Menschen-Aufgaben: JIRA-Zugang einrichten, Testuser-Passwörter einmal
@@ -568,8 +560,8 @@ verbinden — dann `/onboard-project` und das Interview beantworten. Danach hei�
 es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Agent testet
 vollständig, postet aber nichts, bis du es freigibst.
 
-QA Agent Blueprint · Stand: 24. September 2026 (0.12.0) —
-aktualisiert auf Repo-Stand (29 Skills, 5 Subagents, 421 Fixture-Checks + 139 bun-Tests, 24 Eval-Cases,
+QA Agent Blueprint · Stand: 28. Oktober 2026 (0.15.0) —
+aktualisiert auf Repo-Stand (30 Skills, 5 Subagents, Fixture-Batterie + 145 bun-Tests, 39 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
 Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,

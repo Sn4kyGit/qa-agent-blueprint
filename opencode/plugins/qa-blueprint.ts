@@ -20,7 +20,7 @@
 
 import { appendFile, cp, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises"
 import { existsSync, realpathSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { basename, dirname, join, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 
@@ -505,7 +505,8 @@ const BROWSER_CONFIG = `{
   "browser": {
     "isolated": true,
     "launchOptions": { "headless": true }
-  }
+  },
+  "console": { "level": "warning" }
 }
 `
 
@@ -652,7 +653,7 @@ async function readOpencodeMcp(directory: string): Promise<Record<string, Record
 export interface McpScan {
   hasPw: boolean
   pwUnmasked: boolean // playwright without --secrets — passwords unmasked in tool responses
-  pwNoOutdir: boolean // playwright without --output-dir — artifacts never reach evidence/
+  pwNoOutdir: boolean // playwright without --output-dir into evidence/ — artifacts land elsewhere
   pwNoImageomit: boolean // playwright without --image-responses omit — screenshots flood the context (~1-2k tokens each)
   hasAt: boolean
   dcHost: string // JIRA Data Center host from environment.JIRA_URL ("" when Cloud)
@@ -660,24 +661,48 @@ export interface McpScan {
 
 // Exported for the tests — the flags mirror the bash scan's HAS_PW/PW_UNMASKED/
 // PW_NO_OUTDIR/PW_NO_IMAGEOMIT/HAS_AT/AT_DC_HOST:<host> contract.
-export function scanMcpServers(servers: Record<string, Record<string, unknown>>): McpScan {
-  const pw = servers.playwright
-  const cmd = Array.isArray(pw?.command) ? (pw.command as unknown[]) : []
-  // Contract flags apply to the LOCAL server; a remote playwright is the
-  // consumer's own setup, not a contract violation.
-  const pwLocal = Boolean(pw) && pw?.type !== "remote"
-  // A playwright entry launched through qa-secrets.mjs mcp satisfies the
-  // secrets contract by construction (ephemeral mask file) — the literal
-  // --secrets flag is inside the wrapper, not the command args.
-  const wrapsQaSecrets = cmd.some((a) => String(a).includes("qa-secrets"))
-  const at = servers.atlassian
+export function scanMcpServers(servers: Record<string, Record<string, unknown> | Record<string, unknown>[]>, directory: string = process.cwd()): McpScan {
+  const pwValue = servers.playwright
+  const pw = (Array.isArray(pwValue) ? pwValue : [pwValue]).filter((c): c is Record<string, unknown> => Boolean(c))
+  const localPw = pw.filter((c) => c.type !== "remote" && !(c.url && !c.command))
+  const commandOf = (c: Record<string, unknown>) => Array.isArray(c.command) ? c.command.map(String) : []
+  const wrapsQaSecrets = (c: Record<string, unknown>) => commandOf(c).some((a) => a.includes("qa-secrets"))
+  const flagValue = (c: Record<string, unknown>, flag: string): string | undefined => {
+    const cmd = commandOf(c)
+    let value: string | undefined
+    for (let i = 0; i < cmd.length; i++) {
+      if (cmd[i] === flag) value = cmd[++i]
+      else if (cmd[i].startsWith(`${flag}=`)) value = cmd[i].slice(flag.length + 1)
+    }
+    return value
+  }
+  const outputDirOk = (c: Record<string, unknown>) => {
+    const value = flagValue(c, "--output-dir")
+    if (!value || value.startsWith("--")) return false
+    const canonicalPath = (path: string) => {
+      let current = resolve(path)
+      const suffix: string[] = []
+      while (!existsSync(current)) {
+        const parent = dirname(current)
+        if (parent === current) return resolve(path)
+        suffix.unshift(basename(current))
+        current = parent
+      }
+      return join(realpathSync(current), ...suffix)
+    }
+    const evidenceRoot = canonicalPath(resolve(directory, "evidence"))
+    const candidate = canonicalPath(resolve(directory, value))
+    return candidate === evidenceRoot || candidate.startsWith(evidenceRoot + sep)
+  }
+  const atValue = servers.atlassian
+  const at = Array.isArray(atValue) ? atValue[0] : atValue
   const env = ((at?.environment ?? at?.env ?? {}) as Record<string, unknown>) ?? {}
   const url = typeof env.JIRA_URL === "string" ? env.JIRA_URL : ""
   return {
-    hasPw: Boolean(pw),
-    pwUnmasked: pwLocal && !cmd.includes("--secrets") && !wrapsQaSecrets,
-    pwNoOutdir: pwLocal && !cmd.includes("--output-dir"),
-    pwNoImageomit: pwLocal && !cmd.some((a) => a === "--image-responses" || String(a).startsWith("--image-responses=")),
+    hasPw: pw.length > 0,
+    pwUnmasked: localPw.some((c) => !commandOf(c).includes("--secrets") && !wrapsQaSecrets(c)),
+    pwNoOutdir: localPw.some((c) => !outputDirOk(c)),
+    pwNoImageomit: localPw.some((c) => flagValue(c, "--image-responses") !== "omit"),
     hasAt: Boolean(at),
     dcHost: url ? url.replace(/^https?:\/\//, "").split("/")[0] : "",
   }
@@ -712,22 +737,22 @@ async function listProjects(directory: string): Promise<string[]> {
 }
 
 // The Stop gate forces learnings to be CAPTURED; nothing forces them to be
-// groomed — count ungroomed inbox entries and say so once per session (the
-// template ships one illustrative entry; one is not a backlog). Past the
-// auto-groom threshold (5+ entries or oldest entry older than 14 days) the
-// hint to the human becomes a directive to the agent: groom without waiting
+// groomed — count ungroomed inbox entries and say so once per session. Past an
+// auto-groom threshold (5+ entries, oldest entry older than 14 days, or 16 KB)
+// the hint to the human becomes a directive to the agent: groom without waiting
 // for a /retro-learn command.
-async function ungroomedLearnings(directory: string): Promise<{ count: number; oldest: string | null }> {
+async function ungroomedLearnings(directory: string): Promise<{ count: number; oldest: string | null; bytes: number }> {
   try {
     const text = await readFile(join(directory, "memory", "learnings", "_inbox.md"), "utf8")
     const dates = text
       .split("\n")
+      .filter((l) => l !== "## 2026-09-05 — SHOP-1234")
       .map((l) => /^## (\d{4}-\d{2}-\d{2}) /.exec(l)?.[1])
       .filter((d): d is string => Boolean(d))
       .sort()
-    return { count: dates.length, oldest: dates[0] ?? null }
+    return { count: dates.length, oldest: dates[0] ?? null, bytes: Buffer.byteLength(text) }
   } catch {
-    return { count: 0, oldest: null }
+    return { count: 0, oldest: null, bytes: 0 }
   }
 }
 
@@ -739,6 +764,12 @@ async function browserMode(directory: string): Promise<string> {
   const iso = b?.isolated === true ? "isolated" : b?.isolated === false ? "persistent profile" : ""
   const parts = [mode, iso].filter(Boolean)
   return parts.length ? `${parts.join(", ")} (your .playwright-mcp.config.json)` : ""
+}
+
+async function browserConsoleHint(directory: string): Promise<string> {
+  const cfg = await readJsonc(join(directory, ".playwright-mcp.config.json"))
+  if (!cfg || (cfg.console as Record<string, unknown> | undefined)?.level === "warning") return ""
+  return '- WARNING: .playwright-mcp.config.json does not set console.level to warning — info/debug console noise can flood tool responses. Set `"console": { "level": "warning" }` manually; the existing file was left untouched.'
 }
 
 // home = the QA home (data: projects/, memory/, evidence/); sessionDir = the
@@ -755,18 +786,20 @@ export async function orientation(home: string, sessionDir: string = home): Prom
   ]
   const bm = await browserMode(sessionDir)
   if (bm) lines.push(`- Browser: ${bm}`)
+  const consoleHint = await browserConsoleHint(sessionDir)
+  if (consoleHint) lines.push(consoleHint)
   lines.push(
     "- Read memory/INDEX.md before anything else; then only the active project's",
-    "  PROJECT.md + learnings.md. No full-repo scans.",
+    "  PROJECT.md, with targeted keyword lookups in learnings.md. No full-repo scans.",
     "- Lost? The qa-help skill lists every command (/qa-help) — plain language works too.",
   )
-  const scan = scanMcpServers(await readOpencodeMcp(sessionDir))
+  const scan = scanMcpServers(await readOpencodeMcp(sessionDir), sessionDir)
   // Contract violations are findings in any state. Order: security, then evidence.
   if (scan.pwUnmasked) {
     lines.push("- WARNING: the playwright MCP config has no --secrets flag — passwords would appear unmasked in tool responses. Add `--secrets .env.playwright-secrets` (and fill that file) or remove the entry and use the blueprint-provided server.")
   }
   if (scan.pwNoOutdir) {
-    lines.push("- WARNING: the playwright MCP config has no --output-dir flag — raw browser artifacts would not land in evidence/, breaking the evidence policy. Add `--output-dir evidence/.mcp-out` or use the blueprint-provided server.")
+    lines.push("- WARNING: the playwright MCP config has no --output-dir flag with an evidence/ path — raw browser artifacts would not land in evidence/, breaking the evidence policy. Set `--output-dir evidence/.mcp-out` or use the blueprint-provided server.")
   }
   if (scan.pwNoImageomit) {
     lines.push("- WARNING: the playwright MCP config has no --image-responses omit — every screenshot lands in the model context as an image (~1-2k tokens per shot). Add `--image-responses omit` or use the blueprint-provided server.")
@@ -788,13 +821,13 @@ export async function orientation(home: string, sessionDir: string = home): Prom
   if (foreignMcp.length) {
     lines.push(`- Global MCP servers visible but NOT declared in this project — the guard blocks them until declared here (they may belong to another project): ${foreignMcp.join(", ")}`)
   }
-  const { count: ungroomed, oldest: oldestLearning } = await ungroomedLearnings(home)
-  if (ungroomed > 1) {
+  const { count: ungroomed, oldest: oldestLearning, bytes: inboxBytes } = await ungroomedLearnings(home)
+  if (ungroomed > 0) {
     const overdue =
       oldestLearning !== null &&
       (Date.now() - Date.parse(oldestLearning)) / 86_400_000 > 14
-    if (ungroomed >= 5 || overdue) {
-      lines.push(`- AUTO-GROOM: ${ungroomed} ungroomed learnings in memory/learnings/_inbox.md (oldest: ${oldestLearning ?? "unknown"}) — over the auto-groom threshold (5 entries or 14 days). Without waiting for a command: groom and promote them via the retro-learn skill at the end of this session, then report in one sentence what was promoted. All gates apply as usual (seen: 2, _rejected.md, routing re-measurement).`)
+    if (ungroomed >= 5 || overdue || inboxBytes >= 16_384) {
+      lines.push(`- AUTO-GROOM: ${ungroomed} ungroomed learnings in memory/learnings/_inbox.md (oldest: ${oldestLearning ?? "unknown"}; size: ${inboxBytes} bytes) — over the auto-groom threshold (5 entries, 14 days, or 16 KB). Without waiting for a command: groom one bounded oldest-first batch and its eligible promotions via retro-learn at the end of this session, then report in one sentence what was promoted and whether a backlog remains. All gates apply as usual (seen: 2, _rejected.md, routing re-measurement).`)
     } else {
       lines.push(`- ${ungroomed} ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).`)
     }

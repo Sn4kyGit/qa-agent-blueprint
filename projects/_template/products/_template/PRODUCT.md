@@ -8,7 +8,9 @@
 >
 > **Size check**: a filled product file lands at 40–80 lines. If yours is as long as
 > the project file, either it was copy-pasted (which breaks inheritance and doubles
-> the maintenance) or this product is really a separate project.
+> the maintenance) or this product is really a separate project. Above 80 lines,
+> `/retro-learn` and `/re-board` warn about hot-context growth and propose
+> condensing or moving rare knowledge to `learnings.md`; this never blocks a test.
 >
 > No credentials, internal URLs, or secrets — references only.
 > Created via `/onboard-product` on <DATE>.
@@ -63,6 +65,9 @@ strategy input instead of guessing which test types a ticket needs.
 | stage | `<https://stage-<product>.example.invalid>` | all agent testing | <shared? rules> |
 
 - **Version check on stage**: <method, if it differs from the project's>
+- **Build verification**: <`required` | `unavailable` — omit to inherit. Use
+  `unavailable` only when this product has no version source; every report then
+  says `Build: unverified (project-configured)`. An observed mismatch still blocks.>
 
 ## Test users   (merge: add, key = Role — a product row replaces a project row of the same Role)
 
@@ -116,6 +121,11 @@ strategy input instead of guessing which test types a ticket needs.
 - **Test data**: <seed/reset mechanism for this product>
 
 ## Gotchas   (merge: add — project gotchas always still apply)
+
+Only stable, frequently needed product traps belong here: one compact durable
+fact per bullet, merged with or replacing older wording rather than appended as
+ticket history. Rare, keyword-searchable knowledge stays in `learnings.md`;
+repro narratives and transient states stay in learnings/evidence.
 
 - <product-specific trap 1>
 - <product-specific trap 2>

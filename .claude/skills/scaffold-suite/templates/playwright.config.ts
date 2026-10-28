@@ -16,7 +16,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,   // a shared stage tolerates one writer
   reporter: [
-    ['list'],
+    ['line'],
     // Machine-readable run data lands next to the evidence, where /qa-report and the
     // Stop hook look for it.
     ['json', { outputFile: process.env.QA_EVIDENCE_DIR

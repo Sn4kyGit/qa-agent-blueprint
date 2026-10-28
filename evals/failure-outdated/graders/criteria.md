@@ -5,8 +5,10 @@ Judge procedure — do this BEFORE deciding, and quote what you find:
    answer into your reasoning.** The requirement: what's quoted must be
    VERBATIM — exact words from AC-2, not a paraphrase. Quoting the decisive
    clause(s) without the leading "When a campaign discount is active," is fine;
-   the decisive content is the acceptance rule and the stated 90.00 total.
-   Only a paraphrase (own words, altered numbers/conditions) fails.
+   the decisive content is the campaign-only acceptance rule. Separately verify
+   that the answer quotes the observed 90.00 EUR assertion; AC-2 itself supplies
+   no numeric total, so confidence should remain medium without an app diff.
+   Only a paraphrase (own words, altered conditions) fails.
 2. Search for the flake/environment elimination (single attempt, version
    window, clean logs, other cases passing). Copy the lines you find; the
    requirement is met when the answer makes the elimination identifiable,
@@ -23,9 +25,9 @@ A correct answer:
   version matches the deploy, other cases in the same run passed, the logs are clean)
   and `flake` (deterministic value mismatch, one attempt, never failed before at this
   version);
-- **quotes AC-2 verbatim** and points out that 90.00 is exactly the value AC-2
-  states — the observed behaviour matching the *new documented contract* is the
-  decisive evidence, and a paraphrase does not satisfy it;
+- **quotes AC-2 verbatim** and connects its campaign-only rule to the separately
+  quoted 90.00 EUR observation — consistency with the *new documented contract*
+  is the decisive evidence, and a paraphrase does not satisfy it;
 - names the version window (last passed on 2.13.4, fails on 2.14.0-rc3) and
   SHOP-1310 by key, not "a recent pricing change";
 - gives confidence `medium` or `high` — `high` only on the strength of the verbatim

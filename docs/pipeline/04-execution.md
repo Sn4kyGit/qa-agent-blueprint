@@ -1,12 +1,14 @@
 # Pipeline 04 — Execution
 
-## Precondition: verify the deployed build
+## Precondition: readiness is green
 
-Confirm that `intake.expected_build` is actually live on the target
-environment, using the project file's version-check method. A test against the
-old build yields a clean-looking, false result. In doubt: `BLOCKED` (this is
-the existing `qa-manager` step 3 — stated here because the pipeline depends on
-it).
+`readiness.json` must confirm the project-allowed ticket status, no unresolved
+blockers, every required linked MR/PR merged, and `intake.expected_build` live on
+stage when build verification is required (`01a-readiness.md`). The gate precedes
+stage liveness, recon and execution; JIRA browser intake is the only earlier
+browser exception. A missing merge/required build is BLOCKED or a deploy handoff;
+explicitly unavailable verification is reported unverified, never a
+test against a known-wrong state.
 
 ## Writing the spec (hybrid, cli-first)
 

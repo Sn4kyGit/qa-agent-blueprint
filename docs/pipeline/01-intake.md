@@ -1,8 +1,10 @@
 # Pipeline 01 — Ticket intake
 
-Goal: turn a ticket into a testable assignment. Runs inside `qa-manager`'s
-existing steps 1–2 (read ticket, route project/product) — this file adds the
-structure, not a second pass.
+Goal: turn a ticket into a testable assignment. The main orchestrator runs it once
+(read ticket, route project/product) before readiness, strategy and dispatch. After
+strategy it embeds `intake.json` and `readiness.json` exactly in the sealed run
+capsule (`context-capsule.md`). Every manager, leaf and analyst receives that path;
+none repeats intake, routing or acceptance-criteria paraphrasing.
 
 ## Fetch targeted fields, not the whole ticket
 

@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 29 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · 421 fixture checks + 139 bun tests · 24 eval cases |
+| **Contents** | 30 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 145 bun tests · 39 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
@@ -37,8 +37,8 @@ A QA colleague that lives in your repo. You type `/test-ticket SHOP-1234`. The a
 flowchart LR
   A["Read ticket<br/>Atlassian MCP"] --> B["Route to project<br/>SHOP-1234 → projects/SHOP/"]
   B --> C["Route to product<br/>component → STOREFRONT"]
-  C --> D["Check stage<br/>deployed? right version?"]
-  D --> E["Test<br/>exploratory and/or spec"]
+  C --> D["Readiness<br/>status, merge, deployed build"]
+  D --> E["Test<br/>direct leaf or manager, mode-conformant"]
   E --> F["Evidence<br/>screenshots, logs, summary"]
   F --> G["Report to JIRA<br/>comment, attachments, transition"]
   G --> H["Capture learnings<br/>enforced, not suggested"]
@@ -63,9 +63,11 @@ prompt. All of it came from files the agent read because the ticket key told it 
    came up. The same Stop hook checks the declaration; the SessionStart hook shows
    how much is waiting to be groomed. "Explain once, never again" stops depending
    on goodwill.
-4. **It is token-efficient on purpose.** A slim router, skills that load on demand,
-   subagents that keep browser transcripts out of the main context, and a CLI runner
-   roughly 4× cheaper than driving the same flow through MCP.
+4. **It is token-efficient on purpose.** A slim router, on-demand skills and
+   targeted Learning lookups, Sonnet execution roles in Claude Code, and a Fast
+   Path that sends simple tickets straight to one execution leaf. Browser
+   transcripts stay inside subagents; readiness stops tests against a build that
+   is not deployed.
 5. **Rules are advisory; hooks are not.** Anything that must hold — evidence,
    secrets, destructive commands, learning capture — is enforced by a hook with
    fixtures proving it blocks.
@@ -335,11 +337,12 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>18 core skills</b> — the ticket workflow</summary>
+<summary><b>19 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
 | `/qa-help` | Show every command, plus the plain-language phrasing that also triggers it |
+| `/agentswitch` | Read-only check for alternating Claude Code and opencode in one shared QA home — never installs or re-onboards |
 | `/test-ticket` | Full workflow: read → route → stage-check → test → evidence → report |
 | `/retest-bug` | Focused re-test of a fixed bug + a tight regression sweep |
 | `/exploratory-testing` | Chartered SBTM session via Playwright MCP |
@@ -376,7 +379,7 @@ than by guesswork.
 
 Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
 by `/test-automation` when a project's declared framework is webdriverio (not
-invoked directly; see its SKILL.md). 18 + 10 + 1 = the 29 skills from the header.
+invoked directly; see its SKILL.md). 19 + 10 + 1 = the 30 skills from the header.
 
 </details>
 
@@ -468,8 +471,9 @@ transcript, a file, a ticket, or an artifact.
 
 **The MCP contract: name is contract, source and taste are free.** Hooks and
 skills match on the server *names* (`playwright`, `atlassian`), and the
-playwright server must carry `--secrets` (password masking) and `--output-dir`
-(evidence policy). Everything else — headless vs. headful, isolated vs.
+playwright server must carry `--secrets` (password masking), `--output-dir`
+inside `evidence/`, and `--image-responses omit` (screenshots stay files, not
+model input). Everything else — headless vs. headful, isolated vs.
 persistent profile, viewport, browser channel — is your preference, dialed in
 the consumer-owned `.playwright-mcp.config.json` (seeded with safe defaults on
 first run; the server reads it at launch, so edits apply after a restart).
@@ -482,9 +486,9 @@ Claude Code runs both, so pick one source per name. Details:
 
 ## Bringing it into an existing repo
 
-Already have your own `CLAUDE.md`, skills, and `.mcp.json`? Two supported paths.
-**Trying it out → plugin (the Quickstart's recommended mode). One repo,
-long-term → integrate. Many repos → plugin.**
+Already have your own `CLAUDE.md`, skills, and `.mcp.json`? Three supported paths.
+**Trying it out → plugin. One repo, long-term → integrate. Alternating Claude
+Code and opencode in one QA home → shared.**
 
 | | **A) Checkout + integrate** | **B) Plugin** |
 |---|---|---|
@@ -507,8 +511,9 @@ Every step is reported as `ADDED` / `MERGED` / `SKIPPED` / `WARN`. Merges are
 non-destructive by design: your `CLAUDE.md` gets a marked block appended (with a
 backup), rules and hooks are namespaced under `qa-blueprint/` so they cannot
 collide, `.mcp.json` merges by server name with yours winning **as long as your
-playwright entry carries the contract flags** (`--secrets`, `--output-dir` —
-missing ones get upgraded, with a backup), and a name collision
+playwright entry carries the contract flags** (`--secrets`, `--output-dir`,
+`--image-responses omit` — missing or invalid values are upgraded additively,
+with a backup and your wrapper/preferences preserved), and a name collision
 in skills or agents is skipped with a warning rather than overwritten. Running it
 twice changes nothing. `--uninstall` removes only what it added.
 
@@ -536,7 +541,23 @@ session context (one router text, no drift between install modes) and creates
 the Playwright server exits at startup without that file, which otherwise shows up
 only as a connection error.
 
-Full detection matrix, per-file collision policy, plugin mechanics and an FAQ:
+**C — shared (Claude Code + opencode).** Both harnesses stay start-ready in the
+same QA home; the Claude plugin is disabled to prevent duplicate registration.
+The installer creates selective `.claude` links, the opencode surface, both MCP
+configs and the full router while preserving `projects/`, `memory/`, `evidence/`
+and consumer-owned `.agents/`:
+
+```bash
+~/tools/qa-agent-blueprint/install.sh --mode shared --target . --dry-run
+~/tools/qa-agent-blueprint/install.sh --mode shared --target . --yes
+```
+
+Restart each harness and authenticate Atlassian once per harness. After that,
+switching means opening the other extension — no re-onboarding. `/agentswitch
+claude` or `/agentswitch opencode` performs a read-only readiness/collision
+check. Shared stage runs remain sequential.
+
+Full detection matrix, per-file collision policy, plugin/shared mechanics and an FAQ:
 **[docs/integration.md](docs/integration.md)**.
 
 ---
@@ -609,10 +630,10 @@ export. CI/non-macOS: keep exporting `JIRA_PERSONAL_TOKEN`, that always wins.
 - Hook-level enforcement blocks `rm -rf`, force pushes, and writes to `.env*`
   files; a permissions denylist prevents reads of known secret patterns.
 - Stage only. Never production — regardless of who asks or how it is framed.
-- `evidence/` is gitignored, so artifacts never enter the repo. Keeping them out of
-  the *model context* is a discipline rule, not an enforced boundary: Claude Code
-  does not currently honor `.claudeignore` for tool reads. For a hard boundary, add
-  `Read(evidence/**)` to `permissions.deny`.
+- `evidence/` is gitignored. Raw artifacts (`.mcp-out`, images, videos, traces
+  and binary captures) are also denied to Read in both harnesses, while
+  structured summaries and curated JSON/Markdown remain available to reporting
+  and analysis. `.claudeignore` documents intent; permissions enforce it.
 
 Details: `.claude/rules/core/security.md` · `docs/artifact-strategy.md`.
 
@@ -623,27 +644,24 @@ Details: `.claude/rules/core/security.md` · `docs/artifact-strategy.md`.
 The plugin is MIT — free. The git repo is contacted exactly twice in its life:
 at install, and when you explicitly update. Everything else is local.
 
-The real cost is **model tokens**, and the architecture is built to keep them
-down: the always-loaded layer is measured (~7.8k tokens) and capped by a test,
-the 29 skills load on demand, subagents isolate browser transcripts from the
-main context, evidence is referenced by path instead of read back, and project
-knowledge is found via `memory/INDEX.md` instead of full-repo scans.
+The real cost is **model tokens**. The always-loaded layer is measured (~8.3k)
+and capped by a test; skills and detailed rules load on demand. Project files
+stay compact, Learnings are searched by ticket keywords, raw evidence is not
+read back, and browser transcripts stay inside execution subagents.
 
-Rough comparison — one exploratory ticket test (~25 Playwright steps, headful)
-vs. doing the same with bare Claude Code:
+Claude Code uses Sonnet for the two execution roles, while complex orchestration
+and failure analysis still inherit the main model. Simple tickets skip the
+manager layer, complex tickets reuse completed intake/readiness, and no stage
+browser starts before merge/build readiness. A sealed, size-bounded
+`context-capsule.json` hands effective config and relevant knowledge to every
+agent without another PROJECT/PRODUCT merge. opencode deliberately leaves every
+model choice to `/models`.
 
-| | Blueprint | Bare Claude Code |
-|---|---|---|
-| Browser transcript | ~350–500k tokens (the subagent pays it too) | ~350–500k tokens |
-| Project knowledge, evidence read-back, detours | near zero (runbooks, routing, evidence policy) | re-explored every session, plus wrong turns |
-| **Total per ticket** | **~0.4–0.6M tokens** | **~0.6–1.1M tokens** |
-| Re-test with existing spec | ~50k (CLI runner) | full price again |
-
-On a subscription that is quota, not euros; at API prices an exploratory ticket
-test lands around $1–2 vs. $2–4. Honest caveat: the dominant cost is the
-browser snapshots either way — the blueprint earns its keep by removing the
-*repeatable* spend (no re-exploration, no testing-what-isn't-deployed runs,
-tenth-price re-tests once a spec exists), not by making the browser cheaper.
+The dominant context cost is still the browser snapshot history — Sonnet changes
+its price, not its size. Use `/usage` and the session logs to measure your own
+flows; this release does not carry a new benchmark, so older dollar and
+per-ticket estimates are not repeated as promises. Existing specs through the
+CLI runner remain the cheapest repeat check.
 
 ---
 
@@ -681,7 +699,7 @@ runs it.
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |
-| [evals/README.md](evals/README.md) | Behavioral conformance — 24 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
+| [evals/README.md](evals/README.md) | Behavioral conformance — 39 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
 | [docs/pilot-briefing.md](docs/pilot-briefing.md) | **Read before the first real onboarding**: what to collect, shadow mode, what is known unfinished |
 | [docs/rules/](docs/rules/) | The detail behind each always-loaded rule, read on demand |
 | [docs/runbooks/stage-deploy-general.md](docs/runbooks/stage-deploy-general.md) | Generic stage-deploy scaffold |

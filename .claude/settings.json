@@ -8,7 +8,20 @@
       "Read(.env.playwright-secrets)",
       "Read(**/*.pem)",
       "Read(**/id_rsa*)",
-      "Read(**/id_ed25519*)"
+      "Read(**/id_ed25519*)",
+      "Read(evidence/.mcp-out/**)",
+      "Read(**/evidence/.mcp-out/**)",
+      "Read(**/evidence/**/*.png)",
+      "Read(**/evidence/**/*.jpg)",
+      "Read(**/evidence/**/*.jpeg)",
+      "Read(**/evidence/**/*.gif)",
+      "Read(**/evidence/**/*.webp)",
+      "Read(**/evidence/**/*.bmp)",
+      "Read(**/evidence/**/*.webm)",
+      "Read(**/evidence/**/*.mp4)",
+      "Read(**/evidence/**/*.mov)",
+      "Read(**/evidence/**/*.zip)",
+      "Read(**/evidence/**/*.har)"
     ],
     "allow": [
       "Bash(mkdir -p evidence/:*)",

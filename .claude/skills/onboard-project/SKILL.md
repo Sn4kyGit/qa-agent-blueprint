@@ -57,7 +57,13 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
      "Credential sources").
    - Deploy runbook — use `docs/runbooks/stage-deploy-general.md` as the scaffold
      if the user doesn't have one written down yet.
-   - Pipelines/gate overrides, MR process, test assets location, gotchas.
+   - Pipelines/gate overrides, MR process, test assets location, gotchas. For
+     readiness, ask for the exact JIRA statuses that permit stage testing, the
+     merge policy (`when-linked` recommended, `always`, or `not-required`), and the
+      API/CLI queries for blockers, linked MR/PR state and deployed build. If no
+      version source exists, explicitly choose `Build verification: unavailable`
+      and record the residual reporting risk; do not invent an endpoint or an MR
+      requirement for projects that do not use one.
    - **Reporting — fetch, do not ask.** Transition names and the priority scheme are
      facts that live in JIRA, and `docs/rules/testing/jira-confluence.md` is explicit
      that a guessed transition fails loudly in some workflows and silently no-ops in

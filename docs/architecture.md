@@ -74,10 +74,11 @@ all four deliberately:
 2. **Skills expose only name + description (~100 tokens) until invoked** — the full
    SKILL.md loads on demand. Ten skills cost ~1k tokens idle instead of ~20k.
 3. **Project files are plain files, read selectively** — only the active project's
-   PROJECT.md + learnings.md enter the context; other projects cost nothing. The
-   product sub-layer keeps that property: a routed product adds one short file that
-   states only its differences, sibling products cost nothing, and a project without
-   products reads exactly what it read before.
+   PROJECT.md plus keyword-matched learning entries enter the context; other projects
+   cost nothing. Flow maps load only for phases that use them, and only confirmed
+   Areas are binding. The product sub-layer keeps that property: a routed product
+   adds one short file that states only its differences, sibling products cost
+   nothing, and a project without products reads exactly what it read before.
 4. **Subagents own separate context windows** — the 30-step browser snapshot stream
    of an exploration stays inside `test-executor`; only a ≤ 40-line verdict returns.
 
@@ -98,20 +99,18 @@ CLAUDE.md and rules are *advisory*. Hard guarantees are enforced mechanically:
 
 Capture → Groom → Promote, run by the `retro-learn` skill:
 
-- **Capture** (every session): unexpected findings → `memory/learnings/_inbox.md`,
-  dated, Problem/Cause/Solution, with a candidate promotion target.
-- **Groom** (weekly, on demand, or when the AUTO-GROOM directive fires): dedupe via Grep, bump `seen:` counters, retire
-  stale entries into `memory/learnings/_rejected.md` (reason + re-proposal
-  condition — the buffer against re-proposing what was already thrown out).
-- **Promote** (gate: ≥ 2 sessions): into rules, skills, or `projects/<KEY>/` — from
-  then on it is loaded automatically and never explained again. Promotions into
-  the blueprint's own rules/skills are additionally validation-gated: the mapped
-  eval cases from `evals/COVERAGE.md` must stay green, a red case reverts.
+- **Capture** (every session): check for an existing sighting first; only genuinely
+  new findings enter `memory/learnings/_inbox.md` with a candidate target.
+- **Groom** (weekly, on demand, or when AUTO-GROOM fires): one oldest-first batch,
+  dedupe via Grep, bump `seen:` counters, retire stale entries into `_rejected.md`.
+- **Promote** (gate: ≥ 2 sessions): merge one durable rule into rules, skills or
+  project context; rare knowledge stays in searchable Learnings. Blueprint-side
+  rules/skills/templates/hooks/docs are validation-gated through `evals/COVERAGE.md`.
   Promoted routing rows are re-measured once against later evidence
   (`product_routed_by`). Flow knowledge
   (which flows exist, their selectors, their neighbors) promotes into
-  `flow-map.md` — curated, never appended to by runs directly; `retest-bug`
-  scopes regression sweeps from it.
+  `flow-map.md` — curated, with sourced anchors and Neighbor bases; `retest-bug`
+  scopes only from confirmed Areas.
 
 Failures of the agent itself get a compact 5-Whys RCA before capture, so learnings
 target system gaps, not symptoms. See `docs/memory-layers.md` for how repo learnings
@@ -121,21 +120,33 @@ relate to Claude Code auto memory, and why no external memory server is wired in
 
 ```
 User: "Test SHOP-1234"
-  → qa-manager reads ticket (Atlassian MCP)
-  → routing: SHOP → projects/SHOP/PROJECT.md + learnings.md
-       ↳ has products? component "Admin" → products/ADMIN/PRODUCT.md + learnings.md
+  → main orchestrator: preflight once, then ticket intake (Atlassian MCP;
+    playwright-driven UI allowed for JIRA access `browser`)
+  → routing once: SHOP → projects/SHOP/PROJECT.md + targeted learning matches
+       ↳ has products? component "Admin" → products/ADMIN/PRODUCT.md + targeted matches
          (no Products section → skip; ambiguous → ask, headless BLOCKED)
-  → fix on stage?  no → deploy-to-stage (runbook from PROJECT.md)
+  → readiness.json: allowed status + no blockers + required linked MR/PR merged
+    + expected build deployed when required, API/CLI preferred
+       ↳ missing merge → BLOCKED; missing required build → BLOCKED or deploy handoff
+       ↳ explicitly unavailable build verification → report as unverified
+       ↳ only now: stage-liveness navigation, recon and execution may start
   → strategy: PROJECT.md "Execution mode" (mcp-only | hybrid | cli-first)
     + re-test (bug) or full test (story); escalation rules may force live observation
-  → test-executor (exploratory, MCP) and/or test-automator (specs, CLI)
+  → context-capsule.json sealed once: exact intake/readiness + effective config
+    + selected knowledge + source hashes; every later agent gets its path
+  → Fast Path: testable + low risk + no escalation + exactly one execution branch
+       → main orchestrator → test-executor OR test-automator (no qa-manager)
+    Complex path:
+       → qa-manager consumes the capsule, never remerges project context
+       → test-executor (exploratory, MCP) and/or test-automator (specs, CLI)
   → evidence: evidence/SHOP/SHOP-1234/<ts>/ (+ Stop hook enforcement)
   → PASS → report-to-jira: comment + final screenshot + transition "Verify"
-  → FAIL → failure-analyst: product wrong, or test wrong? (class + confidence)
+  → FAIL → owning orchestrator (main or qa-manager) → failure-analyst
+       (never test-executor/test-automator → failure-analyst)
        ↳ product-defect / undetermined → bug-reporter: project template, "Reopen"
        ↳ test-outdated / test-brittle  → NEEDS_REVIEW: propose, no bug, no transition
        ↳ environment → BLOCKED  ·  flake → test-reliability, no product bug
-  → retro-learn: unexpected findings → _inbox.md
+  → shadow mode and reporting unchanged; unexpected findings → retro-learn/_inbox.md
 ```
 
 ## Design principles
@@ -149,3 +160,4 @@ User: "Test SHOP-1234"
 | P5 | Rules ≠ enforcement | Hooks + permissions for evidence and secrets |
 | P6 | Secrets never in context | Vault/env references; MCP `--secrets` masking; storage state |
 | P7 | Evidence is mandatory | Fixed location, naming convention, Stop-hook enforcement |
+| P8 | One QA home, two harnesses | Shared mode links both surfaces without plugin duplication; run files outlive harness switches |

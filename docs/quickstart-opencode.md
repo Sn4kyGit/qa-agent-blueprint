@@ -1,7 +1,7 @@
 # Quickstart: opencode on a fresh machine
 
 The opencode path through the blueprint: the same ticket-driven QA Manager +
-Tester (29 skills, 5 agents, evidence gate), running under
+Tester (30 skills, 5 agents, evidence gate), running under
 [opencode](https://opencode.ai) instead of Claude Code — with **your** choice
 of model. The blueprint pins none: the model is whatever you pick in
 `/models` (docs/opencode-port-plan.md, D6).
@@ -43,20 +43,35 @@ mkdir -p ~/qa-workspace
 
 The installer checks prerequisites, links the blueprint surface, seeds
 `.env.playwright-secrets` (comment-only placeholder) and
-`.playwright-mcp.config.json` (headless defaults), and merges
+`.playwright-mcp.config.json` (headless defaults plus `console.level: warning`), and merges
 `opencode/opencode.template.jsonc` into your `opencode.json`:
 
 - existing **mcp server names win** — a Data Center `atlassian` entry you
-  added survives re-installs; only the **playwright contract flags**
-  (`--config`/`--secrets`/`--output-dir`) are force-upgraded, because hooks
-  and agents hard-reference them
+  added survives re-installs; missing or invalid **local playwright contract
+  flags** (`--config`/`--secrets`/`--output-dir`/`--image-responses omit`) are
+  fixed additively. Custom commands, channels, output paths under `evidence/`,
+  secrets sources and `qa-secrets` wrappers survive; remote entries stay untouched
 - `instructions` (router + core rules), `subagent_depth: 2` and the
-  `permission` denies are added; your existing keys are never removed
+  `permission` denies are added; your existing keys are never removed. Evidence
+  read denies cover only raw artifacts, not summaries, reports or JSON/Markdown
 - an existing `opencode.json` is backed up before the merge
 
 Uninstall: `install.sh --mode opencode --target ~/qa-workspace --uninstall`
 removes only the symlinks that point into the blueprint; your data and your
 `opencode.json` stay.
+
+## Alternating Claude Code and opencode? Use shared instead
+
+```bash
+~/qa-blueprint/install.sh --mode shared --target ~/qa-workspace --dry-run
+~/qa-blueprint/install.sh --mode shared --target ~/qa-workspace --yes
+```
+
+Shared keeps both harnesses start-ready without the Claude plugin, adds Claude's
+`.mcp.json` and full router, and leaves existing onboarding data untouched. After
+one restart and one Atlassian authentication per harness, switching means opening
+the other extension. `/agentswitch <claude|opencode>` checks this read-only;
+there is no re-onboarding and no parallel stage testing.
 
 ## Wrong folder? Move the QA home
 
@@ -140,7 +155,7 @@ In `~/qa-workspace`:
 opencode run "list your available skills"
 ```
 
-should show the 28 blueprint skills, and `/test-ticket` `/retest-bug`
+should show the 30 blueprint skills, and `/test-ticket` `/retest-bug`
 `/qa-report` etc. should appear as commands. The evidence gate is active from
 the first session: a JIRA write without fresh evidence is blocked with
 `QA_EVIDENCE_MISSING:`.

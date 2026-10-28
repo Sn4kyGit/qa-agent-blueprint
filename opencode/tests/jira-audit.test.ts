@@ -68,6 +68,16 @@ describe("jira audit (opencode)", () => {
     expect(await logLines()).toHaveLength(6)
   })
 
+  test("deferred executeWrite and executeDestructive are audited, executeRead is not", async () => {
+    await fire("atlassian_executeWrite", { arguments: { issueKey: "SHOP-7" } })
+    await fire("atlassian_executeDestructive", { arguments: { issueKey: "SHOP-8" } })
+    await fire("atlassian_executeRead", { arguments: { issueKey: "SHOP-9" } })
+    const lines = await logLines()
+    expect(lines).toHaveLength(2)
+    expect(lines[0]).toContain("tool=atlassian_executeWrite | key=SHOP-7")
+    expect(lines[1]).toContain("tool=atlassian_executeDestructive | key=SHOP-8")
+  })
+
   test("read-only atlassian tools are not writes", async () => {
     await fire("atlassian_getJiraIssue", { issueKey: "SHOP-1" })
     await fire("atlassian_searchJiraIssues", {})

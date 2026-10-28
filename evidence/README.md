@@ -25,7 +25,9 @@ Special subdirectories:
   `.claude/rules/core/evidence-policy.md`.
 - No PII, no secrets, no auth-state files. Retention policy:
   `docs/artifact-strategy.md`.
-- Artifacts are referenced by path, never loaded into the model context. That is a
-  discipline rule (`.claude/rules/core/token-discipline.md`), **not** an enforced
-  boundary: Claude Code does not honor `.claudeignore` for tool reads. For a hard
-  boundary add `Read(evidence/**)` to `permissions.deny`.
+- Raw artifacts are referenced by path, never loaded into the model context.
+  `.claudeignore` documents this policy but is not enforced for tool reads. The
+  enforced `permissions.deny` boundary covers `.mcp-out`, screenshots/images,
+  traces, videos and similar raw artifacts — never `evidence/**` wholesale.
+- `execution_summary.json`, curated reports and structured JSON/Markdown remain
+  readable for verdicts, aggregation and reporting.

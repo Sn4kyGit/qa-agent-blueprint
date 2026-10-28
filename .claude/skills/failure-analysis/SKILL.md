@@ -13,19 +13,28 @@ the product broke or the test aged out was decided by a human, every time, from
 scratch. This skill puts one evidenced step in between.
 
 Run it via subagent `failure-analyst` — the browser logs, JIRA issues and run history
-it reads have no business in the orchestrator's context.
+it reads have no business in the orchestrator's context. The caller supplies the
+sealed run capsule path plus the failure packet. The analyst uses the capsule's exact
+ACs, routing, build and effective config instead of PROJECT/PRODUCT full reads,
+re-routing or another Learnings merge. Bounded log, JIRA, history, spec and targeted
+new-symptom Learning reads remain part of triage. A stale capsule is returned as
+`STALE_CONTEXT`; the analyst never regenerates it. Standalone use without a capsule
+keeps the prior effective-project fallback.
 
 ## Steps
 
-1. **Intake, zero tool calls.** `qa-manager` hands over: ticket, project,
-   product/scope, evidence dir, the failing TC-IDs with their assertion and error
-   text, `environment.version_or_build`, and the effective project/product file
-   paths. Re-derive none of it.
+1. **Intake from the handoff.** `qa-manager` or the direct calling orchestrator
+   hands over the sealed capsule path, evidence dir and failure packet: every
+   failing TC-ID with assertion and error text plus `environment.version_or_build`.
+   Read run/AC/build/effective config from the capsule and re-derive none of them.
+   Only a standalone invocation without a capsule uses the former explicit
+   project/product paths. The caller is never an execution leaf.
 2. **Environment gate.** Does the run even count? Compare the version against the
    ticket's fix version and `deploy.to_version`; `grep` `logs/console.log` and
    `logs/network.log` for 404s, 5xx, `ECONNREFUSED`, mixed bundle hashes; `grep`
-   `memory/learnings/env-gotchas.md` and the project's (and product's) `learnings.md`
-   for the signature; check whether any other case in the same run passed. A hit
+   relevant capsule Learning excerpts for the signature; without a capsule, or for
+   a genuinely new signature, grep `memory/learnings/env-gotchas.md` and the routed
+   Learnings narrowly. Check whether any other case in the same run passed. A hit
    **ends the analysis** — reasoning about product vs. test on top of an invalid run
    is theory-building on sand. Class `environment`, verdict BLOCKED, no bug.
 3. **Determinism gate.** `python3 .claude/skills/failure-analysis/tc-history.py
@@ -50,15 +59,16 @@ it reads have no business in the orchestrator's context.
    **quoted verbatim, never paraphrased**. Then apply
    `references/classification.md`. Paraphrase is where an agent smuggles in what it
    wants to be true. When a flow map exists (bridge file section `## Flow map`, or
-   `projects/<KEY>/[products/<PRODUCT>/]flow-map.md`): check the affected area's
-   other flows for sibling cases asserting the same now-changed contract — a
+   `projects/<KEY>/[products/<PRODUCT>/]flow-map.md`): check the affected confirmed
+   area's other flows for sibling cases asserting the same now-changed contract — a
    deliberate change rarely stales exactly one assertion. Name those siblings in
    the analysis; they are the human's ruling scope, not an automatic FAIL.
 7. **Return ≤ 60 lines.** Class, confidence, basis, per-case mapping, and for
    `test-outdated`/`test-brittle` the proposal per
-   `references/proposal-template.md`. `qa-manager` writes `failure-analysis.md` into
-   the existing run directory and merges `failure_analysis` into
-   `execution_summary.json` (`.claude/rules/core/evidence-policy.md`).
+   `references/proposal-template.md`. `qa-manager` or the direct calling
+   orchestrator writes `failure-analysis.md` into the existing run directory and
+   merges `failure_analysis` into `execution_summary.json`
+   (`.claude/rules/core/evidence-policy.md`).
 
 ## What the class means downstream
 
@@ -69,7 +79,7 @@ it reads have no business in the orchestrator's context.
 | `product-defect` | FAIL | `bug-reporter` as before, analysis attached, **FAIL transition on the original ticket** per PROJECT.md |
 | `test-outdated` | NEEDS_REVIEW | proposal, no bug, **no transition** — a human rules |
 | `test-brittle` | NEEDS_REVIEW | proposal (locator/wait mechanics only) |
-| `undetermined` | FAIL | comment the analysis and name the one missing artifact |
+| `undetermined` | FAIL | `bug-reporter` with the analysis attached; name the one artifact that would have decided it |
 
 A NEEDS_REVIEW report always names the **other branch**: what follows if the human
 rules `product-defect` instead (→ `bug-reporter` with this analysis attached) — the

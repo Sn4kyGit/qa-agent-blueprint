@@ -158,6 +158,21 @@ if parts:
 PY
 }
 
+browser_console_status() {
+  local f="$SESSION_CWD/.playwright-mcp.config.json"
+  [ -f "$f" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  python3 - "$f" <<'PY' 2>/dev/null
+import json, sys
+try:
+    cfg = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+if cfg.get("console", {}).get("level") != "warning":
+    print('\n- WARNING: .playwright-mcp.config.json does not set console.level to warning — info/debug console noise can flood tool responses. Set `"console": { "level": "warning" }` manually; the existing file was left untouched.')
+PY
+}
+
 # Plugin-mode update notice: compare the RUNNING plugin version against the
 # version the known marketplaces currently advertise — offline, reading only
 # ~/.claude/plugins/known_marketplaces.json and each marketplace's local
@@ -261,18 +276,20 @@ SECRETS_TEMPLATE
 # The Stop hook forces learnings to be CAPTURED; nothing forces them to be groomed,
 # so an inbox quietly grows until it is useless. Count ungroomed entries (capture
 # headers, "## YYYY-MM-DD — ...") and say so once per session. Counting only, no
-# file content in the context, and silent at zero. Past the auto-groom threshold
-# (5+ entries or oldest entry older than 14 days) the hint to the human becomes a
+# file content in the context, and silent at zero. Past an auto-groom threshold
+# (5+ entries, oldest entry older than 14 days, or 16 KB) the hint becomes a
 # directive to the agent: groom without waiting for a /retro-learn command —
 # people who never type slash commands are exactly who this is for.
 inbox_status() {
-  local inbox="$CWD/memory/learnings/_inbox.md" n oldest overdue=0
+  local inbox="$CWD/memory/learnings/_inbox.md" n oldest overdue=0 bytes
   [ -f "$inbox" ] || return 0
-  n="$(grep -cE '^## [0-9]{4}-[0-9]{2}-[0-9]{2} ' "$inbox" 2>/dev/null || echo 0)"
-  # The template ships one illustrative example entry; one is not a backlog.
-  [ "${n:-0}" -gt 1 ] || return 0
-  oldest="$(grep -oE '^## [0-9]{4}-[0-9]{2}-[0-9]{2} ' "$inbox" 2>/dev/null \
+  n="$(grep -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2} ' "$inbox" 2>/dev/null \
+    | grep -v '^## 2026-09-05 — SHOP-1234$' | grep -c . || true)"
+  [ "${n:-0}" -gt 0 ] || return 0
+  oldest="$(grep -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2} ' "$inbox" 2>/dev/null \
+    | grep -v '^## 2026-09-05 — SHOP-1234$' \
     | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort | head -1)"
+  bytes="$(wc -c < "$inbox" 2>/dev/null | tr -d ' ')"
   if [ -n "$oldest" ]; then
     overdue="$(python3 -c "
 import datetime, sys
@@ -283,8 +300,8 @@ except Exception:
     print(0)
 " 2>/dev/null || echo 0)"
   fi
-  if [ "${n:-0}" -ge 5 ] || [ "$overdue" = "1" ]; then
-    printf '\n- AUTO-GROOM: %s ungroomed learnings in memory/learnings/_inbox.md (oldest: %s) — over the auto-groom threshold (5 entries or 14 days). Without waiting for a command: groom and promote them via the retro-learn skill at the end of this session, then report in one sentence what was promoted. All gates apply as usual (seen: 2, _rejected.md, routing re-measurement).' "$n" "${oldest:-unknown}"
+  if [ "${n:-0}" -ge 5 ] || [ "$overdue" = "1" ] || [ "${bytes:-0}" -ge 16384 ]; then
+    printf '\n- AUTO-GROOM: %s ungroomed learnings in memory/learnings/_inbox.md (oldest: %s; size: %s bytes) — over the auto-groom threshold (5 entries, 14 days, or 16 KB). Without waiting for a command: groom one bounded oldest-first batch and its eligible promotions via retro-learn at the end of this session, then report in one sentence what was promoted and whether a backlog remains. All gates apply as usual (seen: 2, _rejected.md, routing re-measurement).' "$n" "${oldest:-unknown}" "${bytes:-0}"
   else
     printf '\n- %s ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).' "$n"
   fi
@@ -294,7 +311,7 @@ except Exception:
 # configured, read-only: ~/.claude.json (user scope) and .mcp.json (project
 # scope). Prints space-separated flags: HAS_PW, HAS_AT, PW_UNMASKED (a playwright
 # config without --secrets — passwords would appear unmasked in tool responses),
-# PW_NO_OUTDIR (no --output-dir — raw artifacts would not land in evidence/).
+# PW_NO_OUTDIR (no --output-dir into evidence/ — raw artifacts would land elsewhere).
 # Headless/headful and --isolated are deliberately NOT flagged: they are user
 # preferences, not contract (see docs/rules/testing/playwright-mcp.md).
 mcp_scan() {
@@ -336,18 +353,42 @@ pw = servers.get("playwright", [])
 flags = []
 if pw:
     flags.append("HAS_PW")
-    # A playwright entry launched through qa-secrets.mjs mcp satisfies the
-    # secrets contract by construction (ephemeral mask file, appended
-    # --secrets) — the literal flag is inside the wrapper, not the args.
+    def _args(c):
+        return [str(a) for a in (c.get("args") or [])]
+    def _local(c):
+        return c.get("type") not in ("http", "sse", "remote") and not (c.get("url") and not c.get("command"))
     def _wraps_qa_secrets(c):
-        parts = [str(a) for a in (c.get("args") or [])] + [str(c.get("command") or "")]
+        parts = _args(c) + [str(c.get("command") or "")]
         return any("qa-secrets" in p for p in parts)
-    if not any("--secrets" in (c.get("args") or []) or _wraps_qa_secrets(c) for c in pw):
+    def _flag_value(c, flag):
+        args = _args(c)
+        value = None
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg == flag:
+                value = args[i + 1] if i + 1 < len(args) else None
+                i += 1
+            elif arg.startswith(flag + "="):
+                value = arg.split("=", 1)[1]
+            i += 1
+        return value
+    def _output_dir_ok(c):
+        value = _flag_value(c, "--output-dir")
+        if not value or value.startswith("--"):
+            return False
+        evidence_root = os.path.realpath(os.path.join(cwd, "evidence"))
+        candidate = os.path.realpath(os.path.join(cwd, value))
+        try:
+            return os.path.commonpath((evidence_root, candidate)) == evidence_root
+        except ValueError:
+            return False
+    local_pw = [c for c in pw if _local(c)]
+    if any("--secrets" not in _args(c) and not _wraps_qa_secrets(c) for c in local_pw):
         flags.append("PW_UNMASKED")
-    if not any("--output-dir" in (c.get("args") or []) for c in pw):
+    if any(not _output_dir_ok(c) for c in local_pw):
         flags.append("PW_NO_OUTDIR")
-    if not any(a == "--image-responses" or a.startswith("--image-responses=")
-               for c in pw for a in (c.get("args") or [])):
+    if any(_flag_value(c, "--image-responses") != "omit" for c in local_pw):
         flags.append("PW_NO_IMAGEOMIT")
 at = servers.get("atlassian", [])
 if at:
@@ -387,14 +428,6 @@ mcp_hint() {
       printf '\n- Global MCP servers visible but NOT declared in this project — the guard blocks them until declared here (they may belong to another project): %s' \
         "$(printf '%s' "$scan" | sed -E 's/.*FOREIGN_MCP:([^ ]*).*/\1/' | tr ',' ' ')" ;;
   esac
-  [ -d "$CWD/projects" ] || return 0
-  local d
-  for d in "$CWD"/projects/*/; do
-    [ -d "$d" ] || continue
-    case "$(basename "$d")" in _template|EXAMPLE) continue ;; esac
-    return 0   # a real project exists — the user is past first-run setup
-  done
-  local scan="$MCP_SCAN"
   # Contract violations are findings in any mode. Order: security, then evidence.
   case "$scan" in
     *PW_UNMASKED*)
@@ -402,12 +435,19 @@ mcp_hint() {
   esac
   case "$scan" in
     *PW_NO_OUTDIR*)
-      printf '\n- WARNING: an existing playwright MCP config has no --output-dir flag — raw browser artifacts would not land in evidence/, breaking the evidence policy. Add `--output-dir evidence/.mcp-out` or use the blueprint-provided server.' ;;
+      printf '\n- WARNING: an existing playwright MCP config has no --output-dir flag with an evidence/ path — raw browser artifacts would not land in evidence/, breaking the evidence policy. Set `--output-dir evidence/.mcp-out` or use the blueprint-provided server.' ;;
   esac
   case "$scan" in
     *PW_NO_IMAGEOMIT*)
       printf '\n- WARNING: an existing playwright MCP config has no --image-responses omit — every screenshot lands in the model context as an image (~1-2k tokens per shot). Add `--image-responses omit` or use the blueprint-provided server.' ;;
   esac
+  [ -d "$CWD/projects" ] || return 0
+  local d
+  for d in "$CWD"/projects/*/; do
+    [ -d "$d" ] || continue
+    case "$(basename "$d")" in _template|EXAMPLE) continue ;; esac
+    return 0
+  done
   if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
     # Verified behavior: a project .mcp.json does NOT override a plugin-provided
     # server of the same name — it duplicates it (two processes, two tool
@@ -530,9 +570,9 @@ CONTEXT="QA Agent Blueprint — session start$HOME_LINE
 $(list_projects)
 - Playwright CLI: $(playwright_version)$BROWSER_LINE
 - Read memory/INDEX.md before anything else; then only the active project's
-  PROJECT.md + learnings.md. No full-repo scans.
+  PROJECT.md, with targeted keyword lookups in learnings.md. No full-repo scans.
 - Lost? The qa-help skill lists every command (in plugin mode:
-  /qa-agent-blueprint:qa-help) — plain language works too.$(mcp_hint)$(inbox_status)$(secrets_status)$(secrets_keys_line)$(jira_pat_resolve)$AUTO_SECRETS$BROWSER_SEED_NOTE$(update_notice)"
+  /qa-agent-blueprint:qa-help) — plain language works too.$(mcp_hint)$(inbox_status)$(secrets_status)$(secrets_keys_line)$(jira_pat_resolve)$AUTO_SECRETS$BROWSER_SEED_NOTE$(browser_console_status)$(update_notice)"
 
 if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
   # The router is the plugin's own CLAUDE.md, injected VERBATIM. If the file is

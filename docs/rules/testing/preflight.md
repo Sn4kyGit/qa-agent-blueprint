@@ -34,7 +34,9 @@ passing probe writes, and its freshness.
    names only, never values).
 
 MCP liveness is the one thing a bash script cannot probe — the agent-side norm
-(qa-manager step 0) covers it with one trivial call per server in the loop.
+covers Atlassian with one trivial read after preflight. The Playwright stage
+navigation waits until readiness is green; before that, Playwright is allowed only
+for JIRA intake on `browser` access.
 
 ## Artifact and TTL
 
@@ -58,8 +60,9 @@ A gate that cannot be tuned gets switched off; a tuned gate keeps protecting.
   `projects/*/PROJECT.md` exists.
 - **Headless/CI**: a failed preflight is one BLOCKED report with the reason —
   never a retry loop against a dead server; reconnecting is a human step.
-- The probe covers *reachability*, not *version*. "Is the fix deployed?"
-  remains the separate stage-version check (qa-manager step 3).
+- The probe covers *reachability*, not *readiness*. Allowed status, blockers,
+  required merge state and the deployed build are the separate gate in
+  `docs/pipeline/01a-readiness.md`.
 
 Fixture proof: `.claude/hooks/tests/preflight-fixtures.sh` (probe paths:
 VPN off, JIRA-only outage, multi-VPN, missing secrets, undeclared targets) and

@@ -63,10 +63,28 @@ A real, explainable observation — six causes, in order of importance:
 With these four rules, hybrid quality sits close to MCP quality. Without them,
 measurably below.
 
+## Orchestration and readiness
+
+`/test-ticket` and `/retest-bug` load in the main orchestrator. It runs preflight,
+intake, routing, readiness and strategy once, then seals one run-scoped
+`context-capsule.json` before dispatch (`context-capsule.md`). A testable, low-risk
+ticket with no escalation and exactly one mode-conformant execution branch goes
+directly to `test-executor` or `test-automator`; a complex ticket hands the same
+capsule to `qa-manager`. Managers, leaves and the analyst consume that context
+without reading/routing/merging PROJECT, PRODUCT and Learnings again. On FAIL,
+whichever orchestrator owns the run invokes `failure-analyst` with the capsule and
+failure packet — never an execution leaf.
+
+Readiness (`01a-readiness.md`) is the gate between routing and every stage action:
+allowed project status, no blockers, required linked merge complete, expected build
+deployed. JIRA browser intake is allowed before it; stage liveness, recon and test
+execution are not.
+
 ## The six phases
 
 ```
-Phase 1 Intake       → intake.json      ticket read, ACs numbered, testability
+Phase 1 Intake       → intake.json + readiness.json   ticket, ACs, testability, gate
+Dispatch handoff     → context-capsule.json           sealed effective context, created once
 Phase 2 Recon        → recon.json       probe script and/or MCP session — REAL selectors
 Phase 3 Planning     → testplan.md      cases from ACs, gaps named → approval (per config)
 Phase 4 Execution    → run.json + evidence   mode-dependent: MCP live or spec via CLI
@@ -79,7 +97,12 @@ Phases exchange data through **files in the run dir**
 context: the flow survives agent, model and harness switches, and an aborted
 run resumes at its last phase. `execution_summary.json` stays the artifact the
 Stop hook enforces (`.claude/rules/core/evidence-policy.md`); the contract
-files feed it.
+files feed it. The capsule is immutable: a build/readiness or effective-context
+change goes back to the main orchestrator for readiness re-verification and a new
+revision. Revision 1 is `context-capsule.json`; revision N>1 uses
+`context-capsule.vN.json` and preserves every predecessor. Recipients return
+`STALE_CONTEXT`; they never regenerate it themselves. Delegation prompts carry the
+selected revision path, not its full text.
 
 ## Tool assignment by mode
 
@@ -107,9 +130,10 @@ no browser session.
 - No test result without evidence — missing evidence means `BLOCKED`.
 - Never test or deploy against an environment the project file forbids
   (production is reference-only).
-- Before phase 4, verify the expected build is actually deployed (version check
-  per PROJECT.md). A test against the old build yields a clean-looking, false
-  result.
+- Before phase 2 and phase 4, readiness must be green: allowed status, no blockers,
+  required merge complete and expected build deployed when required
+  (`01a-readiness.md`; explicitly unavailable verification is reported). No
+  stage-liveness shortcut and no universal MR/PR requirement.
 - Credentials never printed, logged, written to files, or attached.
 - Phase 3 is confirmed before phase 4 starts when `Plan approval: yes`.
   Headless runs cannot wait: they proceed and flag the unapproved plan in the

@@ -9,7 +9,7 @@
 #   - compat symlinks .claude, docs, .agents resolve the literal path
 #     references inside skill/rule/agent bodies
 #   - opencode.json merges the template: existing mcp names win, the
-#     playwright contract flags are force-upgraded, existing keys survive
+#     playwright contract flags are upgraded additively, existing keys survive
 #   - seed files (.env.playwright-secrets, .playwright-mcp.config.json) exist
 #     after install (both MCP flags hard-fail on ENOENT)
 #   - foreign content is never overwritten; uninstall removes only our links
@@ -96,7 +96,11 @@ cfg_check "config carries instructions + subagent_depth 2" "$TARGET/opencode.jso
 cfg_check "config has no model key (D6)" "$TARGET/opencode.json" \
   "'model' not in cfg and 'small_model' not in cfg"
 cfg_check "playwright contract flags present" "$TARGET/opencode.json" \
-  "'--secrets' in cfg['mcp']['playwright']['command'] and '--config' in cfg['mcp']['playwright']['command']"
+  "'--secrets' in cfg['mcp']['playwright']['command'] and '--config' in cfg['mcp']['playwright']['command'] and cfg['mcp']['playwright']['command'][-2:] == ['--image-responses', 'omit']"
+cfg_check "browser config seed sets console warning" "$TARGET/.playwright-mcp.config.json" \
+  "cfg.get('console',{}).get('level') == 'warning'"
+cfg_check "opencode evidence denies are raw-artifact only" "$TARGET/opencode.json" \
+  "all(k in cfg['permission']['read'] for k in ['**/evidence/.mcp-out/**','**/evidence/**/*.png','**/evidence/**/*.zip','**/evidence/**/*.har']) and not any(k in cfg['permission']['read'] for k in ['**/evidence/**','**/evidence/**/screenshots/**','**/evidence/**/traces/**','**/evidence/**/videos/**']) and not any(k.endswith('.json') or k.endswith('.md') or 'execution_summary' in k for k in cfg['permission']['read'])"
 
 echo
 echo "== merge into an existing opencode.json =="
@@ -119,9 +123,91 @@ cfg_check "own mcp server kept"        "$TARGET2/opencode.json" "'my-own' in cfg
 cfg_check "own model key kept"         "$TARGET2/opencode.json" "cfg.get('model') == 'openrouter/z-ai/glm-5.3-flash'"
 cfg_check "existing atlassian wins (DC entry survives)" "$TARGET2/opencode.json" \
   "cfg['mcp']['atlassian'].get('type') == 'local'"
-cfg_check "playwright contract flags force-upgraded" "$TARGET2/opencode.json" \
+cfg_check "playwright contract flags upgraded additively" "$TARGET2/opencode.json" \
   "'--secrets' in cfg['mcp']['playwright']['command'] and '.env.playwright-secrets' in cfg['mcp']['playwright']['command']"
 cfg_check "subagent_depth raised to 2" "$TARGET2/opencode.json" "cfg.get('subagent_depth') == 2"
+
+JSONCTARGET="$WORK/consumer-jsonc"
+mkdir -p "$JSONCTARGET"
+cat > "$JSONCTARGET/opencode.jsonc" <<'JSONC'
+{
+  // consumer comment
+  "model": "openrouter/consumer-\"jsonc\"",
+  "instructions": ["docs/consumer.md",],
+  "mcp": {"consumer": {"type": "local", "command": ["consumer-mcp"]}}
+}
+JSONC
+OUT="$("$INSTALL" --mode opencode --target "$JSONCTARGET" --yes 2>&1)"
+if [ $? -ne 0 ]; then fail "JSONC migration exits 0" "$(printf '%s' "$OUT" | tail -3)"; else pass "JSONC migration exits 0"; fi
+assert_file "JSONC migrated to opencode.json" "$JSONCTARGET/opencode.json"
+assert_no_file "JSONC source retired" "$JSONCTARGET/opencode.jsonc"
+assert_file "JSONC backup retained" "$(ls "$JSONCTARGET"/opencode.jsonc.bak-* 2>/dev/null | head -1)"
+cfg_check "JSONC model and instruction retained" "$JSONCTARGET/opencode.json" "cfg.get('model') == 'openrouter/consumer-\"jsonc\"' and 'docs/consumer.md' in cfg['instructions'] and any('ROUTER.md' in str(i) for i in cfg['instructions'])"
+cfg_check "JSONC consumer MCP retained" "$JSONCTARGET/opencode.json" "cfg['mcp']['consumer']['command'] == ['consumer-mcp'] and 'playwright' in cfg['mcp']"
+
+DUALTARGET="$WORK/consumer-dual-config"
+mkdir -p "$DUALTARGET"
+printf '%s\n' '{"instructions":["json.md"]}' > "$DUALTARGET/opencode.json"
+printf '%s\n' '{"instructions":["jsonc.md"]}' > "$DUALTARGET/opencode.jsonc"
+cp -R "$DUALTARGET" "$WORK/dual-config-before"
+OUT="$("$INSTALL" --mode opencode --target "$DUALTARGET" --yes 2>&1)"
+if [ $? -eq 0 ]; then fail "dual config exits nonzero" "installer unexpectedly succeeded"; else pass "dual config exits nonzero"; fi
+printf '%s' "$OUT" | grep -q "BLOCKED" && pass "dual config reports BLOCKED" || fail "dual config reports BLOCKED" "$OUT"
+diff -r "$WORK/dual-config-before" "$DUALTARGET" >/dev/null 2>&1 && pass "dual config collision writes nothing" || fail "dual config collision writes nothing"
+
+WRAPTARGET="$WORK/consumer-wrapper"
+mkdir -p "$WRAPTARGET"
+cat > "$WRAPTARGET/opencode.json" <<'JSON'
+{
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["node", ".claude/scripts/qa-secrets.mjs", "mcp", "STAGE_PASSWORD", "--", "custom-pw", "serve"]
+    }
+  }
+}
+JSON
+"$INSTALL" --mode opencode --target "$WRAPTARGET" --yes >/dev/null 2>&1
+cfg_check "opencode wrapper and custom executable preserved" "$WRAPTARGET/opencode.json" \
+  "cfg['mcp']['playwright']['command'][:7] == ['node','.claude/scripts/qa-secrets.mjs','mcp','STAGE_PASSWORD','--','custom-pw','serve']"
+cfg_check "opencode wrapper receives missing contract flags" "$WRAPTARGET/opencode.json" \
+  "all(f in cfg['mcp']['playwright']['command'] for f in ['--config','--output-dir','--image-responses'])"
+cfg_check "opencode wrapper secrets source not replaced" "$WRAPTARGET/opencode.json" \
+  "'--secrets' not in cfg['mcp']['playwright']['command'] and '.env.playwright-secrets' not in cfg['mcp']['playwright']['command']"
+
+CUSTOMTARGET="$WORK/consumer-pre-010-custom"
+mkdir -p "$CUSTOMTARGET"
+cat > "$CUSTOMTARGET/opencode.json" <<'JSON'
+{
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["custom-pw", "serve", "--channel", "firefox", "--secrets", "vault.env", "--output-dir", "evidence/custom", "--image-responses", "allow"]
+    }
+  }
+}
+JSON
+"$INSTALL" --mode opencode --target "$CUSTOMTARGET" --yes >/dev/null 2>&1
+cfg_check "pre-0.10 custom command and channel preserved" "$CUSTOMTARGET/opencode.json" \
+  "cfg['mcp']['playwright']['command'][:4] == ['custom-pw','serve','--channel','firefox']"
+cfg_check "pre-0.10 custom secrets and output preserved" "$CUSTOMTARGET/opencode.json" \
+  "'vault.env' in cfg['mcp']['playwright']['command'] and 'evidence/custom' in cfg['mcp']['playwright']['command']"
+cfg_check "pre-0.10 config added and image value fixed" "$CUSTOMTARGET/opencode.json" \
+  "'--config' in cfg['mcp']['playwright']['command'] and cfg['mcp']['playwright']['command'][cfg['mcp']['playwright']['command'].index('--image-responses') + 1] == 'omit' and 'allow' not in cfg['mcp']['playwright']['command']"
+
+TRAVTARGET="$WORK/consumer-output-traversal"
+mkdir -p "$TRAVTARGET"
+printf '%s' '{"mcp":{"playwright":{"type":"local","command":["npx","@playwright/mcp@latest","--config",".playwright-mcp.config.json","--secrets",".env.playwright-secrets","--output-dir","evidence/../outside","--image-responses","omit"]}}}' > "$TRAVTARGET/opencode.json"
+"$INSTALL" --mode opencode --target "$TRAVTARGET" --yes >/dev/null 2>&1
+cfg_check "traversal output-dir corrected to evidence" "$TRAVTARGET/opencode.json" \
+  "'evidence/.mcp-out' in cfg['mcp']['playwright']['command'] and 'evidence/../outside' not in cfg['mcp']['playwright']['command']"
+
+REMOTETARGET="$WORK/consumer-remote"
+mkdir -p "$REMOTETARGET"
+printf '%s' '{"mcp":{"playwright":{"type":"remote","url":"https://pw.example.invalid/mcp"}}}' > "$REMOTETARGET/opencode.json"
+"$INSTALL" --mode opencode --target "$REMOTETARGET" --yes >/dev/null 2>&1
+cfg_check "remote playwright not replaced by a local command" "$REMOTETARGET/opencode.json" \
+  "cfg['mcp']['playwright'].get('url') == 'https://pw.example.invalid/mcp' and 'command' not in cfg['mcp']['playwright']"
 
 echo
 echo "== foreign content is never overwritten =="

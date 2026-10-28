@@ -12,7 +12,7 @@ task. Humans start at `README.md`.
 
 `qa-agent-blueprint`: a ticket-driven QA Manager + Tester for Claude Code
 (JIRA ticket in → tested ticket out, mandatory evidence, learning loop).
-Ships 29 skills, 5 subagents, 4 hooks, and 2 MCP servers (`playwright`,
+Ships 30 skills, 5 subagents, 4 hooks, and 2 MCP servers (`playwright`,
 `atlassian`). Installs into any project as a Claude Code plugin — nothing is
 copied into the consumer repo; only the user's own data (`projects/`,
 `memory/`, `evidence/`) lives there.
@@ -50,13 +50,16 @@ node ≥ 18, `opencode` CLI (`npm install -g opencode-ai` — you may install it
 with the user's OK), python3. Verify afterwards from the consumer:
 
 ```bash
-opencode run "list your skills"   # should show the 28 blueprint skills
+opencode run "list your skills"   # should show the 30 blueprint skills
 ```
 
 Full walkthrough incl. human steps (provider connect via `/connect`, JIRA auth,
 browser mode, shadow mode): `docs/quickstart-opencode.md`. A consumer picks
-**one** harness — the `.claude` compat symlink and the Claude plugin would
-double-register skills.
+**one** harness per installation mode — the `.claude` compat symlink and the
+Claude plugin would double-register skills. For alternating Claude Code and
+opencode in one QA home, use `install.sh --mode shared` instead: it disables the
+project plugin and links both surfaces without re-onboarding. `/agentswitch`
+checks that layout read-only.
 
 
 - `--scope project` enables the plugin only in this project (writes one key
@@ -173,7 +176,7 @@ referenced read-only from each product's `PRODUCT.md` (`App repo` field) during
 claude plugin details qa-agent-blueprint
 ```
 
-Expected inventory: `Skills (29)`, `Agents (5)`, `Hooks (4)`
+Expected inventory: `Skills (30)`, `Agents (5)`, `Hooks (4)`
 (SessionStart/Stop/PreToolUse/PostToolUse), `MCP servers (2)`.
 
 ## Alternative: clone + installer

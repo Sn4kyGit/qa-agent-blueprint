@@ -20,6 +20,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { qaBlueprint, scanMcpServers } from "../plugins/qa-blueprint.ts"
 import { fakeCtx } from "./fixtures/payloads.ts"
+import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
 const VAR = "JIRA_PERSONAL_TOKEN"
 let saved: string | undefined
@@ -121,10 +124,50 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
     const scan = scanMcpServers({
       playwright: {
         type: "local",
-        command: ["node", ".claude/scripts/qa-secrets.mjs", "mcp", "STAGE_PASSWORD", "--", "npx", "@playwright/mcp@latest"],
+        command: ["node", ".claude/scripts/qa-secrets.mjs", "mcp", "STAGE_PASSWORD", "--", "npx", "@playwright/mcp@latest", "--output-dir", "evidence/.mcp-out", "--image-responses=omit"],
       },
     })
     expect(scan.pwUnmasked).toBe(false)
+    expect(scan.pwNoOutdir).toBe(false)
+    expect(scan.pwNoImageomit).toBe(false)
+  })
+
+  test("image-responses allow is flagged while equals omit is accepted", () => {
+    const base = ["npx", "@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out"]
+    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--image-responses", "allow"] } }).pwNoImageomit).toBe(true)
+    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--image-responses=omit"] } }).pwNoImageomit).toBe(false)
+  })
+
+  test("output-dir must point into evidence, including equals form", () => {
+    const base = ["npx", "@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--image-responses", "omit"]
+    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "/tmp/pw-out"] } }).pwNoOutdir).toBe(true)
+    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir=evidence/custom"] } }).pwNoOutdir).toBe(false)
+    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "evidence/../outside"] } }).pwNoOutdir).toBe(true)
+    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "/tmp/evidence"] } }).pwNoOutdir).toBe(true)
+  })
+
+  test("output-dir cannot escape evidence through a symlink", async () => {
+    const root = await mkdtemp(join(tmpdir(), "qa-output-containment-"))
+    try {
+      await mkdir(join(root, "evidence"))
+      await symlink(tmpdir(), join(root, "evidence", "escape"))
+      const command = ["npx", "@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/escape/out", "--image-responses", "omit"]
+      expect(scanMcpServers({ playwright: { type: "local", command } }, root).pwNoOutdir).toBe(true)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("complementary playwright entries never share contract health", () => {
+    const scan = scanMcpServers({
+      playwright: [
+        { type: "local", command: ["npx", "@playwright/mcp@latest", "--secrets", ".env.playwright-secrets"] },
+        { type: "local", command: ["npx", "@playwright/mcp@latest", "--output-dir", "evidence/.mcp-out", "--image-responses", "omit"] },
+      ],
+    })
+    expect(scan.pwUnmasked).toBe(true)
+    expect(scan.pwNoOutdir).toBe(true)
+    expect(scan.pwNoImageomit).toBe(true)
   })
 
   test("remote playwright is the consumer's own setup — never flagged", () => {

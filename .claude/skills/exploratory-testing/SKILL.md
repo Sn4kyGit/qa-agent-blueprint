@@ -9,10 +9,20 @@ Session-Based Test Management (SBTM) applied to our ticket-driven flow: a writte
 charter, a time-boxed session delegated to `test-executor`, heuristic-guided
 exploration, and a debrief — not "click around and see what happens."
 
+When a run-scoped `context-capsule.json` path is supplied, use it as the effective
+context for this session: exact ACs, routing, stage/test-user references, confirmed
+Areas and relevant Learnings. Do not fully read PROJECT/PRODUCT, route again or
+repeat the mode/suite/Learnings merge. Pass the capsule path to `test-executor`.
+Targeted new symptom/flow Learning reads remain allowed. A stale capsule returns
+`STALE_CONTEXT` to the orchestrator; never regenerate it here. Without a capsule,
+the standalone fallback below reads the effective project context as before.
+
 ## Steps
 
 0. Run the preflight first (same gate as `test-ticket`): the blueprint's
-   `preflight.sh <KEY>` must pass before any browser/JIRA call.
+   `preflight.sh <KEY>` must pass before any browser/JIRA call. Do not use a stage
+   navigation as an early liveness probe. JIRA access `browser` may use Playwright
+   for JIRA intake only.
 1. **Write the charter** before starting, in the SBTM pattern:
 
    ```
@@ -23,21 +33,31 @@ exploration, and a debrief — not "click around and see what happens."
 
    E.g. "Explore the checkout flow's coupon handling, with the `qa-standard` test
    user and three coupon states (valid/expired/exhausted), to discover requirement
-   gaps against SHOP-1234's acceptance criteria." Not "test the app." Check
+   gaps against SHOP-1234's acceptance criteria." Not "test the app." With a capsule, use its selected knowledge. Without one, check
    `memory/learnings/*.md` and `projects/<KEY>/learnings.md` for known risk areas
    or past bug clusters in this area before finalizing the target. When a flow
    map exists (`projects/<KEY>/[products/<PRODUCT>/]flow-map.md`, or the bridge's
-   `## Flow map`): areas whose `last confirmed` is oldest are charter candidates —
-   an unconfirmed flow is a hypothesis, not a truth — and the map names the
-   target area precisely.
-2. Confirm project context is loaded: test users, stage URL, environment gotchas
-   — from the effective project file, i.e. `PROJECT.md` plus the routed product's
-   `PRODUCT.md` if the project has products. Name the product in the charter.
-   from `projects/<KEY>/PROJECT.md` and `learnings.md`.
+   `## Flow map`): confirmed Areas whose `last confirmed` is oldest are charter
+   candidates — an unconfirmed flow is a hypothesis, not a truth — and the map
+   names the target area precisely. Unconfirmed candidates supply no binding anchors.
+2. Confirm project context is loaded: test users, stage URL, environment gotchas.
+   Take them from the supplied capsule; only a standalone run without a capsule
+   reads `PROJECT.md` plus the routed product's `PRODUCT.md`. Name the product in
+   the charter when one is routed.
+2b. For a ticket-driven session, finish intake/routing and the readiness contract
+   (`docs/pipeline/01a-readiness.md`) before the first stage navigation: allowed
+   status, no blockers, required linked merge complete, expected build deployed when
+   verification is required (otherwise explicitly configured and reported unverified).
+   Prefer API/CLI and write `readiness.json`; missing merge/required build means
+   BLOCKED or a deploy handoff, not exploratory clicking. An area-only charter
+   needs an explicitly authorized target and, under required verification, an
+   expected build; unavailable verification stays documented as unverified.
+   Only then may the stage-liveness navigation and this session begin.
 3. **Time-box it**: 45–90 minutes of actual exploration. Bug-finding effectiveness
    drops sharply past 90 minutes — split a bigger area into multiple chartered
    sessions rather than one long unfocused one.
-4. Delegate the session to subagent `test-executor` with the charter. It drives
+4. Delegate the session to subagent `test-executor` with the charter and, when
+   available, the sealed capsule path rather than pasted context. It drives
    the configured playwright MCP browser (headless/headful and isolation per the
    user's `.playwright-mcp.config.json`) per `docs/rules/testing/playwright-mcp.md`
    and produces evidence per `.claude/rules/core/evidence-policy.md`. Instruct it
@@ -82,8 +102,12 @@ exploration, and a debrief — not "click around and see what happens."
    ground instead of re-checking this one. If the flow itself (not just the bug)
    is worth repeating going forward, hand it to `test-automation` — see the
    worked example in `references/heuristics-and-automation.md`.
-7. Any finding of severity P0–P2 → hand off to `bug-report`. Anything unexpected
-   about the environment or tooling itself → capture via `retro-learn`.
+7. On a FAIL, the orchestrator running this skill invokes `failure-analyst` with
+   the failure packet and, when available, the capsule path before any bug handoff; `test-executor` never delegates to the analyst. A confirmed
+   `product-defect`/`undetermined` finding of severity P0–P2 then goes to
+   `bug-report`; other classes follow their normal BLOCKED/NEEDS_REVIEW/reliability
+   path. Anything unexpected about the environment or tooling itself → capture via
+   `retro-learn`.
 
 ## When NOT to use this
 

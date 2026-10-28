@@ -258,12 +258,12 @@
     Sprache, wie Gedächtnis, Kosten und Sicherheit funktionieren.
   </p>
   <div class="stats">
-    <div class="stat"><div class="n">29</div><div class="l">Skills</div></div>
+    <div class="stat"><div class="n">30</div><div class="l">Skills</div></div>
     <div class="stat"><div class="n">5</div><div class="l">Subagents</div></div>
     <div class="stat"><div class="n">5+10</div><div class="l">Regeln (immer / on demand)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
-    <div class="stat"><div class="n">421+139</div><div class="l">Fixture-Checks + bun-Tests</div></div>
-    <div class="stat"><div class="n">24</div><div class="l">Eval-Cases</div></div>
+    <div class="stat"><div class="n">Fixtures+145</div><div class="l">Fixture-Suiten + bun-Tests</div></div>
+    <div class="stat"><div class="n">39</div><div class="l">Eval-Cases</div></div>
     <div class="stat"><div class="n">8,3k</div><div class="l">Token immer geladen</div></div>
   </div>
 </header>
@@ -277,7 +277,8 @@ plugin in this project. Read its AGENTS.md first and follow the runbook.</code><
   <pre><code>claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace</code></pre>
   <p>Unter <strong>opencode</strong> (modell-agnostisch, Modell = deine <code>/models</code>-Wahl): <code>install.sh --mode opencode --target &lt;projekt&gt; --yes</code> vom Clone aus — Details: <a href="https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md">Quickstart opencode</a>.</p>
-  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 29 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
+  <p>Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: <code>install.sh --mode shared</code> — beide bleiben ohne Re-Onboarding startbereit, <code>/agentswitch</code> prüft read-only.</p>
+  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 30 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
 </section>
 
 <section>
@@ -385,7 +386,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <p>Router plus fünf Regeldateien: alles, was binden muss, bevor irgendein Skill geladen ist.
     Das Detail dahinter liegt in <code>docs/rules/</code> und wird gelesen, wenn sein Thema kommt —
     jede Datei nennt ihren Auslöser oben.</p>
-    <span class="path">CLAUDE.md + .claude/rules/core/ · gemessen 8.268 Token, Budget 8.400</span>
+    <span class="path">CLAUDE.md + .claude/rules/core/ · gemessen 8.372 Token, Budget 8.400</span>
   </div>
   <div class="card">
     <h4><span class="num">2</span>Skills &amp; Subagents</h4>
@@ -787,8 +788,8 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
     <tr><th>Bereich</th><th>Absicherung</th></tr>
     <tr><td>Hooks (Guard, Stop, SessionStart)</td><td>189 Fixtures — jede Regel mit eigenem Fall</td></tr>
     <tr><td>Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption)</td><td>119 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses</td></tr>
-    <tr><td>Kontextkosten</td><td>gemessen — Budget-Check, 8.268 von 8.400 Token belegt</td></tr>
-    <tr><td>Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes)</td><td>24 Eval-Cases — ein eigenes Skript fährt sie über <code>claude -p</code> oder OpenRouter</td></tr>
+    <tr><td>Kontextkosten</td><td>gemessen — Budget-Check, 8.372 von 8.400 Token belegt</td></tr>
+    <tr><td>Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes)</td><td>39 Eval-Cases — ein eigenes Skript fährt sie über <code>claude -p</code> oder OpenRouter</td></tr>
     <tr><td>Ein echtes Projekt, ein echtes Ticket</td><td><strong>nie</strong> — genau das ist der Pilot</td></tr>
   </table>
   <p class="note">
@@ -836,26 +837,26 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
     Keine Telemetrie, keine Lizenz-Checks.
   </p>
   <p class="sub">
-    Die echten Kosten sind <strong>Modell-Tokens</strong> — und genau dafür ist die Architektur
-    gebaut: Die immer geladene Ebene ist gemessen (~8.300 Tokens) und per Test gedeckelt,
-    die 29 Skills laden erst bei Bedarf, Subagents halten Browser-Transkripte aus dem
-    Hauptkontext, Evidence wird als Pfad referenziert statt eingelesen, und Projektwissen
-    wird über <code>memory/INDEX.md</code> gefunden statt per Vollscan.
+    Die echten Kosten sind <strong>Modell-Tokens</strong>. Die immer geladene Ebene ist
+    gemessen (~8.300 Tokens) und gedeckelt; Skills und Detailregeln laden bei Bedarf.
+    Learnings werden ticketbezogen durchsucht, rohe Evidence nicht eingelesen, und
+    einfache Tickets überspringen die Manager-Ebene. Eine versiegelte Run-Capsule
+    ersetzt bei jedem weiteren Agenten-Spawn das erneute Lesen und Mergen des
+    Projektkontexts. Claude Code nutzt Sonnet für die
+    Ausführungsrollen; opencode lässt die Modellwahl bei <code>/models</code>.
   </p>
   <table>
-    <tr><th>Ein Ticket-Test (explorativ, ~25 Browser-Schritte)</th><th>Mit Blueprint</th><th>Nacktes Claude Code</th></tr>
-    <tr><td>Browser-Transkript</td><td>~350–500k Tokens (der Subagent zahlt es auch)</td><td>~350–500k Tokens</td></tr>
-    <tr><td>Projektwissen, Evidence-Rücklesen, Irrwege</td><td>nahe null (Runbooks, Routing, Evidence-Policy)</td><td>wird jede Session neu erkundet</td></tr>
-    <tr><td><strong>Summe pro Ticket</strong></td><td><strong>~0,4–0,6 Mio. Tokens</strong></td><td><strong>~0,6–1,1 Mio. Tokens</strong></td></tr>
-    <tr><td>Re-Test mit vorhandenem Spec</td><td>~50k (CLI-Runner)</td><td>wieder voller Preis</td></tr>
-    <tr><td><strong>Hybrid-Modus (0.12.0)</strong></td><td colspan="2">Probe liefert echte Selektoren für einen Bruchteil der MCP-Kosten, Spec läuft per CLI, danach ein kurzer Live-Check — nahe MCP-Tiefe zu mittleren Kosten; <code>cli-first</code> drückt Re-Tests Richtung CI-Niveau</td></tr>
+    <tr><th>Kostentreiber</th><th>Gegenmaßnahme</th></tr>
+    <tr><td>Browser-Snapshot-Verlauf</td><td>isolierter Execution-Subagent; bei Claude Code standardmäßig Sonnet</td></tr>
+    <tr><td>wiederholtes Intake/Routing</td><td>Fast Path bzw. Manager-Handoff mit fertigen Artefakten</td></tr>
+    <tr><td>Tests auf altem/fehlendem Build</td><td>Readiness vor jeder Stage-Aktion</td></tr>
+    <tr><td>wachsende Lern- und Rohdaten</td><td>16-KB-Grooming, verdichtete Promotion, Raw-Read-Denys</td></tr>
+    <tr><td>wiederholte Flows</td><td>vorhandene Specs über den CLI-Runner</td></tr>
   </table>
   <p class="note">
-    <strong>Ehrlichkeit:</strong> Die Browser-Snapshots dominieren die Kosten in beiden Fällen —
-    der Blueprint macht den Browser nicht billiger, er streicht den <em>wiederholbaren</em>
-    Verbrauch: keine Neu-Erkundung, keine Tests gegen eine Umgebung ohne den Fix, und
-    Re-Tests mit Spec kosten ein Zehntel. Im Subscription-Modell ist das Quota statt Euro;
-    zu API-Preisen liegt ein explorativer Ticket-Test bei grob 1–2 $ statt 2–4 $.
+    <strong>Ehrlichkeit:</strong> Sonnet verändert den Preis der Browser-Tokens, nicht
+    ihre Menge. Für 0.15.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und
+    Ticket-Schätzungen sind deshalb keine Zusage. Miss mit <code>/usage</code> und den Session-Logs.
   </p>
 </section>
 
@@ -867,7 +868,7 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
     <h4><span class="num">?</span>Wie funktioniert das Gedächtnis?</h4>
     <p>Gar nicht im Kopf — alles liegt als normale Textdateien in deinem Projektordner,
     einsehbar und per Git teilbar. Fünf Schubladen: das <strong>Handbuch</strong> (immer dabei,
-    nur die Regeln), die <strong>Fachbücher</strong> (29 Skills, laden nur bei Bedarf), die
+    nur die Regeln), die <strong>Fachbücher</strong> (30 Skills, laden nur bei Bedarf), die
     <strong>Projektakte</strong> (Umgebungen, Testuser, Runbooks — einmal eingerichtet), das
     <strong>Lerntagebuch</strong> (Überraschungen aus Läufen) und die <strong>Beweise</strong>
     (Screenshots, Logs — als Datei, nie im Gedächtnis). Der Clou: Am Ende jeder Session
@@ -878,30 +879,21 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
 
   <div class="card">
     <h4><span class="num">?</span>Verbrennt das ständige Lesen und Lernen nicht selbst Tokens?</h4>
-    <p>Ja — aber erstaunlich wenige, und es spart ein Vielfaches. Die Rechnung im Detail:
-    <strong>Lernen kostet</strong> pro Lauf nur die Learning-Deklaration im Protokoll plus ein
-    kurzer Eintrag ins Lerntagebuch (~100–300 Tokens). Das wöchentliche Aufräumen
-    (<code>/retro-learn</code>) liest gezielt per Grep statt ganzer Dateien — ein paar tausend
-    Tokens, nur auf Zuruf. <strong>Lesen kostet</strong> wenig, weil nie alles gelesen wird:
-    Der Session-Start lädt nur das Handbuch (~8.300 Tokens) plus ein Inhaltsverzeichnis
-    (<code>memory/INDEX.md</code>); in die Schubladen wird nur bei Bedarf geschaut, Beweise
-    werden nie zurückgelesen. <strong>Die Gegenrechnung:</strong> Ohne dieses Gedächtnis
-    erkundet ein Agent das Projekt in <em>jeder</em> Session neu — Umgebungen, Logins,
-    Deploy-Wege, Fallstricke. Das sind locker 50.000–100.000 Tokens pro Ticket, plus die
-    Irrwege, die eine vergessene Falle auslöst. Gemessen: ~0,4–0,6 Mio. Tokens pro Ticket-Test
-    mit Gedächtnis gegenüber ~0,6–1,1 Mio. ohne — und ein Re-Test mit gelerntem Autotest liegt
-    bei ~50.000. Lernen kostet also grob 1&nbsp;% des Laufs und verhindert den teuersten Teil:
-    das Neu-Entdecken dessen, was schon bekannt war.</p>
+    <p>Ja — deshalb ist der Lernkreislauf begrenzt: Capture dedupliziert sofort, Grooming
+    arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätestens bei
+    16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
+    stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
+    Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
+    Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.15.0 steht noch aus.</p>
   </div>
 
   <div class="card">
     <h4><span class="num">?</span>Wie effizient ist eine Session?</h4>
     <p>Die immer geladene Ebene ist ~8.300 Tokens (gemessen, per Test gedeckelt). Browser-Arbeit
-    läuft in abgeschotteten Teil-Sessions — das 30-Schritte-Klickprotokoll flutet nie den
-    Hauptkontext, zurück kommt nur das Ergebnis. Pro Ticket-Test: <strong>~0,4–0,6 Mio. Tokens</strong>
-    statt ~0,6–1,1 Mio. ohne Blueprint, weil Projektwissen nicht jede Session neu erkundet wird.
-    Mit vorhandenem Autotest sinkt der Re-Test auf <strong>~50.000 Tokens</strong> — ein Zehntel.
-    Und die Execution Modes lassen dich wählen, wo sich die teure Live-Beobachtung lohnt.</p>
+    läuft in abgeschotteten Teil-Sessions; einfache Tickets gehen direkt an genau einen
+    Execution-Agenten, komplexe übergeben fertiges Intake und Readiness an den Manager.
+    Vorhandene Specs laufen über den CLI-Runner. Die Execution Modes bestimmen, wo sich
+    teure Live-Beobachtung lohnt; gemessen wird mit <code>/usage</code>, nicht mit alten Schätzwerten.</p>
   </div>
 
   <div class="card">
@@ -954,7 +946,7 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
     <p>Nein. Du schreibst ganz normal: „Teste SHOP-1234", „Der Fix ist auf Stage, prüf das",
     „Wie läuft's mit dem Testing?" — deutsch oder englisch. Auch das Lernen läuft von allein:
     Jede Session <em>muss</em> deklarieren, was sie gelernt hat (ein Hook erzwingt es), und
-    wächst der Stapel ungeprüfter Learnings über die Schwelle (5 Einträge oder 14 Tage alt),
+    wächst der Stapel ungeprüfter Learnings über eine Schwelle (5 Einträge, 14 Tage alt oder 16 KB),
     räumt der Agent ihn am Session-Ende <strong>von selbst</strong> auf und berichtet in einem
     Satz, was daraus wurde. Die Einrichtung ist ein geführtes Interview (~30–60 Minuten pro
     Projekt). Einzige Menschen-Aufgaben: JIRA-Zugang einrichten, Testuser-Passwörter einmal
@@ -973,8 +965,8 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
 
 <footer>
   <p>
-    QA Agent Blueprint · Stand: 24. September 2026 (0.12.0) —
-    aktualisiert auf Repo-Stand (29 Skills, 5 Subagents, 421 Fixture-Checks + 139 bun-Tests, 24 Eval-Cases,
+    QA Agent Blueprint · Stand: 28. Oktober 2026 (0.15.0) —
+    aktualisiert auf Repo-Stand (30 Skills, 5 Subagents, Fixture-Batterie + 145 bun-Tests, 39 Eval-Cases,
     5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
     Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
     Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,

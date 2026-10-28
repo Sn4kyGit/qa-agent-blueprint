@@ -8,6 +8,160 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.15.0] — 2026-10-28
+
+Theme: **one QA home, two harnesses, one handoff.** Claude Code and opencode can
+now stay start-ready in the same VSCode workspace without re-onboarding, while a
+sealed run capsule removes the remaining repeated project reads between agents.
+
+### Added — shared installation and `/agentswitch`
+- **`install.sh --mode shared`** links the blueprint selectively into a real
+  consumer `.claude/` (`rules`, `skills`, `agents`, `hooks`, `scripts`) and adds the
+  opencode surface, merged `opencode.json` and consumer `.mcp.json`. The full
+  shared router, support links for onboarding/re-board/whats-new, secrets/browser
+  seeds and QA-home marker are included. `projects/`, `memory/`, `evidence/` and
+  `.agents/` remain consumer-owned; no Claude plugin is active, so nothing is
+  registered twice. Plugin and opencode migrations preserve existing data and
+  settings; integrate/custom collisions block before any write. JSONC configs are
+  migrated without creating a JSON/JSONC duplicate. Uninstall removes links and
+  only blueprint-owned config entries, leaving no dead hook/router references.
+- **`/agentswitch <claude|opencode>`** is a strictly read-only checker for the
+  shared layout, plugin duplication, collisions, MCP contract, CLI prerequisites
+  and data preservation. `READY` means “open the other extension”; otherwise it
+  reports human migration steps. No installer, writes, network/MCP/preflight,
+  keychain access, secret reads, process probes or re-onboarding. Cloud OAuth is
+  once per harness; Data Center reuses the keychain PAT. Harnesses remain
+  sequential for stage work.
+
+### Added — run-scoped context capsule
+- **`context-capsule.json`** is created once by the main orchestrator after
+  intake, routing, readiness and strategy. It carries exact intake/readiness,
+  effective config, selected Learnings, confirmed Areas, field/source provenance
+  and an RFC8785/SHA-256 integrity hash — target 4–8 KiB, hard limit 16 KiB. No
+  secret values, auth state, raw logs, full ticket history or unconfirmed map
+  candidates. This is structured evidence, not another memory layer, database or
+  MCP server.
+- `qa-manager`, `test-executor`, `test-automator` and `failure-analyst` consume
+  the capsule path in both harnesses instead of fully rereading and remerging
+  PROJECT/PRODUCT/Learnings. Targeted new factual reads remain available.
+  Central source freshness is checked once; stale context returns
+  `STALE_CONTEXT` to the orchestrator, never recipient-side repair. Revision N
+  uses `context-capsule.vN.json`, so earlier revisions stay intact and resealing
+  an older/equal revision is rejected.
+- Stdlib `seal`/`validate` tooling covers secret suffixes, source ownership,
+  sealed-field provenance, exact embedded artifacts, safe-integer canonicalization,
+  run binding, hash types and size limits. Integrate now ships `.claude/scripts`,
+  so the same validator exists in every installation mode.
+
+### Changed
+- Skill inventory: **30** with `/agentswitch`; opencode command inventory: **19**.
+- Eval inventory: **39 cases**, adding shared ready/collision and capsule
+  handoff/stale coverage; `evals/COVERAGE.md` maps the new norms and fixtures.
+- Installation docs distinguish plugin, integrate, opencode and shared. Shared is
+  the choice for alternating Claude Code and opencode in one QA home.
+
+### Verification
+- Shared/plugin/opencode/integrate migration fixtures, agentswitch read-only
+  fixtures, capsule schema/security/revision fixtures, full bash battery, plugin
+  validation and 145 opencode bun tests.
+- New behavioral cases: `agentswitch-ready`, `agentswitch-collision`,
+  `capsule-handoff`, `capsule-stale`; affected Fast-Path and handoff cases updated
+  for capsule-first execution. All four plus the affected Fast-Path/Re-board cases
+  pass through the opencode runner with `kimi-code-plan-global/k3.1-pro`.
+- A real scratch shared install returns `STATUS=READY` from `/agentswitch` in both
+  directions with no file changes. Live VSCode/Claude OAuth smoke remains a human
+  verification step; no live
+  browser or JIRA claim is made from installer fixtures.
+
+### Upgrade
+- Existing plugin users who want alternating harnesses: run
+  `install.sh --mode shared --dry-run --target <QA-HOME>`, review, then run the
+  shared install. The project plugin is disabled and existing onboarding data is
+  preserved. Restart both harnesses and authenticate each once.
+- Existing plugin-only users can stay on the plugin and simply update; Shared is
+  optional. `/agentswitch` reports the current state without changing it.
+
+## [0.14.0] — 2026-10-28
+
+Theme: **spend tokens on evidence, not repeated orchestration.** Field report:
+browser subagents dominated the day's quota, simple tickets repeated intake through
+nested agents, and an unmerged fix produced a worthless stage run. This release
+attacks those three costs directly and keeps the learning loop from moving its
+backlog into always-read project files.
+
+### Changed — orchestration and readiness
+- **Fast Path for simple tickets.** `/test-ticket` and `/retest-bug` now perform
+  preflight, intake, routing and readiness once in the main orchestrator. A
+  testable, low-risk, single-branch run delegates directly to `test-executor` or
+  `test-automator`; `qa-manager` is reserved for multi-branch/complex work and
+  receives the completed artifacts instead of reading and routing everything
+  again. FAIL still requires `failure-analyst`, invoked by the owning
+  orchestrator — evidence, execution modes, reporting and shadow gates unchanged.
+- **Readiness before any stage action.** New `readiness.json` contract: allowed
+  JIRA status, no unresolved blockers, required linked MR/PR merged, expected
+  build deployed. API/CLI checks come first; JIRA browser intake remains the
+  explicit exception, but stage liveness, recon and execution wait for green
+  readiness. `Merge requirement` supports `when-linked` (compatibility default),
+  `always` and `not-required`. Projects with no version source can explicitly
+  choose `Build verification: unavailable`; the report then says
+  `Build: unverified (project-configured)` instead of blocking forever, while an
+  observed mismatch always blocks. `/onboard-project` and `/re-board` carry the
+  new fields.
+- **Claude Code execution roles default to Sonnet** (`test-executor` and
+  `test-automator`); manager, analyst and reporter still inherit. opencode stays
+  model-agnostic under D6 — no provider-specific model pin there.
+
+### Changed — browser and upgrade contract
+- Playwright scanners now validate `--image-responses omit` by value, per entry,
+  including wrapped commands, and warn even after onboarding. Output dirs must
+  resolve inside the QA home's `evidence/`; traversal and foreign absolute roots
+  are rejected. Installer upgrades are additive: custom commands, browser
+  channels, preferences, secrets sources and `qa-secrets.mjs` wrappers survive;
+  remote entries stay remote.
+- `console.level=warning` is consistent across every browser-config seed;
+  existing consumer preference files are not overwritten and receive a concrete
+  warning instead. The plugin JIRA audit now covers the Cloud v2 write
+  meta-tools, and the scaffolded Playwright reporter defaults to `line`.
+- **Raw evidence reads are denied, not all evidence.** `.mcp-out`, images,
+  videos, traces and binary captures stay out of the model context;
+  `execution_summary.json`, structured results and curated JSON/Markdown reports
+  remain readable. No blanket `evidence/**` deny.
+
+### Changed — learning and flow-map hygiene
+- AUTO-GROOM adds a **16 KB** trigger to the existing 5-entry/14-day thresholds.
+  A real single entry counts; the retired dated template example does not.
+  Grooming processes at most 10 entries, oldest first, and capture dedupes by
+  updating sightings/counters instead of appending repeats.
+- Promotion is now **merge/condense**, not narrative append: stable config and
+  frequent gotchas belong in PROJECT/PRODUCT, rare knowledge stays in scoped
+  Learnings, and volatile history stays in evidence. Ticket runs read stable
+  project context plus targeted Learning matches; flow maps load only for phases
+  that use them. `/re-board` adds individually confirmed hygiene findings and a
+  read-only Harness delta report — a project version stamp is not proof of
+  harness freshness.
+- Flow-map Anchors need recon/spec/human provenance, Neighbors need their own
+  basis, and only actually executed flows get confirmation stamps. Coarse
+  `steps_executed` yields Unconfirmed candidates only; candidates never enter
+  bridge projections or retest scope. Blueprint feedback can target templates,
+  hooks and docs with the same positive+inverse validation discipline.
+
+### Verification
+- Fixture battery, plugin validation and 145 opencode bun tests.
+- Eval inventory grows from 24 to **35 cases**: Fast Path, complex handoff,
+  FAIL triage, readiness positive/inverse/policy exceptions, flow-map evidence
+  and promotion hygiene. The touched existing cases and all eleven new cases
+  pass through the opencode runner with `kimi-code-plan-global/k3.1-pro`.
+- The opencode eval materializer now includes CLAUDE.md, CHANGELOG.md and the
+  plugin manifest, matching the ground truth available to Claude-side runs.
+- A real Claude/Sonnet Playwright smoke remains outstanding: the local Claude
+  OAuth session was expired, so no live-browser claim is made for this release.
+
+### Upgrade
+- Claude plugin: update and restart, then run `/whats-new` and `/re-board <KEY>`.
+- Integrate/opencode: re-run the installer to merge the new contract and raw
+  evidence denies, then restart. Existing browser preference files stay yours;
+  follow the session-start warning if console damping is missing.
+
 ## [0.13.0] — 2026-10-01
 
 Theme: **the learning loop gets a validation gate.** Three upgrades to

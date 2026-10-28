@@ -50,13 +50,14 @@ assert_no_grep() { grep -qF -- "$3" "$2" 2>/dev/null && fail "$1" "should not ap
 
 # --- a target repo that already has its own ecosystem -------------------------
 TARGET="$WORK/host"
-mkdir -p "$TARGET/.claude/skills/my-own-skill" "$TARGET/docs"
+mkdir -p "$TARGET/.claude/skills/my-own-skill" "$TARGET/.claude/scripts" "$TARGET/docs"
 git -C "$TARGET" init -q . 2>/dev/null
 printf '# My project\n\nOwn instructions that must survive.\n' > "$TARGET/CLAUDE.md"
 printf 'node_modules/\n' > "$TARGET/.gitignore"
 # printf would read a leading '---' as an option, leaving the file empty.
 printf '%s\n' '---' 'name: my-own-skill' '---' 'Mine.' > "$TARGET/.claude/skills/my-own-skill/SKILL.md"
 printf '# Host docs\n' > "$TARGET/docs/README.md"
+printf 'consumer script\n' > "$TARGET/.claude/scripts/consumer-script.py"
 
 echo "== integrate into an existing repo =="
 OUT="$("$INSTALL" --mode integrate --target "$TARGET" --yes 2>&1)"
@@ -70,6 +71,8 @@ assert_file    "hooks namespaced"                "$TARGET/.claude/hooks/qa-bluep
 assert_file    "hook fixtures came along"        "$TARGET/.claude/hooks/qa-blueprint/tests/guard-fixtures.sh"
 assert_file    "skills copied"                   "$TARGET/.claude/skills/test-ticket/SKILL.md"
 assert_file    "agents copied"                   "$TARGET/.claude/agents/qa-manager.md"
+assert_file    "context capsule script copied"   "$TARGET/.claude/scripts/context-capsule.py"
+assert_grep    "own script untouched"            "$TARGET/.claude/scripts/consumer-script.py" "consumer script"
 assert_grep    "own skill untouched"             "$TARGET/.claude/skills/my-own-skill/SKILL.md" "Mine."
 assert_file    "docs copied, namespaced"         "$TARGET/docs/qa-blueprint/architecture.md"
 assert_grep    "host docs untouched"             "$TARGET/docs/README.md" "Host docs"
@@ -86,7 +89,7 @@ echo "== internal path references were rewritten to the namespace =="
 assert_grep    "agent points at namespaced rule" "$TARGET/.claude/agents/qa-manager.md" ".claude/rules/qa-blueprint/core/product-layer.md"
 assert_no_grep "no un-namespaced rule path left" "$TARGET/.claude/agents/qa-manager.md" ".claude/rules/core/"
 assert_grep    "rule cross-ref rewritten"        "$TARGET/.claude/rules/qa-blueprint/core/evidence-policy.md" ".claude/rules/qa-blueprint/core/product-layer.md"
-assert_grep    "docs ref rewritten"              "$TARGET/.claude/skills/test-ticket/SKILL.md" "docs/qa-blueprint/architecture.md"
+assert_grep    "docs ref rewritten"              "$TARGET/.claude/skills/test-ticket/SKILL.md" "docs/qa-blueprint/pipeline/01-intake.md"
 # And every rewritten target must actually be there.
 MISSING_REFS=0
 while IFS= read -r ref; do
@@ -102,6 +105,11 @@ if (cd "$TARGET" && bash .claude/hooks/qa-blueprint/tests/guard-fixtures.sh >/de
   pass "guard fixtures pass after integration"
 else
   fail "guard fixtures pass after integration" "the copied guard behaves differently"
+fi
+if (cd "$TARGET" && QA_CAPSULE_SCRIPT="$TARGET/.claude/scripts/context-capsule.py" bash .claude/hooks/qa-blueprint/tests/context-capsule-fixtures.sh >/dev/null 2>&1); then
+  pass "context capsule fixtures pass against integrated script"
+else
+  fail "context capsule fixtures pass against integrated script" "the integrated context-capsule.py behaves differently"
 fi
 
 echo
@@ -123,6 +131,8 @@ assert_no_grep "managed block gone"              "$TARGET/CLAUDE.md" "qa-agent-b
 assert_no_file "namespaced rules removed"        "$TARGET/.claude/rules/qa-blueprint/core/product-layer.md"
 assert_no_file "namespaced hooks removed"        "$TARGET/.claude/hooks/qa-blueprint/stop-evidence-check.sh"
 assert_no_file "blueprint skill removed"         "$TARGET/.claude/skills/test-ticket/SKILL.md"
+assert_no_file "context capsule script removed"  "$TARGET/.claude/scripts/context-capsule.py"
+assert_grep    "own script survives uninstall"   "$TARGET/.claude/scripts/consumer-script.py" "consumer script"
 assert_no_file "namespaced docs removed"         "$TARGET/docs/qa-blueprint/architecture.md"
 assert_grep    "own skill still there"           "$TARGET/.claude/skills/my-own-skill/SKILL.md" "Mine."
 assert_grep    "host docs still there"           "$TARGET/docs/README.md" "Host docs"
@@ -196,9 +206,9 @@ git -C "$MTARGET" init -q . 2>/dev/null
 # atlassian, and an own server that must survive untouched.
 printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]},' '    "atlassian": {"type": "http", "url": "https://mcp.atlassian.com/v2/mcp"},' '    "mine": {"command": "my-server"}' '  }' '}' > "$MTARGET/.mcp.json"
 OUTM="$("$INSTALL" --mode integrate --target "$MTARGET" --yes 2>&1)"
-printf '%s' "$OUTM" | grep -q "upgraded 'playwright'" \
-  && pass "playwright upgraded to the blueprint config" \
-  || fail "playwright upgraded to the blueprint config" "$(printf '%s' "$OUTM" | grep mcp)"
+printf '%s' "$OUTM" | grep -q "additively upgraded 'playwright'" \
+  && pass "playwright contract flags upgraded additively" \
+  || fail "playwright contract flags upgraded additively" "$(printf '%s' "$OUTM" | grep mcp)"
 assert_grep "secrets flag present after merge" "$MTARGET/.mcp.json" '"--secrets"'
 assert_grep "output-dir present after merge" "$MTARGET/.mcp.json" '"--output-dir"'
 assert_grep "config file wired after merge" "$MTARGET/.mcp.json" '".playwright-mcp.config.json"'
@@ -210,6 +220,9 @@ else
   pass "isolated moved to the preference file"
 fi
 assert_file "browser preference file seeded" "$MTARGET/.playwright-mcp.config.json"
+python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get("console",{}).get("level") == "warning" else 1)' "$MTARGET/.playwright-mcp.config.json" \
+  && pass "installer browser seed sets console warning" \
+  || fail "installer browser seed sets console warning"
 assert_grep  "own server untouched"             "$MTARGET/.mcp.json" '"my-server"'
 printf '%s' "$OUTM" | grep -q "atlassian' already configured (identical)" \
   && pass "identical atlassian is SKIPPED, not WARN" \
@@ -238,7 +251,7 @@ fi
 KEEP="$WORK/mcp-headful"
 mkdir -p "$KEEP"
 git -C "$KEEP" init -q . 2>/dev/null
-printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out", "--image-responses", "omit"]}' '  }' '}' > "$KEEP/.mcp.json"
+printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "npx", "args": ["@playwright/mcp@latest", "--channel", "firefox", "--config", ".playwright-mcp.config.json", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out", "--image-responses", "omit"]}' '  }' '}' > "$KEEP/.mcp.json"
 OUTK="$("$INSTALL" --mode integrate --target "$KEEP" --yes 2>&1)"
 printf '%s' "$OUTK" | grep -q "kept existing 'playwright'" \
   && pass "headful config with contract flags is kept" \
@@ -250,17 +263,61 @@ else
 fi
 
 # A playwright entry launched through the qa-secrets wrapper is a deliberate
-# consumer setup and satisfies the secrets contract by construction — it must
-# be KEPT (with a verify note), never force-upgraded into the blueprint entry.
+# consumer setup and satisfies the secrets contract by construction — missing
+# forwarded contract flags are added without replacing the wrapper or its secrets.
 WRAP="$WORK/mcp-wrapper"
 mkdir -p "$WRAP"
 git -C "$WRAP" init -q . 2>/dev/null
 printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "node", "args": [".claude/scripts/qa-secrets.mjs", "mcp", "STAGE_PASSWORD", "--", "npx", "@playwright/mcp@latest"]}' '  }' '}' > "$WRAP/.mcp.json"
 OUTW="$("$INSTALL" --mode integrate --target "$WRAP" --yes 2>&1)"
-printf '%s' "$OUTW" | grep -q "qa-secrets wrapper detected" \
-  && pass "qa-secrets wrapper entry is kept" \
-  || fail "qa-secrets wrapper entry is kept" "$(printf '%s' "$OUTW" | grep mcp)"
+printf '%s' "$OUTW" | grep -q "additively upgraded 'playwright'" \
+  && pass "qa-secrets wrapper entry upgraded additively" \
+  || fail "qa-secrets wrapper entry upgraded additively" "$(printf '%s' "$OUTW" | grep mcp)"
 assert_grep "wrapper entry not rewritten" "$WRAP/.mcp.json" 'qa-secrets.mjs'
+assert_grep "wrapper receives output-dir" "$WRAP/.mcp.json" '"--output-dir"'
+assert_grep "wrapper receives image omission" "$WRAP/.mcp.json" '"--image-responses"'
+assert_no_grep "wrapper secrets source is not replaced" "$WRAP/.mcp.json" '"--secrets"'
+
+CUSTOM="$WORK/mcp-pre-010-custom"
+mkdir -p "$CUSTOM"
+git -C "$CUSTOM" init -q . 2>/dev/null
+printf '%s\n' '{' '  "mcpServers": {' '    "playwright": {"command": "custom-pw", "args": ["serve", "--channel", "firefox", "--secrets", "vault.env", "--output-dir", "evidence/custom"]}' '  }' '}' > "$CUSTOM/.mcp.json"
+printf '%s' '{"browser":{"isolated":false,"launchOptions":{"headless":false}}}' > "$CUSTOM/.playwright-mcp.config.json"
+OUTC="$("$INSTALL" --mode integrate --target "$CUSTOM" --yes 2>&1)"
+assert_grep "pre-0.10 custom command preserved" "$CUSTOM/.mcp.json" '"custom-pw"'
+assert_grep "pre-0.10 custom channel preserved" "$CUSTOM/.mcp.json" '"firefox"'
+assert_grep "pre-0.10 custom secrets source preserved" "$CUSTOM/.mcp.json" '"vault.env"'
+assert_grep "pre-0.10 custom output-dir preserved" "$CUSTOM/.mcp.json" '"evidence/custom"'
+assert_grep "pre-0.10 missing config added" "$CUSTOM/.mcp.json" '"--config"'
+assert_grep "pre-0.10 missing image omission added" "$CUSTOM/.mcp.json" '"--image-responses"'
+assert_grep "custom browser preferences untouched" "$CUSTOM/.playwright-mcp.config.json" '"headless":false'
+printf '%s' "$OUTC" | grep -q "console.level is not warning" \
+  && pass "existing browser config gets a concrete console warning" \
+  || fail "existing browser config gets a concrete console warning" "$(printf '%s' "$OUTC" | grep playwright-mcp)"
+
+TRAV="$WORK/mcp-output-traversal"
+mkdir -p "$TRAV"
+git -C "$TRAV" init -q . 2>/dev/null
+printf '%s' '{"mcpServers":{"playwright":{"command":"npx","args":["@playwright/mcp@latest","--config",".playwright-mcp.config.json","--secrets",".env.playwright-secrets","--output-dir","evidence/../outside","--image-responses","omit"]}}}' > "$TRAV/.mcp.json"
+"$INSTALL" --mode integrate --target "$TRAV" --yes >/dev/null 2>&1
+assert_grep "traversal output-dir corrected to evidence" "$TRAV/.mcp.json" '"evidence/.mcp-out"'
+assert_no_grep "traversal output-dir removed" "$TRAV/.mcp.json" 'evidence/../outside'
+
+REMOTE="$WORK/mcp-remote"
+mkdir -p "$REMOTE"
+printf '%s' '{"mcpServers":{"playwright":{"type":"http","url":"https://pw.example.invalid/mcp"}}}' > "$REMOTE/.mcp.json"
+"$INSTALL" --mode integrate --target "$REMOTE" --yes >/dev/null 2>&1
+assert_grep "remote playwright URL preserved" "$REMOTE/.mcp.json" 'https://pw.example.invalid/mcp'
+assert_no_grep "remote playwright not replaced by a local command" "$REMOTE/.mcp.json" '"command"'
+
+python3 - "$REPO/.claude/settings.json" <<'PY'
+import json, sys
+rules = json.load(open(sys.argv[1]))["permissions"]["deny"]
+required = {"Read(**/evidence/.mcp-out/**)", "Read(**/evidence/**/*.png)", "Read(**/evidence/**/*.zip)", "Read(**/evidence/**/*.har)"}
+forbidden = {"Read(evidence/**)", "Read(**/evidence/**)", "Read(**/evidence/**/screenshots/**)", "Read(**/evidence/**/traces/**)", "Read(**/evidence/**/videos/**)"}
+sys.exit(0 if required <= set(rules) and not forbidden & set(rules) and not any("execution_summary" in r or r.endswith(".json)") or r.endswith(".md)") for r in rules) else 1)
+PY
+[ $? -eq 0 ] && pass "Claude evidence denies are raw-artifact only" || fail "Claude evidence denies are raw-artifact only"
 
 echo
 echo "== plugin mode reports local MCP duplicates instead of silently doubling =="

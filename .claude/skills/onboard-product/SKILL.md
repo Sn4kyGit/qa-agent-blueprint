@@ -72,8 +72,9 @@ differs from the project. Every question defaults to "same as the project", and 
     self-contained, because the vendored skills read one flat file and never inherit.
     Include the frontmatter `generated_from:` (both source paths) and `source_sha:`
     so staleness is checkable instead of remembered. When
-    `products/<PRODUCT>/flow-map.md` exists, append it as a `## Flow map` section
-    and add it to `generated_from:`/`source_sha:` — same rule for the project-level
+    `products/<PRODUCT>/flow-map.md` exists, append only its confirmed Areas as a
+    `## Flow map` section, never Unconfirmed candidates, and add the map to
+    `generated_from:`/`source_sha:` — same rule for the project-level
     `flow-map.md` in `.agents/qa-project-context/<KEY>.md`.
 12. **`memory/INDEX.md`**: extend the project's existing row with the product list.
     One row per project, never one row per product.

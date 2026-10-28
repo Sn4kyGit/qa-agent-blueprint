@@ -200,7 +200,7 @@ materialize_case() {
   cp -R "$REPO/opencode/commands" "$dir/.opencode/commands"
   cp -R "$REPO/.claude" "$dir/.claude"
   rm -rf "$dir/.claude/hooks" "$dir/.claude/agents" # inert for opencode; keep the layer lean
-  for item in docs projects memory; do
+  for item in docs projects memory CHANGELOG.md CLAUDE.md .claude-plugin; do
     [ -e "$REPO/$item" ] && cp -R "$REPO/$item" "$dir/"
   done
   cat > "$dir/opencode.json" <<'JSON'

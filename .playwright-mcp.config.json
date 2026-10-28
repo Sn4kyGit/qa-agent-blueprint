@@ -2,5 +2,6 @@
   "browser": {
     "isolated": true,
     "launchOptions": { "headless": true }
-  }
+  },
+  "console": { "level": "warning" }
 }

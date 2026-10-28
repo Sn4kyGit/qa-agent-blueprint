@@ -15,10 +15,18 @@ anything that should be repeated.
 
 ## Framework dispatch — first, before any spec work
 
-Read **Framework** from `projects/<KEY>/PROJECT.md` → "Test assets", overridden
-by the routed product's `PRODUCT.md` (a product may run a different stack than
-its project). Then load the matching conventions and follow them, not this
-list's defaults:
+When a sealed `context-capsule.json` path is supplied, read it and optionally run
+the lightweight validator with `--run-dir` only. Consume **Framework**, suite
+location/config, mode controls, exact ACs and selected Learnings from it. Do not
+fully read PROJECT/PRODUCT, route, repeat mode/framework/suite lookup or merge
+Learnings. Targeted existing-spec, recon, framework-reference and new-symptom
+Learning reads remain allowed. Return `STALE_CONTEXT` on mismatch; never regenerate
+or reseal the capsule. Without one, use the standalone project fallback below.
+
+With a capsule, use its effective **Framework**. Otherwise read it from
+`projects/<KEY>/PROJECT.md` → "Test assets", overridden by the routed product's
+`PRODUCT.md` (a product may run a different stack than its project). Then load the
+matching conventions and follow them, not this list's defaults:
 
 - `playwright` → `docs/rules/testing/playwright-cli.md`
 - `webdriverio` → the `webdriverio-testing` skill (load its
@@ -30,12 +38,12 @@ list's defaults:
 
 ## Before writing anything
 
-Check "Test assets" for the suite's location and config — it is very often a
-**separate repo checkout** (e.g. `../<key>-web-tests/`), not this repo. Read it from
-`projects/<KEY>/PROJECT.md`, overridden by `products/<PRODUCT>/PRODUCT.md` when a
-product was routed: a product often has its own suite and its own TC category
-namespace, and a TC-ID from the wrong namespace makes a failure unmappable. Check whether a spec for this flow already exists; extend it rather
-than duplicating.
+Use the capsule's "Test assets" for the suite's location and config; only without a
+capsule, read them from `projects/<KEY>/PROJECT.md` and any routed
+`products/<PRODUCT>/PRODUCT.md`. The suite is very often a **separate repo checkout**
+(e.g. `../<key>-web-tests/`), not this repo. A product often has its own suite and TC
+category namespace, and a TC-ID from the wrong namespace makes a failure unmappable.
+Check whether a spec for this flow already exists; extend it rather than duplicating.
 
 ## Writing specs
 
@@ -47,9 +55,9 @@ wins.
 - One describe block per flow, `beforeEach` for login/setup.
 - Title format `TC-<CAT>-<NNN>: <behavior>` using the project's TC categories.
 - Condition-based waits/assertions only; fixed sleeps are a documented last
-  resort, never the default reach. Check `memory/learnings/flaky-tests.md` and
-  `selector-failures.md` before choosing wait strategies or selectors — these
-  files exist specifically so the same mistake isn't repeated per project.
+  resort, never the default reach. Use capsule Learning excerpts first; without a
+  capsule, or for a new symptom, check `memory/learnings/flaky-tests.md` and
+  `selector-failures.md` narrowly before choosing wait strategies or selectors.
 - Isolate test data per run/worker; never assert against global/shared lists.
 
 ## Running

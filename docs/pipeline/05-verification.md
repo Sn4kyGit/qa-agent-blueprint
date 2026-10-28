@@ -47,8 +47,8 @@ originate.
 
 Every red test gets exactly one category. **No retry before classification.**
 This is the pipeline view of what `failure-analysis` does with full rigor —
-the subagent `failure-analyst` owns the classification; this table is its
-contract:
+the subagent `failure-analyst` owns the classification; `qa-manager` or the direct
+main orchestrator invokes it, never an execution leaf. This table is its contract:
 
 | Category | Signature | Consequence |
 |---|---|---|

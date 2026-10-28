@@ -45,7 +45,11 @@ Decisions about test evidence: what we capture, how long it lives, who sees it.
 
 - Run dirs are local to the machine that ran the test; JIRA attachments are the
   sharing mechanism for results.
-- `.claudeignore` keeps `evidence/` out of the model context — artifacts are
-  referenced by path, never loaded wholesale.
+- `.claudeignore` only declares the raw-artifact policy; Claude Code does not
+  enforce it for tool reads. The actual boundary is `permissions.deny` for
+  `.mcp-out`, screenshots/images, traces, videos and similar raw binary artifacts.
+  Raw artifacts are referenced by path, never loaded wholesale.
+- `execution_summary.json`, curated reports and other structured JSON/Markdown
+  remain deliberately readable; there is no blanket `evidence/**` read deny.
 - The append-only audit log `evidence/.audit/jira-writes.log` records every JIRA
   write (who/what/where) for traceability, including headless CI runs.

@@ -5,20 +5,20 @@ existing ecosystem — your own `CLAUDE.md`, `.claude/`, `.mcp.json`, already
 installed Playwright browsers, your own hooks — and merges the blueprint
 non-destructively.
 
-**Choosing a mode: trying it out → plugin (the Quickstart's recommended mode).
-One repo, long-term → integrate. Many repos → plugin.**
+**Choosing a mode: trying it out → plugin. One repo, long-term → integrate.
+Alternating Claude Code and opencode in one QA home → shared.**
 
 > **Principle: Detect → Merge → Report.**
 > Never overwrite. Always back up. Idempotent. Dry-run capable.
 
 ```bash
-./install.sh [--mode integrate|plugin] [--target <path>]
+./install.sh [--mode integrate|plugin|opencode|shared] [--target <path>]
              [--dry-run] [--yes] [--uninstall]
 ```
 
 | Flag | Meaning |
 |---|---|
-| `--mode` | `integrate` · `plugin`. Default: **auto-detect** (see below). |
+| `--mode` | `integrate` · `plugin` · `opencode` · `shared`. Default: **auto-detect** (see below). |
 | `--target <path>` | Repo to integrate into. Default: current working directory. |
 | `--dry-run` | Prints every planned action, changes nothing. |
 | `--yes` / `-y` | Non-interactive (accepts the auto-detected proposal). |
@@ -26,7 +26,7 @@ One repo, long-term → integrate. Many repos → plugin.**
 
 ---
 
-## The two modes (plus one special case)
+## The installation modes (plus one special case)
 
 ### Self-setup — the blueprint repo itself is the target
 
@@ -143,6 +143,41 @@ snippet above and copies nothing.
 
 ---
 
+## Shared mode — Claude Code and opencode in one QA home
+
+Shared keeps both harnesses start-ready without the Claude plugin. The plugin is
+disabled at project scope because it would otherwise duplicate the selectively
+linked skills, hooks and MCP servers.
+
+```bash
+./install.sh --mode shared --target /path/to/qa-home --dry-run
+./install.sh --mode shared --target /path/to/qa-home --yes
+```
+
+The shared layout contains:
+
+- a real `.claude/` with selective links for `rules`, `skills`, `agents`, `hooks`
+  and `scripts`, plus merged consumer `settings.json` and `.mcp.json`;
+- `.opencode/{ROUTER.md,agents,commands,plugins}` and merged `opencode.json`;
+- the full blueprint router in `CLAUDE.md` and support links for `docs`,
+  `projects/_template`, `projects/EXAMPLE`, `.claude-plugin` and `CHANGELOG.md`;
+- consumer-owned `projects/`, `memory/`, `evidence/` and `.agents/` — onboarding
+  data and bridges never move into the blueprint checkout;
+- the existing secrets/browser files and `.qa-home` marker.
+
+Plugin and opencode installations migrate in place without re-onboarding.
+`opencode.jsonc` moves to `opencode.json` with a backup rather than leaving two
+active config files. Integrate/custom collisions block before any write; global
+settings are only read and reported, never edited. Uninstall removes shared links
+and only blueprint-owned hook/permission/instruction/router entries, leaving no
+dead references and no consumer data.
+
+After installation, restart and authenticate each harness once. Switching then
+means opening the other extension. `/agentswitch <claude|opencode>` verifies the
+layout read-only and reports `READY`, `READY_WITH_HUMAN_STEPS` or `BLOCKED`;
+it never installs, edits, probes JIRA/stage or re-onboards. Stage runs remain
+sequential even though both extensions may be open.
+
 ## Detection matrix
 
 | # | Check | If FOUND | If MISSING |
@@ -152,7 +187,7 @@ snippet above and copies nothing.
 | 3 | Playwright browsers (`npx playwright --version` + `chromium-*` under `~/.cache/ms-playwright` resp. `~/Library/Caches/ms-playwright`) | **SKIP** browser download, noted in report | `npx playwright install chromium` |
 | 4 | `CLAUDE.md` in target | managed router block is **appended**, your content kept; block present → SKIPPED ("already integrated") | blueprint router `CLAUDE.md` is copied |
 | 5 | `.claude/` in target | namespaced merge, per-file collision checks (below) | blueprint `.claude/` content is copied (namespaced) |
-| 6 | `.mcp.json` in target | JSON merge by server **name**, with one deliberate exception: an existing `playwright` without the contract flags (`--secrets`/`--output-dir`) is **upgraded to the blueprint config** — those flags are the password-masking/evidence model, "existing wins" would silently drop them (your old config lands in the backup). A config missing only preference flags (`--headless`/`--isolated`) is KEPT with a note — taste is not a reason to overwrite. Identical entries → SKIPPED. Other names: existing wins → WARN | blueprint `.mcp.json` is copied |
+| 6 | `.mcp.json` in target | JSON merge by server **name**. A local `playwright` gets missing or invalid contract values (`--config`, `--secrets`, `--output-dir` into `evidence/`, `--image-responses omit`) **additively** — command, custom preferences/channel, output path under `evidence/`, secrets source and `qa-secrets` wrapper stay intact (old config in the backup). Remote entries are never replaced by local commands. Preference flags (`--headless`/`--isolated`) are never forced. Other names: existing wins → WARN | blueprint `.mcp.json` is copied |
 | 7 | `.claude/settings.json` in target | merge: `permissions.deny/allow` deduplicated union; blueprint hooks appended to `SessionStart`/`Stop`/`PreToolUse`/`PostToolUse`, duplicates detected by command string | created with blueprint permissions + namespaced hooks |
 | 8 | `.gitignore` in target | only **missing** entries appended, as a marked managed block; block present → SKIPPED | blueprint `.gitignore` is copied |
 | 9 | `evidence/`, `memory/`, `projects/` | left untouched (SKIPPED) | created from the blueprint scaffold |
@@ -169,7 +204,7 @@ Blueprint content is **namespaced** so it can never clobber your files:
 | `.claude/skills/<name>/` | `.claude/skills/<name>/` | name exists with different content → **SKIPPED + WARN** |
 | `.claude/agents/<name>.md` | `.claude/agents/<name>.md` | name exists with different content → **SKIPPED + WARN** |
 | hooks in `settings.json` | appended, command points at the `qa-blueprint/` namespace | same command string already present → SKIPPED |
-| MCP servers in `.mcp.json` | added by name | name taken → kept yours + WARN, **except** `playwright` missing the security flags → upgraded to the blueprint config (backup kept) |
+| MCP servers in `.mcp.json` | added by name | name taken → kept yours + WARN, **except** local `playwright` contract flags → additive in-place upgrade (backup kept) |
 
 Identical files (e.g. from a previous run) are reported as
 "already integrated" and skipped.
@@ -197,9 +232,8 @@ Removes exactly what the integration added, and nothing else:
 - permission entries that the blueprint added (attributed via the install-time
   backup — entries you already had are kept);
 - MCP servers from `.mcp.json` **only if they exactly match** the blueprint
-  config (your own `playwright` server stays — note that one we upgraded for the
-  security flags *does* match afterwards and is removed; your pre-merge config is
-  in the `.bak-*` backup);
+  config. Additively upgraded custom entries differ from it and therefore stay;
+  your pre-merge config is in the `.bak-*` backup;
 - scaffold dirs (`evidence/`, `memory/`, `projects/`), `.claudeignore`, `.env`,
   `.env.playwright-secrets` — only if unmodified.
 
@@ -222,10 +256,12 @@ The installer detects the Chromium cache (`~/.cache/ms-playwright` on Linux,
 says SKIPPED.
 
 **"I already run my own playwright MCP server."**
-MCP merge is by server **name**. Your `playwright` entry stays untouched as long
-as it carries the contract flags `--secrets` and `--output-dir` (into
-`evidence/`); a missing contract flag upgrades it to the blueprint config (old
-config in the backup). Headless/headful and isolation are preferences — yours
+MCP merge is by server **name**. Your local `playwright` entry keeps its command,
+channel, preferences, output path under `evidence/`, secrets source and any
+`qa-secrets` wrapper. Missing or invalid contract values (`--config`, masking,
+`--output-dir` into `evidence/`, `--image-responses omit`) are fixed in place
+(old config in the backup), never by substituting the blueprint server. Remote
+entries stay untouched. Headless/headful and isolation are preferences — yours
 are respected, and the blueprint's own defaults live in the consumer-owned
 `.playwright-mcp.config.json`, not in forced CLI flags. Only missing names (e.g.
 `atlassian`) are added.

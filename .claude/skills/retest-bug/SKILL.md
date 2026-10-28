@@ -5,82 +5,88 @@ description: Focused re-test of a fixed bug plus a tight regression sweep — sc
 
 # /retest-bug — verify a fix + surrounding regression
 
-A narrower, faster variant of `test-ticket` for bugs that already have a known
-repro from the original report.
+A narrower variant of `test-ticket` for bugs with a known repro. It uses the same
+dispatcher: the agent loading this skill is the main orchestrator and performs
+preflight, intake, routing and readiness once; only a complex re-test hands the
+remaining orchestration to `qa-manager`.
 
 ## Steps
 
-0. Run the preflight first (same gate as `test-ticket`): the blueprint's
-   `preflight.sh <KEY>` must pass before any browser/JIRA call — a re-test
-   against a half-reachable VPN state produces exactly the false results the
-   gate exists to prevent.
-1. Read the ticket — pull the **original bug report** (description, comments) to
-   get the exact repro steps and the expected-vs-actual from the first report.
-   Route to `projects/<KEY>/PROJECT.md` + `learnings.md` as usual — and on to the
-   ticket's product if the project has a `## Products` section
-   (`.claude/rules/core/product-layer.md`). A re-test is where a wrong product hurts
-   most: the original repro was recorded against one product's URL and test users. If the original
-   report is thin or the repro steps are vague/incomplete, run `bug-reproduction`
-   first to extract a verified, minimal, deterministic repro before retesting
-   anything — retesting against a repro nobody actually confirmed is a guess, not
-   a test. Point it at `.agents/qa-project-context/<KEY>.md` — or, when a product
-   was routed, `.agents/qa-project-context/<KEY>/<PRODUCT>.md` — explicitly (see
-   `CLAUDE.md` → project routing); never the generic path it mentions internally,
-   which may hold a different project's or product's data.
-2. Verify stage actually has the fix deployed (version check per the project
-   file) before testing — retesting against the pre-fix build produces a false
-   FAIL. If not deployed, run `deploy-to-stage` (if allowed) or report BLOCKED.
-   Read `PROJECT.md` → "Execution mode" now — it decides who executes step 3:
-   - **`cli-first` / `hybrid`** — if a spec covers the bug's flow, the re-test IS
-     the spec: run it via `test-automator` (the bug should have graduated into a
-     spec after the first fix — the exploration-to-automation pipeline). No spec
-     yet and selectors unknown → `/recon` probe first, then the spec. MCP enters
-     only to classify an unclear CLI failure.
-   - **`mcp-only`**, or an escalation trigger (the bug is not reproducible, the
-     fix is visual, the flow can't be asserted without observing it) → live via
-     `test-executor` as below. Never escalate merely because a test is red.
-3. Execute the re-test: **re-execute the exact original repro
-   steps** first (spec or live, per the mode above). This is the primary check —
-   did the specific reported behavior
-   change? `bug-reproduction`'s red-before-fix discipline applies here in reverse:
-   if you have access to the pre-fix build/commit, confirming the repro still
-   failed there (and now passes on the fix) is stronger evidence than testing the
-   fix alone.
-4. Regression sweep: check 2–4 adjacent flows the fix could plausibly have
-   affected (same component, same code path, same feature area) — not the whole
-   application. **When a flow map exists** (`projects/<KEY>/flow-map.md`, or
-   `projects/<KEY>/products/<PRODUCT>/flow-map.md` for a routed product — the
-   bridge file carries it as `## Flow map` when present): take the sweep from
-   the **Neighbors** of the fixed flow's area instead of improvising, and say so
-   in the evidence ("sweep scoped from flow map, area Checkout"). No flow map →
-   risk-based as before, per `.claude/rules/core/qa-principles.md`. A flow map
-   whose `last confirmed` dates are old narrows nothing — then prefer fresh
-   judgment over stale neighbors. The sweep runs in the same mode as step 3 —
-   in `cli-first`/`hybrid` that means the neighboring specs via CLI, live only
-   for what no spec covers and an escalation trigger names.
-5. **If anything fails, analyse before concluding "not fixed".** Run
-   `failure-analysis` (subagent `failure-analyst`) on the failing cases. A re-test is
-   where the two cheap wrong answers live: the fix was never deployed (class
-   `environment` → BLOCKED, not FAIL), and **the original repro is itself outdated**
-   — a fix that changed the flow can make the recorded steps unfollowable without
-   the fix being absent. Neither is "the bug is back", and reporting them as such
-   burns the reporter's trust in our re-tests.
-6. Evidence and reporting exactly as in `test-ticket`: evidence dir with
-   `execution_summary.json`, then `report-to-jira` on PASS or `bug-report` +
-   `report-to-jira` if the fix didn't hold or a regression was introduced.
+0. Run `preflight.sh <KEY>` before any browser/JIRA call. Do not navigate to stage
+   for liveness yet. JIRA access `browser` may use the playwright-driven JIRA UI
+   for intake now; that exception never includes stage.
+1. Read the original bug report (description, expected-vs-actual and exact repro,
+   plus the last relevant comments) and route once to `projects/<KEY>/PROJECT.md` +
+   `learnings.md`, then to a product only per the `## Products` registry. Write
+   `intake.json` with the repro, expected build, risk and regression area. If the
+   repro is vague/incomplete, extract only ticket-held environment, build, steps and
+   data now; mark live `bug-reproduction` as a Complex-path escalation after
+   readiness, pointed at the routed `.agents/qa-project-context/<KEY>[/PRODUCT].md`
+   bridge. Do not reproduce on stage during intake.
+2. Apply `docs/pipeline/01a-readiness.md` and write `readiness.json` before any
+   stage navigation, recon or spec run: project-allowed status, no blockers, linked
+   MR/PR merged when required/present under the merge policy, expected fix build
+   deployed when verification is required. Prefer API/CLI. If the build is missing,
+   use `deploy-to-stage` only
+   when allowed and then re-verify; otherwise BLOCKED. Only a ready result permits
+   the one stage-liveness navigation and execution.
+3. Read the effective Execution mode and scope the work:
+   - **`cli-first` / `hybrid`** — an existing spec covering the repro and its tight
+     regression sweep runs through `test-automator`. New specs still require recon
+     and the red check; hybrid's configured live verification pass still applies.
+   - **`mcp-only`**, or an escalation trigger (non-reproducible bug, visual fix,
+     non-assertable behavior) — live through `test-executor`. Never escalate merely
+     because a test is red.
+ 4. Seal `evidence/<KEY>/<TICKET>/<RUN>/context-capsule.json` once per
+    `docs/pipeline/context-capsule.md`, with exact intake/readiness, effective
+    config, relevant confirmed knowledge and source hashes. Run
+    `context-capsule.py seal` and one full `validate` using `--qa-home` and
+    `--run-dir` before dispatch. Revision 1 is `context-capsule.json`; revision N>1
+    must be `context-capsule.vN.json` in the same run dir with every predecessor
+    preserved. Pass only the selected revision path in Task prompts. A changed
+    build/readiness or effective context returns to this orchestrator for readiness
+    re-verification and a new immutable revision. Changed same/older-revision
+    payloads conflict; identical reseals are idempotent and invalid existing hashes
+    are never overwritten.
+ 5. Dispatch by complexity:
+    - **Fast Path** — unambiguously testable, low risk, no escalation, exactly one
+      mode-conformant execution branch: the main orchestrator invokes
+      `test-executor` OR `test-automator` directly with the selected sealed revision path and
+      repro/sweep charter. No PROJECT/PRODUCT full reads, re-routing, mode/suite
+      lookup or repeated Learnings merge in the leaf. No `qa-manager`.
+    - **Complex path** — invoke `qa-manager` with the selected sealed revision path, run dir
+      and any recon/plan. It consumes the capsule without reading the ticket or
+      PROJECT/PRODUCT files, routing, repeating readiness, or redoing mode/suite
+      lookup and Learnings merging, and owns the remaining phases.
+ 6. Execute the exact original repro first, then **2–4 adjacent checks**, not the
+    whole application. Prefer the fixed flow's **Neighbors** from confirmed Areas in
+    the routed `flow-map.md` and record that provenance. `Unconfirmed candidates`,
+    basis-less Neighbors and stale or absent maps are not binding scope: use
+    risk-based judgment around the actual defect instead. Keep the sweep in the same
+    mode, with live observation only where a
+   real escalation trigger requires it. When a pre-fix build/commit is available,
+   proving the old failure there and the fix on the expected build is stronger
+   evidence; never deploy or roll back solely to manufacture it.
+7. **On FAIL, the owning orchestrator invokes `failure-analyst`** with the sealed
+   selected revision path and failure packet — main on the Fast Path, `qa-manager` on the complex path; never the execution leaf. Distinguish a
+   genuine product defect from a missing/wrong build (`environment` → BLOCKED), a
+   flake, or an original repro made outdated by the deliberate fix. Only
+   `product-defect` and `undetermined` justify reopening; class-specific evidence
+   and reporting stay unchanged.
+ 8. Produce `execution_summary.json` and all mandatory evidence, then use
+   `report-to-jira` on PASS and the classified FAIL/BLOCKED/NEEDS_REVIEW paths as
+   in `test-ticket`. Use `bug-reporter` only after the required classification;
+   shadow mode and transitions are unchanged. Close with the learnings declaration.
 
 ## If the bug is not actually fixed
 
 Do not soften this into a "partial pass." Report FAIL, keep the original ticket
 open/reopened per the project's FAIL transition, and note precisely what part of
-the original repro still reproduces.
-
-The opposite error is just as expensive: do not report "not fixed" when the truth is
-"not deployed", or when the repro steps no longer match a flow the fix deliberately
-changed. That is what step 5 is for — the analysis distinguishes them, and only
-`product-defect` and `undetermined` justify reopening.
+the original repro still reproduces. Do not report "not fixed" when the truth is
+"not deployed" or the recorded repro no longer matches the deliberately changed
+flow.
 
 ## If a regression was introduced
 
-File it as a **new** bug via `bug-report` (don't conflate it with the original
-ticket) and cross-reference both tickets.
+After classification as a product defect, file it as a **new** bug via `bug-report`
+(do not conflate it with the original ticket) and cross-reference both tickets.

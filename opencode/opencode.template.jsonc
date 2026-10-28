@@ -1,4 +1,4 @@
-// blueprint-version: 0.13.0
+// blueprint-version: 0.15.0
 // opencode config template for the qa-agent-blueprint — merged into the
 // consumer's opencode.json(c) by `install.sh --mode opencode`. Contract:
 // docs/opencode-port-plan.md (D4 router via instructions, D5 tool-name
@@ -27,7 +27,7 @@
       // Contract flags: --config and --secrets are hard-fail on ENOENT, which
       // is why the plugin seeds both files on startup (bootstrap).
       // --image-responses omit keeps screenshots out of the context — they
-      // land as evidence files in --output-dir and are read back on demand.
+      // land as evidence files in --output-dir and are referenced by path.
       "command": [
         "npx",
         "@playwright/mcp@latest",
@@ -70,6 +70,18 @@
       "**/*.pem": "deny",
       "**/id_rsa*": "deny",
       "**/id_ed25519*": "deny",
+      "**/evidence/.mcp-out/**": "deny",
+      "**/evidence/**/*.png": "deny",
+      "**/evidence/**/*.jpg": "deny",
+      "**/evidence/**/*.jpeg": "deny",
+      "**/evidence/**/*.gif": "deny",
+      "**/evidence/**/*.webp": "deny",
+      "**/evidence/**/*.bmp": "deny",
+      "**/evidence/**/*.webm": "deny",
+      "**/evidence/**/*.mp4": "deny",
+      "**/evidence/**/*.mov": "deny",
+      "**/evidence/**/*.zip": "deny",
+      "**/evidence/**/*.har": "deny",
       // last match wins — the committed placeholder template stays readable,
       // same exemption the pre-tool guard encodes.
       "**/.env.example": "allow"

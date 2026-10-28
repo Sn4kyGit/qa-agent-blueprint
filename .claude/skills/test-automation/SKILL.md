@@ -5,23 +5,32 @@ description: Write or run deterministic automated test specs (Playwright or Webd
 
 # /test-automation — CLI-driven specs
 
+When a run-scoped `context-capsule.json` path is supplied, consume its exact intake,
+routing, execution controls, test assets and selected Learnings. Do not fully read
+PROJECT/PRODUCT, route again or repeat mode/framework/suite lookup and merging.
+Forward the capsule path to `test-automator`; targeted existing-spec, recon,
+framework-convention and new-symptom Learning reads remain allowed. Return
+`STALE_CONTEXT` instead of repairing a stale capsule. Direct standalone runs without
+a capsule retain the effective-project fallback below.
+
 ## Steps
 
 0. Resolve scope first: a suite run started from a ticket inherits that ticket's
    product; a scheduled/headless run must be told
    (`/test-automation --project SHOP --product ADMIN`), because there is no
    ticket to route from and the TC namespace is product-specific.
-1. Check `projects/<KEY>/PROJECT.md` → "Test assets" (overridden by the product's
-   `PRODUCT.md` when one was routed) for the suite's **framework** and location
-   (often a separate repo checkout) and whether a spec for this flow already
-   exists.
-2. Delegate to subagent `test-automator`: write/extend the spec per the
+1. Use the capsule's "Test assets" for the suite's **framework** and location
+   (often a separate repo checkout). Only without a capsule, read
+   `projects/<KEY>/PROJECT.md` and any routed `PRODUCT.md`. In either mode, check
+   whether a spec for this flow already exists.
+2. Delegate to subagent `test-automator` with the capsule path when supplied: write/extend the spec per the
    framework's conventions — Playwright: `docs/rules/testing/playwright-cli.md`
    (TC-ID title, AAA structure, web-first assertions); WebdriverIO: the
    `webdriverio-testing` skill — or run the existing suite/subset relevant to
    the ticket.
-3. Check `memory/learnings/flaky-tests.md` and `selector-failures.md` first —
-   don't rediscover a known flake or a known-bad selector pattern.
+3. Use relevant capsule Learning excerpts first. Without a capsule, or for a new
+   symptom not covered by them, check `memory/learnings/flaky-tests.md` and
+   `selector-failures.md` narrowly — don't rediscover a known issue.
 3b. **Never write a spec blind.** When the flow was not observed yet, run
     `/recon` first and take selectors from its `recon.json` (roles + accessible
     names), never from guesses. Assertions are positive and specific (what
@@ -40,8 +49,9 @@ description: Write or run deterministic automated test specs (Playwright or Webd
 4. Produce evidence (report, trace-on-failure, `execution_summary.json`) per
    `.claude/rules/core/evidence-policy.md` — including `test_cases[]`, which the CLI
    runner is the only source of and which every later failure analysis depends on.
-5. **On a failure, do not conclude anything yet.** `failure-analysis` decides whether
-   the product broke or the test aged out; a red spec is a question, not a verdict.
+5. **On a failure, do not conclude anything yet.** `failure-analysis` receives the
+   failure packet and capsule path when available and decides whether the product
+   broke or the test aged out; a red spec is a question, not a verdict.
 6. Report pass/fail counts and flake occurrences; anything P0–P2 confirmed as a
    product defect → `bug-report`. A recurring flake or a new selector pattern worth
    generalizing → `retro-learn`.

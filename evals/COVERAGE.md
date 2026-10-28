@@ -49,6 +49,7 @@ only enforcement once a fixture proves it".
 | Installer keeps a user playwright config that carries the contract flags (preferences never trigger an overwrite) | fixture: `install-integrate-fixtures.sh` (headful-kept block) |
 | Execution mode routing: PROJECT.md → "Execution mode" steers the run (`mcp-only`/`hybrid`/`cli-first`); hybrid = recon-first + spec via CLI + red check + observation pass; escalation rules override every mode; "test is red" alone never escalates | case: `mode-routing` (pipeline-modes feature) |
 | Never idle-wait: no sleep-polling on deploys/pipelines; the wait window is filled with non-colliding parallel work (lint/typecheck, read-only checks, report drafting); browser verification and stage writes still wait for the deploy | case: `no-idle-wait` |
+| Claude execution-role defaults: test-executor/test-automator use Sonnet; manager/analyst/reporter inherit; opencode stays model-agnostic | fixture: `manifest-conventions.sh` |
 
 ## Pipeline (`docs/pipeline/`)
 
@@ -58,6 +59,12 @@ only enforcement once a fixture proves it".
 | Red check before a new spec's green counts; observation pass after green CLI run on `Verification pass: yes` | case: `mode-routing` (stated in the flow) — execution fidelity uncovered (needs a run-trace grader) |
 | Mode field is mandatory in every report (observed vs. asserted must be visible) | **uncovered** — grading needs report-artifact inspection, not answer text; candidate for an artifact-aware runner |
 | Plan approval: `yes` waits for human confirmation; headless proceeds and flags | **uncovered** — interactive gate; a case could only grade recitation |
+| Readiness after intake/routing and before any stage action: allowed status, no blockers, required merge and required build; JIRA-browser intake is the only pre-readiness browser exception | case pair: `readiness-before-stage-browser` + `readiness-merged-ready` |
+| Merge/build policy exceptions stay honest: `when-linked` needs no invented link, `not-required` skips only merge, explicitly unavailable build verification is reported as unverified while observed mismatches block | case: `readiness-policy-exceptions` — observed-mismatch inverse also in `readiness-before-stage-browser` |
+| Fast Path: one low-risk, mode-conformant execution branch goes main → execution leaf without qa-manager; complex work reuses completed intake/readiness through qa-manager | case pair: `simple-ticket-fast-path` + `complex-ticket-uses-manager` |
+| Fast Path does not bypass failure triage: the owning orchestrator starts failure-analyst on FAIL, never the execution leaf | case: `simple-ticket-fail-still-triages` |
+| Run context capsule: one sealed, size-bounded effective-context handoff with exact intake/readiness, source hashes and no secrets/unconfirmed knowledge; recipients never remerge project context | fixture: `context-capsule-fixtures.sh` + case: `capsule-handoff` |
+| Capsule revisions are immutable: changed context returns STALE_CONTEXT to the main orchestrator; recipients never self-repair; revision N uses context-capsule.vN.json | fixture: `context-capsule-fixtures.sh` + case: `capsule-stale` |
 
 ## `evidence-policy.md`
 
@@ -97,7 +104,8 @@ only enforcement once a fixture proves it".
 | Norm | Coverage |
 |---|---|
 | Subagent policy: browser work delegated; no subagent for one-liners | **uncovered** — needs tool-call/trace inspection; revisit with a trace-aware runner |
-| Evidence never read back into context | **uncovered** — same reason (transcript-level norm) |
+| Raw evidence never read back into context: `.mcp-out` and binary/image/trace formats denied; structured summaries and curated JSON/Markdown remain readable; no blanket `evidence/**` deny | fixture: `install-integrate-fixtures.sh` + `install-opencode-fixtures.sh` (static permission contracts) — runtime read enforcement is harness-owned |
+| Hot context stays bounded: PROJECT/PRODUCT read for stable config; Learnings searched by area/component/flow/failure; flow maps load only for phases that use them and only confirmed Areas are binding | case: `flow-map-unconfirmed-scoping` + `promotion-condenses-existing-section` — actual Read/Grep trace behavior remains uncovered until the runner is trace-aware |
 | MCP budget (declared set) | see router row above |
 | Atlassian Cloud uses the v2 default URL (discovery/execute meta-tools) — never `?tools=all`; the installer auto-strips a legacy `?tools=all` entry instead of just warning. DC surface trimmed to the ~11 used Jira tools via `ENABLED_TOOLS` | fixture: `install-integrate-fixtures.sh` (tools=all upgrade block) for the mechanism; the DC/`ENABLED_TOOLS` half is config-time, verified at setup |
 | Playwright CLI runner output stays out of the context (`--reporter=line` default; failures summarized, full output to files) | **deliberately advisory** — a violation is immediately visible (context fills with runner noise) and self-corrects on the next run; an eval could only grade recitation (0.10.0) |
@@ -116,23 +124,27 @@ only enforcement once a fixture proves it".
 |---|---|
 | `qa-help` renders the command overview and starts no work | **uncovered** — static content; a case could only grade recitation, which proves nothing. The discovery half (preamble names `qa-help` in every session and mode) is fixture-covered in `session-start-fixtures.sh`. |
 | Entry-point skills trigger on natural language (German + English), not only on slash commands — the descriptions carry the surface forms users actually type | case: `nl-routing` — a bare German "Teste SHOP-1412" must take the same path as `/test-ticket`; the silent failure is a generic chat reply or a pointer back at slash commands |
-| `retest-bug` scopes the regression sweep from the flow map's Neighbors when a map exists; risk-based fallback without one, never a stall and never a fabricated map read | case pair: `flow-map-scoping` + `flow-map-absent` (same-commit rule) — the silent failures: improvising neighbors while a map sits on disk, and inventing a map read where none exists |
+| `retest-bug` scopes the regression sweep from confirmed flow-map Neighbors with a basis; unconfirmed/basis-less candidates and absent maps use risk-based fallback, never a stall or fabricated map read | cases: `flow-map-scoping` + `flow-map-absent` + `flow-map-unconfirmed-scoping` |
 | `test-executor` starts from flow-map anchors; `exploratory-testing` takes charter candidates from longest-unconfirmed areas | **deliberately advisory** — soft optimizations on top of the bridge-carried `## Flow map` section; both degrade gracefully to exploration. An eval could only grade that the map was cited, which proves nothing about test quality. Revisit if a concrete silent failure appears. |
-| `re-board` offers only the delta (missing fields/files/TODOs), confirms each change individually, re-stamps only after the upgrade | case: `re-board-delta` — the silent failures: bulk-applying without confirmation, re-running the full interview, stamping the version without doing the work |
+| `re-board` offers only schema/readiness deltas, confirms each edit, audits hygiene and Harness read-only, and re-stamps project-schema freshness only after the upgrade | case: `re-board-delta` — no silent bulk apply, full re-interview, harness edits or stamp-as-harness-proof |
 | `whats-new` renders the version delta and starts no work | **uncovered** — static render, same reasoning as `qa-help`; the stamp mechanism it reads is exercised by `re-board-delta`. A case could only grade recitation. |
 | Secrets resolution: declared keys reach `.env.playwright-secrets` without a value ever entering context; the agent sees which keys it has | **fixture-covered** — `session-start-fixtures.sh` (status line names missing keys, auto-resolve writes the file, no fixture value ever reaches context, JIRA PAT via `$CLAUDE_ENV_FILE`, no-CLI degradation) + `guard-fixtures.sh` (the resolver stays a sanctioned Bash path while direct `.env*` writes stay blocked). Behavioral side ("agent runs the resolver instead of asking for passwords") is the same norm family as the guard fixtures, not a separate case |
 | `retro-learn` keeps a rejected-edit buffer: retired/overruled learnings land in `_rejected.md` with reason + re-proposal condition, and groom checks it before re-capturing | **uncovered** — a file convention inside the learnings loop; a case could only grade recitation. The failure it prevents (loop amnesia) shows up over weeks, not in one answer — revisit if field reports show re-proposed rejections |
-| Promotions into blueprint rules/skills are validation-gated: COVERAGE.md row updated in the same pass, mapped cases run, a red case reverts | **process, self-referential** — this matrix is the mechanism (a promotion without a row update is incomplete by the rule at the top of this file); the eval-runner discipline is maintainer process, not gradable behavior |
+| Promotions into blueprint rules/skills/templates/hooks/docs are validation-gated: COVERAGE.md row, positive+inverse checks and mapped cases in the same pass, red reverts; consumer data never copied | **process, self-referential** — this matrix is the mechanism; maintainer process, not gradable behavior |
+| Consumer promotions condense durable hot context instead of appending narrative; stable config may be added, rare knowledge stays keyword-searchable | case pair: `promotion-condenses-existing-section` + `promotion-adds-durable-config` |
+| Flow-map seeding/promotion is evidence-gated: steps yield candidates only; anchors and Neighbors need sources/basis; only executed flows get confirmation stamps | case pair: `flow-map-seed-verified` + `flow-map-seed-insufficient-evidence` |
 | Promoted routing rows are re-measured once: pending line in the project's learnings file, confirmed or contradicted by `product_routed_by` in later summaries | **deliberately advisory** — auditable retroactively via `/qa-report`'s `weak_or_manual` count on evidence; not gradable from one answer |
-| Auto-groom: past the threshold (≥ 5 entries or oldest > 14 days) the session-start inbox hint becomes a directive — groom + promote at session end without waiting for a command, one-sentence report | fixture: `session-start-fixtures.sh` (threshold cases: count, age, silence) + `opencode/tests/bootstrap.test.ts` (parity) — **behavioral side uncovered**: "agent actually grooms when the directive is present" is a candidate case for the eval runner |
+| Auto-groom: past any threshold (≥ 5 entries, oldest > 14 days, or ≥ 16 KB) the hint becomes a directive for one bounded oldest-first batch plus eligible promotions; real single entries count, the legacy dated template example does not | fixture: `session-start-fixtures.sh` (count/age/bytes/single/example) + `opencode/tests/bootstrap.test.ts` (parity) — actual file-changing groom behavior remains uncovered |
 
 ## Agents
 
 | Norm | Coverage |
 |---|---|
 | `test-automator` framework dispatch: loads the suite's **declared** framework conventions (webdriverio-testing when "Test assets" says so), never the Playwright default | case: `framework-routing` — the base model's Playwright prior is the exact silent failure |
+| Shared mode keeps Claude Code and opencode start-ready with selective links, merged settings/configs and no plugin duplication; projects/memory/evidence/.agents stay consumer-owned | fixture: `install-shared-fixtures.sh` + case: `agentswitch-ready` |
+| `/agentswitch` is strictly read-only: ready means open the other extension; collisions block without repairs, data loss, secrets, network or re-onboarding | fixture: `agentswitch-fixtures.sh` + cases: `agentswitch-ready` + `agentswitch-collision` |
 
-## The twenty-four cases
+## The thirty-nine cases
 
 Tiers: **hard** = record integrity / safety, a single miss is an incident
 (all-pass required); **variance** = reasoning quality against maximally loud
@@ -164,6 +176,21 @@ norms (floor 2/3 + non-falling history trend). See `evals/README.md` → "Tiers"
 | `re-board-delta` | delta-only onboarding: per-item confirmation, no re-interview, stamp follows the upgrade | variance |
 | `mode-routing` | PROJECT.md execution mode steers the run; hybrid = recon-first + spec + red check + observation pass; escalation rules override every mode | hard |
 | `no-idle-wait` | deploy wait window filled with non-colliding work, never sleep-polling; browser verification waits for the deploy | hard |
+| `simple-ticket-fast-path` | simple single-branch ticket goes directly to its execution leaf | variance |
+| `simple-ticket-fail-still-triages` | Fast Path FAIL still requires orchestrator-owned failure analysis | hard |
+| `complex-ticket-uses-manager` | complex run uses qa-manager without repeating intake/readiness | variance |
+| `readiness-before-stage-browser` | unmerged/wrong-build ticket blocks before any stage browser action | hard |
+| `readiness-merged-ready` | merged/matching-build ticket proceeds after readiness; JIRA-browser intake allowed | hard |
+| `readiness-policy-exceptions` | merge/build policy exceptions do not become universal blockers; unverified build is reported | hard |
+| `flow-map-seed-verified` | sufficient recon/spec evidence seeds sourced, confirmed map knowledge | variance |
+| `flow-map-seed-insufficient-evidence` | coarse steps never become confirmed anchors/Neighbors | variance |
+| `flow-map-unconfirmed-scoping` | unconfirmed candidates do not control retest scope | variance |
+| `promotion-condenses-existing-section` | promotion merges durable wording and removes superseded duplication | variance |
+| `promotion-adds-durable-config` | stable config may promote while rare knowledge stays out of hot context | variance |
+| `agentswitch-ready` | shared QA home switches by opening the other extension, never re-onboarding | variance |
+| `agentswitch-collision` | collisions block read-only with data-preservation and human migration steps | hard |
+| `capsule-handoff` | manager/leaves/analyst consume sealed context without project remerging | variance |
+| `capsule-stale` | stale context returns to the orchestrator, never recipient self-repair | hard |
 
 The failure pairs rule: `failure-outdated`/`failure-undocumented-change` only
 mean something together. Any future "agent must do X when Y" norm should get

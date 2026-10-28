@@ -5,14 +5,13 @@ Why the blueprint stays cheap to run, and the rules that keep it that way.
 ## Lookup policy — read this, not everything
 
 1. `memory/INDEX.md` first — it points at exactly the file you need.
-2. `projects/<KEY>/PROJECT.md` + `learnings.md` for the active project only.
-3. Only if that project has a `## Products` section and the ticket routed to a
-   product: `products/<PRODUCT>/PRODUCT.md` + its `learnings.md` **in addition**.
-   A `project-wide` ticket loads no product file at all, and a project without
-   products never globs for one. Before loading all four, check the field-ownership
-   table in `.claude/rules/core/product-layer.md`: a narrow question about a sealed
-   field (transitions, report format, deploy authorization) is answered by
-   `PROJECT.md` alone.
+2. Read the active `projects/<KEY>/PROJECT.md`. Grep its `learnings.md` for
+   area/component/flow/failure keywords; read matches only.
+3. On a product route, add `products/<PRODUCT>/PRODUCT.md` and targeted learning
+   matches. Load `flow-map.md` only for recon/planning/retest/charters; only
+   confirmed Areas bind. `project-wide` loads no product; no `## Products` means
+   no product glob. Sealed-field questions use `PROJECT.md` alone (ownership:
+   `.claude/rules/core/product-layer.md`).
 4. Everything else (other projects, other learning files, docs/) is loaded **only
    when a specific reason exists** — a skill instructs it, or the index points there.
 
@@ -45,9 +44,9 @@ more than it saves.
 
 ## Context hygiene
 
-- Evidence (`evidence/`) is gitignored and covered by `.claudeignore` — never read a
-  screenshot/log/trace back into context "to check it looked right"; trust the
-  capture step and reference the path in reports instead.
+- Never Read raw evidence (`.mcp-out`, images, traces, videos, binary captures)
+  back into context; reference its path. Structured summaries and curated
+  JSON/Markdown stay readable.
 - Close out exploratory sessions with a short verdict, not a full transcript replay,
   when reporting back to the user or to JIRA.
 - Long `memory/learnings/*.md` files are meant to be grepped, not read end-to-end,

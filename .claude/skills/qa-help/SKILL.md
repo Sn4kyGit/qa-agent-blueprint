@@ -46,6 +46,7 @@ mode they are namespaced: `/qa-agent-blueprint:<name>`.
 | `/onboard-product` | Short onboarding for a product inside an existing project. |
 | `/re-board <KEY>` | Delta-onboarding: brings an existing project up to the current blueprint schema (new fields, missing files, open TODOs) without repeating the full interview — the upgrade path after a blueprint update. |
 | `/scaffold-suite` | Creates the Playwright test project when a product has no test assets yet. |
+| `/agentswitch <target>` | Read-only check for switching harnesses (`claude` or `opencode`); never migrates or re-onboards. |
 
 ## Knowledge & meta
 

@@ -21,6 +21,11 @@ They serve different purposes and must not be confused.
    → See "Why there is no memory server" below before adding one.
 ```
 
+Run-scoped `context-capsule.json` files are not a fourth memory layer. They are
+immutable, size-bounded pipeline artifacts that hand already-resolved context to
+subagents without another PROJECT/PRODUCT merge. Durable knowledge still goes
+through promotion into level 1; capsules never become its source of truth.
+
 ## Why level 1 is the one that matters
 
 The blueprint's promise is "explain once, never again", and that is a **promotion**

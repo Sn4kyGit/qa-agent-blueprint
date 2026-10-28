@@ -102,6 +102,7 @@ in the product files — note that they carry a product segment in the key, so t
 - **Agent may trigger deploy**: yes (stage only; announce in team chat per gotcha #1)
 - **How a deploy is triggered**: `gh workflow run shop-stage-deploy.yml -f BRANCH=<release-branch>`
   (requires the `gh` CLI, authenticated against the shop repo)
+- **Build verification**: `required`
 - **Post-deploy verification**: `/api/version` matches the expected version AND the
   entry page loads AND login with `qa-readonly` succeeds — the project-wide user, so
   this check works for either product. (A product-specific smoke user belongs in that
@@ -117,9 +118,13 @@ in the product files — note that they carry a product segment in the key, so t
 - **Gate overrides**: pass rate ≥ 90 % (stricter than default), P0 = 0, P1 ≤ 3,
   coverage ≥ 80 %
 - **Nightly regression**: runs P0+P1 specs; failures are reported to SHOP-100
+- **Readiness statuses**: `Ready for QA`, `In QA`
+- **Readiness API/CLI**: `gh pr view <PR> --json state,mergedAt` for linked PRs;
+  JIRA blocking links for unresolved blockers; `GET /api/version` for the deployed build
 
 ## MR process
 
+- **Merge requirement**: `when-linked`
 - MRs against `main`; review by team "shop-frontend" or "shop-backend".
 - Agent may comment test results on MRs: yes — plain summary + link to the JIRA ticket.
 - Agent never merges, never approves.
@@ -169,4 +174,5 @@ import jobs) live in the product files and are **added** to these, never replace
 
 ## Learnings
 
-See `learnings.md` in this directory — read it before every test run.
+See `learnings.md` in this directory — search it by the ticket's area, component,
+flow and failure keywords; read only the matching entries.

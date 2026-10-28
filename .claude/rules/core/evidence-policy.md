@@ -134,9 +134,9 @@ The blueprint's second promise, next to evidence, is "explain once, never again"
 (`.claude/skills/retro-learn/SKILL.md`). Prose reminders enforce nothing, so the
 obligation is **declared in the summary** instead:
 
-- `learnings.captured` — a short list of what went into
-  `memory/learnings/_inbox.md` during this run (one line each, the inbox holds the
-  full Problem/Cause/Solution entry).
+- `learnings.captured` — new inbox entries or updated existing sightings, one
+  referenced line each. Repeats name the inbox, scoped-learning or `_rejected.md`
+  entry whose counter/date changed.
 - `learnings.none_because` — when the list is empty, one sentence stating why:
   `"clean run, no surprises"`, `"everything hit was already in the product's
   learnings"`.

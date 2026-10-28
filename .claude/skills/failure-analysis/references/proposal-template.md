@@ -1,6 +1,7 @@
 # Proposal format — `test-outdated` and `test-brittle`
 
-Written by `qa-manager` to `evidence/<KEY>/<TICKET>/<ts>/failure-analysis.md`, and
+Written by `qa-manager` or the direct calling orchestrator to
+`evidence/<KEY>/<TICKET>/<ts>/failure-analysis.md`, and
 rendered into the JIRA comment as headings and bullets. **No pipe tables** — JIRA
 Cloud is ADF (`docs/rules/testing/jira-confluence.md`).
 

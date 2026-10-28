@@ -125,9 +125,9 @@ qa-agent-blueprint/
   `atlassian`, same contract flags (`--secrets`, `--output-dir`, `--config`).
   All tool-name references get a mechanical mapping `mcp__<srv>__<tool>` →
   `<srv>_<tool>`; a convention test forbids `mcp__` strings under `opencode/`.
-- **D6 — Model-agnostic by construction.** No `model` key in any agent file
-  (= inherit semantics on both harnesses), no model key or recommendation in
-  the config template — the model is set via `/models` in opencode and is none
+- **D6 — Model-agnostic by construction.** No `model` key in any opencode agent
+  file (= inherit semantics), no model key or recommendation in the opencode
+  config template — the model is set via `/models` in opencode and is none
   of the blueprint's business (user decision 2026-09-16). The eval runner takes
   `QA_EVAL_MODEL` / `QA_JUDGE_MODEL` with **no built-in default**. Everything
   behavioural must hold for any competent tool-calling model — that is exactly
@@ -139,10 +139,10 @@ qa-agent-blueprint/
   secrets/playwright config — idempotent, `.bak` backups, never overwrites.
   npm publishing stays possible (layout matches the hiai pattern) but is out
   of scope.
-- **D8 — Permissions instead of settings.json denies.** The Claude-side
-  `permissions.deny` list (e.g. `Read(evidence/**)`) becomes `permission`
-  entries in the template (`read: { "evidence/**": "deny" }`-style patterns,
-  verified against opencode's glob semantics in S4).
+- **D8 — Permissions instead of settings.json denies.** Claude-side raw-artifact
+  `permissions.deny` rules become `permission.read` entries in the template
+  (`**/evidence/**/*.png`-style patterns, never blanket evidence denies),
+  verified against opencode's glob semantics in S4.
 - **D9 — Eval parity, not eval fork.** `evals/<case>/` content is shared;
   only the runner is harness-specific. Gate stays 0.9 (hard) / 0.66 (variance).
   The judge on the opencode path is an opencode run with a *different* model
@@ -412,9 +412,9 @@ are a documented model floor + a sharpened norm, not a special case.
 | D3 | Stop-hook → atlassian-write gate + idle reminder; markers unchanged | **confirmed (S4/S5, P2 landed)**; `client.session.prompt()` shape verified against installed SDK types (`path:{id}`, `body:{parts:[{type:"text"}]}`) |
 | D4 | Router via `instructions`, no injection hack | accepted |
 | D5 | `mcp__<s>__<t>` → `<s>_<t>` mechanical mapping + convention test | **confirmed (S6)** |
-| D6 | No model pins or recommendations anywhere; model = user's `/models` choice; evals take `QA_EVAL_MODEL`/`QA_JUDGE_MODEL` with no default | **confirmed (user decision 2026-09-16)**; GLM-5.2 availability recorded only as a fact (S2, opencode data page) |
+| D6 | No model pins or recommendations in opencode; model = user's `/models` choice; evals take `QA_EVAL_MODEL`/`QA_JUDGE_MODEL` with no default. Claude Code may use harness-specific role aliases | **confirmed (user decision 2026-09-16; Claude-only role defaults added 0.14.0)**; GLM-5.2 availability recorded only as a fact (S2, opencode data page) |
 | D7 | Local-first distribution via install.sh; npm later | accepted |
-| D8 | settings.json denies → `permission` globs | **confirmed (S4)** — patterns must match absolute paths: use `**/evidence/**` |
+| D8 | settings.json raw-artifact denies → `permission` globs | **confirmed (S4)** — patterns must match absolute paths: use `**/evidence/**/*.png` and peers, not blanket evidence denies |
 | D9 | Shared eval cases, harness-specific runner, cross-model judging | accepted |
 | D10 | Path references in skill/rule/agent bodies (~70) stay **literal**; `install.sh --mode opencode` creates read-only compat symlinks in the consumer (`.claude`, `docs`, `.agents` → blueprint root; `.opencode/{ROUTER.md,agents,commands,plugins}` → blueprint `opencode/`). Consumer-owned paths (`projects/`, `memory/`, `evidence/`) resolve in the cwd identically on both harnesses. Consequence: a consumer picks ONE harness — installing the Claude plugin alongside the `.claude` symlink would double-register skills | accepted (P4 audit) |
 

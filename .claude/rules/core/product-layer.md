@@ -99,11 +99,11 @@ permission or loosen a safety constraint.
 
 | Area | Override |
 |---|---|
-| Environments, Test users, Test assets, Feature matrix, Gotchas, Confluence links, bug template | yes |
+| Environments, Build verification (unverified reporting mandatory), Test users, Test assets, Feature matrix, Gotchas, Confluence links, bug template | yes |
 | Deploy runbook steps | yes |
 | Gate overrides (pass rate, P0/P1, coverage) | **stricter only** — otherwise PRODUCT.md becomes a way to buy a green run |
 | "Agent may trigger deploy", "Agent may comment on MRs" | **narrowing only** (`yes→no`), never `no→yes` |
-| JIRA transitions (PASS/FAIL/BLOCKED), report format | **never** — a property of the JIRA project's workflow. Two products in one JIRA project share one workflow by definition; if a product truly needs different transitions, it is a separate JIRA project |
+| JIRA transitions, Readiness statuses, Merge requirement, report format | **never** — shared JIRA workflow; different transitions require a separate JIRA project |
 | Evidence obligation, path schema, `execution_summary.json` requirement | **never** |
 | Everything in `.claude/rules/core/security.md` (production ban, never merge/approve, never roll back alone, secrets-as-references, no real PII or card data), the MCP register (`token-discipline.md` → MCP budget) | **never** |
 

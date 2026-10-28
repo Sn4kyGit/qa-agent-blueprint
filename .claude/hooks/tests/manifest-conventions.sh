@@ -30,7 +30,7 @@ MARKETPLACE="$ROOT/.claude-plugin/marketplace.json"
 command -v python3 >/dev/null 2>&1 || { echo "python3 required" >&2; exit 1; }
 
 python3 - "$MANIFEST" "$MARKETPLACE" <<'PY'
-import json, os, sys
+import json, os, re, sys
 
 manifest_path, marketplace_path = sys.argv[1], sys.argv[2]
 root = os.path.dirname(os.path.dirname(manifest_path))
@@ -108,6 +108,27 @@ if os.path.exists(marketplace_path):
         fail("manifest versions agree", f"plugin.json={pv} but marketplace.json={mv}")
     else:
         ok(f"manifest versions agree ({pv})")
+
+claude_models = {
+    "test-executor": "sonnet",
+    "test-automator": "sonnet",
+    "qa-manager": "inherit",
+    "failure-analyst": "inherit",
+    "bug-reporter": "inherit",
+}
+for agent, expected in claude_models.items():
+    path = os.path.join(root, ".claude", "agents", agent + ".md")
+    if not os.path.exists(path):
+        fail(f"Claude agent {agent} model", f"{path} missing")
+        continue
+    with open(path) as fh:
+        text = fh.read()
+    match = re.search(r"(?m)^model:\s*(\S+)\s*$", text)
+    actual = match.group(1) if match else None
+    if actual != expected:
+        fail(f"Claude agent {agent} model", f"expected {expected}, got {actual}")
+    else:
+        ok(f"Claude agent {agent} model: {expected}")
 
 print()
 if fails:
@@ -257,7 +278,7 @@ else:
 # (3) command <-> skill parity: every opencode/commands/<name>.md has a skill
 #     of the same name, and every entry-point skill has a command wrapper.
 ENTRY_POINTS = [
-    "bug-report", "deploy-to-stage", "exploratory-testing", "failure-analysis",
+    "agentswitch", "bug-report", "deploy-to-stage", "exploratory-testing", "failure-analysis",
     "onboard-product", "onboard-project", "qa-help", "qa-report", "re-board",
     "recon", "report-to-jira", "retest-bug", "retro-learn", "scaffold-suite",
     "test-automation", "test-ticket", "whats-new",
