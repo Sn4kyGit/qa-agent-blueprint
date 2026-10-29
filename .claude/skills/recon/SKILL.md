@@ -42,6 +42,10 @@ tokens an MCP session costs. Full phase contract: `docs/pipeline/02-recon.md`.
    new run shows different controls, say so — specs built from the old recon
    are outdated (re-run recon, don't patch specs onto a changed page).
 
+This skill writes no summary of its own: when the calling flow writes the run's
+`execution_summary.json`, `recon` belongs in its `skills_used` if this skill
+actually ran (`.claude/rules/core/evidence-policy.md`).
+
 ## MCP instead of probe
 
 Unclear interaction, non-reproducible bug, visual assessment, or

@@ -66,9 +66,11 @@ keeps the prior effective-project fallback.
 7. **Return ≤ 60 lines.** Class, confidence, basis, per-case mapping, and for
    `test-outdated`/`test-brittle` the proposal per
    `references/proposal-template.md`. `qa-manager` or the direct calling
-   orchestrator writes `failure-analysis.md` into the existing run directory and
-   merges `failure_analysis` into `execution_summary.json`
-   (`.claude/rules/core/evidence-policy.md`).
+    orchestrator writes `failure-analysis.md` into the existing run directory and
+    merges `failure_analysis` into `execution_summary.json`
+    (`.claude/rules/core/evidence-policy.md`). The same merge declares the run's
+    `skills_used` — every skill the run actually used (`failure-analysis` included),
+    never the ones merely planned.
 
 ## What the class means downstream
 

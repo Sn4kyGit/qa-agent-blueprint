@@ -8,7 +8,7 @@ und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
 Neu hier? Unten beantwortet die Rubrik **Häufige Fragen** in einfacher
 Sprache, wie Gedächtnis, Kosten und Sicherheit funktionieren.
 
-31
+32
 
 Skills
 
@@ -28,7 +28,7 @@ Fixtures+145
 
 Fixture-Checks + bun-Tests
 
-43
+45
 
 Eval-Cases
 
@@ -55,7 +55,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
 Unter **opencode** (modell-agnostisch, Modell = deine `/models`-Wahl): `install.sh --mode opencode --target <projekt> --yes` vom Clone aus — Details: [Quickstart opencode](https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md).
 Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: `install.sh --mode shared` — beide bleiben ohne Re-Onboarding startbereit, `/agentswitch` prüft read-only.
 
-Ende-zu-Ende verifiziert (claude 2.1.263): registriert 31 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
+Ende-zu-Ende verifiziert (claude 2.1.263): registriert 32 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
 
 ## Der Ablauf
 
@@ -133,6 +133,7 @@ zeigt jederzeit `/qa-agent-blueprint:qa-help` — auch direkt in der Session.
 | /qa-report | Aggregiert alle Evidence-Läufe: Pass-Rate, P0/P1, BLOCKED-Gründe — pro Projekt und Produkt | „Wie läuft's mit dem Testing?" |
 | /retro-learn | Hält Learnings fest, verdichtet sie und befördert Bewährtes in Regeln und Projektdateien | „Session abschließen" |
 | /whats-new | Zeigt, was sich am Blueprint seit dem Onboarding geändert hat — und was ein /re-board lohnt | „Was ist neu?" |
+| /skill-review | Skill-Nutzungsanalyse: jeder installierte Skill ist `used` (in den `skills_used`-Datensätzen) oder `unknown` (keine Daten) — nie „unbenutzt". Profile (`full`/`standard`/`minimal`/`custom`) nur als Dry-run-Vorschlag, umgesetzt nur nach ausdrücklicher Bestätigung und nur im integrate-Modus | „Welche Skills nutzen wir eigentlich?" |
 | /demo | Präsentiert eine Bug-Repro oder einen fertigen Testlauf sichtbar: Headed-Slow-Mo-Wiederholung + Demo-Karte, Selbst-ausprobieren-Modus, .webm-Aufzeichnung nur auf ausdrückliche Anfrage — niemals automatisch | „Präsentier den Bug", „Lass mich probieren" |
 | /qa-help | Diese Übersicht, direkt in der Session — antwortet in der Sprache, in der man fragt | „Welche Befehle gibt es?" |
 
@@ -190,7 +191,7 @@ Beschreibung. Ein Subagent hat zusätzlich ein eigenes Kontextfenster und eine e
 Werkzeugliste — er läuft abgeschottet und gibt nur ein Ergebnis zurück. Deshalb sind alle
 Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptkontext nicht fluten.
 
-### Die 17 eigenen Skills — der Ticket-Ablauf
+### Die 18 eigenen Skills — der Ticket-Ablauf
 
 | Skill | Was er tut | Wann er greift |
 | --- | --- | --- |
@@ -209,6 +210,7 @@ Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptk
 | /scaffold-suite | Erzeugt das Playwright-Projekt, das die Blaupause voraussetzt: package.json, eine Config, deren Capture-Einstellungen die Evidence-Matrix sind, und eine erste laufende Smoke-Spec. | „Test assets: none yet" |
 | /re-board | Delta-Onboarding: vergleicht ein Bestandsprojekt mit dem aktuellen Template und bietet nur die Lücke an — neue Felder (Secrets-Quelle, Versionsstempel), fehlende Dateien (Flow-Map-Seed aus bisheriger Evidence), offene TODOs. Jede Änderung einzeln bestätigt, danach Bridge-Refresh und neuer Stempel. Der Upgrade-Pfad für jedes Schema-Wachstum. | Nach einem Blueprint-Update; „Projekt aktualisieren" |
 | /whats-new | Liest den Versionsstempel im PROJECT.md gegen die installierte Plugin-Version und rendert die CHANGELOG-Abschnitte dazwischen — in der Sprache der Frage, mit dem Hinweis, welche Änderung ein /re-board lohnt. Reine Orientierung, startet keine Arbeit. | „Was hat sich geändert?", nach einem Update |
+| /skill-review | Liest die `skills_used`-Nutzungsdaten und klassifiziert jeden installierten Skill als used oder unknown — nie „unused": fehlende Daten sind unknown, kein Freigabegrund. Ohne Daten ist alles unknown und die Coverage 0%. Read-only; ein Profil-Vorschlag (full/standard/minimal/custom) bleibt ein Dry-run mit exakter Exclude-Liste, bis der Nutzer die konkrete Liste ausdrücklich bestätigt — und greift nur in einer integrate-Installation. | „Welche Skills brauchen wir wirklich?" |
 | /qa-report | Liest alle `execution_summary.json` zurück: Pass-Rate pro Produkt, P0/P1, BLOCKED- und NO\_TEST-Gründe, Routing-Qualität, Learning-Durchsatz. Nennt ausdrücklich, was das Schema nicht hergibt. | „Wie läuft's?", Wochen- oder Sprintbericht |
 | /retro-learn | Capture → Groom → Promote. Klassifiziert eine Überraschung nach Reichweite (Projekt, Produkt, projektübergreifend) und befördert sie beim zweiten Auftreten in eine Regel oder Projektdatei. | Session-Ende, oder wöchentlich zum Verdichten |
 
@@ -410,7 +412,7 @@ Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gl
 | Hooks (Guard, Stop, SessionStart) | 189 Fixtures — jede Regel mit eigenem Fall |
 | Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption) | 119 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses |
 | Kontextkosten | gemessen — Budget-Check, 8.372 von 8.400 Token belegt |
-| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 43 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
+| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 45 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
 | Ein echtes Projekt, ein echtes Ticket | **nie** — genau das ist der Pilot |
 
 Der erste gelaufene Eval-Case war lehrreich: die Antwort war präziser als der Grader — sie
@@ -466,7 +468,7 @@ ohne Overrides oder nutzt die unter `/model-setup` konfigurierten Modelle und Va
 | wiederholte Flows | vorhandene Specs über den CLI-Runner |
 
 **Ehrlichkeit:** Die Modell-Lane verändert den Preis der Browser-Tokens, nicht ihre Menge.
-Für 0.17.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
+Für 0.18.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
 sind deshalb keine Zusage. Miss deine eigenen Abläufe mit `/usage` und den Session-Logs.
 
 ## Häufige Fragen
@@ -492,7 +494,7 @@ arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätesten
 16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
 stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
 Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
-Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.17.0 steht noch aus.
+Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.18.0 steht noch aus.
 
 #### ?Wie effizient ist eine Session?
 
@@ -561,10 +563,11 @@ verbinden — dann `/onboard-project` und das Interview beantworten. Danach hei�
 es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Agent testet
 vollständig, postet aber nichts, bis du es freigibst.
 
-QA Agent Blueprint · Stand: 28. Oktober 2026 (0.17.0) —
-aktualisiert auf Repo-Stand (31 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 43 Eval-Cases,
+QA Agent Blueprint · Stand: 29. Oktober 2026 (0.18.0) —
+aktualisiert auf Repo-Stand (32 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 45 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
 Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,
-Flow-Maps, /re-board und /whats-new als Upgrade-Pfad, Shadow-Modus als Default).
+Flow-Maps, /re-board und /whats-new als Upgrade-Pfad, /skill-review Skill-Nutzungsanalyse
+(used/unknown, Profile nur nach Bestätigung), Shadow-Modus als Default).
 Quelle der Wahrheit ist das Repo: `CLAUDE.md`, `memory/INDEX.md`, `README.md`.

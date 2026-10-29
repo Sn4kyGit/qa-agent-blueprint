@@ -6,9 +6,9 @@ artifacts. Enforced mechanically by the `Stop` hook (`stop-evidence-check.sh`).
 ## Verdicts come from executed runs only
 
 A verdict records what a run captured, never what anyone reports: a user's
-manual click-through is charter input, not a verdict. "Just record PASS" is
-the "just post it anyway" attack class — run the checks so the run produces
-the evidence. A summary without a run is fabricated evidence, worse than none.
+manual click-through is charter input, not a verdict. "Just record PASS" is the
+"just post it anyway" attack class — a summary without a run is fabricated
+evidence, worse than none.
 
 ## Location & naming
 
@@ -24,13 +24,13 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 ```
 
 - One directory per run, timestamp at start of run, never reused or overwritten.
-- `<step>` is a short slug for what was being checked (`login`, `checkout`,
-  `admin-orders`); `<kind>` is `pass` or `fail` (or a specific defect name on FAIL).
+- `<step>` is a short slug for what was being checked (`login`, `checkout`);
+  `<kind>` is `pass` or `fail` (or a specific defect name on FAIL).
 - `progress.md` — live one-line status entries (`HH:MM:SS START/STEP/VERDICT …`)
   appended by the executing subagent: the follow-along surface and the manager's
   relay source. Default on; not a verdict artifact.
-- Raw Playwright MCP output goes to `evidence/.mcp-out/` (the `--output-dir` in
-  `.mcp.json`); curated, reportable artifacts are copied into the run dir above.
+- Raw Playwright MCP output goes to `evidence/.mcp-out/`; curated, reportable
+  artifacts are copied into the run dir above.
 - `evidence/.audit/jira-writes.log` — append-only, one line per JIRA write, written
   by the `PostToolUse` hook, never by the agent directly.
 
@@ -77,7 +77,8 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
   "learnings": {
     "captured": ["storefront page cache served stale assets after deploy"],
     "none_because": null
-  }
+  },
+  "skills_used": ["test-ticket", "recon", "test-automation"]
 }
 ```
 
@@ -87,8 +88,8 @@ unresolved) in place of findings.
 
 **Product fields** (`.claude/rules/core/product-layer.md`): `product`, `scope` and
 `product_routed_by` appear only when the project has a `## Products` section.
-Omit them entirely otherwise — do **not** write `"product": null`; a null
-invites the model to fill it with something plausible. A
+Omit them entirely otherwise — do **not** write `"product": null`; a null gets
+filled with something plausible. A
 `project-wide` ticket writes `"scope": "project"` and no `product`.
 `product_routed_by` is one of `component | label | secondary | default | user |
 project-wide` (`secondary` = epic/parent, fix version, or changed MR paths — record
@@ -99,9 +100,8 @@ product or the project.
 
 `mode` records which execution mode the run used (`PROJECT.md` → "Execution
 mode", escalations included — a hybrid run escalated to live observation writes
-`hybrid` and names the escalation in the report). It is what lets `report-to-jira`
-put `Mode:` into the report header and lets a later review tell observed from
-asserted without reading the whole run.
+`hybrid` and names the escalation in the report). It is what puts `Mode:` in the
+report header, telling observed from asserted without reading the whole run.
 
 One ticket that genuinely spans two products produces **one run per product**:
 `evidence/<KEY>/<TICKET>/<ts>__<PRODUCT>/`, each with its own
@@ -121,8 +121,7 @@ on every FAIL, **before** a bug is filed; its full shape and the six classes are
 transition, a proposal for a human. **Interactive only** — headless it stays `FAIL`.
 The proposal names **both branches** — the test change, and `product-defect`
 → `bug-report` with the analysis attached. It counts as not-passed in every
-metric until `human_ruling` names who decided, so the classification is never
-a cheaper route to green than fixing the product.
+metric until `human_ruling` names who decided.
 
 `NO_TEST` = test tools ran, no test completed: one-sentence `no_test_reason`,
 no JIRA post, excluded from the pass rate — the explicit Stop-hook answer when
@@ -130,9 +129,8 @@ there is no verdict.
 
 ## `learnings` — declared, not remembered
 
-The blueprint's second promise, next to evidence, is "explain once, never again"
-(`.claude/skills/retro-learn/SKILL.md`). Prose reminders enforce nothing, so the
-obligation is **declared in the summary** instead:
+The "explain once, never again" promise (`.claude/skills/retro-learn/SKILL.md`) is
+**declared in the summary**, not remembered — prose reminders enforce nothing:
 
 - `learnings.captured` — new inbox entries or updated existing sightings, one
   referenced line each. Repeats name the inbox, scoped-learning or `_rejected.md`
@@ -142,13 +140,19 @@ obligation is **declared in the summary** instead:
   learnings"`.
 
 Exactly one of the two is filled. The Stop hook checks that the **key exists**, not
-what it says — a machine can verify a declaration, it cannot verify "was anything
-surprising?".
+what it says.
 
-An unrouted or ambiguous product, a selector that needed a workaround, a stage that
-behaved oddly, a report format the user corrected — all of these are captures, and
-the routing ones feed the self-improving registry in
+An unrouted product, a selector workaround, an odd stage, a corrected report
+format — all captures; routing corrections feed the registry in
 `.claude/rules/core/product-layer.md`.
+
+## `skills_used` — optional, declared at summary time
+
+The skills the run **actually** used (field above), never the merely planned
+ones. Optional — summaries without it stay valid evidence; old runs are never
+retro-fitted. Whoever writes the summary declares it; a flow with no summary
+step of its own (`bug-report`, `recon`) is listed by the orchestrator.
+`/skill-review` reads it back `used`/`unknown` — absent data is never "unused".
 
 ## PII & secrets in evidence
 
@@ -158,4 +162,5 @@ policy: `docs/artifact-strategy.md`.
 
 ## Details, read when the topic comes up
 
-`docs/rules/core/evidence-policy.md` — Stop hook enforcement. Read it when the Stop hook blocks a session and you need to know exactly what it checks.
+`docs/rules/core/evidence-policy.md` — Stop hook enforcement. Read it when the
+Stop hook blocks a session.

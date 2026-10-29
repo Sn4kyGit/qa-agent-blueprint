@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 31 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 145 bun tests · 43 eval cases |
+| **Contents** | 32 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 145 bun tests · 45 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
@@ -183,7 +183,7 @@ blueprint-side to change): in opencode, `/connect` → pick your provider
 opencode run "list your available skills"
 ```
 
-should show the 29 blueprint skills; `/test-ticket`, `/retest-bug`,
+should show the 32 blueprint skills; `/test-ticket`, `/retest-bug`,
 `/qa-report` etc. appear as commands.
 
 **Updating:** `cd ~/qa-blueprint && git pull` — live after a restart; if the
@@ -361,7 +361,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>20 core skills</b> — the ticket workflow</summary>
+<summary><b>21 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
@@ -384,6 +384,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 | `/qa-report` | Aggregate the evidence into metrics: pass rate, P0/P1, BLOCKED reasons, routing quality |
 | `/retro-learn` | Capture, groom and promote learnings |
 | `/whats-new` | What changed in the blueprint since a project was onboarded — and what calls for `/re-board` |
+| `/skill-review` | Skill-usage analysis: every skill `used` or `unknown` from the `skills_used` records — never "unused", read-only; profile changes (`full`/`standard`/`minimal`/`custom`) are dry-run proposals |
 | `/demo` | Present a bug repro or finished test run to an audience: headed slow-mo replay + demo card, hands-on mode ("lass mich probieren"), .webm recording only on explicit request — never automatically |
 
 </details>
@@ -404,7 +405,7 @@ than by guesswork.
 
 Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
 by `/test-automation` when a project's declared framework is webdriverio (not
-invoked directly; see its SKILL.md). 20 + 10 + 1 = the 31 skills from the header.
+invoked directly; see its SKILL.md). 21 + 10 + 1 = the 32 skills from the header.
 
 </details>
 
@@ -427,6 +428,23 @@ provider/model and optional supported variants only into consumer `opencode.json
 A 30-step browser session stays inside `test-executor`; only a verdict comes back.
 
 </details>
+
+### Which skills do you actually use? — `/skill-review`
+
+Skills load on demand, so over time the honest question is which ones your
+team ever reaches. `/skill-review` answers it from the `skills_used` records:
+every installed skill is **used** (it appears in the records) or **unknown**
+(no data) — never "unused", because absent data is not evidence of non-use.
+No records at all means every skill is unknown and coverage is 0%. The review
+is read-only: it deactivates nothing.
+
+It may propose a **skill profile** — `full` (everything, the default),
+`standard`, `minimal` or `custom` — as a dry-run that names the exact exclude
+list. A profile is applied only after your explicit confirmation of that
+concrete proposal, and only in an **integrate** installation (skills are copied
+into your repo there and can be excluded). The plugin — and the symlinked
+opencode surface — ship the full set and deactivate nothing, and no profile is
+ever applied automatically.
 
 ---
 
@@ -729,7 +747,7 @@ runs it.
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |
-| [evals/README.md](evals/README.md) | Behavioral conformance — 43 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
+| [evals/README.md](evals/README.md) | Behavioral conformance — 45 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
 | [docs/pilot-briefing.md](docs/pilot-briefing.md) | **Read before the first real onboarding**: what to collect, shadow mode, what is known unfinished |
 | [docs/rules/](docs/rules/) | The detail behind each always-loaded rule, read on demand |
 | [docs/runbooks/stage-deploy-general.md](docs/runbooks/stage-deploy-general.md) | Generic stage-deploy scaffold |

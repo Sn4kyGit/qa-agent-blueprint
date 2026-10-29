@@ -48,6 +48,7 @@ mode they are namespaced: `/qa-agent-blueprint:<name>`.
 | `/scaffold-suite` | Creates the Playwright test project when a product has no test assets yet. |
 | `/agentswitch <target>` | Read-only check for switching harnesses (`claude` or `opencode`); never migrates or re-onboards. |
 | `/model-setup` | Configure cheap/standard/deep opencode model overrides per execution role; consumer-only, restart required. |
+| `/skill-review` | Review which skills the evidence shows as used (used/unknown with coverage, never "unused") and propose a slimmer skill profile after confirmation; integrate-only apply. |
 
 ## Knowledge & meta
 

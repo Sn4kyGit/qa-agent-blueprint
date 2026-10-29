@@ -258,12 +258,12 @@
     Sprache, wie Gedächtnis, Kosten und Sicherheit funktionieren.
   </p>
   <div class="stats">
-    <div class="stat"><div class="n">31</div><div class="l">Skills</div></div>
+    <div class="stat"><div class="n">32</div><div class="l">Skills</div></div>
     <div class="stat"><div class="n">9</div><div class="l">Subagents</div></div>
     <div class="stat"><div class="n">5+10</div><div class="l">Regeln (immer / on demand)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
     <div class="stat"><div class="n">Fixtures+145</div><div class="l">Fixture-Suiten + bun-Tests</div></div>
-    <div class="stat"><div class="n">43</div><div class="l">Eval-Cases</div></div>
+    <div class="stat"><div class="n">45</div><div class="l">Eval-Cases</div></div>
     <div class="stat"><div class="n">8,3k</div><div class="l">Token immer geladen</div></div>
   </div>
 </header>
@@ -278,7 +278,7 @@ plugin in this project. Read its AGENTS.md first and follow the runbook.</code><
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace</code></pre>
   <p>Unter <strong>opencode</strong> (modell-agnostisch, Modell = deine <code>/models</code>-Wahl): <code>install.sh --mode opencode --target &lt;projekt&gt; --yes</code> vom Clone aus — Details: <a href="https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md">Quickstart opencode</a>.</p>
   <p>Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: <code>install.sh --mode shared</code> — beide bleiben ohne Re-Onboarding startbereit, <code>/agentswitch</code> prüft read-only.</p>
-  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 31 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
+  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 32 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
 </section>
 
 <section>
@@ -364,6 +364,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <tr><td>/qa-report</td><td>Aggregiert alle Evidence-Läufe: Pass-Rate, P0/P1, BLOCKED-Gründe — pro Projekt und Produkt</td><td>„Wie läuft's mit dem Testing?"</td></tr>
     <tr><td>/retro-learn</td><td>Hält Learnings fest, verdichtet sie und befördert Bewährtes in Regeln und Projektdateien</td><td>„Session abschließen"</td></tr>
     <tr><td>/whats-new</td><td>Zeigt, was sich am Blueprint seit dem Onboarding geändert hat — und was ein /re-board lohnt</td><td>„Was ist neu?"</td></tr>
+    <tr><td>/skill-review</td><td>Skill-Nutzungsanalyse: jeder installierte Skill ist <code>used</code> (in den <code>skills_used</code>-Datensätzen) oder <code>unknown</code> (keine Daten) — nie „unbenutzt". Profile (<code>full</code>/<code>standard</code>/<code>minimal</code>/<code>custom</code>) nur als Dry-run-Vorschlag, umgesetzt nur nach ausdrücklicher Bestätigung und nur im integrate-Modus</td><td>„Welche Skills nutzen wir eigentlich?"</td></tr>
     <tr><td>/demo</td><td>Präsentiert eine Bug-Repro oder einen fertigen Testlauf sichtbar: Headed-Slow-Mo-Wiederholung + Demo-Karte, Selbst-ausprobieren-Modus, .webm-Aufzeichnung nur auf ausdrückliche Anfrage — niemals automatisch</td><td>„Präsentier den Bug", „Lass mich probieren"</td></tr>
     <tr><td>/qa-help</td><td>Diese Übersicht, direkt in der Session — antwortet in der Sprache, in der man fragt</td><td>„Welche Befehle gibt es?"</td></tr>
   </table>
@@ -424,7 +425,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptkontext nicht fluten.
   </p>
 
-  <h3>Die 17 eigenen Skills — der Ticket-Ablauf</h3>
+  <h3>Die 18 eigenen Skills — der Ticket-Ablauf</h3>
   <table>
     <tr><th>Skill</th><th>Was er tut</th><th>Wann er greift</th></tr>
     <tr>
@@ -527,6 +528,15 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
       die CHANGELOG-Abschnitte dazwischen — in der Sprache der Frage, mit dem Hinweis, welche
       Änderung ein /re-board lohnt. Reine Orientierung, startet keine Arbeit.</td>
       <td>„Was hat sich geändert?", nach einem Update</td>
+    </tr>
+    <tr>
+      <td>/skill-review</td>
+      <td>Liest die <code>skills_used</code>-Nutzungsdaten und klassifiziert jeden installierten Skill
+      als used oder unknown — nie „unused": fehlende Daten sind unknown, kein Freigabegrund. Ohne
+      Daten ist alles unknown und die Coverage 0%. Read-only; ein Profil-Vorschlag
+      (full/standard/minimal/custom) bleibt ein Dry-run mit exakter Exclude-Liste, bis der Nutzer die
+      konkrete Liste ausdrücklich bestätigt — und greift nur in einer integrate-Installation.</td>
+      <td>„Welche Skills brauchen wir wirklich?"</td>
     </tr>
     <tr>
       <td>/qa-report</td>
@@ -788,7 +798,7 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
     <tr><td>Hooks (Guard, Stop, SessionStart)</td><td>189 Fixtures — jede Regel mit eigenem Fall</td></tr>
     <tr><td>Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption)</td><td>119 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses</td></tr>
     <tr><td>Kontextkosten</td><td>gemessen — Budget-Check, 8.372 von 8.400 Token belegt</td></tr>
-    <tr><td>Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes)</td><td>43 Eval-Cases — ein eigenes Skript fährt sie über <code>claude -p</code> oder OpenRouter</td></tr>
+    <tr><td>Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes)</td><td>45 Eval-Cases — ein eigenes Skript fährt sie über <code>claude -p</code> oder OpenRouter</td></tr>
     <tr><td>Ein echtes Projekt, ein echtes Ticket</td><td><strong>nie</strong> — genau das ist der Pilot</td></tr>
   </table>
   <p class="note">
@@ -856,7 +866,7 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
   </table>
   <p class="note">
     <strong>Ehrlichkeit:</strong> Die Modell-Lane verändert den Preis der Browser-Tokens, nicht
-    ihre Menge. Für 0.17.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und
+    ihre Menge. Für 0.18.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und
     Ticket-Schätzungen sind deshalb keine Zusage. Miss mit <code>/usage</code> und den Session-Logs.
   </p>
 </section>
@@ -885,7 +895,7 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
     16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
     stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
     Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
-    Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.17.0 steht noch aus.</p>
+    Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.18.0 steht noch aus.</p>
   </div>
 
   <div class="card">
@@ -966,12 +976,13 @@ security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span
 
 <footer>
   <p>
-    QA Agent Blueprint · Stand: 28. Oktober 2026 (0.17.0) —
-    aktualisiert auf Repo-Stand (31 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 43 Eval-Cases,
+    QA Agent Blueprint · Stand: 29. Oktober 2026 (0.18.0) —
+    aktualisiert auf Repo-Stand (32 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 45 Eval-Cases,
     5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
     Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
     Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,
-    Flow-Maps, /re-board und /whats-new als Upgrade-Pfad, Shadow-Modus als Default).
+    Flow-Maps, /re-board und /whats-new als Upgrade-Pfad, /skill-review Skill-Nutzungsanalyse
+    (used/unknown, Profile nur nach Bestätigung), Shadow-Modus als Default).
     Quelle der Wahrheit ist das Repo: <code>CLAUDE.md</code>, <code>memory/INDEX.md</code>, <code>README.md</code>.
   </p>
 </footer>

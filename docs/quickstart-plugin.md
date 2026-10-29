@@ -169,6 +169,12 @@ composes the exact JIRA comment — but posts nothing. The proposal lands in
 access only after a couple of weeks of reviewed proposals: `Shadow mode: off` in
 the project file.
 
+After the first runs, `/skill-review` reports which skills the sessions
+actually used (`used`) and for which no `skills_used` data exists (`unknown` —
+never "unused"), and can propose a skill profile (`full`/`standard`/`minimal`/
+`custom`) as a dry-run. Applying is explicit-confirmation-only and
+**integrate-only** — the plugin never deactivates skills.
+
 ## What is different without an app repo
 
 Documented behavior, not bugs:

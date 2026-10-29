@@ -21,6 +21,9 @@ format — see `.claude/agents/bug-reporter.md` for its full process.
    ADF — see `docs/rules/testing/jira-confluence.md`.
 4. Return the created/updated ticket key to the user (or to the calling skill,
    e.g. `test-ticket`).
+5. This skill writes no `execution_summary.json` of its own: when it ran inside a
+   test run, the calling flow lists `bug-report` in that summary's `skills_used`
+   (`.claude/rules/core/evidence-policy.md`) — actually used only.
 
 ## What this skill does not do
 

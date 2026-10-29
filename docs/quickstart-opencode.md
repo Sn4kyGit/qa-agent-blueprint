@@ -1,7 +1,7 @@
 # Quickstart: opencode on a fresh machine
 
 The opencode path through the blueprint: the same ticket-driven QA Manager +
-Tester (31 skills, 9 agents, evidence gate), running under
+Tester (32 skills, 9 agents, evidence gate), running under
 [opencode](https://opencode.ai) instead of Claude Code — with **your** choice
 of model. The blueprint pins none: the model is whatever you pick in
 `/models` (docs/opencode-port-plan.md, D6).
@@ -178,10 +178,17 @@ In `~/qa-workspace`:
 opencode run "list your available skills"
 ```
 
-should show the 31 blueprint skills, and `/test-ticket` `/retest-bug`
+should show the 32 blueprint skills, and `/test-ticket` `/retest-bug`
 `/qa-report` etc. should appear as commands. The evidence gate is active from
 the first session: a JIRA write without fresh evidence is blocked with
 `QA_EVIDENCE_MISSING:`.
+
+After the first runs, `/skill-review` reports which skills the sessions
+actually used (`used`) and for which no `skills_used` data exists (`unknown` —
+never "unused"), and can propose a skill profile (`full`/`standard`/`minimal`/
+`custom`) as a dry-run. The symlinked surface is never deactivated — a profile
+is applied only after your explicit confirmation and only in an integrate
+installation.
 
 ## Updating
 

@@ -74,9 +74,11 @@ remaining orchestration to `qa-manager`.
    `product-defect` and `undetermined` justify reopening; class-specific evidence
    and reporting stay unchanged.
  8. Produce `execution_summary.json` and all mandatory evidence, then use
-   `report-to-jira` on PASS and the classified FAIL/BLOCKED/NEEDS_REVIEW paths as
-   in `test-ticket`. Use `bug-reporter` only after the required classification;
-   shadow mode and transitions are unchanged. Close with the learnings declaration.
+    `report-to-jira` on PASS and the classified FAIL/BLOCKED/NEEDS_REVIEW paths as
+    in `test-ticket`. The summary's `skills_used` names every skill this re-test
+    actually invoked (this one, `recon`, `failure-analysis`, …) — never merely
+    planned ones (`.claude/rules/core/evidence-policy.md`). Use `bug-reporter` only after the required classification;
+    shadow mode and transitions are unchanged. Close with the learnings declaration.
 
 ## If the bug is not actually fixed
 

@@ -85,9 +85,12 @@ orchestration to `qa-manager`.
    applies the class-specific next step (`bug-reporter`, BLOCKED, NEEDS_REVIEW or
    reliability handling) before reporting.
  9. Verify `execution_summary.json` and the required evidence, then report through
-   `report-to-jira` on PASS/FAIL/BLOCKED/NEEDS_REVIEW exactly as before, including
-   the mode and shadow behavior. Finish with `retro-learn` capture and the mandatory
-   `learnings` declaration; unexpected routing corrections follow the standing rule.
+    `report-to-jira` on PASS/FAIL/BLOCKED/NEEDS_REVIEW exactly as before, including
+    the mode and shadow behavior. The summary's `skills_used` names every skill
+    this run actually invoked (this one, `recon`, the execution leaf's skill,
+    `failure-analysis`, …) — never merely planned ones
+    (`.claude/rules/core/evidence-policy.md`). Finish with `retro-learn` capture and the mandatory
+    `learnings` declaration; unexpected routing corrections follow the standing rule.
 
 ## Output to the user
 

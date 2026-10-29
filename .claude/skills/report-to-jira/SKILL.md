@@ -102,7 +102,10 @@ wrong channel for this project.
    remain sealed to `PROJECT.md` — this decides **whether** to transition, never
    **which** name to use.
 5. This write goes through the `PostToolUse` JIRA-write audit hook automatically
-    — no action needed from you beyond making the actual MCP call.
+     — no action needed from you beyond making the actual MCP call. Afterwards
+     update the run's summary (`reported_to_jira`, `shadow`) and make sure its
+     `skills_used` lists the skills the run actually used, `report-to-jira`
+     included (`.claude/rules/core/evidence-policy.md`).
 
 ## Two output channels, two reference rules
 

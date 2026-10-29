@@ -64,8 +64,11 @@ the standalone fallback below reads the effective project context as before.
    from model selection. The selected agent drives
    the configured playwright MCP browser (headless/headful and isolation per the
    user's `.playwright-mcp.config.json`) per `docs/rules/testing/playwright-mcp.md`
-   and produces evidence per `.claude/rules/core/evidence-policy.md`. Instruct it
-   to explore through the **HICCUPS** lenses, not just the happy path:
+    and produces evidence per `.claude/rules/core/evidence-policy.md`. This flow
+    has no summary step of its own: whoever writes the run's
+    `execution_summary.json` lists `exploratory-testing` (and any other skill the
+    session actually used, never merely planned ones) in `skills_used`. Instruct it
+    to explore through the **HICCUPS** lenses, not just the happy path:
 
    | Letter | Oracle | Ask |
    |---|---|---|

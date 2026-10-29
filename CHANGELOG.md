@@ -8,6 +8,67 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.18.0] — 2026-10-29
+
+Theme: **know which skills the evidence actually shows as used.** Skill selection
+becomes evidence-driven instead of guesswork, and slimming is a confirmed
+profile change — never an automatic deletion.
+
+### Added — `/skill-review`
+- Read-only analysis of `evidence/**/execution_summary.json` (never transcripts,
+  chat, JIRA, screenshots or raw artifacts). Every installed skill is classified
+  `used` (count, last use, declared in the run's own summary) or `unknown` with
+  one of six precise reasons (`field_not_instrumented`, `no_runs`,
+  `outside_test_run_scope`, `timestamp_unknown`, `unreadable_summary`,
+  `retention_or_other_qa_home`). **There is no `unused`** — absence of a
+  declaration is not evidence of absence.
+- Coverage is always shown: time window, total runs, runs with `skills_used`,
+  percentage. Timestamp-unusable runs are listed separately, never silently
+  dropped. `--since DAYS` (default 90, 0 = off), `--project KEY`, `--json`.
+- **`skills_used`** is now an optional field in `execution_summary.json`; old
+  summaries stay valid. Flows that write a summary declare which skills they
+  actually used — never planned or merely mentioned in the router.
+
+### Added — skill profiles with dependency closure
+- Profiles `full` (default, shipped state), `standard`, `minimal` and `custom`,
+  nested `minimal ⊂ standard ⊂ full`. The resolver closes every proposal over
+  the real dependency rules before showing it: `test-ticket`→
+  `failure-analysis`→`report-to-jira`→`retro-learn`; `qa-report` and `qa-help`
+  pinned in every profile; `webdriverio-testing` only when the project declares
+  framework `webdriverio`; active feature-matrix rows pin their specialists.
+- Proposals are **dry-run only**: the exact exclude list with the reason for
+  every item (profile membership, resolver pin, or observed usage). Nothing is
+  changed until the user explicitly confirms the concrete list.
+- **Apply is integrate-only** via `install.sh --skill-profile full|standard|
+  minimal|custom` and `--skills-exclude "a,b"`: the installer writes a
+  consumer-owned `.qa-skill-profile.json` (timestamped backup, idempotent,
+  foreign keys preserved), skips excluded skills on fresh copy and does not
+  re-add them on update. Existing foreign skill files are never touched.
+  In `plugin`, `opencode` and `shared` mode the skill set ships whole — those
+  modes stay read-only for profiles and explain why.
+
+### Changed
+- Skill inventory grows to **32** (`/skill-review`); opencode commands to **21**.
+  Eval inventory grows to **45 cases** (`skill-review-unknown-correctly`,
+  `skill-review-profile-dry-run`).
+- README, AGENTS runbook, `docs/integration.md` and both quickstarts document
+  `/skill-review`, the profile semantics and the integrate-only apply rule.
+
+### Verification
+- New `skill-profile-fixtures.sh` (96 assertions): full/standard/minimal/custom
+  excludes, dependency closure, reinstall never re-adds excluded skills, foreign
+  skills preserved, backup/idempotency, `--yes` without profile flags changes
+  nothing, invalid profiles rejected.
+- Manifest conventions enforce 21-command parity; full bash battery (16 suites),
+  145 opencode bun tests, plugin validation and the three new/updated behavioral
+  evals all pass. A real helper smoke with synthetic evidence confirms
+  used/unknown classification, coverage reporting and the no-`unused` contract.
+
+### Upgrade
+- No migration step: existing installs and automation are unchanged. Run
+  `/skill-review` to see which skills the evidence supports; profile changes
+  require explicit confirmation and an integrate-mode re-run.
+
 ## [0.17.0] — 2026-10-29
 
 Theme: **one guided installer for every kind of user.** Plugin beginners,

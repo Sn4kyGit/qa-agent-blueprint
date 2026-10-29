@@ -12,7 +12,7 @@ task. Humans start at `README.md`.
 
 `qa-agent-blueprint`: a ticket-driven QA Manager + Tester for Claude Code
 (JIRA ticket in → tested ticket out, mandatory evidence, learning loop).
-Ships 31 skills, 9 subagents, 4 hooks, and 2 MCP servers (`playwright`,
+Ships 32 skills, 9 subagents, 4 hooks, and 2 MCP servers (`playwright`,
 `atlassian`). Installs into any project as a Claude Code plugin — nothing is
 copied into the consumer repo; only the user's own data (`projects/`,
 `memory/`, `evidence/`) lives there.
@@ -72,7 +72,7 @@ node ≥ 18, `opencode` CLI (`npm install -g opencode-ai` — you may install it
 with the user's OK), python3. Verify afterwards from the consumer:
 
 ```bash
-opencode run "list your skills"   # should show the 31 blueprint skills
+opencode run "list your skills"   # should show the 32 blueprint skills
 ```
 
 Full walkthrough incl. human steps (provider connect via `/connect`, JIRA auth,
@@ -198,8 +198,20 @@ referenced read-only from each product's `PRODUCT.md` (`App repo` field) during
 claude plugin details qa-agent-blueprint
 ```
 
-Expected inventory: `Skills (31)`, `Agents (9)`, `Hooks (4)`
+Expected inventory: `Skills (32)`, `Agents (9)`, `Hooks (4)`
 (SessionStart/Stop/PreToolUse/PostToolUse), `MCP servers (2)`.
+
+### Skill usage and profiles — `/skill-review`
+
+After the first runs, `/skill-review` reports which skills the sessions
+actually used (`used`) and for which no `skills_used` data exists (`unknown` —
+never "unused"; with no data at all coverage is 0%). It is read-only and
+deactivates nothing. A skill profile (`full`/`standard`/`minimal`/`custom`) is
+proposed as a dry-run naming the exact exclude list, and applied **only**
+after the user's explicit confirmation of that concrete proposal and **only**
+in an integrate installation. The plugin never deactivates skills, and nothing
+is ever applied automatically — when a user asks for a slimmer install, hand
+them the dry-run and wait for the confirmation.
 
 ## Alternative: clone + installer
 

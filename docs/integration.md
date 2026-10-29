@@ -27,6 +27,7 @@ in one QA home → shared.** Not sure? The guided wizard walks you through it.
 | `--jira cloud\|datacenter` + `--jira-url <url>` | Pre-answer the wizard's JIRA question. `datacenter` requires `--jira-url`. Default: `cloud`. |
 | `--browser headless\|headful` | Pre-answer the wizard's browser question (written to the consumer's `.playwright-mcp.config.json`). Default: `headless`. |
 | `--model-setup now\|later\|skip` | Optional model lanes (cheap/standard/deep): configure now, hand over to `/model-setup` later, or skip. Default: `skip` — nothing model-related is written. `now` in a non-interactive run also needs `--cheap`, `--standard`, `--deep` and optional `--cheap-variant`, `--standard-variant`, `--deep-variant` values. |
+| `--skill-profile full\|standard\|minimal\|custom` + `--skills-exclude "a,b"` | Integrate only: which blueprint skills land in the target. The choice persists in the consumer-owned `.qa-skill-profile.json` and is re-applied on update/reinstall; without these flags — and without that file — every skill is copied. See "Skill profiles" below. |
 | `--dry-run` | Prints every planned action, changes nothing. |
 | `--yes` / `-y` | Non-interactive (accepts the auto-detected proposal). Skips the wizard and takes the defaults — it does **not** answer the wizard's preference questions; pass `--jira` / `--browser` / `--model-setup` to script those. |
 | `--uninstall` | Removes the blueprint integration again (integrate, opencode or shared). |
@@ -78,9 +79,10 @@ Rules that hold no matter how the wizard is answered:
   non-interactively.
 - **All four modes are covered**, including `shared` (both harnesses in one QA
   home). Mode-specific mechanics are unchanged — see the sections below.
-- **No skill selection.** The wizard never asks which skills to install, and
-  there is no feature to disable individual skills anywhere in the installer —
-  the full set ships; there is no per-skill toggle.
+- **No skill selection.** The wizard never asks which skills to install — the
+  full set ships (`full` profile). Slimming the skill set is a separate,
+  explicit step (see "Skill profiles" below), never a hidden default and never
+  automatic.
 
 ---
 
@@ -199,6 +201,48 @@ script serves both modes.
 Node ≥ 18, Playwright Chromium (`npx playwright install chromium`), and
 Atlassian OAuth via `/mcp`. `./install.sh --mode plugin` prints the setup
 snippet above and copies nothing.
+
+---
+
+## Skill profiles — what can be slimmed, and where
+
+A skill profile decides which blueprint skills land in an installation. The
+four names are fixed: **`full`** (every installed skill — the default),
+**`standard`** (the ticket core plus harness comfort and `skill-review`
+itself), **`minimal`** (the ticket core) and **`custom`** (the user's
+confirmed allowlist). Profiles nest (`minimal` ⊂ `standard` ⊂ `full`), and a
+dependency resolver always pins required companions back in (e.g.
+`test-ticket` keeps `failure-analysis` → `report-to-jira` → `retro-learn`).
+
+Where a profile can apply, and how:
+
+- **`integrate` only.** Integrate copies the skills into your repo, so the
+  selection is enforceable there: `install.sh --skill-profile
+  full|standard|minimal|custom` (plus `--skills-exclude "a,b"` for a concrete
+  selection) chooses which skills land in the target. The choice persists in
+  the consumer-owned `.qa-skill-profile.json` (backed up on every change) and
+  is re-applied on update/reinstall; without the flags — and without that
+  file — every skill is copied, as always. In **plugin** mode there is no
+  deactivation at all — the skill set is plugin-owned and replaced on update —
+  and the symlinked opencode surface is blueprint-owned the same way. There,
+  `/skill-review` stays read-only.
+- **The proposal is always a dry-run.** `/skill-review` names the profile and
+  the exact exclude list, one line per skill with its reason, and writes
+  nothing. Its analysis classifies every skill from the `skills_used` records
+  as `used` or `unknown` — never "unused": absent data is unknown, not
+  evidence of non-use, and with no records at all everything is unknown and
+  coverage is 0%.
+- **Apply needs explicit confirmation.** `/skill-review` applies a profile
+  only after the user confirms the concrete list — "mach es schlank" is not a
+  confirmation — and applies it through the installer's profile-apply step
+  (`install.sh --mode integrate --skill-profile <name> --skills-exclude
+  "<list>"`), never by renaming or deleting skill files by hand (that would
+  desync the persisted profile and be undone by the next update). If the list
+  changes, it is shown and confirmed again. Nothing is ever applied
+  automatically, and a vague "make it slim" request alone is a request for a
+  proposal, not a confirmation.
+
+The wizard and `--yes` install `full`: no prompt, no hidden exclude.
 
 ---
 

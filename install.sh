@@ -23,6 +23,7 @@
 #                [--browser headless|headful] [--model-setup now|later|skip]
 #                [--cheap <provider/model>] [--standard <provider/model>] [--deep <provider/model>]
 #                [--cheap-variant <v>] [--standard-variant <v>] [--deep-variant <v>]
+#                [--skill-profile full|standard|minimal|custom] [--skills-exclude "a,b"]
 #                [--dry-run] [--yes] [--uninstall] [--move <new-target>]
 #                [--non-interactive] [-h|--help]
 #
@@ -31,6 +32,17 @@
 #   links the blueprint surface there, and unlinks it from --target. Use when
 #   the installer went into the wrong folder (e.g. ~/qa-workspace instead of
 #   the project workspace). Never overwrites existing files in <new-target>.
+#
+# --skill-profile / --skills-exclude (integrate mode only): choose which blueprint
+#   skills land in the target; the choice persists in the target's
+#   .qa-skill-profile.json (consumer-owned JSON, backed up on every change) and is
+#   re-applied on update/reinstall. custom freezes an allowlist (from the file's
+#   "allowlist", else the resolved --skills-exclude selection, persisted). Without
+#   the flags — and without that file — every skill is copied, as always.
+#   Dependencies are added automatically: test-ticket/retest-bug ->
+#   failure-analysis -> report-to-jira -> retro-learn, qa-report and qa-help
+#   always, webdriverio-testing unless the file says "framework": "playwright",
+#   and the feature-matrix specialists (or the file's "matrix_active" list).
 #
 # Detection checks (all reported FOUND/MISSING/MERGED/SKIPPED):
 #   1. node/npm + minimum version (>= 18)
@@ -59,7 +71,7 @@ info() { printf "%b[INFO]%b %s\n"  "$C_INFO" "$C_RST" "$*"; }
 dry()  { printf "%b[DRY ]%b %s\n"  "$C_DIM"  "$C_RST" "$*"; }
 
 usage() {
-  sed -n '2,55p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,/^set -euo pipefail/p' "$0" | sed '$d; s/^# \{0,1\}//'
   exit 0
 }
 
@@ -85,6 +97,10 @@ MODEL_DEEP=""
 MODEL_CHEAP_VARIANT=""
 MODEL_STANDARD_VARIANT=""
 MODEL_DEEP_VARIANT=""
+SKILL_PROFILE=""
+SKILL_PROFILE_FLAG=0
+SKILLS_EXCLUDE_RAW=""
+SKILLS_EXCLUDE_FLAG=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -114,6 +130,10 @@ while [ $# -gt 0 ]; do
     --standard-variant=*) MODEL_STANDARD_VARIANT="${1#*=}"; shift ;;
     --deep-variant)     MODEL_DEEP_VARIANT="${2:-}"; shift 2 ;;
     --deep-variant=*)   MODEL_DEEP_VARIANT="${1#*=}"; shift ;;
+    --skill-profile)    SKILL_PROFILE="${2:?--skill-profile needs a value}"; SKILL_PROFILE_FLAG=1; shift 2 ;;
+    --skill-profile=*)  SKILL_PROFILE="${1#*=}"; SKILL_PROFILE_FLAG=1; shift ;;
+    --skills-exclude)   SKILLS_EXCLUDE_RAW="${2:?--skills-exclude needs a value}"; SKILLS_EXCLUDE_FLAG=1; shift 2 ;;
+    --skills-exclude=*) SKILLS_EXCLUDE_RAW="${1#*=}"; SKILLS_EXCLUDE_FLAG=1; shift ;;
     --dry-run)          DRY_RUN=1; shift ;;
     --yes|-y)           YES=1; shift ;;
     --non-interactive)  YES=1; shift ;;  # backwards-compatible alias
@@ -144,6 +164,10 @@ esac
 case "$MODEL_SETUP_MODE" in
   ""|now|later|skip) ;;
   *) err "Invalid --model-setup '$MODEL_SETUP_MODE' (expected now|later|skip)"; exit 1 ;;
+esac
+case "$SKILL_PROFILE" in
+  ""|full|standard|minimal|custom) ;;
+  *) err "Invalid --skill-profile '$SKILL_PROFILE' (expected full|standard|minimal|custom)"; exit 1 ;;
 esac
 if [ -n "$JIRA_URL" ] && [ "$JIRA_KIND" != "datacenter" ]; then
   err "--jira-url requires --jira datacenter"
@@ -565,6 +589,219 @@ autodetect_mode() {
   info "Mode: $MODE (target: $TARGET)"
 }
 
+SKILL_PROFILE_FILE_NAME=".qa-skill-profile.json"
+SKILL_SELECTION_ACTIVE=0
+SKILL_PROFILE_EFF=""
+ACTIVE_SKILLS=""
+SKILL_FORCED_ALWAYS="qa-report qa-help"
+SKILL_SPECIALISTS="risk-based-testing bug-reproduction api-testing accessibility-testing security-testing visual-testing test-reliability qa-metrics test-case-management release-readiness"
+SKILL_STANDARD_EXCLUDES="agentswitch model-setup whats-new re-board demo scaffold-suite"
+SKILL_MINIMAL_EXCLUDES="$SKILL_STANDARD_EXCLUDES recon deploy-to-stage onboard-product onboard-project exploratory-testing"
+
+skill_list_contains() {
+  local item
+  for item in $2; do [ "$item" = "$1" ] && return 0; done
+  return 1
+}
+
+skill_is_active() {
+  skill_list_contains "$1" "$ACTIVE_SKILLS"
+}
+
+skill_dep_closure() {
+  case "$1" in
+    test-ticket|retest-bug) echo "failure-analysis report-to-jira retro-learn" ;;
+    failure-analysis)       echo "report-to-jira retro-learn" ;;
+    report-to-jira)         echo "retro-learn" ;;
+  esac
+}
+
+skill_profile_read() {
+  PF_PROFILE=""; PF_EXCLUDES=""; PF_ALLOWLIST=""; PF_FRAMEWORK=""; PF_MATRIX=""
+  [ -f "$1" ] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+  local out
+  out="$(python3 - "$1" <<'PY'
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        d = json.load(fh)
+    if not isinstance(d, dict):
+        raise ValueError
+except Exception:
+    sys.exit(1)
+def joined(key):
+    return " ".join(str(x).strip() for x in (d.get(key) or []) if str(x).strip())
+print(d.get("profile") or "")
+print(joined("exclude"))
+print(joined("allowlist"))
+print(d.get("framework") or "")
+print(joined("matrix_active"))
+PY
+)" || return 1
+  PF_PROFILE="$(printf '%s\n' "$out" | sed -n 1p)"
+  PF_EXCLUDES="$(printf '%s\n' "$out" | sed -n 2p)"
+  PF_ALLOWLIST="$(printf '%s\n' "$out" | sed -n 3p)"
+  PF_FRAMEWORK="$(printf '%s\n' "$out" | sed -n 4p)"
+  PF_MATRIX="$(printf '%s\n' "$out" | sed -n 5p)"
+  return 0
+}
+
+skill_profile_write() {
+  local f="$TARGET/$SKILL_PROFILE_FILE_NAME"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    report DRY-RUN "skills" "would persist selection to $SKILL_PROFILE_FILE_NAME (profile: $1)"
+    return 0
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    report WARN "skills" "python3 missing — $SKILL_PROFILE_FILE_NAME not written (selection applied for this run)"
+    return 0
+  fi
+  if ! PF_WP="$1" PF_WE="$2" PF_WA="$3" PF_TS="$TS" python3 - "$f" <<'PY' | consume_report_lines
+import datetime, json, os, shutil, sys
+path = sys.argv[1]
+old = {}
+if os.path.exists(path):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            old = json.load(fh)
+        if not isinstance(old, dict):
+            old = {}
+    except Exception:
+        old = {}
+def split(v):
+    return [s.strip() for s in (v or "").replace(",", " ").split() if s.strip()]
+data = dict(old)
+data["profile"] = os.environ.get("PF_WP", "")
+for key, env in (("exclude", "PF_WE"), ("allowlist", "PF_WA")):
+    vals = split(os.environ.get(env))
+    if vals:
+        data[key] = vals
+    else:
+        data.pop(key, None)
+def norm(d):
+    return {k: v for k, v in d.items() if k != "updated_at"}
+base = os.path.basename(path)
+stamp = os.environ.get("PF_TS", "bak")
+if os.path.exists(path) and norm(old) == norm(data):
+    print("SKIPPED|skills|" + base + " unchanged — kept as is")
+    sys.exit(0)
+if os.path.exists(path):
+    shutil.copy2(path, path + ".bak-" + stamp)
+    print("BACKUP|backup|" + path + " → " + path + ".bak-" + stamp)
+data["updated_at"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(data, fh, indent=2, ensure_ascii=False)
+    fh.write("\n")
+print(("ADDED" if not old else "MERGED") + "|skills|" + base + " written (profile: " + data["profile"] + ")")
+PY
+  then
+    report WARN "skills" "could not persist $SKILL_PROFILE_FILE_NAME (selection applied for this run)"
+  fi
+  return 0
+}
+
+skill_selection_resolve() {
+  SKILL_SELECTION_ACTIVE=1
+  local f="$TARGET/$SKILL_PROFILE_FILE_NAME"
+  PF_PROFILE=""; PF_EXCLUDES=""; PF_ALLOWLIST=""; PF_FRAMEWORK=""; PF_MATRIX=""
+  if [ -f "$f" ]; then
+    if ! skill_profile_read "$f"; then
+      report WARN "skills" "$SKILL_PROFILE_FILE_NAME present but unreadable — ignored"
+    fi
+  fi
+  local profile excludes_csv allowlist_csv framework matrix
+  if [ "$SKILL_PROFILE_FLAG" -eq 1 ] || [ "$SKILLS_EXCLUDE_FLAG" -eq 1 ]; then
+    profile="${SKILL_PROFILE:-${PF_PROFILE:-full}}"
+    excludes_csv=""
+    if [ "$SKILLS_EXCLUDE_FLAG" -eq 1 ]; then excludes_csv="$SKILLS_EXCLUDE_RAW"; fi
+    allowlist_csv="${PF_ALLOWLIST// /,}"
+    framework="$PF_FRAMEWORK"
+    matrix="$PF_MATRIX"
+  elif [ -f "$f" ]; then
+    profile="$PF_PROFILE"
+    excludes_csv="${PF_EXCLUDES// /,}"
+    allowlist_csv="${PF_ALLOWLIST// /,}"
+    framework="$PF_FRAMEWORK"
+    matrix="$PF_MATRIX"
+  else
+    SKILL_SELECTION_ACTIVE=0
+    return 0
+  fi
+  case "$profile" in
+    full|standard|minimal|custom) ;;
+    *) report WARN "skills" "unknown profile '$profile' — treating as full"; profile="full" ;;
+  esac
+  local excludes allowlist matrix_list
+  excludes="${excludes_csv//,/ }"
+  allowlist="${allowlist_csv//,/ }"
+  matrix_list="${matrix//,/ }"
+  local all="" name s
+  for s in "$REPO_ROOT/.claude/skills"/*/; do
+    [ -d "$s" ] || continue
+    all="$all $(basename "$s")"
+  done
+  local base_active=""
+  for name in $all; do
+    if [ "$profile" = "custom" ]; then
+      if [ -n "$allowlist" ]; then
+        skill_list_contains "$name" "$allowlist" || continue
+      fi
+    else
+      case "$profile" in
+        standard) if skill_list_contains "$name" "$SKILL_STANDARD_EXCLUDES"; then continue; fi ;;
+        minimal)  if skill_list_contains "$name" "$SKILL_MINIMAL_EXCLUDES"; then continue; fi ;;
+      esac
+    fi
+    if skill_list_contains "$name" "$excludes"; then continue; fi
+    base_active="$base_active $name"
+  done
+  ACTIVE_SKILLS="$base_active"
+  local grew=1 dep added=""
+  while [ "$grew" -eq 1 ]; do
+    grew=0
+    for name in $ACTIVE_SKILLS; do
+      for dep in $(skill_dep_closure "$name"); do
+        if [ -d "$REPO_ROOT/.claude/skills/$dep" ] && ! skill_list_contains "$dep" "$ACTIVE_SKILLS"; then
+          ACTIVE_SKILLS="$ACTIVE_SKILLS $dep"
+          added="$added $dep"
+          grew=1
+        fi
+      done
+    done
+  done
+  for name in $SKILL_FORCED_ALWAYS; do
+    if [ -d "$REPO_ROOT/.claude/skills/$name" ] && ! skill_list_contains "$name" "$ACTIVE_SKILLS"; then
+      ACTIVE_SKILLS="$ACTIVE_SKILLS $name"
+      added="$added $name"
+    fi
+  done
+  if [ "${framework:-}" != "playwright" ] && [ -d "$REPO_ROOT/.claude/skills/webdriverio-testing" ] && ! skill_list_contains "webdriverio-testing" "$ACTIVE_SKILLS"; then
+    ACTIVE_SKILLS="$ACTIVE_SKILLS webdriverio-testing"
+    added="$added webdriverio-testing"
+  fi
+  local specialists="$SKILL_SPECIALISTS"
+  if [ -n "$matrix_list" ]; then specialists="$matrix_list"; fi
+  for name in $specialists; do
+    if [ -d "$REPO_ROOT/.claude/skills/$name" ] && ! skill_list_contains "$name" "$ACTIVE_SKILLS"; then
+      ACTIVE_SKILLS="$ACTIVE_SKILLS $name"
+      added="$added $name"
+    fi
+  done
+  SKILL_PROFILE_EFF="$profile"
+  if [ -n "$added" ]; then
+    report MERGED "skills" "dependency closure added:${added}"
+  fi
+  if [ "$SKILL_PROFILE_FLAG" -eq 1 ] || [ "$SKILLS_EXCLUDE_FLAG" -eq 1 ]; then
+    local persist_allow=""
+    if [ "$profile" = "custom" ]; then
+      persist_allow="$(printf '%s' "${base_active# }" | tr ' ' ',')"
+    fi
+    skill_profile_write "$profile" "$excludes_csv" "$persist_allow"
+  fi
+  return 0
+}
+
 # =================================================================================
 # INTEGRATE MODE — merge steps
 # =================================================================================
@@ -661,6 +898,14 @@ integrate_dot_claude() {
   for s in "$REPO_ROOT/.claude/skills"/*/; do
     [ -d "$s" ] || continue
     name="$(basename "$s")"
+    if [ "$SKILL_SELECTION_ACTIVE" -eq 1 ] && ! skill_is_active "$name"; then
+      if [ -e "$TARGET/.claude/skills/$name" ]; then
+        report SKIPPED "skills" "$name deactivated by profile — existing copy left untouched"
+      else
+        report SKIPPED "skills" "$name omitted (profile: $SKILL_PROFILE_EFF)"
+      fi
+      continue
+    fi
     if [ -e "$TARGET/.claude/skills/$name" ]; then
       if source_dir_matches_installed "$s" "$TARGET/.claude/skills/$name"; then
         report SKIPPED "skills" "$name already integrated (identical)"
@@ -1789,6 +2034,9 @@ integrate_docs() {
 
 run_integrate() {
   if [ "$UNINSTALL" -eq 1 ]; then
+    if [ "$SKILL_PROFILE_FLAG" -eq 1 ] || [ "$SKILLS_EXCLUDE_FLAG" -eq 1 ]; then
+      warn "--skill-profile/--skills-exclude are ignored on uninstall"
+    fi
     uninstall_integrate
     return 0
   fi
@@ -1796,11 +2044,15 @@ run_integrate() {
   # copied or merged — only the environment is prepared. Self-setup is a branch
   # here, not a separate mode, because every copy step would be a self-copy.
   if [ "$TARGET" = "$REPO_ROOT" ]; then
+    if [ "$SKILL_PROFILE_FLAG" -eq 1 ] || [ "$SKILLS_EXCLUDE_FLAG" -eq 1 ]; then
+      warn "--skill-profile/--skills-exclude have no effect on self-setup (nothing is copied)"
+    fi
     run_self_setup
     return 0
   fi
   info "Integrating blueprint into existing ecosystem: $TARGET"
 
+  skill_selection_resolve
   setup_playwright
   check_ci_cli
   integrate_claude_md
@@ -2863,6 +3115,11 @@ if [ "$MODEL_SETUP_MODE" = "now" ] && { [ "$MODE" = "opencode" ] || [ "$MODE" = 
   fi
 fi
 autodetect_mode
+if [ "$MODE" != "integrate" ] && { [ "$SKILL_PROFILE_FLAG" -eq 1 ] || [ "$SKILLS_EXCLUDE_FLAG" -eq 1 ]; }; then
+  warn "--skill-profile/--skills-exclude apply to integrate mode only (v1) — ignored in $MODE mode"
+  SKILL_PROFILE_FLAG=0
+  SKILLS_EXCLUDE_FLAG=0
+fi
 [ "$DRY_RUN" -eq 1 ] && info "DRY RUN — actions are reported, nothing is written."
 
 if [ "$UNINSTALL" -eq 1 ] && [ "$MODE" != "integrate" ] && [ "$MODE" != "opencode" ] && [ "$MODE" != "shared" ]; then

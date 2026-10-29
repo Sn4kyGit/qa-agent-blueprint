@@ -53,6 +53,9 @@ a capsule retain the effective-project fallback below.
 4. Produce evidence (report, trace-on-failure, `execution_summary.json`) per
    `.claude/rules/core/evidence-policy.md` — including `test_cases[]`, which the CLI
    runner is the only source of and which every later failure analysis depends on.
+   The summary's `skills_used` lists the skills this run actually invoked
+   (`test-automation`, `recon` when one ran, `webdriverio-testing` when the WDIO
+   path was used) — actually used, never planned.
 5. **On a failure, do not conclude anything yet.** `failure-analysis` receives the
    failure packet and capsule path when available and decides whether the product
    broke or the test aged out; a red spec is a question, not a verdict.
