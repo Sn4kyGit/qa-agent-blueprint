@@ -8,6 +8,57 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.17.0] — 2026-10-29
+
+Theme: **one guided installer for every kind of user.** Plugin beginners,
+opencode power users, shared-harness switchers and long-term integrate teams now
+get the same step-by-step setup instead of a wall of flags.
+
+### Added — guided installer wizard
+- `install.sh` becomes a wizard by default on an interactive TTY. It walks
+  through mode, target folder, JIRA deployment, browser mode and optional
+  opencode model lanes one question at a time, explains every choice, and
+  writes nothing before the final confirmation. All four modes are offered:
+  `plugin`, `opencode`, `shared` and `integrate`.
+- Every wizard answer has a CLI flag for scripted runs: `--mode`, `--target`,
+  `--wizard`/`--no-wizard`, `--jira cloud|datacenter --jira-url <url>`,
+  `--browser headless|headful`, `--model-setup now|later|skip`, plus
+  `--cheap/--standard/--deep` and optional variant values for non-interactive
+  model-lane setup. Explicit flags are never re-asked.
+- `--yes`, CI/non-TTY, `--uninstall` and `--move` skip the wizard entirely —
+  automation stays automation-safe. `--yes` alone takes defaults (Cloud,
+  headless, no model setup) and does **not** answer preference questions; pass
+  the preference flags explicitly to script anything else.
+- Browser preference updates preserve unrelated keys in
+  `.playwright-mcp.config.json` with a timestamped backup. Data Center writes
+  only the local `atlassian` entry (JIRA_URL + the 11 used tools, never a PAT);
+  plugin + Data Center warns about the bundled Cloud entry instead of silently
+  replacing it. Model lanes are only written when `--model-setup now` is
+  explicitly chosen.
+- `install/wizard.sh` is the read-only question/plan layer; the existing
+  `run_*` functions, merge routines, backups and report collector remain the
+  only install-and-write engine. No second installer.
+
+### Changed
+- README, AGENTS runbook, `docs/integration.md` and both quickstarts now lead
+  with the wizard and document the flag-driven fallback, TTY rules, defaults
+  and the no-secrets-in-chat boundary.
+
+### Verification
+- New PTY fixture suite `install-wizard-fixtures.sh`: all four modes reachable
+  through the wizard, explicit flags never re-asked, `--yes`/CI/Non-TTY/
+  `--no-wizard`/`--uninstall`/`--move` produce no prompts, abort before
+  confirmation writes nothing, browser preferences preserve foreign keys,
+  Data Center writes no token, model setup writes exactly six consumer lane
+  overrides, and `--wizard` forces the guided path.
+- Full bash battery (15 suites), 145 opencode bun tests and plugin validation
+  pass.
+
+### Upgrade
+- No migration step: existing installs, `--yes` automation and explicit flags
+  behave exactly as before. Run the wizard with no flags on an interactive TTY
+  to experience the new guided path.
+
 ## [0.16.0] — 2026-10-28
 
 Theme: **model depth follows ticket risk.** Execution can now use cheaper models

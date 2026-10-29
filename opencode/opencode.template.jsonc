@@ -1,4 +1,4 @@
-// blueprint-version: 0.16.0
+// blueprint-version: 0.17.0
 // opencode config template for the qa-agent-blueprint — merged into the
 // consumer's opencode.json(c) by `install.sh --mode opencode`. Contract:
 // docs/opencode-port-plan.md (D4 router via instructions, D5 tool-name
@@ -95,5 +95,6 @@
   }
 
   // No "model"/"small_model" key on purpose (D6): the default is the user's
-  // /models choice. Optional per-lane overrides are consumer-owned via /model-setup.
+  // /models choice. Optional per-lane overrides are consumer-owned via /model-setup
+  // (or the install wizard's --model-setup now) — never written without that choice.
 }

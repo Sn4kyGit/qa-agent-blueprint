@@ -17,9 +17,26 @@ Ships 31 skills, 9 subagents, 4 hooks, and 2 MCP servers (`playwright`,
 copied into the consumer repo; only the user's own data (`projects/`,
 `memory/`, `evidence/`) lives there.
 
-## Setup — two commands (verified end-to-end 2026-09-07, claude 2.1.263)
+## Setup — guided wizard, or two commands (verified end-to-end 2026-09-07, claude 2.1.263)
 
-Run from inside the consumer project:
+**Guided path (the human's UX).** Clone the repo and run the installer wizard
+from inside the consumer project — it asks mode, target, JIRA deployment,
+browser mode and optional model lanes one question at a time, and writes
+nothing until the final confirmation:
+
+```bash
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
+~/qa-blueprint/install.sh --target <consumer-repo>
+```
+
+As an agent you usually have no TTY for the wizard: skip it and pass the
+answers as flags — `--mode`, `--jira cloud|datacenter --jira-url <url>`,
+`--browser headless|headful`, `--model-setup now|later|skip`. `--yes` alone
+takes the defaults (Cloud, headless, no model setup) and does **not** answer
+the wizard's preference questions. Wizard and flags run the same code; the
+rest of this runbook applies unchanged.
+
+**Plugin path — two commands.** Run from inside the consumer project:
 
 ```bash
 claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
@@ -39,6 +56,10 @@ an agent that was given only the GitHub link, the full run from zero is:
 git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
 ~/qa-blueprint/install.sh --mode opencode --target <consumer-repo> --yes
 ```
+
+(or `install.sh --target <consumer-repo>` for the guided wizard — pick
+`opencode` at the mode question; `--yes` takes the defaults as above and needs
+explicit `--jira`/`--browser`/`--model-setup` flags for anything else.)
 
 (private repo → clone needs GitHub auth on the machine, see "Missing
 prerequisites" below — `gh auth login` is the one human step there.)
@@ -195,13 +216,22 @@ Full walkthrough incl. a no-clone `settings.json` variant:
 
 ## Steps that need the human — say so explicitly
 
+**No secrets in the chat — ever.** Never ask the user to paste a PAT, password
+or API key into the conversation (transcripts keep it). Point them at the
+keychain command instead (`security add-generic-password …` — macOS prompts
+with hidden input) or the GUI dialog (`resolve-secrets.sh --capture`). The
+steps that genuinely need a human are the ones that need a browser or a typed
+credential:
+
 1. **JIRA auth** — Cloud: `/mcp` → authorize **atlassian** (OAuth browser flow).
-   Data Center: create a Personal Access Token in JIRA and export
-   `JIRA_PERSONAL_TOKEN` in the shell. An agent cannot do either.
+   Data Center: the human creates a Personal Access Token in their JIRA profile
+   and stores it in the macOS keychain (`JIRA_PAT_<jira-host>`; non-macOS/CI:
+   export `JIRA_PERSONAL_TOKEN` in the shell). An agent cannot do either.
 2. Fill `.env.playwright-secrets` with test-user credentials (created as a
-   placeholder on first session start; values are masked in transcripts).
-3. **Browser mode** (headful/headless) — answer the question from setup, or
-   accept the headless default (see "Browser mode" above).
+   placeholder on first session start; values are masked in transcripts) —
+   typed into the file or the keychain dialog, never into the chat.
+3. **Browser mode** (headful/headless) — answer the question from setup/the
+   wizard, or accept the headless default (see "Browser mode" above).
 4. Run `/onboard-project` — needs the JIRA project key, the deployment kind
    (cloud/datacenter), and the stage URL.
 5. **Shadow mode is ON by default**: the agent composes JIRA comments but posts

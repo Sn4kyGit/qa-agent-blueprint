@@ -6,23 +6,81 @@ installed Playwright browsers, your own hooks — and merges the blueprint
 non-destructively.
 
 **Choosing a mode: trying it out → plugin. One repo, long-term → integrate.
-Alternating Claude Code and opencode in one QA home → shared.**
+Your own model under opencode → opencode. Alternating Claude Code and opencode
+in one QA home → shared.** Not sure? The guided wizard walks you through it.
 
 > **Principle: Detect → Merge → Report.**
 > Never overwrite. Always back up. Idempotent. Dry-run capable.
 
 ```bash
 ./install.sh [--mode integrate|plugin|opencode|shared] [--target <path>]
-             [--dry-run] [--yes] [--uninstall]
+             [--wizard|--no-wizard] [--jira cloud|datacenter --jira-url <url>]
+             [--browser headless|headful] [--model-setup now|later|skip]
+             [--dry-run] [--yes] [--uninstall] [--move <path>]
 ```
 
 | Flag | Meaning |
 |---|---|
 | `--mode` | `integrate` · `plugin` · `opencode` · `shared`. Default: **auto-detect** (see below). |
 | `--target <path>` | Repo to integrate into. Default: current working directory. |
+| `--wizard` / `--no-wizard` | Force / forbid the guided wizard (below). Default: wizard on an interactive TTY, plain flag-driven run otherwise. |
+| `--jira cloud\|datacenter` + `--jira-url <url>` | Pre-answer the wizard's JIRA question. `datacenter` requires `--jira-url`. Default: `cloud`. |
+| `--browser headless\|headful` | Pre-answer the wizard's browser question (written to the consumer's `.playwright-mcp.config.json`). Default: `headless`. |
+| `--model-setup now\|later\|skip` | Optional model lanes (cheap/standard/deep): configure now, hand over to `/model-setup` later, or skip. Default: `skip` — nothing model-related is written. `now` in a non-interactive run also needs `--cheap`, `--standard`, `--deep` and optional `--cheap-variant`, `--standard-variant`, `--deep-variant` values. |
 | `--dry-run` | Prints every planned action, changes nothing. |
-| `--yes` / `-y` | Non-interactive (accepts the auto-detected proposal). |
-| `--uninstall` | Removes the blueprint integration again (integrate mode only). |
+| `--yes` / `-y` | Non-interactive (accepts the auto-detected proposal). Skips the wizard and takes the defaults — it does **not** answer the wizard's preference questions; pass `--jira` / `--browser` / `--model-setup` to script those. |
+| `--uninstall` | Removes the blueprint integration again (integrate, opencode or shared). |
+| `--move <path>` | Relocate an existing opencode QA home (data included) to a new folder (opencode mode only). |
+
+---
+
+## The guided wizard
+
+`install.sh` is a wizard by default: on an interactive TTY — and with none of
+`--yes`, `--uninstall`, `--move` or `--no-wizard` given — it walks through the
+decisions one at a time, explains each choice, and asks for a final
+confirmation before anything is written. The wizard fills in exactly the flags
+above and then runs the identical code path — an interactive install and a
+flag-driven one produce the same result.
+
+What it asks, with its defaults:
+
+| Question | Options | Default |
+|---|---|---|
+| Mode | `integrate` · `plugin` · `opencode` · `shared` | auto-detected proposal (see the detection matrix) |
+| Target folder | any path | current working directory |
+| JIRA deployment | `cloud` · `datacenter` (+ URL) | `cloud` |
+| Browser | `headless` · `headful` | `headless` |
+| Model lanes | `now` · `later` · `skip` | `skip` |
+
+Rules that hold no matter how the wizard is answered:
+
+- **Nothing is written before the final confirmation.** Aborting (`Ctrl-C` or
+  "nein") at any earlier step leaves the target untouched.
+- **TTY only.** Without an interactive terminal (CI, pipes, most agent-driven
+  runs) the wizard does not start — flags and the defaults above apply, exactly
+  as with `--yes`.
+- **`--yes`, `--uninstall` and `--move` skip the wizard** and run straight
+  through. Automation stays automation-safe, but note that `--yes` alone never
+  resolves a preference question: everything unpassed falls back to Cloud /
+  headless / no model setup. Script `--jira`, `--browser` or `--model-setup`
+  explicitly when a run needs anything else.
+- **No model or JIRA write without an explicit choice.** Cloud (the default)
+  keeps the shipped Atlassian remote entry untouched; the Data Center entry is
+  only written when `datacenter` is selected with its URL. Model lanes are only
+  written when `now` is selected — `skip`/`later` write nothing, and
+  `/model-setup` stays available at any time. (The wizard itself performs no
+  JIRA API call and no authentication; those remain the human's steps.)
+- **Existing installs migrate in place.** A plugin, opencode or shared
+  installation already present in the target is detected and migrated/updated —
+  never re-onboarded, with `projects/`, `memory/`, `evidence/` untouched and a
+  backup before every change, the same guarantees as the corresponding mode run
+  non-interactively.
+- **All four modes are covered**, including `shared` (both harnesses in one QA
+  home). Mode-specific mechanics are unchanged — see the sections below.
+- **No skill selection.** The wizard never asks which skills to install, and
+  there is no feature to disable individual skills anywhere in the installer —
+  the full set ships; there is no per-skill toggle.
 
 ---
 
@@ -40,7 +98,8 @@ cache, the download is skipped.
 ### `integrate` — merge into your repo (default when an ecosystem is detected)
 
 Auto-detect triggers when the target contains `CLAUDE.md`, `.claude/` or a
-`.git/` directory. You are asked to confirm (unless `--yes`).
+`.git/` directory. The wizard asks you to confirm (skipped by `--yes` or a
+non-TTY run, which accept the auto-detected proposal).
 
 ```bash
 cd ~/work/my-project

@@ -466,7 +466,7 @@ ohne Overrides oder nutzt die unter `/model-setup` konfigurierten Modelle und Va
 | wiederholte Flows | vorhandene Specs über den CLI-Runner |
 
 **Ehrlichkeit:** Die Modell-Lane verändert den Preis der Browser-Tokens, nicht ihre Menge.
-Für 0.16.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
+Für 0.17.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
 sind deshalb keine Zusage. Miss deine eigenen Abläufe mit `/usage` und den Session-Logs.
 
 ## Häufige Fragen
@@ -492,7 +492,7 @@ arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätesten
 16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
 stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
 Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
-Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.16.0 steht noch aus.
+Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.17.0 steht noch aus.
 
 #### ?Wie effizient ist eine Session?
 
@@ -561,7 +561,7 @@ verbinden — dann `/onboard-project` und das Interview beantworten. Danach hei�
 es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Agent testet
 vollständig, postet aber nichts, bis du es freigibst.
 
-QA Agent Blueprint · Stand: 28. Oktober 2026 (0.16.0) —
+QA Agent Blueprint · Stand: 28. Oktober 2026 (0.17.0) —
 aktualisiert auf Repo-Stand (31 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 43 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,

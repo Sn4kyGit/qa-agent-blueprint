@@ -44,6 +44,20 @@ mkdir -p ~/qa-workspace
 ~/qa-blueprint/install.sh --mode plugin --target ~/qa-workspace --yes
 ```
 
+Prefer being walked through it? Drop the flags and let the **guided wizard**
+ask one question at a time (mode, JIRA deployment, browser mode, optional
+model lanes) and write only after your confirmation:
+
+```bash
+~/qa-blueprint/install.sh --target ~/qa-workspace
+```
+
+> **`--yes` does not answer the wizard's preference questions.** It skips the
+> wizard and takes the defaults: JIRA Cloud, headless, no model setup. For a
+> scripted run with other preferences, pass them explicitly — e.g.
+> `--jira datacenter --jira-url https://jira.<firma>.tld --browser headful
+> [--model-setup now]`. Details: [integration.md](integration.md#the-guided-wizard).
+
 The installer writes the two settings keys for you, with the **local checkout as
 source** — the code you enabled is the code you can read, and updates are a
 `git pull` away.

@@ -19,6 +19,10 @@
 #
 # Usage:
 #   ./install.sh [--mode integrate|plugin|opencode|shared] [--target <path>]
+#                [--wizard|--no-wizard] [--jira cloud|datacenter --jira-url <url>]
+#                [--browser headless|headful] [--model-setup now|later|skip]
+#                [--cheap <provider/model>] [--standard <provider/model>] [--deep <provider/model>]
+#                [--cheap-variant <v>] [--standard-variant <v>] [--deep-variant <v>]
 #                [--dry-run] [--yes] [--uninstall] [--move <new-target>]
 #                [--non-interactive] [-h|--help]
 #
@@ -55,24 +59,61 @@ info() { printf "%b[INFO]%b %s\n"  "$C_INFO" "$C_RST" "$*"; }
 dry()  { printf "%b[DRY ]%b %s\n"  "$C_DIM"  "$C_RST" "$*"; }
 
 usage() {
-  sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,55p' "$0" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
 # --- argument parsing ----------------------------------------------------------
 MODE=""
+MODE_EXPLICIT=0
 TARGET="$PWD"
+TARGET_EXPLICIT=0
 DRY_RUN=0
 YES=0
 UNINSTALL=0
 MOVE_TO=""
+WIZARD_DISABLED=0
+WIZARD_FORCE=0
+PREFS_REQUESTED=0
+JIRA_KIND=""
+JIRA_URL=""
+BROWSER_MODE=""
+MODEL_SETUP_MODE=""
+MODEL_CHEAP=""
+MODEL_STANDARD=""
+MODEL_DEEP=""
+MODEL_CHEAP_VARIANT=""
+MODEL_STANDARD_VARIANT=""
+MODEL_DEEP_VARIANT=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --mode)             MODE="${2:?--mode needs a value}"; shift 2 ;;
-    --mode=*)           MODE="${1#*=}"; shift ;;
-    --target)           TARGET="${2:?--target needs a path}"; shift 2 ;;
-    --target=*)         TARGET="${1#*=}"; shift ;;
+    --mode)             MODE="${2:?--mode needs a value}"; MODE_EXPLICIT=1; shift 2 ;;
+    --mode=*)           MODE="${1#*=}"; MODE_EXPLICIT=1; shift ;;
+    --target)           TARGET="${2:?--target needs a path}"; TARGET_EXPLICIT=1; shift 2 ;;
+    --target=*)         TARGET="${1#*=}"; TARGET_EXPLICIT=1; shift ;;
+    --wizard)           WIZARD_FORCE=1; shift ;;
+    --no-wizard)        WIZARD_DISABLED=1; shift ;;
+    --jira)             JIRA_KIND="${2:?--jira needs cloud|datacenter}"; shift 2 ;;
+    --jira=*)           JIRA_KIND="${1#*=}"; shift ;;
+    --jira-url)         JIRA_URL="${2:?--jira-url needs a URL}"; shift 2 ;;
+    --jira-url=*)       JIRA_URL="${1#*=}"; shift ;;
+    --browser)          BROWSER_MODE="${2:?--browser needs headless|headful}"; shift 2 ;;
+    --browser=*)        BROWSER_MODE="${1#*=}"; shift ;;
+    --model-setup)      MODEL_SETUP_MODE="${2:?--model-setup needs now|later|skip}"; shift 2 ;;
+    --model-setup=*)    MODEL_SETUP_MODE="${1#*=}"; shift ;;
+    --cheap)            MODEL_CHEAP="${2:?--cheap needs provider/model}"; shift 2 ;;
+    --cheap=*)          MODEL_CHEAP="${1#*=}"; shift ;;
+    --standard)         MODEL_STANDARD="${2:?--standard needs provider/model}"; shift 2 ;;
+    --standard=*)       MODEL_STANDARD="${1#*=}"; shift ;;
+    --deep)             MODEL_DEEP="${2:?--deep needs provider/model}"; shift 2 ;;
+    --deep=*)           MODEL_DEEP="${1#*=}"; shift ;;
+    --cheap-variant)    MODEL_CHEAP_VARIANT="${2:-}"; shift 2 ;;
+    --cheap-variant=*)  MODEL_CHEAP_VARIANT="${1#*=}"; shift ;;
+    --standard-variant) MODEL_STANDARD_VARIANT="${2:-}"; shift 2 ;;
+    --standard-variant=*) MODEL_STANDARD_VARIANT="${1#*=}"; shift ;;
+    --deep-variant)     MODEL_DEEP_VARIANT="${2:-}"; shift 2 ;;
+    --deep-variant=*)   MODEL_DEEP_VARIANT="${1#*=}"; shift ;;
     --dry-run)          DRY_RUN=1; shift ;;
     --yes|-y)           YES=1; shift ;;
     --non-interactive)  YES=1; shift ;;  # backwards-compatible alias
@@ -84,18 +125,45 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+if [ -n "$JIRA_KIND" ] || [ -n "$JIRA_URL" ] || [ -n "$BROWSER_MODE" ] || [ -n "$MODEL_SETUP_MODE" ] || [ -n "$MODEL_CHEAP" ] || [ -n "$MODEL_STANDARD" ] || [ -n "$MODEL_DEEP" ] || [ -n "$MODEL_CHEAP_VARIANT" ] || [ -n "$MODEL_STANDARD_VARIANT" ] || [ -n "$MODEL_DEEP_VARIANT" ]; then
+  PREFS_REQUESTED=1
+fi
+
 case "$MODE" in
   ""|integrate|plugin|opencode|shared) ;;
   *) err "Invalid --mode '$MODE' (expected integrate|plugin|opencode|shared)"; exit 1 ;;
 esac
+case "$JIRA_KIND" in
+  ""|cloud|datacenter) ;;
+  *) err "Invalid --jira '$JIRA_KIND' (expected cloud|datacenter)"; exit 1 ;;
+esac
+case "$BROWSER_MODE" in
+  ""|headless|headful) ;;
+  *) err "Invalid --browser '$BROWSER_MODE' (expected headless|headful)"; exit 1 ;;
+esac
+case "$MODEL_SETUP_MODE" in
+  ""|now|later|skip) ;;
+  *) err "Invalid --model-setup '$MODEL_SETUP_MODE' (expected now|later|skip)"; exit 1 ;;
+esac
+if [ -n "$JIRA_URL" ] && [ "$JIRA_KIND" != "datacenter" ]; then
+  err "--jira-url requires --jira datacenter"
+  exit 1
+fi
+if [ -n "$JIRA_URL" ]; then
+  case "$JIRA_URL" in
+    http://*|https://*) ;;
+    *) err "--jira-url must start with http:// or https://"; exit 1 ;;
+  esac
+fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ ! -d "$TARGET" ]; then
+if [ "$TARGET_EXPLICIT" -eq 1 ] && [ ! -d "$TARGET" ]; then
   err "Target directory does not exist: $TARGET"
   exit 1
 fi
-TARGET="$(cd "$TARGET" && pwd)"
 TS="$(date +%Y%m%d-%H%M%S)"
+WIZARD_ACTIVE=0
+source "$REPO_ROOT/install/wizard.sh"
 
 # Managed-block markers (fixed strings, matched with index() / grep -F)
 CLAUDE_BLOCK_START='<!-- >>> qa-agent-blueprint (managed, do not edit) -->'
@@ -450,7 +518,7 @@ autodetect_mode() {
   [ -d "$TARGET/.claude" ]   && signals="$signals .claude/"
   [ -d "$TARGET/.git" ]      && signals="$signals .git/"
   if [ -n "$signals" ]; then
-    if [ "$YES" -eq 1 ]; then
+    if [ "$YES" -eq 1 ] || [ -n "${CI:-}" ] || [ ! -t 0 ]; then
       MODE="integrate"
       info "Auto-detected existing ecosystem (${signals# }) → mode=integrate"
     else
@@ -483,7 +551,7 @@ autodetect_mode() {
   else
     # No ecosystem detected — an empty repo is a fine integrate target (it gets
     # a fresh CLAUDE.md managed block) and a fine plugin target, so offer both.
-    if [ "$YES" -eq 1 ]; then
+    if [ "$YES" -eq 1 ] || [ -n "${CI:-}" ] || [ ! -t 0 ]; then
       MODE="integrate"
     else
       printf "No existing Claude Code setup found here. Integrate the blueprint into this directory, or use it as a plugin? [I/p] "
@@ -1617,7 +1685,7 @@ EOF
     next_step "Re-run with --target <your project> to wire the plugin into it"
     return 0
   fi
-  if [ "$YES" -eq 1 ] || [ "$DRY_RUN" -eq 1 ]; then
+  if [ "$YES" -eq 1 ] || [ "$DRY_RUN" -eq 1 ] || [ "${WIZARD_ACTIVE:-0}" -eq 1 ]; then
     plugin_wire_settings
   else
     printf "Write those two keys into %s/.claude/settings.json now? [Y/n] " "$TARGET"
@@ -2758,6 +2826,42 @@ run_shared_mode() {
 # MAIN
 # =================================================================================
 
+if [ "$WIZARD_FORCE" -eq 1 ] && [ "$WIZARD_DISABLED" -eq 1 ]; then
+  err "--wizard and --no-wizard are mutually exclusive"
+  exit 1
+fi
+if [ "$WIZARD_FORCE" -eq 1 ] && [ "$YES" -eq 1 ]; then
+  err "--wizard and --yes are mutually exclusive; use --yes for automation or remove it for the guided wizard"
+  exit 1
+fi
+if [ "$WIZARD_FORCE" -eq 1 ] && [ "$UNINSTALL" -eq 0 ] && [ -z "$MOVE_TO" ]; then
+  if [ ! -t 0 ] || [ ! -t 1 ]; then
+    err "--wizard needs an interactive terminal"
+    exit 1
+  fi
+  wizard_run
+elif wizard_interactive; then
+  wizard_run
+else
+  JIRA_KIND="${JIRA_KIND:-cloud}"
+  BROWSER_MODE="${BROWSER_MODE:-headless}"
+  MODEL_SETUP_MODE="${MODEL_SETUP_MODE:-skip}"
+fi
+if [ ! -d "$TARGET" ]; then
+  err "Target directory does not exist: $TARGET"
+  exit 1
+fi
+TARGET="$(cd "$TARGET" && pwd)"
+if [ "$JIRA_KIND" = "datacenter" ] && [ -z "$JIRA_URL" ]; then
+  err "--jira datacenter requires --jira-url"
+  exit 1
+fi
+if [ "$MODEL_SETUP_MODE" = "now" ] && { [ "$MODE" = "opencode" ] || [ "$MODE" = "shared" ]; }; then
+  if [ -z "$MODEL_CHEAP" ] || [ -z "$MODEL_STANDARD" ] || [ -z "$MODEL_DEEP" ]; then
+    err "--model-setup now requires --cheap, --standard and --deep provider/model values"
+    exit 1
+  fi
+fi
 autodetect_mode
 [ "$DRY_RUN" -eq 1 ] && info "DRY RUN — actions are reported, nothing is written."
 
@@ -2792,11 +2896,12 @@ case "$MODE" in
     if [ "$UNINSTALL" -eq 1 ]; then shared_uninstall
     else run_shared_mode; fi
     ;;
-  opencode)
+    opencode)
     if [ "$UNINSTALL" -eq 1 ]; then opencode_uninstall
     elif [ -n "$MOVE_TO" ]; then run_opencode_move
     else run_opencode_mode; fi
     ;;
 esac
 
+wizard_apply_preferences
 print_report

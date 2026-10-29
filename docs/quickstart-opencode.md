@@ -41,6 +41,19 @@ mkdir -p ~/qa-workspace
 ~/qa-blueprint/install.sh --mode opencode --target ~/qa-workspace --yes
 ```
 
+Or let the **guided wizard** ask one question at a time (mode, JIRA deployment,
+browser mode, optional model lanes) and write only after your confirmation:
+
+```bash
+~/qa-blueprint/install.sh --target ~/qa-workspace
+```
+
+> **`--yes` does not answer the wizard's preference questions** — it skips the
+> wizard and takes the defaults: JIRA Cloud, headless, no model setup. For a
+> scripted Data Center / headful / model-lane run, pass them explicitly, e.g.
+> `--jira datacenter --jira-url https://jira.<firma>.tld --browser headful
+> [--model-setup now]`. Details: [integration.md](integration.md#the-guided-wizard).
+
 The installer checks prerequisites, links the blueprint surface, seeds
 `.env.playwright-secrets` (comment-only placeholder) and
 `.playwright-mcp.config.json` (headless defaults plus `console.level: warning`), and merges
@@ -66,6 +79,9 @@ removes only the symlinks that point into the blueprint; your data and your
 ~/qa-blueprint/install.sh --mode shared --target ~/qa-workspace --dry-run
 ~/qa-blueprint/install.sh --mode shared --target ~/qa-workspace --yes
 ```
+
+(`--mode shared` is also a wizard question — same defaults caveat for `--yes`
+as above.)
 
 Shared keeps both harnesses start-ready without the Claude plugin, adds Claude's
 `.mcp.json` and full router, and leaves existing onboarding data untouched. After

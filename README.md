@@ -79,6 +79,26 @@ prompt. All of it came from files the agent read because the ticket key told it 
 > **You need:** [Claude Code](https://claude.com/claude-code) ≥ 2.x, git access
 > to this repo while it is private (`gh auth login` — it is git under the hood).
 
+**Not sure which way in? Take the guided wizard.** Clone the repo and run
+`install.sh` with no flags — it walks you through everything one question at a
+time, explains each choice, and writes nothing until you confirm:
+
+```bash
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
+~/qa-blueprint/install.sh --target ~/qa-workspace
+```
+
+Which mode? **plugin** — trying it out, zero footprint (recommended default);
+**integrate** — one repo long-term, reviewable and editable in your commits;
+**opencode** — your own model (Kimi, GLM, GPT, …) instead of Claude Code;
+**shared** — alternating the two harnesses in one QA home. The wizard also asks
+JIRA (Cloud by default, Data Center with its URL) and browser mode (headless by
+default); model lanes are optional — `--model-setup now`, or skip and run
+`/model-setup` later, nothing is written unless you choose it. `--yes` stays
+automation-safe: it skips the wizard and takes the defaults — pass
+`--jira`/`--browser`/`--model-setup` to script anything else. Details:
+[docs/integration.md](docs/integration.md#the-guided-wizard).
+
 **Step 1 — the easiest way: tell your agent.** Open Claude Code inside the
 project you want tested and paste:
 
@@ -228,13 +248,17 @@ Preview everything the installer would do, without changing anything:
 ```bash
 git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git
 cd qa-agent-blueprint
-./install.sh            # asks how you want it, then sets that up
+./install.sh            # guided wizard: mode, JIRA, browser, optional model lanes
 ```
 
 Run in a fresh clone it sets up the blueprint repo itself. Run it **from inside
-your own project** and it asks which of the two ways in you want — integrate or
-plugin — and explains the trade-off before you pick. Pick **plugin** for the
-recommended mode.
+your own project** and the wizard asks which way in you want — integrate,
+plugin, opencode or shared — and explains the trade-off before you pick. Pick
+**plugin** for the recommended starting mode. Nothing is written before the final
+confirmation, and every
+wizard answer has a flag (`--mode`, `--jira`, `--browser`, `--model-setup`) for
+scripted runs — `--yes` skips the wizard and takes the defaults (Cloud,
+headless, no model setup), it does not answer the wizard's preference questions.
 
 #### Plugin-only via settings.json
 
