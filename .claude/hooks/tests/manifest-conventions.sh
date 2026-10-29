@@ -111,24 +111,55 @@ if os.path.exists(marketplace_path):
 
 claude_models = {
     "test-executor": "sonnet",
+    "test-executor-cheap": "haiku",
+    "test-executor-deep": "opus",
     "test-automator": "sonnet",
+    "test-automator-cheap": "haiku",
+    "test-automator-deep": "opus",
     "qa-manager": "inherit",
     "failure-analyst": "inherit",
     "bug-reporter": "inherit",
 }
+claude_dir = os.path.join(root, ".claude", "agents")
+actual_names = {name[:-3] for name in os.listdir(claude_dir) if name.endswith(".md")}
+if actual_names == set(claude_models):
+    ok("Claude agent inventory is exactly the 9 expected agents")
+else:
+    fail("Claude agent inventory is exactly the 9 expected agents",
+         f"missing={sorted(set(claude_models) - actual_names)}, extra={sorted(actual_names - set(claude_models))}")
+claude_texts = {}
 for agent, expected in claude_models.items():
-    path = os.path.join(root, ".claude", "agents", agent + ".md")
+    path = os.path.join(claude_dir, agent + ".md")
     if not os.path.exists(path):
         fail(f"Claude agent {agent} model", f"{path} missing")
         continue
     with open(path) as fh:
         text = fh.read()
+    claude_texts[agent] = text
     match = re.search(r"(?m)^model:\s*(\S+)\s*$", text)
     actual = match.group(1) if match else None
+    name_match = re.search(r"(?m)^name:\s*(\S+)\s*$", text)
+    actual_name = name_match.group(1) if name_match else None
     if actual != expected:
         fail(f"Claude agent {agent} model", f"expected {expected}, got {actual}")
+    elif actual_name != agent:
+        fail(f"Claude agent {agent} name", f"expected {agent}, got {actual_name}")
     else:
         ok(f"Claude agent {agent} model: {expected}")
+for family in ("test-executor", "test-automator"):
+    base = claude_texts.get(family, "")
+    tools = re.search(r"(?m)^tools:\s*(.*)$", base)
+    for lane in (family + "-cheap", family + "-deep"):
+        lane_text = claude_texts.get(lane, "")
+        lane_tools = re.search(r"(?m)^tools:\s*(.*)$", lane_text)
+        if tools and lane_tools and tools.group(1) == lane_tools.group(1):
+            ok(f"Claude {lane} permissions match {family}")
+        else:
+            fail(f"Claude {lane} permissions match {family}", "tools frontmatter differs")
+        if base and lane_text and base.split("---\n", 2)[2] == lane_text.split("---\n", 2)[2]:
+            ok(f"Claude {lane} body exactly matches {family}")
+        else:
+            fail(f"Claude {lane} body exactly matches {family}", "role body differs")
 
 print()
 if fails:
@@ -281,7 +312,7 @@ ENTRY_POINTS = [
     "agentswitch", "bug-report", "deploy-to-stage", "exploratory-testing", "failure-analysis",
     "onboard-product", "onboard-project", "qa-help", "qa-report", "re-board",
     "recon", "report-to-jira", "retest-bug", "retro-learn", "scaffold-suite",
-    "test-automation", "test-ticket", "whats-new",
+    "test-automation", "test-ticket", "whats-new", "model-setup",
 ]
 skills = {os.path.basename(os.path.dirname(p)) for p in glob.glob(os.path.join(root, ".claude", "skills", "*", "SKILL.md"))}
 cmds = {os.path.basename(p)[:-3] for p in glob.glob(os.path.join(oc, "commands", "*.md"))}
@@ -289,9 +320,13 @@ for c in sorted(cmds):
     if c not in skills:
         fail(f"command '{c}' names an existing skill", f"no .claude/skills/{c}/SKILL.md")
 missing = [s for s in ENTRY_POINTS if s not in cmds]
+expected_cmds = set(ENTRY_POINTS) | {"demo"}
 if missing:
     fail("every entry-point skill has a command wrapper", f"missing commands: {', '.join(missing)}")
-elif cmds:
+elif cmds != expected_cmds:
+    fail("command inventory is exactly the 20 expected commands",
+         f"missing={sorted(expected_cmds - cmds)}, extra={sorted(cmds - expected_cmds)}")
+else:
     ok(f"command <-> skill parity ({len(cmds)} commands)")
 for s in ENTRY_POINTS:
     if s not in skills:
@@ -334,8 +369,21 @@ if os.path.exists(tpl_path):
 
 # (5) agent frontmatter lint: description required, valid mode, no model pin.
 agents = sorted(glob.glob(os.path.join(oc, "agents", "*.md")))
-if not agents:
-    fail("opencode/agents/ holds the 5 agents", "none found")
+expected_agents = {
+    "test-executor", "test-executor-cheap", "test-executor-deep",
+    "test-automator", "test-automator-cheap", "test-automator-deep",
+    "qa-manager", "failure-analyst", "bug-reporter",
+}
+actual_agents = {os.path.basename(a)[:-3] for a in agents}
+if actual_agents == expected_agents:
+    ok("opencode agent inventory is exactly the 9 expected agents")
+else:
+    fail("opencode agent inventory is exactly the 9 expected agents",
+         f"missing={sorted(expected_agents - actual_agents)}, extra={sorted(actual_agents - expected_agents)}")
+opencode_texts = {}
+for a in agents:
+    with open(a) as fh:
+        opencode_texts[os.path.basename(a)[:-3]] = fh.read()
 for a in agents:
     fields, err = mini_yaml_frontmatter(a)
     name = os.path.basename(a)
@@ -344,8 +392,9 @@ for a in agents:
         continue
     if not fields.get("description"):
         fail(f"agent {name} has a description", "required by opencode")
-    elif fields.get("model"):
-        fail(f"agent {name} has no model pin (D6)", f"model: {fields['model']}")
+    elif fields.get("model") or fields.get("variant"):
+        fail(f"agent {name} has no model/variant pin (D6)",
+             f"model: {fields.get('model')}, variant: {fields.get('variant')}")
     elif fields.get("mode", "subagent") not in ("primary", "subagent", "all"):
         fail(f"agent {name} has a valid mode", f"mode: {fields.get('mode')}")
     else:
@@ -355,17 +404,20 @@ for a in agents:
 #     (permission.task glob map, last match wins — "*" deny first), and the
 #     leaf agents never delegate (task: deny). Raw-text check: the mini YAML
 #     parser deliberately skips nested blocks.
-LEAVES = ["test-executor", "test-automator", "failure-analyst", "bug-reporter"]
+LEAVES = [
+    "test-executor", "test-executor-cheap", "test-executor-deep",
+    "test-automator", "test-automator-cheap", "test-automator-deep",
+    "failure-analyst", "bug-reporter",
+]
 qm_path = os.path.join(oc, "agents", "qa-manager.md")
 qm = open(qm_path).read() if os.path.exists(qm_path) else ""
 task_block = re.search(r"(?ms)^  task:\n((?:^    .*\n)+)", qm)
-if task_block and '"*": deny' in task_block.group(1) and all(
-    re.search(rf"^    {leaf}: allow$", task_block.group(1), re.M) for leaf in LEAVES
-):
-    ok("qa-manager task permission whitelists exactly the 4 leaf agents")
+allowed_leaves = re.findall(r"^    ([a-z0-9-]+): allow$", task_block.group(1), re.M) if task_block else []
+if task_block and '"*": deny' in task_block.group(1) and set(allowed_leaves) == set(LEAVES) and len(allowed_leaves) == 8:
+    ok("qa-manager task permission whitelists exactly the 8 leaf agents")
 else:
-    fail("qa-manager task permission whitelists exactly the 4 leaf agents",
-         "expected permission.task with '*' deny + allow per leaf agent")
+    fail("qa-manager task permission whitelists exactly the 8 leaf agents",
+         f"expected '*' deny + exactly {LEAVES}, got {allowed_leaves}")
 for leaf in LEAVES:
     p = os.path.join(oc, "agents", f"{leaf}.md")
     text = open(p).read() if os.path.exists(p) else ""
@@ -373,6 +425,20 @@ for leaf in LEAVES:
         ok(f"{leaf} never delegates (task: deny)")
     else:
         fail(f"{leaf} never delegates (task: deny)", "leaf agents must not spawn subagents")
+for family in ("test-executor", "test-automator"):
+    base = opencode_texts.get(family, "")
+    permission = re.search(r"(?ms)^permission:\n.*?^---$", base)
+    for lane in (family + "-cheap", family + "-deep"):
+        lane_text = opencode_texts.get(lane, "")
+        lane_permission = re.search(r"(?ms)^permission:\n.*?^---$", lane_text)
+        if permission and lane_permission and permission.group(0) == lane_permission.group(0):
+            ok(f"opencode {lane} permissions match {family}")
+        else:
+            fail(f"opencode {lane} permissions match {family}", "permission frontmatter differs")
+        if base and lane_text and base.split("---\n", 2)[2] == lane_text.split("---\n", 2)[2]:
+            ok(f"opencode {lane} body exactly matches {family}")
+        else:
+            fail(f"opencode {lane} body exactly matches {family}", "role body differs")
 
 # (6) every skill satisfies opencode's constraints (S1): name regex + name ==
 #     directory, description 1..1024 chars, only recognized frontmatter fields.

@@ -1,6 +1,6 @@
 ---
 name: qa-manager
-description: Orchestrates a full ticket-driven QA workflow end to end — reads the JIRA ticket, routes to the project file, decides the test strategy, delegates to test-executor/test-automator/failure-analyst/bug-reporter, ensures evidence exists, and reports the verdict back to JIRA. Use this for "test ticket X" / "re-test X" style requests that span more than one step — including German phrasings like "teste SHOP-123", "prüf das Ticket", "der Fix ist auf Stage, teste nochmal" — rather than driving each step manually.
+description: Orchestrates a full ticket-driven QA workflow end to end — reads the JIRA ticket, routes to the project file, decides the test strategy, delegates to risk-selected test-executor/test-automator lanes plus failure-analyst/bug-reporter, ensures evidence exists, and reports the verdict back to JIRA. Use this for "test ticket X" / "re-test X" style requests that span more than one step — including German phrasings like "teste SHOP-123", "prüf das Ticket", "der Fix ist auf Stage, teste nochmal" — rather than driving each step manually.
 tools: Read, Write, Edit, Grep, Glob, Bash, Task, mcp__atlassian__*, mcp__plugin_qa-agent-blueprint_atlassian__*, mcp__playwright__*, mcp__plugin_qa-agent-blueprint_playwright__*
 model: inherit
 ---
@@ -131,11 +131,27 @@ unchanged fallback.
      tickets → pull in the `risk-based-testing` skill first to score areas by
      impact×probability before deciding depth per area.
 5. **Delegate execution** — visibly (see "Delegation is visible" below), with the
-   sealed capsule path in every Task prompt when one was supplied:
-   - Exploratory / reproduction → subagent `test-executor` (Playwright MCP),
-     chartered per `exploratory-testing` (SBTM/HICCUPS).
-   - Deterministic/regression → subagent `test-automator` (suite's framework via
-     CLI: Playwright or WebdriverIO). If the
+   sealed capsule path in every Task prompt when one was supplied. Choose the model
+   lane from `intake.risk` and the branch's escalation state, independently of the
+   mode decision:
+
+   | Situation | Execution lane |
+   |---|---|
+   | Fast Path: low risk, no escalation, exactly one branch | `test-executor-cheap` or `test-automator-cheap` |
+   | High risk | `test-executor-deep` and/or `test-automator-deep` for every execution branch |
+   | Escalated execution branch | Deep lane for that branch |
+   | Complex low/medium risk without escalation | Standard `test-executor` / `test-automator` |
+   | Missing or unknown risk | Standard lane |
+
+   For multiple branches, choose per branch: high risk makes every branch deep;
+   otherwise only escalated branches are deep and non-escalated low/medium-risk
+   branches stay standard. Escalation still decides whether live observation
+   overrides the configured mode; the lane changes only execution depth and never
+   adds, removes or converts a branch.
+   - Exploratory / reproduction → the selected `test-executor` lane (Playwright
+     MCP), chartered per `exploratory-testing` (SBTM/HICCUPS).
+   - Deterministic/regression → the selected `test-automator` lane (suite's
+     framework via CLI: Playwright or WebdriverIO). If the
      effective project file says the suite is "none yet", the runner has nothing to
      run and the evidence policy has no producer — `scaffold-suite` first.
    - A ticket often needs both — run exploratory first to understand the surface,

@@ -23,7 +23,11 @@ a capsule retain the effective-project fallback below.
    (often a separate repo checkout). Only without a capsule, read
    `projects/<KEY>/PROJECT.md` and any routed `PRODUCT.md`. In either mode, check
    whether a spec for this flow already exists.
-2. Delegate to subagent `test-automator` with the capsule path when supplied: write/extend the spec per the
+2. Delegate to subagent `test-automator` with the capsule path when supplied. Use
+   `test-automator-deep` only when reliable capsule intake marks high risk or this
+   execution branch is escalated; otherwise use the standard agent. Missing or
+   unknown risk means standard, and neither mode nor escalation is changed by the
+   model-lane choice: write/extend the spec per the
    framework's conventions — Playwright: `docs/rules/testing/playwright-cli.md`
    (TC-ID title, AAA structure, web-first assertions); WebdriverIO: the
    `webdriverio-testing` skill — or run the existing suite/subset relevant to

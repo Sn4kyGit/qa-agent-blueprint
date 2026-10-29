@@ -8,11 +8,11 @@ und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
 Neu hier? Unten beantwortet die Rubrik **Häufige Fragen** in einfacher
 Sprache, wie Gedächtnis, Kosten und Sicherheit funktionieren.
 
-30
+31
 
 Skills
 
-5
+9
 
 Subagents
 
@@ -28,7 +28,7 @@ Fixtures+145
 
 Fixture-Checks + bun-Tests
 
-39
+43
 
 Eval-Cases
 
@@ -55,7 +55,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
 Unter **opencode** (modell-agnostisch, Modell = deine `/models`-Wahl): `install.sh --mode opencode --target <projekt> --yes` vom Clone aus — Details: [Quickstart opencode](https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md).
 Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: `install.sh --mode shared` — beide bleiben ohne Re-Onboarding startbereit, `/agentswitch` prüft read-only.
 
-Ende-zu-Ende verifiziert (claude 2.1.263): registriert 30 Skills, 5 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
+Ende-zu-Ende verifiziert (claude 2.1.263): registriert 31 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
 
 ## Der Ablauf
 
@@ -239,13 +239,13 @@ schreiben, die als read-only gilt. Und ihre Beschreibungen verweisen auf rund 24
 es hier nicht gibt. Die Eingrenzung steht als offener Punkt auf der Liste; bis dahin ist
 qa-manager die Instanz, die entscheidet, was von einem Spezialisten tatsächlich ausgeführt wird.
 
-### Die 5 Subagents
+### Die 9 Subagents
 
 | Subagent | Rolle | Werkzeuge |
 | --- | --- | --- |
 | qa-manager | Der Dirigent: liest das Ticket, routet zu Projekt und Produkt, entscheidet die Strategie anhand der Feature-Matrix, delegiert an die anderen — und prüft am Ende, ob Evidence und Deklaration wirklich da sind. Fährt selbst keinen Browser und schreibt keine Specs. | Read, Write, Edit, Grep, Glob, Bash, Task, atlassian |
-| test-executor | Exploratives Testen und Reproduktion über Playwright MCP, isolierte Browser-Session pro Lauf. Nutzt den Accessibility-Snapshot zum Navigieren und Screenshots nur als Beweis — nicht zum „Ansehen" der Seite. | playwright (MCP), Read, Write, Bash |
-| test-automator | Schreibt und fährt Specs über den CLI-Runner — rund 4× günstiger als derselbe Ablauf turn-by-turn über MCP. Arbeitet im Framework der Suite (Playwright oder WebdriverIO, inkl. Selenium Grid und Appium-Mobile über WDIO) und kennt den Unterschied zwischen einem Flake und einem Pass. | Bash, Read, Write, Edit, Grep, Glob |
+| test-executor[-cheap|-deep] | Drei Lanes für exploratives Testen und Reproduktion über Playwright MCP: cheap für Fast Path, standard für komplexe Arbeit, deep für high/eskaliert. Isolierte Browser-Session, Accessibility-Snapshot zur Navigation und Screenshots nur als Beweis. | playwright (MCP), Read, Write, Bash |
+| test-automator[-cheap|-deep] | Drei Lanes für Specs über den CLI-Runner — rund 4× günstiger als derselbe Ablauf turn-by-turn über MCP. Arbeitet im Framework der Suite (Playwright oder WebdriverIO, inkl. Selenium Grid und Appium-Mobile über WDIO). | Bash, Read, Write, Edit, Grep, Glob |
 | failure-analyst | Triagiert jeden FAIL vor dem Bug-Report: Produkt falsch, oder Test veraltet? Kommt **absichtlich ohne Write und Edit** — ein Agent, der einen roten Test grün schreiben kann, ist genau der Fehlermodus, den diese Rolle verhindert. | Read, Grep, Glob, Bash, atlassian |
 | bug-reporter | Verwandelt eine Fundstelle in einen Report nach der exakten Projekt- oder Produktvorlage, mit Severity→Priorität-Mapping und Evidence-Referenzen statt eingebetteter Bilder. | Read, Write, Grep, Glob, atlassian |
 
@@ -410,7 +410,7 @@ Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gl
 | Hooks (Guard, Stop, SessionStart) | 189 Fixtures — jede Regel mit eigenem Fall |
 | Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption) | 119 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses |
 | Kontextkosten | gemessen — Budget-Check, 8.372 von 8.400 Token belegt |
-| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 39 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
+| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 43 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
 | Ein echtes Projekt, ein echtes Ticket | **nie** — genau das ist der Pilot |
 
 Der erste gelaufene Eval-Case war lehrreich: die Antwort war präziser als der Grader — sie
@@ -453,19 +453,20 @@ Die echten Kosten sind **Modell-Tokens**. Die immer geladene Ebene ist gemessen
 werden ticketbezogen durchsucht, rohe Evidence nicht eingelesen, und einfache
 Tickets überspringen die Manager-Ebene. Eine versiegelte Run-Capsule ersetzt bei
 jedem weiteren Agenten-Spawn das erneute Lesen und Mergen des Projektkontexts.
-Claude Code nutzt Sonnet für die beiden
-Ausführungsrollen; opencode lässt die Modellwahl bei `/models`.
+Die Modell-Lane wählt pro Branch: Fast/low → cheap, komplex low/medium → standard,
+high/eskaliert → deep. Claude bildet das auf haiku/sonnet/opus ab; opencode erbt
+ohne Overrides oder nutzt die unter `/model-setup` konfigurierten Modelle und Varianten.
 
 | Kostentreiber | Gegenmaßnahme |
 | --- | --- |
-| Browser-Snapshot-Verlauf | isolierter Execution-Subagent; bei Claude Code standardmäßig Sonnet |
+| Browser-Snapshot-Verlauf | isolierter Execution-Subagent; Modell-Lane nach Risiko (haiku/sonnet/opus bzw. Consumer-Override) |
 | wiederholtes Intake/Routing | Fast Path bzw. Manager-Handoff mit fertigen Artefakten |
 | Tests auf altem/fehlendem Build | Readiness vor jeder Stage-Aktion |
 | wachsende Lern- und Rohdaten | 16-KB-Grooming, verdichtete Promotion, Raw-Read-Denys |
 | wiederholte Flows | vorhandene Specs über den CLI-Runner |
 
-**Ehrlichkeit:** Sonnet verändert den Preis der Browser-Tokens, nicht ihre Menge.
-Für 0.15.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
+**Ehrlichkeit:** Die Modell-Lane verändert den Preis der Browser-Tokens, nicht ihre Menge.
+Für 0.16.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
 sind deshalb keine Zusage. Miss deine eigenen Abläufe mit `/usage` und den Session-Logs.
 
 ## Häufige Fragen
@@ -491,7 +492,7 @@ arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätesten
 16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
 stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
 Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
-Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.15.0 steht noch aus.
+Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.16.0 steht noch aus.
 
 #### ?Wie effizient ist eine Session?
 
@@ -560,8 +561,8 @@ verbinden — dann `/onboard-project` und das Interview beantworten. Danach hei�
 es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Agent testet
 vollständig, postet aber nichts, bis du es freigibst.
 
-QA Agent Blueprint · Stand: 28. Oktober 2026 (0.15.0) —
-aktualisiert auf Repo-Stand (30 Skills, 5 Subagents, Fixture-Batterie + 145 bun-Tests, 39 Eval-Cases,
+QA Agent Blueprint · Stand: 28. Oktober 2026 (0.16.0) —
+aktualisiert auf Repo-Stand (31 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 43 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
 Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,

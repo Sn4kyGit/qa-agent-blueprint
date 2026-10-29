@@ -8,6 +8,63 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.16.0] — 2026-10-28
+
+Theme: **model depth follows ticket risk.** Execution can now use cheaper models
+for simple Fast Path work and stronger models for high-risk or escalated branches,
+without giving the manager free rein to invent provider settings.
+
+### Added — execution model lanes
+- Three lanes per execution role: `test-executor-cheap` / `test-executor` /
+  `test-executor-deep` and `test-automator-cheap` / `test-automator` /
+  `test-automator-deep`. The existing names remain the standard path. Agent
+  inventory grows from five to **nine**; opencode's manager whitelist allows all
+  six execution leaves plus analyst and reporter.
+- Routing policy: Fast Path/low risk → cheap, complex low/medium → standard,
+  high risk or an escalated branch → deep. Multi-branch runs choose per branch;
+  direct skills and unknown risk stay standard. Mode escalation and model depth
+  are separate decisions; JIRA intake gets no wasteful mini-subagent.
+- Claude Code maps cheap/standard/deep to **haiku/sonnet/opus**. opencode source
+  agents still pin nothing: unconfigured lanes inherit the caller's model, so
+  existing installations keep working.
+
+### Added — `/model-setup`
+- Configure all six consumer-owned opencode `agent` overrides in one step:
+  provider/model per lane plus optional provider-supported `variant`. The helper
+  accepts JSON/JSONC, preserves unrelated config/MCP/permissions/model keys,
+  backs up existing config, and has read-only `--check` and `--dry-run` modes.
+- No blueprint-source or global model pins. Unknown or unsupported variants are
+  omitted rather than assumed. Users choose actual models and variants from
+  `opencode models`; optional smoke runs require explicit confirmation. Restart
+  is required. Installer merge, reinstall and move preserve the overrides.
+- D6 clarified: the blueprint and its template stay model-agnostic, while
+  consumer-owned per-lane overrides are a supported configuration choice.
+- Skill inventory: **31** with `/model-setup`; opencode commands: **20**. Eval
+  inventory: **43 cases**, including standard/deep/per-branch routing and setup.
+
+### Verification
+- Manifest matrix for all nine agents, exact eight-leaf manager permissions,
+  opencode source model/variant absence, installer override preservation,
+  model-setup JSONC/backup/read-only fixtures, full bash battery, plugin
+  validation and 145 opencode bun tests.
+- New behavioral cases: `model-routing-standard`, `model-routing-deep`,
+  `model-routing-branch-deep`, `model-setup-consumer-overrides`; affected Fast
+  Path and readiness cases updated for cheap lanes. All four plus six affected
+  cases pass through the opencode runner with `kimi-code-plan-global/k3.1-pro`.
+- A scratch `/model-setup` writes and reads back all six model/variant overrides;
+  no provider call is needed for that config smoke. The complete 43-case suite
+  passes in final batches through the opencode runner with
+  `kimi-code-plan-global/k3.1-pro`.
+- No blanket cost-saving claim: cheap-model quality and token use still need an
+  A/B measurement against the same Fast Path scenario and evidence requirements.
+
+### Upgrade
+- Existing users can update and do nothing: the lane names inherit current
+  models. To activate real depth mapping under opencode, run `/model-setup`,
+  choose three available models and any supported variants, then restart.
+- Claude Code uses the lane aliases automatically; no model config file is
+  written there.
+
 ## [0.15.0] — 2026-10-28
 
 Theme: **one QA home, two harnesses, one handoff.** Claude Code and opencode can

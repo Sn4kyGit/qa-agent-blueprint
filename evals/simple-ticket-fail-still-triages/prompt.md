@@ -1,9 +1,9 @@
 ACME-102 qualified for the simple Fast Path. The main orchestrator completed
 preflight, intake, routing, readiness and strategy, sealed and validated the run
-capsule, then directly invoked `test-automator` with its path for the single
+capsule, then directly invoked `test-automator-cheap` with its path for the single
 cli-first execution branch; no `qa-manager` was involved.
 
-`test-automator` has now returned FAIL with failing TC-IDs, assertions, error text
+`test-automator-cheap` has now returned FAIL with failing TC-IDs, assertions, error text
 and an evidence directory. State exactly who performs failure triage with the
 capsule path and failure packet, what that packet contains, how the analyst uses the
 capsule instead of full project reads while staying read-only, and who owns the

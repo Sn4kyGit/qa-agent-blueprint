@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 30 skills · 5 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 145 bun tests · 39 eval cases |
+| **Contents** | 31 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 145 bun tests · 43 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
@@ -337,12 +337,13 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>19 core skills</b> — the ticket workflow</summary>
+<summary><b>20 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
 | `/qa-help` | Show every command, plus the plain-language phrasing that also triggers it |
 | `/agentswitch` | Read-only check for alternating Claude Code and opencode in one shared QA home — never installs or re-onboards |
+| `/model-setup` | Configure cheap/standard/deep opencode models per execution role, with source and global config left untouched |
 | `/test-ticket` | Full workflow: read → route → stage-check → test → evidence → report |
 | `/retest-bug` | Focused re-test of a fixed bug + a tight regression sweep |
 | `/exploratory-testing` | Chartered SBTM session via Playwright MCP |
@@ -379,20 +380,25 @@ than by guesswork.
 
 Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
 by `/test-automation` when a project's declared framework is webdriverio (not
-invoked directly; see its SKILL.md). 19 + 10 + 1 = the 30 skills from the header.
+invoked directly; see its SKILL.md). 20 + 10 + 1 = the 31 skills from the header.
 
 </details>
 
 <details>
-<summary><b>5 subagents</b> — separate context windows</summary>
+<summary><b>9 subagents</b> — separate context windows and risk-selected model lanes</summary>
 
 | Subagent | Role |
 |---|---|
 | `qa-manager` | Orchestrates one ticket end to end; decides strategy, delegates, quality-gates the result |
-| `test-executor` | Exploratory testing and bug reproduction via Playwright MCP |
-| `test-automator` | Deterministic specs via the Playwright CLI runner |
+| `test-executor[-cheap|-deep]` | Exploratory testing via Playwright MCP: cheap Fast Path, standard complex work, deep high/escalated |
+| `test-automator[-cheap|-deep]` | Deterministic specs via the CLI runner, with the same risk-selected model lanes |
 | `failure-analyst` | Triages a FAIL before a bug is filed — holds no `Write`, so it can never edit a test green |
 | `bug-reporter` | Composes the bug report against the project's template |
+
+Execution lanes follow risk: Fast/low → cheap, complex low/medium → standard,
+high/escalated → deep, independently per branch. Claude maps them to
+haiku/sonnet/opus. opencode inherits by default; `/model-setup` writes actual
+provider/model and optional supported variants only into consumer `opencode.json`.
 
 A 30-step browser session stays inside `test-executor`; only a verdict comes back.
 
@@ -699,7 +705,7 @@ runs it.
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |
-| [evals/README.md](evals/README.md) | Behavioral conformance — 39 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
+| [evals/README.md](evals/README.md) | Behavioral conformance — 43 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
 | [docs/pilot-briefing.md](docs/pilot-briefing.md) | **Read before the first real onboarding**: what to collect, shadow mode, what is known unfinished |
 | [docs/rules/](docs/rules/) | The detail behind each always-loaded rule, read on demand |
 | [docs/runbooks/stage-deploy-general.md](docs/runbooks/stage-deploy-general.md) | Generic stage-deploy scaffold |

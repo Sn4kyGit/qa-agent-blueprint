@@ -13,6 +13,8 @@ Ticket content (already fetched for you):
   4. observe the total: it stays unchanged (expected: −10%)
 - **Status**: fix 2.14.1 is claimed deployed on stage; this is the
   PRE-fix behavior to demonstrate.
+- Present the numbered demo steps and "what to watch for" card in chat even if
+  the live replay becomes blocked; do not merely link the card file.
 
 There is a finished test run from the original finding under
 `evidence/ACME/ACME-77/` — use what is there.

@@ -134,11 +134,13 @@ User: "Test SHOP-1234"
     + re-test (bug) or full test (story); escalation rules may force live observation
   → context-capsule.json sealed once: exact intake/readiness + effective config
     + selected knowledge + source hashes; every later agent gets its path
+  → model lane per branch: Fast/low → cheap; complex low/medium → standard;
+    high/escalated → deep; unknown → standard (separate from execution mode)
   → Fast Path: testable + low risk + no escalation + exactly one execution branch
-       → main orchestrator → test-executor OR test-automator (no qa-manager)
+       → main orchestrator → test-executor-cheap OR test-automator-cheap (no qa-manager)
     Complex path:
        → qa-manager consumes the capsule, never remerges project context
-       → test-executor (exploratory, MCP) and/or test-automator (specs, CLI)
+       → selected test-executor/test-automator lane (deep only for high/escalated)
   → evidence: evidence/SHOP/SHOP-1234/<ts>/ (+ Stop hook enforcement)
   → PASS → report-to-jira: comment + final screenshot + transition "Verify"
   → FAIL → owning orchestrator (main or qa-manager) → failure-analyst

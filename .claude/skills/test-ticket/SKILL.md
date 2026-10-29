@@ -64,8 +64,8 @@ orchestration to `qa-manager`.
    - **Fast Path** — only when intake is unambiguously `testable`, risk is `low`, no
      escalation trigger applies, no specialized/multi-area orchestration is needed,
      and the effective mode needs **exactly one execution branch**. The main
-     orchestrator delegates directly to `test-executor` **or** `test-automator`,
-      with the selected sealed revision path and charter/plan; no PROJECT/PRODUCT full reads,
+     orchestrator delegates directly to `test-executor-cheap` **or** `test-automator-cheap`,
+       with the selected sealed revision path and charter/plan; no PROJECT/PRODUCT full reads,
       re-routing, mode/suite lookup or repeated Learnings merge.
      No `qa-manager` spawn. For hybrid, a required live verification pass is a
      second branch and therefore excludes the Fast Path; recon and plan approval

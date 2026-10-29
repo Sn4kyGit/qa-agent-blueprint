@@ -71,6 +71,7 @@ assert_file    "hooks namespaced"                "$TARGET/.claude/hooks/qa-bluep
 assert_file    "hook fixtures came along"        "$TARGET/.claude/hooks/qa-blueprint/tests/guard-fixtures.sh"
 assert_file    "skills copied"                   "$TARGET/.claude/skills/test-ticket/SKILL.md"
 assert_file    "agents copied"                   "$TARGET/.claude/agents/qa-manager.md"
+assert_file    "deep lane agent copied"           "$TARGET/.claude/agents/test-executor-deep.md"
 assert_file    "context capsule script copied"   "$TARGET/.claude/scripts/context-capsule.py"
 assert_grep    "own script untouched"            "$TARGET/.claude/scripts/consumer-script.py" "consumer script"
 assert_grep    "own skill untouched"             "$TARGET/.claude/skills/my-own-skill/SKILL.md" "Mine."
@@ -88,6 +89,8 @@ echo "== internal path references were rewritten to the namespace =="
 # exist in the target repo — the agent loses the detail behind every rule.
 assert_grep    "agent points at namespaced rule" "$TARGET/.claude/agents/qa-manager.md" ".claude/rules/qa-blueprint/core/product-layer.md"
 assert_no_grep "no un-namespaced rule path left" "$TARGET/.claude/agents/qa-manager.md" ".claude/rules/core/"
+assert_grep    "deep lane rule path rewritten" "$TARGET/.claude/agents/test-executor-deep.md" ".claude/rules/qa-blueprint/core/product-layer.md"
+assert_no_grep "deep lane has no un-namespaced rule path" "$TARGET/.claude/agents/test-executor-deep.md" ".claude/rules/core/"
 assert_grep    "rule cross-ref rewritten"        "$TARGET/.claude/rules/qa-blueprint/core/evidence-policy.md" ".claude/rules/qa-blueprint/core/product-layer.md"
 assert_grep    "docs ref rewritten"              "$TARGET/.claude/skills/test-ticket/SKILL.md" "docs/qa-blueprint/pipeline/01-intake.md"
 # And every rewritten target must actually be there.

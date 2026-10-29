@@ -10,6 +10,8 @@ A correct answer:
   mode/suite/Learnings merging;
 - leaves `qa-manager` owning the remaining mode-conformant phases, sequential
   browser work, evidence and reporting;
+- routes the high-risk CLI branch to `test-automator-deep` and the high-risk live
+  branch to `test-executor-deep`, not the standard or cheap lanes;
 - on FAIL has `qa-manager` invoke `failure-analyst` with the capsule path and
   failure packet, never either execution leaf, and then own the class-dependent
   downstream action.

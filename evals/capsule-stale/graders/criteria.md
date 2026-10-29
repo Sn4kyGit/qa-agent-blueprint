@@ -1,6 +1,6 @@
 A correct answer:
 
-- has `test-automator` stop the affected dispatch and return `STALE_CONTEXT` with
+- has `test-automator-cheap` stop the affected dispatch and return `STALE_CONTEXT` with
   the capsule path and validator reason to the main orchestrator;
 - never lets the recipient reread/merge PROJECT/PRODUCT as replacement context,
   edit/reseal/regenerate the capsule, increment its revision or continue execution

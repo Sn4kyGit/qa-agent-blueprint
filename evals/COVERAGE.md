@@ -143,8 +143,10 @@ only enforcement once a fixture proves it".
 | `test-automator` framework dispatch: loads the suite's **declared** framework conventions (webdriverio-testing when "Test assets" says so), never the Playwright default | case: `framework-routing` — the base model's Playwright prior is the exact silent failure |
 | Shared mode keeps Claude Code and opencode start-ready with selective links, merged settings/configs and no plugin duplication; projects/memory/evidence/.agents stay consumer-owned | fixture: `install-shared-fixtures.sh` + case: `agentswitch-ready` |
 | `/agentswitch` is strictly read-only: ready means open the other extension; collisions block without repairs, data loss, secrets, network or re-onboarding | fixture: `agentswitch-fixtures.sh` + cases: `agentswitch-ready` + `agentswitch-collision` |
+| Execution model lanes: Fast/low → cheap, complex low/medium → standard, high/escalated → deep; branches choose independently; missing risk stays standard | cases: `simple-ticket-fast-path` + `model-routing-standard` + `model-routing-deep` + `model-routing-branch-deep`; Claude/opencode lane matrix fixture: `manifest-conventions.sh` |
+| `/model-setup` writes only six consumer-owned agent model/variant overrides with backup; source/global config stays model-free; unknown variants are omitted, never assumed | fixture: `model-setup-fixtures.sh` + case: `model-setup-consumer-overrides`; installer preservation: `install-opencode-fixtures.sh` |
 
-## The thirty-nine cases
+## The forty-three cases
 
 Tiers: **hard** = record integrity / safety, a single miss is an incident
 (all-pass required); **variance** = reasoning quality against maximally loud
@@ -191,6 +193,10 @@ norms (floor 2/3 + non-falling history trend). See `evals/README.md` → "Tiers"
 | `agentswitch-collision` | collisions block read-only with data-preservation and human migration steps | hard |
 | `capsule-handoff` | manager/leaves/analyst consume sealed context without project remerging | variance |
 | `capsule-stale` | stale context returns to the orchestrator, never recipient self-repair | hard |
+| `model-routing-standard` | medium complex branches stay on standard execution models | hard |
+| `model-routing-deep` | high-risk execution uses the deep lane | hard |
+| `model-routing-branch-deep` | only escalated branches go deep, others stay standard | hard |
+| `model-setup-consumer-overrides` | setup writes six consumer lane overrides, no source/global pins or unknown variants | hard |
 
 The failure pairs rule: `failure-outdated`/`failure-undocumented-change` only
 mean something together. Any future "agent must do X when Y" norm should get

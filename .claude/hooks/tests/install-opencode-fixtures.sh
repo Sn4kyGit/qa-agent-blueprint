@@ -110,6 +110,10 @@ cat > "$TARGET2/opencode.json" <<'JSON'
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "openrouter/z-ai/glm-5.3-flash",
+  "agent": {
+    "test-executor-deep": { "model": "openrouter/consumer-deep", "variant": "max" },
+    "test-automator-cheap": { "model": "openrouter/consumer-cheap", "variant": "low" }
+  },
   "mcp": {
     "my-own": { "type": "local", "command": ["my-mcp"] },
     "atlassian": { "type": "local", "command": ["uvx", "mcp-atlassian"], "environment": { "JIRA_URL": "https://jira.example.com" } },
@@ -126,6 +130,12 @@ cfg_check "existing atlassian wins (DC entry survives)" "$TARGET2/opencode.json"
 cfg_check "playwright contract flags upgraded additively" "$TARGET2/opencode.json" \
   "'--secrets' in cfg['mcp']['playwright']['command'] and '.env.playwright-secrets' in cfg['mcp']['playwright']['command']"
 cfg_check "subagent_depth raised to 2" "$TARGET2/opencode.json" "cfg.get('subagent_depth') == 2"
+cfg_check "consumer agent model/variant overrides survive merge" "$TARGET2/opencode.json" \
+  "cfg['agent']['test-executor-deep'] == {'model':'openrouter/consumer-deep','variant':'max'} and cfg['agent']['test-automator-cheap'] == {'model':'openrouter/consumer-cheap','variant':'low'}"
+OUT="$("$INSTALL" --mode opencode --target "$TARGET2" --yes 2>&1)"
+if [ $? -ne 0 ]; then fail "override re-install exits 0" "$(printf '%s' "$OUT" | tail -3)"; else pass "override re-install exits 0"; fi
+cfg_check "consumer agent model/variant overrides survive re-install" "$TARGET2/opencode.json" \
+  "cfg['agent']['test-executor-deep'] == {'model':'openrouter/consumer-deep','variant':'max'} and cfg['agent']['test-automator-cheap'] == {'model':'openrouter/consumer-cheap','variant':'low'}"
 
 JSONCTARGET="$WORK/consumer-jsonc"
 mkdir -p "$JSONCTARGET"
@@ -259,6 +269,7 @@ echo
 echo "== move relocates a QA home (--move) =="
 TARGET4="$WORK/move-old"; TARGET5="$WORK/move-new"
 mkdir -p "$TARGET4"
+printf '%s\n' '{"agent":{"test-executor-deep":{"model":"openrouter/move-deep","variant":"max"},"test-automator-cheap":{"model":"openrouter/move-cheap","variant":"low"}}}' > "$TARGET4/opencode.json"
 "$INSTALL" --mode opencode --target "$TARGET4" --yes >/dev/null 2>&1 \
   && pass "move: install into old home" || fail "move: install into old home" "exit $?"
 # user data accumulates over time
@@ -277,6 +288,8 @@ assert_grep "move: secrets content intact" "$TARGET5/.env.playwright-secrets" "c
 assert_file "move: opencode.json moved" "$TARGET5/opencode.json"
 cfg_check  "move: instructions in moved config" "$TARGET5/opencode.json" \
   "len([i for i in cfg['instructions'] if 'ROUTER.md' in str(i)]) == 1"
+cfg_check  "move: consumer agent model/variant overrides survive" "$TARGET5/opencode.json" \
+  "cfg['agent']['test-executor-deep'] == {'model':'openrouter/move-deep','variant':'max'} and cfg['agent']['test-automator-cheap'] == {'model':'openrouter/move-cheap','variant':'low'}"
 assert_no_file "move: old router link removed" "$TARGET4/.opencode/ROUTER.md"
 assert_no_file "move: old compat link removed" "$TARGET4/.claude"
 assert_no_file "move: old data gone"           "$TARGET4/projects"

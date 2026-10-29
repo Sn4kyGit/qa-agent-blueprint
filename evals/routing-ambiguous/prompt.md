@@ -5,8 +5,10 @@ Treat `projects/EXAMPLE/` as the onboarded project `SHOP`. A ticket has arrived:
     Labels: product:admin
     Type: Bug
 
-Which product does this ticket belong to? Answer in at most four lines. Do not test
-anything.
+Which product does this ticket belong to? Answer in at most four lines. If the
+routing is ambiguous, formulate the actual clarifying question for the user with
+both candidate products; do not merely note that a question is required. Do not
+test anything.
 
 ---
 

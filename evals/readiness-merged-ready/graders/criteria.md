@@ -6,7 +6,7 @@ A correct answer:
   liveness navigation and mcp-only recon/execution;
 - does not BLOCK on this ready state and does not require any additional MR beyond
   the linked merged one;
-- uses the Fast Path: main orchestrator directly invokes `test-executor`, with no
+- uses the Fast Path: main orchestrator directly invokes `test-executor-cheap`, with no
   `qa-manager` and no second execution branch;
 - still preserves evidence and shadow-aware reporting.
 

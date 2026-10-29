@@ -127,8 +127,8 @@ qa-agent-blueprint/
   `<srv>_<tool>`; a convention test forbids `mcp__` strings under `opencode/`.
 - **D6 — Model-agnostic by construction.** No `model` key in any opencode agent
   file (= inherit semantics), no model key or recommendation in the opencode
-  config template — the model is set via `/models` in opencode and is none
-  of the blueprint's business (user decision 2026-09-16). The eval runner takes
+  config template — the default model is set via `/models` in opencode, with
+  optional consumer-owned per-lane overrides via `/model-setup` (0.16.0). The eval runner takes
   `QA_EVAL_MODEL` / `QA_JUDGE_MODEL` with **no built-in default**. Everything
   behavioural must hold for any competent tool-calling model — that is exactly
   what the eval gate measures. (Side record: GLM-5.2 exists and is available in
@@ -412,7 +412,7 @@ are a documented model floor + a sharpened norm, not a special case.
 | D3 | Stop-hook → atlassian-write gate + idle reminder; markers unchanged | **confirmed (S4/S5, P2 landed)**; `client.session.prompt()` shape verified against installed SDK types (`path:{id}`, `body:{parts:[{type:"text"}]}`) |
 | D4 | Router via `instructions`, no injection hack | accepted |
 | D5 | `mcp__<s>__<t>` → `<s>_<t>` mechanical mapping + convention test | **confirmed (S6)** |
-| D6 | No model pins or recommendations in opencode; model = user's `/models` choice; evals take `QA_EVAL_MODEL`/`QA_JUDGE_MODEL` with no default. Claude Code may use harness-specific role aliases | **confirmed (user decision 2026-09-16; Claude-only role defaults added 0.14.0)**; GLM-5.2 availability recorded only as a fact (S2, opencode data page) |
+| D6 | No model pins or recommendations in opencode source/template; default = user's `/models` choice, optional consumer per-lane overrides via `/model-setup`; evals take `QA_EVAL_MODEL`/`QA_JUDGE_MODEL` with no default. Claude Code may use harness-specific role aliases | **confirmed (user decision 2026-09-16; Claude-only role defaults added 0.14.0, consumer lane overrides added 0.16.0)**; GLM-5.2 availability recorded only as a fact (S2, opencode data page) |
 | D7 | Local-first distribution via install.sh; npm later | accepted |
 | D8 | settings.json raw-artifact denies → `permission` globs | **confirmed (S4)** — patterns must match absolute paths: use `**/evidence/**/*.png` and peers, not blanket evidence denies |
 | D9 | Shared eval cases, harness-specific runner, cross-model judging | accepted |

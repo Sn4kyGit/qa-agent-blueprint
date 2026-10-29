@@ -69,11 +69,17 @@ measurably below.
 intake, routing, readiness and strategy once, then seals one run-scoped
 `context-capsule.json` before dispatch (`context-capsule.md`). A testable, low-risk
 ticket with no escalation and exactly one mode-conformant execution branch goes
-directly to `test-executor` or `test-automator`; a complex ticket hands the same
-capsule to `qa-manager`. Managers, leaves and the analyst consume that context
-without reading/routing/merging PROJECT, PRODUCT and Learnings again. On FAIL,
-whichever orchestrator owns the run invokes `failure-analyst` with the capsule and
-failure packet — never an execution leaf.
+directly to `test-executor-cheap` or `test-automator-cheap`; a complex ticket hands
+the same capsule to `qa-manager`. Managers, leaves and the analyst consume that
+context without reading/routing/merging PROJECT, PRODUCT and Learnings again. On
+FAIL, whichever orchestrator owns the run invokes `failure-analyst` with the
+capsule and failure packet — never an execution leaf.
+
+Execution depth is a separate lane choice, independent of the execution mode:
+Fast/low → cheap, complex low/medium → standard, high → deep, and only escalated
+branches go deep while other low/medium branches stay standard. Unknown risk stays
+standard. Claude maps cheap/standard/deep to haiku/sonnet/opus; opencode uses
+consumer overrides from `/model-setup` or inherits the caller's model.
 
 Readiness (`01a-readiness.md`) is the gate between routing and every stage action:
 allowed project status, no blockers, required linked merge complete, expected build

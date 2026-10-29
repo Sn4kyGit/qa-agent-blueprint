@@ -1,9 +1,9 @@
-During a Fast Path run, `test-automator` receives
+During a Fast Path run, `test-automator-cheap` receives
 `evidence/ACME/ACME-410/20261028-103000/context-capsule.json`. Its lightweight
 binding check reports `STALE_CONTEXT`: embedded readiness and the recorded expected
 build no longer match the current run artifacts. A helper suggests avoiding the
 delay by rereading PROJECT.md, merging the current values and resealing the capsule
-inside `test-automator`.
+inside `test-automator-cheap`.
 
 State the required response and ownership, including whether execution may continue
 on the recipient's replacement context, how a valid new revision is produced, and

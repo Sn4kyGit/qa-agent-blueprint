@@ -12,7 +12,7 @@ task. Humans start at `README.md`.
 
 `qa-agent-blueprint`: a ticket-driven QA Manager + Tester for Claude Code
 (JIRA ticket in → tested ticket out, mandatory evidence, learning loop).
-Ships 30 skills, 5 subagents, 4 hooks, and 2 MCP servers (`playwright`,
+Ships 31 skills, 9 subagents, 4 hooks, and 2 MCP servers (`playwright`,
 `atlassian`). Installs into any project as a Claude Code plugin — nothing is
 copied into the consumer repo; only the user's own data (`projects/`,
 `memory/`, `evidence/`) lives there.
@@ -30,8 +30,9 @@ Then tell the user to **restart Claude Code** and accept the trust dialog.
 
 ### opencode instead of Claude Code?
 
-The same blueprint runs under [opencode](https://opencode.ai) (model-agnostic —
-the model is the user's `/models` choice, the blueprint pins none). If you are
+The same blueprint runs under [opencode](https://opencode.ai) (model-agnostic source —
+the default model is the user's `/models` choice; optional consumer lane overrides
+live in `opencode.json` via `/model-setup`). If you are
 an agent that was given only the GitHub link, the full run from zero is:
 
 ```bash
@@ -50,7 +51,7 @@ node ≥ 18, `opencode` CLI (`npm install -g opencode-ai` — you may install it
 with the user's OK), python3. Verify afterwards from the consumer:
 
 ```bash
-opencode run "list your skills"   # should show the 30 blueprint skills
+opencode run "list your skills"   # should show the 31 blueprint skills
 ```
 
 Full walkthrough incl. human steps (provider connect via `/connect`, JIRA auth,
@@ -176,7 +177,7 @@ referenced read-only from each product's `PRODUCT.md` (`App repo` field) during
 claude plugin details qa-agent-blueprint
 ```
 
-Expected inventory: `Skills (30)`, `Agents (5)`, `Hooks (4)`
+Expected inventory: `Skills (31)`, `Agents (9)`, `Hooks (4)`
 (SessionStart/Stop/PreToolUse/PostToolUse), `MCP servers (2)`.
 
 ## Alternative: clone + installer

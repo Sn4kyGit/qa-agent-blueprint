@@ -21,7 +21,8 @@ Learning B:
     Candidate target: PRODUCT.md ACME/STOREFRONT.
 
 Return the exact durable edit for A and the disposition for B. Keep the product
-file focused on stable configuration and frequently needed gotchas.
+file focused on stable configuration and frequently needed gotchas, and note the
+required regeneration of the affected bridge after the PRODUCT.md change.
 
 ---
 

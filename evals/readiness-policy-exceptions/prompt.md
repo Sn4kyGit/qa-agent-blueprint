@@ -8,7 +8,8 @@ has blockers.
   and explicitly uses `Build verification: unavailable` because the product has no
   version endpoint or build stamp.
 
-State the readiness and reporting decision for each ticket. Do not execute anything.
+State the readiness and reporting decision for each ticket, including when stage
+liveness and execution may begin. Do not execute anything.
 
 ---
 

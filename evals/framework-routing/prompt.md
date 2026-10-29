@@ -9,9 +9,11 @@ everything else is unchanged. The flow "pasted voucher codes are accepted at
 checkout" (ticket SHOP-1412, component Checkout → product STOREFRONT) is now
 understood and should become a repeatable spec.
 
-Describe, in at most eight lines: what you delegate to whom, which conventions
-file the executing agent loads, and what the resulting spec looks like (runner
-command, element/wait style, title). Do not write any files.
+Describe, in at most eight lines: what you delegate to whom, which Framework
+field is read, which exact conventions file the executing agent loads
+(`webdriverio-testing`, not `docs/rules/testing/playwright-cli.md`), and what the
+resulting spec looks like (runner command, element/wait style, title). Do not
+write any files.
 
 ---
 

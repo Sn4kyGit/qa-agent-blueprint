@@ -1,7 +1,7 @@
 # Quickstart: opencode on a fresh machine
 
 The opencode path through the blueprint: the same ticket-driven QA Manager +
-Tester (30 skills, 5 agents, evidence gate), running under
+Tester (31 skills, 9 agents, evidence gate), running under
 [opencode](https://opencode.ai) instead of Claude Code — with **your** choice
 of model. The blueprint pins none: the model is whatever you pick in
 `/models` (docs/opencode-port-plan.md, D6).
@@ -126,20 +126,27 @@ workspace root.
    a coding plan) and pick the model in `/models`. Cheap-and-capable dev
    option verified during the port: `openrouter/z-ai/glm-5.3-flash`; the
    production gate is meant to run on a production-class model.
-2. **JIRA auth** — Cloud: `opencode mcp auth atlassian` (OAuth browser flow).
+2. **Optional model lanes** — without configuration, every execution lane inherits
+   your selected model. Run `/model-setup` to map cheap/standard/deep execution
+   roles to three available provider/model IDs and optional supported variants.
+   Fast/low risk uses cheap, complex low/medium standard, high/escalated deep;
+   each branch is chosen independently. Only consumer `agent` overrides in
+   `opencode.json` are written; restart afterwards. Claude Code needs no such
+   file: cheap/standard/deep maps to haiku/sonnet/opus.
+3. **JIRA auth** — Cloud: `opencode mcp auth atlassian` (OAuth browser flow).
    Data Center: replace the `atlassian` entry in your `opencode.json` with the
    local `mcp-atlassian` server (keep the **name** `atlassian` — hooks match
    on it) and store the PAT in the macOS keychain, service
    `JIRA_PAT_<jira-host>`; the blueprint's plugin resolves it into the session
    at runtime, so the token lives in no file and no chat. Details: AGENTS.md.
-3. **Browser mode** — edit `.playwright-mcp.config.json`:
+4. **Browser mode** — edit `.playwright-mcp.config.json`:
    `"launchOptions": { "headless": false }` for a visible browser. Applies
    after a restart (the server reads the file at launch).
-4. Fill `.env.playwright-secrets` with your test users (values are masked in
+5. Fill `.env.playwright-secrets` with your test users (values are masked in
    transcripts).
-5. Run `/onboard-project` — needs the JIRA project key, deployment kind
+6. Run `/onboard-project` — needs the JIRA project key, deployment kind
    (cloud/datacenter), and the stage URL.
-6. **Shadow mode is ON by default**: JIRA comments are composed into the
+7. **Shadow mode is ON by default**: JIRA comments are composed into the
    evidence dir (`proposed-report.md`), never posted, until you write
    `Shadow mode: off` in the project file or set `QA_AGENT_SHADOW=0`.
 
@@ -155,7 +162,7 @@ In `~/qa-workspace`:
 opencode run "list your available skills"
 ```
 
-should show the 30 blueprint skills, and `/test-ticket` `/retest-bug`
+should show the 31 blueprint skills, and `/test-ticket` `/retest-bug`
 `/qa-report` etc. should appear as commands. The evidence gate is active from
 the first session: a JIRA write without fresh evidence is blocked with
 `QA_EVIDENCE_MISSING:`.

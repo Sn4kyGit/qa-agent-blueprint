@@ -51,7 +51,7 @@ remaining orchestration to `qa-manager`.
  5. Dispatch by complexity:
     - **Fast Path** — unambiguously testable, low risk, no escalation, exactly one
       mode-conformant execution branch: the main orchestrator invokes
-      `test-executor` OR `test-automator` directly with the selected sealed revision path and
+      `test-executor-cheap` OR `test-automator-cheap` directly with the selected sealed revision path and
       repro/sweep charter. No PROJECT/PRODUCT full reads, re-routing, mode/suite
       lookup or repeated Learnings merge in the leaf. No `qa-manager`.
     - **Complex path** — invoke `qa-manager` with the selected sealed revision path, run dir

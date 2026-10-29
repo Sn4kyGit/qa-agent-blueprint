@@ -7,7 +7,7 @@ A correct answer:
   than PROJECT/PRODUCT full reads or re-routing, while bounded log/JIRA/history/spec
   reads remain allowed;
 - does not insert `qa-manager` merely because the Fast Path failed, and never has
-  `test-automator` or another execution leaf invoke the analyst;
+  `test-automator-cheap` or another execution leaf invoke the analyst;
 - leaves the analyst read-only: the main orchestrator writes/merges
   `failure-analysis.md` and `failure_analysis`, then applies the returned class
   (product-defect/undetermined → bug-reporter; environment → BLOCKED;

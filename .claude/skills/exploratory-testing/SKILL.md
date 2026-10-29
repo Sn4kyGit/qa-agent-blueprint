@@ -57,7 +57,11 @@ the standalone fallback below reads the effective project context as before.
    drops sharply past 90 minutes — split a bigger area into multiple chartered
    sessions rather than one long unfocused one.
 4. Delegate the session to subagent `test-executor` with the charter and, when
-   available, the sealed capsule path rather than pasted context. It drives
+   available, the sealed capsule path rather than pasted context. Use
+   `test-executor-deep` when reliable capsule intake marks high risk or this branch
+   is escalated; otherwise keep the standard agent. Missing or unknown risk never
+   selects a cheap or deep lane, and this mode/escalation decision remains separate
+   from model selection. The selected agent drives
    the configured playwright MCP browser (headless/headful and isolation per the
    user's `.playwright-mcp.config.json`) per `docs/rules/testing/playwright-mcp.md`
    and produces evidence per `.claude/rules/core/evidence-policy.md`. Instruct it

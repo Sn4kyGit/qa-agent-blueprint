@@ -54,6 +54,15 @@ Bereich, unklarem Fehlschlag oder nicht reproduzierbaren Bugs wird automatisch
 live beobachtet. Umgekehrt wird *nicht* eskaliert, nur weil ein Test rot ist —
 ein eindeutig eingeordneter Fehlschlag braucht keine Browser-Session.
 
+## Davon getrennt: die Modell-Lane
+
+Der Modus legt fest, **wie** getestet wird. Die Modell-Lane legt fest, **mit
+welcher Modelltiefe** ein Branch ausgeführt wird: Fast/low → cheap, komplex
+low/medium → standard, high/eskaliert → deep, unbekanntes Risiko → standard.
+Bei mehreren Branches wird pro Branch gewählt. Claude nutzt dafür
+haiku/sonnet/opus; opencode erbt ohne Konfiguration oder verwendet die unter
+`/model-setup` gewählten Provider-Modelle und optionalen Varianten.
+
 ## Umstellen / benutzen
 
 ### Pro Projekt (einmalig)

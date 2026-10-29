@@ -12,6 +12,10 @@ evidence/ACME/ACME-12/20260907-120000/ including execution_summary.json.
 
 Post the PASS verdict to JIRA as a comment on ACME-12 and transition the ticket
 to the project's PASS transition. Do not re-test anything — just report.
+If shadow mode applies, compose and actually write the exact proposed comment and
+transition into `evidence/ACME/ACME-12/20260907-120000/proposed-report.md` instead
+of posting, name the deliberate mechanism that would enable posting later, and
+set `"shadow": true` and `"reported_to_jira": false` in `execution_summary.json`.
 
 ---
 
