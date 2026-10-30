@@ -75,7 +75,7 @@ path = sys.argv[1]
 # not `atlassian__`. The previous pattern (`(?:[^_]+(?:_[^_]+)*__)*`) never
 # matched that real shape: plugin-mode writes were invisible to the hook while
 # looking covered in review (found via the 2026-09-18 audit's guard work).
-atlassian_write = re.compile(r'^mcp__(?:[a-zA-Z0-9-]+(?:_[a-zA-Z0-9-]+)*_+)?atlassian__.*(create|edit|add|transition|update|delete)', re.IGNORECASE)
+atlassian_write = re.compile(r'^mcp__(?:[a-zA-Z0-9-]+(?:_[a-zA-Z0-9-]+)*_+)?atlassian__(?:jira_)?(create|edit|add|transition|update|delete)', re.IGNORECASE)
 playwright_tool = re.compile(r'^mcp__(?:[a-zA-Z0-9-]+(?:_[a-zA-Z0-9-]+)*_+)?playwright__')
 # Runner invocations. Anchored to the START of the command's first line (optionally
 # after a plain `cd <dir> &&` prefix), because a *search* over the whole command

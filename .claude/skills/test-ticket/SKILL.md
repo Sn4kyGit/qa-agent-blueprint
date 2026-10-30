@@ -60,6 +60,10 @@ orchestration to `qa-manager`.
     this orchestrator for readiness re-verification and a new revision, never
     recipient-side repair. Changed same/older-revision payloads conflict; identical
     reseals are idempotent and invalid existing hashes are never overwritten.
+ 6b. **Write `testplan.md` before execution starts** (`docs/pipeline/03-planning.md`).
+     The plan's producer is the planning agent: the main orchestrator on the Fast
+     Path, `qa-manager` on the complex path (its own flow writes the file; the
+     complex handoff may carry a plan already produced).
  7. **Dispatch exactly one way:**
    - **Fast Path** — only when intake is unambiguously `testable`, risk is `low`, no
      escalation trigger applies, no specialized/multi-area orchestration is needed,

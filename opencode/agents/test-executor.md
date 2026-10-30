@@ -66,6 +66,17 @@ Write curated artifacts into `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` per
 that invoked you is relying on you to have produced it, including
 `execution_summary.json`.
 
+**Write `run.json`** into the run dir as the run record — TC-IDs, outcomes,
+timing and the execution mode (`docs/pipeline/04-execution.md`).
+
+**Recon session?** When the charter is a recon run (pipeline phase 2, e.g. the
+`/recon` MCP path), also write `recon.json` into the run dir before returning —
+the pages you observed with their controls (role + accessible name), form
+fields, console errors and failed requests, in the probe format of
+`docs/pipeline/02-recon.md` (`"source": "mcp"`). Both recon paths produce that
+file; without it the area counts as never reconnoitred and re-triggers the
+"no `recon.json` exists" escalation rule.
+
 **Keep a live `progress.md` in the run dir.** While you work, the user sees
 nothing in the chat — this file is how a human follows along (and how the
 manager relays credibly afterwards). Append one line at each meaningful step:

@@ -100,7 +100,7 @@ if [ -z "$TOOL_NAME" ]; then
   if printf '%s' "$INPUT" | sed 's/\.env\.example//g' | grep -qiE '\.env(\.|"|'"'"'|$)|\.pem|id_rsa|id_ed25519|secret|credential|\.auth|storage.state'; then
     block "refusing an unrecognized call touching a secrets path — failing closed."
   fi
-  if printf '%s' "$INPUT" | grep -qiE 'atlassian__?[a-z]*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)'; then
+  if printf '%s' "$INPUT" | grep -qiE 'atlassian__?(jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive)'; then
     # Single underscore before `atlassian` — the shadow-gate regex expects the
     # namespace prefix to end in one `_` (the real plugin naming shape), and the
     # sentinel must pass through that gate to be blocked there.
@@ -159,7 +159,28 @@ if [ -n "$FILE_PATH" ]; then
   esac
 fi
 
-# 2. Bash: block destructive/secret-touching commands.
+# 1d. Raw evidence stays out of the model context: screenshots, traces, videos,
+# archives and the raw MCP output dir are evidence files, not reading material.
+# This check works in every install mode — the permission denylist in
+# .claude/settings.json covers integrate/shared, but plugin mode ships only
+# hooks, so the guard is the universal enforcement.
+if [ "$TOOL_NAME" = "Read" ] && [ -n "$FILE_PATH" ]; then
+  case "$FILE_PATH" in
+    *.png|*.jpg|*.jpeg|*.gif|*.webp|*.bmp|*.webm|*.mp4|*.mov|*.zip|*.har|*.mcp-out|*/.mcp-out/*|*/.mcp-out)
+      block "refusing to read raw evidence ($FILE_PATH) — screenshots, traces, videos and archives stay as evidence files. Read execution_summary.json or curated JSON/Markdown instead." ;;
+  esac
+fi
+
+# 1e. Read tool calls to secret files follow the same policy as Bash readers.
+if [ "$TOOL_NAME" = "Read" ] && [ -n "$FILE_PATH" ]; then
+  is_secret_path "$FILE_PATH" && case "$FILE_PATH" in
+    *.env.example|*/.env.example) : ;;
+    *.env|*.env.*|*/.env|*/.env.*)
+      [ "$SECRETS_READ" != "allow" ] && block "refusing to read a .env* file — secrets never enter chat or context by default. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task)." ;;
+    *)
+      block "refusing to read a credential file — private keys, auth tokens and storage state never enter chat or context (blocked regardless of secrets_read)." ;;
+  esac
+fi
 if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; then
   if printf '%s' "$COMMAND" | grep -qE 'rm[[:space:]]+(-[a-zA-Z]*f[a-zA-Z]*r|-[a-zA-Z]*r[a-zA-Z]*f)[[:space:]]'; then
     block "refusing rm -rf / rm -fr — destructive command."
@@ -314,7 +335,7 @@ fi
 # the gate classifies them by name without parsing the inner tool (0.10.0).
 # executeRead is absent on purpose: it runs read-only deferred tools
 # (listJiraIssueChangelogs & co.) and must stay open.
-if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?atlassian__.*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)'; then
+if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?atlassian__(jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive)'; then
   if [ "${QA_AGENT_SHADOW:-1}" != "0" ]; then
     ISSUE_KEY="$(get_json 'import re; m = re.search(r"[A-Z][A-Z0-9]+-[0-9]+", json.dumps(d.get("tool_input") or {})); print(m.group(0) if m else "")')"
     PROJ="${ISSUE_KEY%%-*}"

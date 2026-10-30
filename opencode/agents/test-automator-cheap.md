@@ -74,6 +74,11 @@ Copy the relevant run artifacts (report, trace on failure, screenshots on failur
 into `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` per
 `.claude/rules/core/evidence-policy.md`, including `execution_summary.json`.
 
+**Write `run.json`** into the run dir as the run record — command, mode,
+duration, per-case TC-IDs and outcomes, timing and the observation-channel
+summary (`docs/pipeline/04-execution.md`). The machine reporter data you
+already hold is its source; this is copying, not deriving.
+
 Keep a live `progress.md` in the run dir — one line per meaningful step
 (`HH:MM:SS START specs: …`, `HH:MM:SS STEP <suite/case + outcome>`,
 `HH:MM:SS VERDICT …`). While you run, the chat shows the user nothing; this

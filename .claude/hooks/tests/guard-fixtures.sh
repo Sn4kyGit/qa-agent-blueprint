@@ -315,6 +315,12 @@ check "shadow: curl DELETE JIRA issue" 2 '{"tool_name":"Bash","tool_input":{"com
 check "shadow: curl GET JIRA read ok" 0 '{"tool_name":"Bash","tool_input":{"command":"curl https://jira.example.com/rest/api/2/issue/SHOP-1"},"cwd":"'"$TOG"'"}'
 check "shadow: curl POST non-JIRA ok" 0 '{"tool_name":"Bash","tool_input":{"command":"curl -X POST https://api.example.com/data -d \"{}\""},"cwd":"'"$TOG"'"}'
 
+# --- DC read tools are NOT writes (regression: substring match blocked them)
+check "shadow: jira_get_transitions read ok" 0 '{"tool_name":"mcp__atlassian__jira_get_transitions","tool_input":{"issueKey":"SHOP-1"},"cwd":"'"$TOG"'"}'
+check "shadow: jira_get_create_fields read ok" 0 '{"tool_name":"mcp__atlassian__jira_get_create_fields","tool_input":{"issueKey":"SHOP-1"},"cwd":"'"$TOG"'"}'
+check "shadow: jira_createJiraIssue write blocked" 2 '{"tool_name":"mcp__atlassian__jira_createJiraIssue","tool_input":{"issueKey":"SHOP-1"},"cwd":"'"$TOG"'"}'
+check "shadow: jira_transitionJiraIssue write blocked" 2 '{"tool_name":"mcp__atlassian__jira_transitionJiraIssue","tool_input":{"issueKey":"SHOP-1"},"cwd":"'"$TOG"'"}'
+
 # --- S4: reader guard covers all secret file classes, not just .env*
 check "toggle: allow, cat id_rsa" 2 "$(tog_bash '"cat id_rsa"')"
 check "toggle: allow, cat deploy.pem" 2 "$(tog_bash '"cat deploy.pem"')"
@@ -326,6 +332,19 @@ check "toggle: allow, cat id_rsa via interpreter" 2 "$(tog_bash '"python3 -c \"p
 check "toggle: Write .auth file" 2 "$(tog_write "$TOG/session.auth")"
 check "toggle: Write storage-state.json" 2 "$(tog_write "$TOG/storage-state.json")"
 check "toggle: Write plain file ok" 0 "$(tog_write "$TOG/notes.md")"
+
+# --- Read tool: raw evidence stays out of context (plugin-mode enforcement)
+check "Read screenshot.png blocked" 2 '{"tool_name":"Read","tool_input":{"file_path":"evidence/SHOP/SHOP-1/20261028-100000/screenshots/shot.png"},"cwd":"'"$TOG"'"}'
+check "Read trace.zip blocked" 2 '{"tool_name":"Read","tool_input":{"file_path":"evidence/SHOP/SHOP-1/20261028-100000/trace.zip"},"cwd":"'"$TOG"'"}'
+check "Read .mcp-out file blocked" 2 '{"tool_name":"Read","tool_input":{"file_path":"evidence/.mcp-out/data.json"},"cwd":"'"$TOG"'"}'
+check "Read video.webm blocked" 2 '{"tool_name":"Read","tool_input":{"file_path":"evidence/SHOP/SHOP-1/20261028-100000/video.webm"},"cwd":"'"$TOG"'"}'
+check "Read execution_summary.json ok" 0 '{"tool_name":"Read","tool_input":{"file_path":"evidence/SHOP/SHOP-1/20261028-100000/execution_summary.json"},"cwd":"'"$TOG"'"}'
+check "Read normal report.md ok" 0 '{"tool_name":"Read","tool_input":{"file_path":"evidence/SHOP/SHOP-1/20261028-100000/report.md"},"cwd":"'"$TOG"'"}'
+
+# --- Read tool: secrets follow the same policy
+check "Read .env blocked by default" 2 '{"tool_name":"Read","tool_input":{"file_path":".env.playwright-secrets"},"cwd":"'"$TOG"'"}'
+check "Read id_rsa blocked" 2 '{"tool_name":"Read","tool_input":{"file_path":".ssh/id_rsa"},"cwd":"'"$TOG"'"}'
+check "Read .auth blocked" 2 '{"tool_name":"Read","tool_input":{"file_path":"session.auth"},"cwd":"'"$TOG"'"}'
 
 rm -rf "$TOG" 2>/dev/null
 

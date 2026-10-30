@@ -8,7 +8,47 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.18.2] — 2026-10-30
+## [0.18.3] — 2026-10-30
+
+Theme: **functional gaps closed.** The pipeline artifacts now have producers,
+MCP recon writes `recon.json`, DC read tools are no longer misclassified as
+writes, and plugin mode enforces raw-evidence Read protection.
+
+### Fixed — functional breaks
+- **Pipeline artifacts now have producers**: `testplan.md` is written by the
+  planning agent before execution, `run.json` by the execution leaf, and
+  `verdict.json` by the verification owner. The docs name the producer for
+  each artifact; `execution_summary.json` remains the only hook-enforced file.
+- **MCP recon writes `recon.json`**: the MCP recon session and the executor's
+  recon charter now produce the same `recon.json` as the probe path. The
+  escalation trigger "no recon.json exists" no longer fires permanently for
+  MCP-reconnoitered areas.
+- **DC read tools correctly classified**: `jira_get_transitions` and
+  `jira_get_create_fields` are no longer blocked as writes by the shadow gate.
+  The verb must be the first word after the server prefix — a substring match
+  on `transition`/`create` inside read tool names was the bug. Verified with
+  live exit-code fixtures on both harnesses.
+- **Plugin-mode raw-evidence Read protection**: screenshots, traces, videos,
+  archives and `.mcp-out` are now blocked for the Read tool in every install
+  mode via the pre-tool guard (the permission denylist only covered
+  integrate/shared). Secret file reads follow the same policy as Bash readers.
+- **DC attachment path clarified**: `bug-reporter` now states that attachment
+  upload is Cloud-only; on Data Center files are referenced by filename and a
+  human attaches them.
+
+### Changed
+- `PROJECT.md` template documents when cheap model lanes are reachable
+  (`cli-first`/`mcp-only` low-risk single-branch); `hybrid` with verification
+  pass uses standard lanes by design.
+
+### Verification
+- Full bash battery (16 suites), 152 opencode bun tests, plugin validation,
+  context budget and manifest conventions all pass — including Claude↔opencode
+  body parity for all 9 agents and the DC read-tool regression fixtures.
+
+### Upgrade
+- No migration step. Pipeline artifacts and recon.json appear from the next
+  test run; guard changes apply on session start.
 
 Theme: **five guard holes closed.** The pre-tool guard now blocks the
 self-escalation and bypass classes the audit found — verified with live
@@ -42,6 +82,8 @@ exit-code fixtures on both harnesses.
 ### Upgrade
 - No migration step. The guard changes apply on the next session start after
   updating.
+
+## [0.18.1] — 2026-10-29
 
 Theme: **opencode parity pass.** Every hook, rule, skill and agent now works the
 same way under opencode as under Claude Code — no dead paths, no silent drift.
@@ -110,6 +152,8 @@ same way under opencode as under Claude Code — no dead paths, no silent drift.
 - No migration step. Re-run `install.sh --mode opencode` (or `--mode shared`) to
   pick up the new support links; existing installs already carrying them are
   unchanged. Restart the harness after any install.
+
+## [0.18.0] — 2026-10-29
 
 Theme: **know which skills the evidence actually shows as used.** Skill selection
 becomes evidence-driven instead of guesswork, and slimming is a confirmed

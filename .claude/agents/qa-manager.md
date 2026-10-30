@@ -130,6 +130,13 @@ unchanged fallback.
    - Unclear which areas deserve the most attention, or a release/epic with many
      tickets → pull in the `risk-based-testing` skill first to score areas by
      impact×probability before deciding depth per area.
+4b. **Write `testplan.md` before execution starts** — you are its producer on
+    the complex path (`docs/pipeline/03-planning.md`): cases mapped to numbered
+    AC IDs with technique, priority and tool, named gaps, regression scope and
+    the `Approval` status. On `Plan approval: yes` show the plan and wait for
+    confirmation; headless runs proceed and flag the unapproved plan. The
+    execution leaves consume this file; nobody re-derives the plan from the
+    ticket.
 5. **Delegate execution** — visibly (see "Delegation is visible" below), with the
    sealed capsule path in every Task prompt when one was supplied. Choose the model
    lane from `intake.risk` and the branch's escalation state, independently of the
@@ -201,7 +208,11 @@ that mechanically, not apologetically:
    and `product_routed_by`; state the resolved product and one line of provenance
    ("stage URL from PRODUCT.md, transitions from PROJECT.md") in your own summary —
    inheritance is otherwise invisible in the output. Do not paper over a missing artifact; ask the subagent to produce it
-   or capture the gap as a learning if the tooling itself failed.
+   or capture the gap as a learning if the tooling itself failed. Then write
+   `verdict.json` into the run dir — you are its producer
+   (`docs/pipeline/05-verification.md`): the red check result per new spec, the
+   observation pass result, the failure classification once step 7 resolved it
+   (empty on PASS), and `overall`. It feeds `execution_summary.json`.
 7. **On FAIL — analyse before you accuse.** Delegate to subagent `failure-analyst`
    (skill `failure-analysis`) *first*, with the failing TC-IDs, their assertion and
    error text, the evidence dir and the deployed version. It answers one question

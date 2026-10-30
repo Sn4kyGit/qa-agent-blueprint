@@ -50,7 +50,12 @@ actually ran (`.claude/rules/core/evidence-policy.md`).
 
 Unclear interaction, non-reproducible bug, visual assessment, or
 `Mode: mcp-only` → skip the probe and charter `test-executor`
-(`exploratory-testing`) instead; its findings take the `recon.json` role.
+(`exploratory-testing`) instead. The session still produces the phase artifact:
+at its end the executor writes `recon.json` into the run dir with what it
+observed — pages, controls (role + accessible name), form fields, console
+errors, failed requests — in the probe output format
+(`docs/pipeline/02-recon.md`, `"source": "mcp"`). Both recon paths are
+producers of `recon.json`; the expiry check (step 8) applies to MCP output too.
 
 ## What this skill never does
 

@@ -64,7 +64,12 @@ the standalone fallback below reads the effective project context as before.
    from model selection. The selected agent drives
    the configured playwright MCP browser (headless/headful and isolation per the
    user's `.playwright-mcp.config.json`) per `docs/rules/testing/playwright-mcp.md`
-    and produces evidence per `.claude/rules/core/evidence-policy.md`. This flow
+    and produces evidence per `.claude/rules/core/evidence-policy.md`. When the
+    session is a recon run (pipeline phase 2, the `/recon` MCP path), the executor
+    additionally writes `recon.json` into the run dir at its end — pages,
+    controls, form fields, console errors, failed requests in the probe format
+    (`docs/pipeline/02-recon.md`, `"source": "mcp"`), so the area has its
+    phase-2 artifact like a probe run. This flow
     has no summary step of its own: whoever writes the run's
     `execution_summary.json` lists `exploratory-testing` (and any other skill the
     session actually used, never merely planned ones) in `skills_used`. Instruct it

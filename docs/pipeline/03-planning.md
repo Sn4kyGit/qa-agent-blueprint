@@ -57,6 +57,11 @@ From the ticket's area and `flow-map.md`:
 
 ## Output: `testplan.md` in the run dir
 
+**Producer:** the planning agent writes `testplan.md` into the run dir before
+execution starts — `qa-manager` on the complex path, the main orchestrator on
+the Fast Path. The execution leaves and the report consume this file; nobody
+downstream re-derives the plan from the ticket.
+
 ```markdown
 # Test plan SHOP-1234
 Environment: stage | Build: release-24.9 | Mode: hybrid | Risk: high

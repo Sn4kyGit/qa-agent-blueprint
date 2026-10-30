@@ -82,6 +82,11 @@ re-enacted screenshot is no proof.
 
 ## Output: `run.json` in the run dir
 
+**Producer:** the execution leaf that ran the cases writes `run.json` at the end
+of the run — `test-executor` after an MCP session, `test-automator` after a CLI
+run (cheap/deep lanes included). It is the run record: TC-IDs, outcomes, timing,
+mode.
+
 ```json
 {
   "command": "npx playwright test tests/e2e/checkout --reporter=line",

@@ -50,7 +50,9 @@ a capsule retain the effective-project fallback below.
     times over threshold, end-of-test screenshot — collected independently of
     the assertions and reported as *Observations*, even on a fully green run.
     That is the part of the live eye a spec otherwise lacks.
-4. Produce evidence (report, trace-on-failure, `execution_summary.json`) per
+4. Produce evidence (report, trace-on-failure, `run.json` run record with
+   TC-IDs/outcomes/timing/mode per `docs/pipeline/04-execution.md`,
+   `execution_summary.json`) per
    `.claude/rules/core/evidence-policy.md` — including `test_cases[]`, which the CLI
    runner is the only source of and which every later failure analysis depends on.
    The summary's `skills_used` lists the skills this run actually invoked

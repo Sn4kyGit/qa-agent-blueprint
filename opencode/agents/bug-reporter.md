@@ -57,7 +57,9 @@ connected there, and a failed MCP call says nothing about JIRA itself.
    pipe tables — structure the description as headings/lists, not a hand-rolled
    table (`docs/rules/testing/jira-confluence.md`).
 6. Attach the relevant evidence files (screenshots, logs) via the Atlassian MCP
-   attachment call; reference them by filename in the description. The marked
+   attachment call (Cloud only — on Data Center the server has no upload tool;
+   reference files by filename and note the human attach step instead);
+   reference them by filename in the description. The marked
    failure screenshot (culprit element outlined — the test-executor's capture
    norm) leads the attachments; a FAIL without one is the exception and needs a
    reason (no visible culprit, API-level defect).

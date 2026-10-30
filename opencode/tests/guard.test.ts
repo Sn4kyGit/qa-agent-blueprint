@@ -40,9 +40,16 @@ async function stampPreflight(dir: string, ageMinutes = 0): Promise<void> {
   await writeFile(join(dir, "evidence", ".preflight", "ok.json"), JSON.stringify({ key: "SHOP", checked_at: checkedAt, ok: true }))
 }
 
-function jiraWrite(args: Record<string, unknown>): BeforeCall {
+function jiraWrite(args: Record<string, unknown>, tool = "atlassian_editJiraIssue"): BeforeCall {
   return {
-    input: { tool: "atlassian_editJiraIssue", sessionID: SESSION_ID, callID: "tool_fixture" },
+    input: { tool, sessionID: SESSION_ID, callID: "tool_fixture" },
+    output: { args },
+  }
+}
+
+function jiraRead(tool: string, args: Record<string, unknown>): BeforeCall {
+  return {
+    input: { tool, sessionID: SESSION_ID, callID: "tool_fixture" },
     output: { args },
   }
 }
@@ -111,8 +118,6 @@ const allowed: Array<[string, BeforeCall]> = [
   ["Bash resolver --import", bashBefore("bash .claude/hooks/resolve-secrets.sh . --import")],
   ["Bash resolver --capture", bashBefore("bash .claude/hooks/resolve-secrets.sh . --capture")],
   ["Bash plugin-root resolver", bashBefore("bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh")],
-  // == reads are governed by opencode permissions, not this guard ==
-  ["Read .env is not the guard's job", fileBefore("read", ".env")],
   // == ordinary work is unaffected ==
   ["Write a normal file", fileBefore("write", "README.md")],
   ["Bash normal command", bashBefore("npx playwright test")],
@@ -398,6 +403,15 @@ describe("secrets_read toggle (opencode)", () => {
     await expect(run(h, bashBefore("curl -X POST https://api.example.com/data -d '{}'"))).resolves.toBeUndefined()
   })
 
+  test("DC read tools are not classified as writes", async () => {
+    const dir = await qaHome()
+    const h = await hooksIn(dir)
+    await expect(run(h, jiraRead("atlassian_jira_get_transitions", { issueKey: "SHOP-1" }))).resolves.toBeUndefined()
+    await expect(run(h, jiraRead("atlassian_jira_get_create_fields", { issueKey: "SHOP-1" }))).resolves.toBeUndefined()
+    await expect(run(h, jiraWrite({ issueKey: "SHOP-1" }, "atlassian_jira_createJiraIssue"))).rejects.toThrow(/Shadow Mode is on/)
+    await expect(run(h, jiraWrite({ issueKey: "SHOP-1" }, "atlassian_jira_transitionJiraIssue"))).rejects.toThrow(/Shadow Mode is on/)
+  })
+
   test("S4: reader guard covers all secret file classes", async () => {
     const dir = await qaHome('{"secrets_read":"allow"}')
     const h = await hooksIn(dir)
@@ -415,6 +429,25 @@ describe("secrets_read toggle (opencode)", () => {
     await expect(run(h, fileBefore("write", join(dir, "session.auth")))).rejects.toThrow(/secrets? file/)
     await expect(run(h, fileBefore("write", join(dir, "storage-state.json")))).rejects.toThrow(/secrets? file/)
     await expect(run(h, fileBefore("write", join(dir, "notes.md")))).resolves.toBeUndefined()
+  })
+
+  test("Read tool: raw evidence stays out of context", async () => {
+    const dir = await qaHome()
+    const h = await hooksIn(dir)
+    await expect(run(h, fileBefore("read", join(dir, "evidence/screenshots/shot.png")))).rejects.toThrow(/raw evidence/)
+    await expect(run(h, fileBefore("read", join(dir, "evidence/trace.zip")))).rejects.toThrow(/raw evidence/)
+    await expect(run(h, fileBefore("read", join(dir, "evidence/.mcp-out/data.json")))).rejects.toThrow(/raw evidence/)
+    await expect(run(h, fileBefore("read", join(dir, "evidence/execution_summary.json")))).resolves.toBeUndefined()
+    await expect(run(h, fileBefore("read", join(dir, "evidence/report.md")))).resolves.toBeUndefined()
+  })
+
+  test("Read tool: secrets follow the same policy", async () => {
+    const dir = await qaHome()
+    const h = await hooksIn(dir)
+    await expect(run(h, fileBefore("read", join(dir, ".env.playwright-secrets")))).rejects.toThrow(/secret/)
+    await expect(run(h, fileBefore("read", join(dir, "id_rsa")))).rejects.toThrow(/credential/)
+    await expect(run(h, fileBefore("read", join(dir, "session.auth")))).rejects.toThrow(/credential/)
+    await expect(run(h, fileBefore("read", join(dir, "notes.md")))).resolves.toBeUndefined()
   })
 })
 

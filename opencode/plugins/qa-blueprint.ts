@@ -221,6 +221,21 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
       block("refusing to write 'Shadow mode: off' into PROJECT.md — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself.")
     }
   }
+  // Read tool: raw evidence stays out of context (plugin-mode enforcement).
+  if (tool === "read" && filePath) {
+    if (/\.(png|jpe?g|gif|webp|bmp|webm|mp4|mov|zip|har)$/i.test(filePath) || filePath.includes(".mcp-out")) {
+      block(`refusing to read raw evidence (${filePath}) — screenshots, traces, videos and archives stay as evidence files. Read execution_summary.json or curated JSON/Markdown instead.`)
+    }
+    if (isSecretPath(filePath)) {
+      if (filePath.endsWith(".env.example") || filePath.endsWith("/.env.example")) {
+        // exempt
+      } else if (/\.env(\.|"|'|$)/.test(filePath)) {
+        if (secretsRead !== "allow") block("refusing to read a .env* file — secrets never enter chat or context by default. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task).")
+      } else {
+        block("refusing to read a credential file — private keys, auth tokens and storage state never enter chat or context (blocked regardless of secrets_read).")
+      }
+    }
+  }
 
   if (process.env.QA_ALLOW_GLOBAL_MCP !== "1") {
     if (filePath && pathChecked && globalMcpConfigPaths().has(filePath)) {
@@ -279,7 +294,7 @@ async function secretsReadMode(home: string): Promise<"block" | "allow"> {
 // executeDestructive are the Atlassian v2 meta-tools for DEFERRED tools
 // (uploadAttachmentToJiraIssue & co.) — writes by definition; executeRead is
 // deliberately absent (read-only deferred tools must stay open).
-const JIRA_WRITE = /^atlassian_.*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)/i
+const JIRA_WRITE = /^atlassian_(?:jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive)/i
 
 function issueKeyOf(args: Record<string, unknown> | undefined): string {
   for (const k of ["issueKey", "issue_key", "key", "id"]) {
@@ -328,7 +343,7 @@ async function shadowGateBlocks(directory: string, tool: string, args: Record<st
     // fail closed: an unparsable call that looks like an Atlassian write is one.
     // `__?` mirrors the bash fallback (1–2 underscores: opencode tool names use
     // one, a raw Claude-style payload carries `atlassian__createJiraIssue`).
-    if (!/atlassian__?[a-z]*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)/i.test(JSON.stringify(args ?? {}))) return false
+    if (!/atlassian__?(jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive)/i.test(JSON.stringify(args ?? {}))) return false
     tool = "atlassian_create"
   }
   if (!JIRA_WRITE.test(tool)) return false

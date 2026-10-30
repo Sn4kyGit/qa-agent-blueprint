@@ -49,7 +49,17 @@ the deep URL instead of clicking through; one step at a time; screenshot only
 where it lands in the report. The subagent returns findings, not snapshots —
 the existing `exploratory-testing` charter applies.
 
+At session end the subagent **writes `recon.json` into the run dir** — same
+contract as the probe output below (`"source": "mcp"`): the pages observed with
+their controls, form fields, console errors and failed requests. Both recon
+paths are producers of the file; without the MCP path writing it, every
+MCP-reconnoitred area would trip the "no `recon.json` exists" escalation
+trigger (00-overview) forever.
+
 ## Output: `recon.json` in the run dir
+
+**Producers:** `merge-recon.mjs` on the probe path, the `test-executor`
+subagent on the MCP path — both write this file.
 
 ```json
 {

@@ -69,6 +69,10 @@ root-causing.
 
 ## Output: `verdict.json` in the run dir
 
+**Producer:** the verification owner writes `verdict.json` — `qa-manager` on the
+complex path, the run-owning main orchestrator on the Fast Path. It records the
+red check result, the observation pass result and the failure classification.
+
 ```json
 {
   "red_check": { "performed": true, "passed": ["AC1", "AC2"] },

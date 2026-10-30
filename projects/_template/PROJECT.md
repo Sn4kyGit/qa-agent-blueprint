@@ -147,6 +147,9 @@ Phases, contracts and escalation rules: `docs/pipeline/`.
   observation for everything (new projects, exploratory work, visual tickets).
   `hybrid` (default) = probe-based recon, spec via CLI, short live verification
   pass. `cli-first` = existing suite only, MCP only on unclear failure.
+  Model lanes: `hybrid` with a verification pass has two execution branches and
+  therefore uses the standard lane; the cheap lane is reachable via `cli-first`
+  or `mcp-only` on low-risk single-branch tickets.
 - **Verification pass**: `yes` ← hybrid only: a short MCP observation run over
   the ticket's main flow after a green CLI run, explicitly looking for what the
   assertions do not cover.
