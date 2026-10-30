@@ -1,7 +1,8 @@
 # Evidence Policy
 
-Full schema behind the one-line rule in `CLAUDE.md`: no test result without
-artifacts. Enforced mechanically by the `Stop` hook (`stop-evidence-check.sh`).
+Full schema behind the one-line rule in the router: no test result without
+artifacts. Enforced mechanically by the evidence gate (Claude Code:
+`stop-evidence-check.sh` Stop hook; opencode: plugin evidence gate).
 
 ## Verdicts come from executed runs only
 
@@ -24,7 +25,7 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 ```
 
 - One directory per run, timestamp at start of run, never reused or overwritten.
-- `<step>` is a short slug for what was being checked (`login`, `checkout`);
+- `<step>` is a short slug of what was checked (`login`, `checkout`);
   `<kind>` is `pass` or `fail` (or a specific defect name on FAIL).
 - `progress.md` — live one-line status entries (`HH:MM:SS START/STEP/VERDICT …`)
   appended by the executing subagent: the follow-along surface and the manager's
@@ -32,7 +33,7 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 - Raw Playwright MCP output goes to `evidence/.mcp-out/`; curated, reportable
   artifacts are copied into the run dir above.
 - `evidence/.audit/jira-writes.log` — append-only, one line per JIRA write, written
-  by the `PostToolUse` hook, never by the agent directly.
+  by the JIRA-write audit, never by the agent directly.
 
 ## Capture matrix
 
@@ -95,12 +96,12 @@ filled with something plausible. A
 project-wide` (`secondary` = epic/parent, fix version, or changed MR paths — record
 which one in `product_routed_by_detail` if it matters). Add `"confidence"`:
 `medium` for a secondary-signal match, `low` when a declared default resolved the
-routing — otherwise nothing in the report shows whether the stage URL came from the
-product or the project.
+routing — otherwise nothing shows whether the stage URL came from product or
+project.
 
 `mode` records which execution mode the run used (`PROJECT.md` → "Execution
 mode", escalations included — a hybrid run escalated to live observation writes
-`hybrid` and names the escalation in the report). It is what puts `Mode:` in the
+`hybrid` and names the escalation). It puts `Mode:` in the
 report header, telling observed from asserted without reading the whole run.
 
 One ticket that genuinely spans two products produces **one run per product**:
@@ -124,7 +125,7 @@ The proposal names **both branches** — the test change, and `product-defect`
 metric until `human_ruling` names who decided.
 
 `NO_TEST` = test tools ran, no test completed: one-sentence `no_test_reason`,
-no JIRA post, excluded from the pass rate — the explicit Stop-hook answer when
+no JIRA post, excluded from the pass rate — the explicit evidence-gate answer when
 there is no verdict.
 
 ## `learnings` — declared, not remembered
@@ -139,7 +140,7 @@ The "explain once, never again" promise (`.claude/skills/retro-learn/SKILL.md`) 
   `"clean run, no surprises"`, `"everything hit was already in the product's
   learnings"`.
 
-Exactly one of the two is filled. The Stop hook checks that the **key exists**, not
+Exactly one of the two is filled. The evidence gate checks that the **key exists**, not
 what it says.
 
 An unrouted product, a selector workaround, an odd stage, a corrected report
@@ -148,8 +149,7 @@ format — all captures; routing corrections feed the registry in
 
 ## `skills_used` — optional, declared at summary time
 
-The skills the run **actually** used (field above), never the merely planned
-ones. Optional — summaries without it stay valid evidence; old runs are never
+The skills the run **actually** used (field above), never the planned ones. Optional — summaries without it stay valid evidence; old runs are never
 retro-fitted. Whoever writes the summary declares it; a flow with no summary
 step of its own (`bug-report`, `recon`) is listed by the orchestrator.
 `/skill-review` reads it back `used`/`unknown` — absent data is never "unused".
@@ -162,5 +162,5 @@ policy: `docs/artifact-strategy.md`.
 
 ## Details, read when the topic comes up
 
-`docs/rules/core/evidence-policy.md` — Stop hook enforcement. Read it when the
-Stop hook blocks a session.
+`docs/rules/core/evidence-policy.md` — evidence gate enforcement. Read it when
+the evidence gate blocks a session.

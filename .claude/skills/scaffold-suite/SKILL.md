@@ -6,7 +6,7 @@ description: Create the Playwright project a project/product is missing — pack
 # /scaffold-suite — give the evidence promise a producer
 
 The blueprint demands `traces/trace.zip`, `logs/`, video on failure and a screenshot
-at the assertion point, and a Stop hook blocks a session without them. Those are all
+at the assertion point, and the evidence gate blocks a session without them. Those are all
 Playwright *configuration*. Until this skill runs, nothing in a fresh setup produces
 them: `PROJECT.md` → "Test assets" says "none yet", and the first `/test-ticket` is
 asked to satisfy a schema whose producer does not exist.

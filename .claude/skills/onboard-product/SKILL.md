@@ -17,7 +17,8 @@ differs from the project. Every question defaults to "same as the project", and 
    meaningless. If it doesn't, run `onboard-project` first.
 2. **Product key + one-liner.** Key is uppercase `[A-Z][A-Z0-9]{1,15}`, unique in
    the project, and becomes the directory name. Reject `SECRET`, `CREDENTIALS`,
-   `ENV` and anything containing them — `pre-tool-guard.sh` blocks paths matching
+   `ENV` and anything containing them — the pre-tool guard (`pre-tool-guard.sh`
+   / opencode plugin) blocks paths matching
    `*secrets*`/`*credentials*`, so the directory would be unwritable with a
    confusing "refusing to write a secrets file" error.
 3. **First product in this project?** If `projects/<KEY>/products/` does not exist
@@ -27,9 +28,9 @@ differs from the project. Every question defaults to "same as the project", and 
    (registry table + match order + no-match policy + project-wide entries). This is
    the only write into `PROJECT.md` this skill ever makes.
 4. **Copy the scaffold**: `projects/_template/products/_template/` →
-   `projects/<KEY>/products/<PRODUCT>/`. In plugin mode the scaffold lives in the
-   plugin — read it from `$CLAUDE_PLUGIN_ROOT/projects/_template/products/_template/`
-   and write only into the consumer's repo.
+   `projects/<KEY>/products/<PRODUCT>/` (plugin mode: read the scaffold from
+   `$CLAUDE_PLUGIN_ROOT/projects/_template/products/_template/`) and write only
+   into the consumer's repo.
 5. **Routing.** Ask which JIRA components and/or labels identify this product's
    tickets. **Fetch the project's real component list via the Atlassian MCP** and
    let the user pick existing values instead of typing from memory — a dead routing
@@ -59,7 +60,7 @@ differs from the project. Every question defaults to "same as the project", and 
    (`security add-generic-password -s <SECRET_KEY> -a qa -w`), then run the
    blueprint's `resolve-secrets.sh`. On `env-file`: tell the user to add the
    keys to `.env.playwright-secrets` themselves — it is gitignored, and the
-   PreToolUse guard blocks any write to it, so do not attempt it.
+    the pre-tool guard blocks any write to it, so do not attempt it.
 9. **Generate the "Differences from the project" index** at the top of `PRODUCT.md`
    from what was actually written. Derived last, never hand-maintained.
 10. **Seed `products/<PRODUCT>/learnings.md`** from the scaffold. Move any gotcha

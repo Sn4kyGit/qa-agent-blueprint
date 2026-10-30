@@ -1,16 +1,17 @@
 # Evidence Policy — details
 
 On-demand companion to `.claude/rules/core/evidence-policy.md`, which stays in the
-always-loaded layer and carries the norms. **Read this file when the Stop hook blocks a session and you need to know exactly what it checks, or when you are about to write `NEEDS_REVIEW` or `NO_TEST` into a summary.**
+always-loaded layer and carries the norms. **Read this file when the evidence gate blocks a session and you need to know exactly what it checks, or when you are about to write `NEEDS_REVIEW` or `NO_TEST` into a summary.**
 Splitting it out is what keeps the always-on layer small; nothing here is
 optional when its topic comes up.
 
-## Stop hook enforcement
+## Evidence gate enforcement
 
-`stop-evidence-check.sh` runs on session end. If the transcript shows a completed
+The evidence gate runs on session end (Claude Code: `stop-evidence-check.sh`
+Stop hook; opencode: plugin evidence gate). If the transcript shows a completed
 test action (a Playwright MCP/CLI run, a reported verdict) with no matching
-`execution_summary.json` under `evidence/`, the hook blocks the stop and asks for
-the missing artifact. This is not a reminder — the session cannot end clean without
+`execution_summary.json` under `evidence/`, the gate blocks the session end and
+asks for the missing artifact. This is not a reminder — the session cannot end clean without
 it.
 
 The block message carries a machine-readable first-line marker so a headless
@@ -21,7 +22,7 @@ semantics in `claude -p`.
 
 ## `NO_TEST` — the explicit way out
 
-The hook fires whenever a test *tool* was invoked, which includes sessions that
+The gate fires whenever a test *tool* was invoked, which includes sessions that
 legitimately completed no test: still investigating a reported problem, debugging
 a flaky spec, or aborted early. The answer is not to end the session silently
 (that works only via the loop-breaker and leaves no record) — it is a minimal

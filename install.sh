@@ -2446,7 +2446,8 @@ opencode_uninstall() {
   info "opencode uninstall: removing only symlinks that point into $REPO_ROOT"
   local l
   for l in ".opencode/ROUTER.md" ".opencode/agents" ".opencode/commands" ".opencode/plugins" \
-           ".claude" "docs" ".agents"; do
+           ".claude" "docs" ".agents" \
+           "projects/_template" "projects/EXAMPLE" ".claude-plugin" "CHANGELOG.md"; do
     local link="$TARGET/$l"
     [ -L "$link" ] || continue
     case "$(readlink "$link")" in
@@ -2484,6 +2485,10 @@ run_opencode_mode() {
   opencode_link "$TARGET/.claude" "$REPO_ROOT/.claude"
   opencode_link "$TARGET/docs"    "$REPO_ROOT/docs"
   opencode_link "$TARGET/.agents" "$REPO_ROOT/.agents"
+  opencode_link "$TARGET/projects/_template" "$REPO_ROOT/projects/_template"
+  opencode_link "$TARGET/projects/EXAMPLE" "$REPO_ROOT/projects/EXAMPLE"
+  opencode_link "$TARGET/.claude-plugin" "$REPO_ROOT/.claude-plugin"
+  opencode_link "$TARGET/CHANGELOG.md" "$REPO_ROOT/CHANGELOG.md"
   opencode_seed_files
   opencode_merge_config
   next_step "Connect a provider in opencode (/connect — e.g. OpenRouter) and pick your model with /models — the blueprint pins none (D6)"

@@ -59,7 +59,7 @@ default and say so up front.
      `execution_summary.json` plus its screenshots (several runs → newest;
      if the user named one, use that).
    Extract the step list: numbered, one action per step, with the expected
-   observation per step. Preflight applies: the PreToolUse gate expects a
+   observation per step. Preflight applies: the pre-tool guard expects a
    fresh `preflight.sh <KEY>` pass before any browser call — a demo on an
    unreachable stage is the same false-positive factory as a test.
 2. **Build the demo spec** into the run's demo dir

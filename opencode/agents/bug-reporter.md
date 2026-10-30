@@ -5,6 +5,7 @@ hidden: true
 permission:
   atlassian_*: allow
   playwright_*: deny
+  bash: deny
   task: deny
 ---
 

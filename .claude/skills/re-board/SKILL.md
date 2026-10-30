@@ -18,10 +18,10 @@ offer only the delta, confirm each change individually, and re-stamp. Expect
    `learnings.md` and `flow-map.md` files. If `PROJECT.md` does not exist,
    this is not a re-board — say so and route to `/onboard-project`.
 2. Build the **schema delta list** by comparing against the current template
-   (`projects/_template/`, in plugin mode under `$CLAUDE_PLUGIN_ROOT/`) and the
-   installed blueprint version (in the blueprint repo: `.claude-plugin/plugin.json`;
-   in plugin mode: `claude plugin details qa-agent-blueprint` — the file lives in
-   the plugin cache, not the consumer repo):
+   (`projects/_template/`; plugin mode: `$CLAUDE_PLUGIN_ROOT/projects/_template/`) and the
+   installed blueprint version (`.claude-plugin/plugin.json` via the support link;
+   plugin mode: `claude plugin details qa-agent-blueprint` or
+   `$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json`):
    - **Missing fields** the template has and the project file lacks (e.g.
       `Blueprint version`, `Secrets source`, `Framework`, `Readiness statuses`,
       `Readiness API/CLI`, `Build verification`, `Merge requirement`, the whole
@@ -41,8 +41,9 @@ offer only the delta, confirm each change individually, and re-stamp. Expect
      After seeding, `retro-learn` stays the only writer, as always.
    - **Open `TODO:` entries** from the original onboarding.
    - **Version gap**: installed version vs. the `Blueprint version` stamp
-     (absent stamp = "pre-0.5.0"). Skim the CHANGELOG sections between the two
-     (`CHANGELOG.md` in the plugin root) and note which entries actually
+      (absent stamp = "pre-0.5.0"). Skim the CHANGELOG sections between the two
+      (`CHANGELOG.md` via the support link; plugin mode:
+      `$CLAUDE_PLUGIN_ROOT/CHANGELOG.md`) and note which entries actually
      concern this project — `/whats-new` does the full render, here one line
      per relevant change is enough.
 3. Run two **read-only audits** and add their findings to the review:
@@ -73,9 +74,10 @@ offer only the delta, confirm each change individually, and re-stamp. Expect
    A TODO the user still cannot answer stays a TODO — never fill a guess (same
    rule as onboarding).
 5. If a **Secrets source** was set or changed to `keychain`: run the
-   blueprint's `resolve-secrets.sh` (plugin mode:
-   `bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh`; integrate
-   mode: the namespaced copy under `.claude/hooks/qa-blueprint/`). Then offer
+   blueprint's `resolve-secrets.sh`
+   (`bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh` (plugin mode) /
+   `bash .claude/hooks/resolve-secrets.sh` (opencode/shared/integrate via
+   symlink)). Then offer
    the assisted storage paths before manual commands: `--import` when the
    user already hand-filled values into `.env.playwright-secrets` (migrates
    declared keys into the keychain, values never surface), `--capture` for

@@ -22,7 +22,7 @@ No secrets in context, ever. This is enforced by rule AND by hooks — see below
 ## Shadow mode — testing fully, writing nothing (default: on)
 
 Shadow mode is **on by default**; the mechanics (proposal file, summary flags,
-unlock) are the hard rule in `CLAUDE.md`. While on, every JIRA **write** is
+unlock) are the hard rule in the router. While on, every JIRA **write** is
 suppressed: the agent reads, routes, tests, and produces evidence exactly as if
 reporting. A line in `evidence/.audit/jira-writes.log` from a shadow run is a
 bug — on `browser` access no such log exists; the proposal review is the only

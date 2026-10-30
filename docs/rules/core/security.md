@@ -141,7 +141,7 @@ never:
 
 - print, echo, or summarize a secret value into the transcript, a report, a ticket
   comment, an artifact, or a commit — including "just to confirm it was fetched";
-- write a value into a file, `.env*` included (the PreToolUse guard blocks that
+- write a value into a file, `.env*` included (the pre-tool guard blocks that
   path regardless of where the value came from) — with one deliberate exception:
   the blueprint's `resolve-secrets.sh`, documented below;
 - fetch credentials for a system the current ticket does not require, or for
@@ -204,8 +204,8 @@ secret or PII leaks into an artifact" — offer `--capture` for the next one
 instead of repeating it anywhere.
 
 **JIRA Data Center PAT** follows the same principle one level up: service
-`JIRA_PAT_<jira-host>` (host from the atlassian entry's `JIRA_URL`), resolved by
-the session-start hook into `$CLAUDE_ENV_FILE` — the token exists only in the
+`JIRA_PAT_<jira-host>` (host from the atlassian entry's `JIRA_URL`), resolved at
+session start into `$CLAUDE_ENV_FILE` — the token exists only in the
 session's environment, in no file and no global shell export. An already-set
 `JIRA_PERSONAL_TOKEN` always wins (CI, non-macOS). Store once:
 `security add-generic-password -s JIRA_PAT_<jira-host> -a jira -w`.
@@ -215,9 +215,9 @@ session's environment, in no file and no global shell export. An already-set
 A hook counts as enforcement only once a test proves it blocks — these are shell
 scripts parsing a JSON payload, and a parse failure makes them fail open while
 still looking correct in review. Every hook that enforces something has fixtures:
-`guard-fixtures.sh` (PreToolUse allow/block, incl. the secrets_read toggle),
-`stop-evidence-fixtures.sh` (the Stop
-hook's evidence *and* learning-declaration checks), `session-start-fixtures.sh`
+`guard-fixtures.sh` (pre-tool guard allow/block, incl. the secrets_read toggle),
+`stop-evidence-fixtures.sh` (the evidence
+gate's evidence *and* learning-declaration checks), `session-start-fixtures.sh`
 (project/product listing), `qa-secrets-fixtures.sh` (credential injection,
 redaction, ephemeral MCP mask file) and
 `install-integrate-fixtures.sh` (integrate mode end
@@ -225,7 +225,7 @@ to end: namespacing, path rewriting, idempotency, uninstall) — all under
 `.claude/hooks/tests/`. Run the matching one
 after any change to a hook, and add a fixture for every new rule.
 
-- `PreToolUse` guard (`pre-tool-guard.sh`) blocks `Bash`/`Write`/`Edit`/`MultiEdit`/
+- pre-tool guard (`pre-tool-guard.sh` / opencode plugin) blocks `Bash`/`Write`/`Edit`/`MultiEdit`/
   `NotebookEdit` calls that touch `.env*`, attempt `rm -rf`, or force-push. The
   `.env*` classes (0.11.0): readers (`cat|less|more|head|tail|grep|sed|awk|jq|source`)
   follow the `secrets_read` toggle in `.qa-guard.json` (default block); `cp`/`mv`,
@@ -239,7 +239,7 @@ after any change to a hook, and add a fixture for every new rule.
   different customer's `.env` in another project's folder — the agent used it
   for weeks without noticing, and only the secrets guard stopped it from
   editing the foreign file. Two mechanical rules follow, both in the
-  PreToolUse guard (opencode: same logic in `qa-blueprint.ts` against
+  pre-tool guard (opencode: same logic in `qa-blueprint.ts` against
   `opencode.json` + `~/.config/opencode/`):
   1. **Foreign-server block** — a call to an MCP server that exists only in
      global config but is not declared in the project's own `.mcp.json` /
@@ -255,7 +255,7 @@ after any change to a hook, and add a fixture for every new rule.
   Escape hatch for deliberate global setups: `QA_ALLOW_GLOBAL_MCP=1`.
 - Permission denylist in `.claude/settings.json` prevents reads of known secret file
   patterns outright.
-- `PostToolUse` JIRA write audit (`post-jira-audit.sh`) logs every Atlassian MCP
+- JIRA-write audit (`post-jira-audit.sh` / opencode plugin) logs every Atlassian MCP
   write (create/edit/transition/delete) to `evidence/.audit/jira-writes.log` for
   traceability — including headless CI runs.
 

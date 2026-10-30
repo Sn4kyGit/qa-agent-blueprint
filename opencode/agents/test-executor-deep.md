@@ -35,8 +35,9 @@ acceptance criteria or repro steps, project context). Full usage rules:
   value itself. A value pasted into chat is a leak.
 - Never touch production. Stage only, per the project file.
 - When the capsule's confirmed Areas (or, standalone, the effective project file or
-  bridge's `## Flow map` section) name **anchors** for a flow you'll touch (selectors, test data that survived past
-  runs): start from them instead of re-discovering. An anchor that no longer
+  bridge's `## Flow map` section) name **anchors** for a flow you'll touch (selectors, test data
+  that survived past runs): start from them instead of re-discovering. Unconfirmed
+  candidates are not anchors. An anchor that no longer
   matches is a finding, not a blocker — note it for `retro-learn`, then explore
   as usual.
 

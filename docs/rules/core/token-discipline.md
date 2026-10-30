@@ -52,7 +52,7 @@ handling in `.claude/rules/core/security.md`. Removing one is the same in revers
 config (`.mcp.json` / `opencode.json`) — never in global config
 (`~/.claude.json`, `~/.config/opencode/`). Global config is invisible to the
 project boundary and can silently point at another project's credentials
-(field report 0.9.0 in `security.md`); the PreToolUse guard blocks both
+(field report 0.9.0 in `security.md`); the pre-tool guard blocks both
 directions: calling a global-only server, and writing global config.
 
 **Before proposing one, check it earns its place**: does it enable something the

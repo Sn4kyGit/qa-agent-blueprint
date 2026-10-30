@@ -71,7 +71,7 @@ prompts, pre-authorized actions only).
 
 **Preflight before any long unattended run.** Run the blueprint's
 `preflight.sh <KEY>` — it probes stage/JIRA reachability (incl. multiple-VPN
-detection) and secrets status, and the PreToolUse gate enforces a fresh pass
+detection) and secrets status, and the pre-tool guard enforces a fresh pass
 for browser/JIRA MCP calls. Additionally verify the suite's smoke spec passes
 solo. A dead harness costs a whole night of BLOCKED cases (field report
 2026-09: 11 cases lost to an MCP server down at the connection level). A

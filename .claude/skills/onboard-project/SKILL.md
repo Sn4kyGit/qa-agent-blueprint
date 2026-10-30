@@ -7,18 +7,20 @@ description: Onboard a new project into projects/<KEY>/ — fills PROJECT.md fro
 
 Expect this to take real back-and-forth with the user (~30–60 min for a first
 project) — every field matters for later autonomous testing, and guessing here is
-exactly what `CLAUDE.md` forbids ("never guess a project's process").
+exactly what the router (`CLAUDE.md` in Claude Code, `.opencode/ROUTER.md` in
+opencode) forbids ("never guess a project's process").
 
 ## Steps
 
 1. Ask for the JIRA project key (must match the directory name you'll create).
 2. Copy `projects/_template/` to `projects/<KEY>/` (including `templates/`, but
    **not** `products/` — that scaffold stays put until `/onboard-product` needs it).
-   **In plugin mode the scaffold is not in this repo**: the SessionStart bootstrap
-   creates `projects/` empty on purpose, so copy from
-   `$CLAUDE_PLUGIN_ROOT/projects/_template/` and write only into the consumer's
-   repo. Same for the two reads below — the reference project lives at
-   `$CLAUDE_PLUGIN_ROOT/projects/EXAMPLE/`. Without this branch step 2 copies from a
+   **In plugin mode the scaffold is not in this repo**: the session start bootstrap
+   creates `projects/` empty on purpose, so copy from `projects/_template/`
+   (plugin mode: `$CLAUDE_PLUGIN_ROOT/projects/_template/`) and write only into the
+   consumer's repo. Same for the two reads below — the reference project lives at
+   `projects/EXAMPLE/` (plugin mode: `$CLAUDE_PLUGIN_ROOT/projects/EXAMPLE/`).
+   Without this branch step 2 copies from a
    path that does not exist and onboarding stops at its first write.
    Read `projects/EXAMPLE/PROJECT.md` alongside the template as a filled reference
    — it's fictional but shows what a complete answer looks like per field. Ignore
@@ -101,7 +103,8 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    `projects/<KEY>/templates/bug-report.md` with the base template matching the
    report format chosen above — `.claude/skills/bug-report/templates/jira-cloud.md`
    or `plain-text.md` (always the latter on `browser` access — the DC editor takes
-   rich text, no ADF needed), in plugin mode under `$CLAUDE_PLUGIN_ROOT/` — and adjust
+   rich text, no ADF needed; plugin mode: the same paths under
+   `$CLAUDE_PLUGIN_ROOT/`) — and adjust
    section names, order and extra fields to the
    project's conventions. This is not optional polish: `bug-reporter` reads that
    file as the template, so a project that keeps the placeholder stalls on its
@@ -109,14 +112,16 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
 6. Add one line for the new project to `memory/INDEX.md` under "Projects" —
    this is what keeps lookups fast later.
 7. **Stamp the blueprint version** into `PROJECT.md` → Basics: read `version`
-   from the installed plugin manifest (`.claude-plugin/plugin.json`, in plugin
-   mode under `$CLAUDE_PLUGIN_ROOT/`; integrate mode: this repo's copy) and
+   from the installed plugin manifest (`.claude-plugin/plugin.json` via the
+   support link; plugin mode:
+   `$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json`) and
    write it as `Blueprint version: <version>`. `/whats-new` and `/re-board`
    key off this stamp later — never leave it `TODO:`.
 8. **Resolve secrets if the source is keychain**: run the blueprint's
-   `resolve-secrets.sh` once (plugin mode:
-   `bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh`, integrate mode:
-   the namespaced copy under `.claude/hooks/qa-blueprint/`). It prints only key
+   `resolve-secrets.sh` once
+   (`bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/resolve-secrets.sh` (plugin mode) /
+   `bash .claude/hooks/resolve-secrets.sh` (opencode/shared/integrate via
+   symlink)). It prints only key
    names. Offer the two assisted storage paths before handing over the manual
    command: `--import` migrates values the user already hand-filled into
    `.env.playwright-secrets` into the keychain (declared keys only, values
@@ -147,7 +152,7 @@ exactly what `CLAUDE.md` forbids ("never guess a project's process").
    is onboarded or tested — whoever invokes a vendored skill next would read
    the *previous* project's context without any error. Keying by `<KEY>` makes
    staleness structurally impossible instead of relying on remembering to
-   refresh a shared file. See `CLAUDE.md` → project routing for the rule that
+   refresh a shared file. See the router → project routing for the rule that
    every vendored-skill invocation must point at the current ticket's file.
 
    `PROJECT.md` stays the source of truth for this blueprint's own skills/hooks;

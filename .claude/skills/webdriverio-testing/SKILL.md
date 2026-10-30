@@ -86,7 +86,7 @@ flag it to the user instead of improvising a project layout.
   health (field report 2026-09: 11 cases lost overnight to exactly that).
   Report BLOCKED with the reason and stop; reconnecting (`/mcp`, restart) is a
   human step. (The general preflight norm — `preflight.sh <KEY>` plus the
-  PreToolUse gate — lives in `docs/rules/testing/preflight.md` and
+  pre-tool guard — lives in `docs/rules/testing/preflight.md` and
   `test-automation`; this bullet is the device-specific addendum.)
   Resource contention counts too: one Appium/simulator pipeline per
   machine at a time — two in parallel crash-loop WebDriverAgent.

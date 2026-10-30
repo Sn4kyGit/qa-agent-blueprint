@@ -1,4 +1,4 @@
-The blueprint was just updated to 0.18.0. The user runs `/re-board WEB`.
+The blueprint was just updated to 0.18.1. The user runs `/re-board WEB`.
 
 A project directory contains exactly these files:
 
@@ -12,7 +12,7 @@ A project directory contains exactly these files:
     projects/WEB/learnings.md
     evidence/WEB/...              (a dozen past runs with execution_summary.json)
 
-There is no `projects/WEB/flow-map.md`. The installed plugin version is 0.18.0.
+There is no `projects/WEB/flow-map.md`. The installed plugin version is 0.18.1.
 
 What does the re-board do — list the delta it offers, the order and manner in
 which it walks it, and how it closes out?

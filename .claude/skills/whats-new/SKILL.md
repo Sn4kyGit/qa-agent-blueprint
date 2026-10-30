@@ -11,8 +11,9 @@ and the user runs it next. **Answer in the user's language.**
 
 ## Steps
 
-1. Read the installed blueprint version from `.claude-plugin/plugin.json` (in
-   plugin mode under `$CLAUDE_PLUGIN_ROOT/`).
+1. Read the installed blueprint version from `.claude-plugin/plugin.json` (via
+   the support link; plugin mode:
+   `$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json`).
 2. Read the `Blueprint version` stamps of all onboarded projects
    (`projects/*/PROJECT.md`, skipping `_template` and `EXAMPLE`). No stamp =
    "pre-0.5.0" (the field did not exist yet).

@@ -34,25 +34,28 @@ project recognized → project knowledge applied → tested → evidence produce
 
 | Situation | Use |
 |---|---|
-| Test / re-test a ticket end-to-end | Skill `test-ticket` (orchestrates everything below) |
-| Re-test a fixed bug | Skill `retest-bug` — sweep from the flow map's Neighbors |
-| Exploratory testing, bug reproduction | Skill `exploratory-testing` via subagent `test-executor` (Playwright MCP) |
-| Regression, repeatable checks, spec maintenance | Skill `test-automation` via subagent `test-automator` (suite's framework: Playwright or WebdriverIO) |
-| Recon before a spec — real selectors, console errors, screenshots | Skill `recon` (probe script; pipeline phase 2, `docs/pipeline/`) |
-| Test failed — real defect, or is the test case outdated? | Skill `failure-analysis` via subagent `failure-analyst` — automatic on FAIL, **before** `bug-report` |
-| Bug found | Skill `bug-report` via subagent `bug-reporter` — template from the project file |
+| Test / re-test a ticket end-to-end | Skill `test-ticket` (orchestrates the rest) |
+| Re-test a fixed bug | Skill `retest-bug` — sweep from flow-map Neighbors |
+| Exploratory testing, bug reproduction | Skill `exploratory-testing` via subagent `test-executor` |
+| Regression, repeatable checks, spec maintenance | Skill `test-automation` via subagent `test-automator` (Playwright or WebdriverIO) |
+| Recon before a spec — selectors, console errors, screenshots | Skill `recon` (probe script, phase 2, `docs/pipeline/`) |
+| Test failed — defect, or outdated test case? | Skill `failure-analysis` via subagent `failure-analyst` — on FAIL, before `bug-report` |
+| Bug found | Skill `bug-report` via subagent `bug-reporter` — template per project file |
 | Report result to JIRA | Skill `report-to-jira` — format per `PROJECT.md` |
 | Fix not on stage yet | Skill `deploy-to-stage` — runbook from `PROJECT.md` |
 | New project | Skill `onboard-project` |
 | New product inside an existing project | Skill `onboard-product` |
-| Blueprint updated / "what changed?" / project behind the template | Skill `whats-new` (read-only delta) → `re-board <KEY>` (apply, each change confirmed) |
-| No Playwright suite exists yet for this project/product | Skill `scaffold-suite` |
+| Blueprint updated / "what changed?" | Skill `whats-new` (read-only) → `re-board <KEY>` (apply, each change confirmed) |
+| No Playwright suite yet for this project/product | Skill `scaffold-suite` |
 | Harness readiness / switch | Skill `agentswitch` (read-only) |
-| Present a bug/test to an audience, "lass mich probieren" | Skill `demo` — headed replay, handover, recording only on explicit request |
+| Present a bug/test to an audience, "lass mich probieren" | Skill `demo` — headed replay, handover; recording on request |
 | "How is testing going?", weekly/sprint summary, metrics | Skill `qa-report` |
-| End of session / something unexpected happened | Skill `retro-learn` (capture into `memory/learnings/_inbox.md`) |
-| Overall orchestration & strategy for a ticket | Subagent `qa-manager` |
-| API/GraphQL, accessibility, security (OWASP), visual regression, flaky-test root-cause, thin bug report, risk scoring, release go/no-go, test-case mgmt, QA metrics | Vendored skills — see `qa-manager`'s "Specialized skills" section and `.claude/skills/THIRD_PARTY_NOTICES.md` |
+| End of session / something unexpected happened | Skill `retro-learn` (into `memory/learnings/_inbox.md`) |
+| Ticket orchestration & strategy | Subagent `qa-manager` |
+| Command overview / help | Skill `qa-help` |
+| QA model lanes (cheap/standard/deep) | Skill `model-setup` |
+| Skill usage & profile (dry run) | Skill `skill-review` |
+| API/GraphQL, accessibility, security (OWASP), visual regression, flaky tests, bug reports, risk scoring, release go/no-go, test cases, QA metrics | Vendored — `qa-manager` → "Specialized skills" (`.claude/skills/THIRD_PARTY_NOTICES.md`) |
 
 ## Hard rules
 
@@ -97,13 +100,13 @@ just detail that would otherwise cost every session:
 
 | Read this | When |
 |---|---|
-| `docs/rules/testing/preflight.md` | before any browser/JIRA action of a test run — reachability, VPN posture, secrets (the gate enforces it) |
+| `docs/rules/testing/preflight.md` | before any browser/JIRA action of a run — reachability, VPN, secrets (gate-enforced) |
 | `docs/rules/testing/playwright-mcp.md` | before/while driving the browser via MCP |
 | `docs/rules/testing/playwright-cli.md` | writing or running specs via the CLI runner |
-| `docs/rules/testing/jira-confluence.md` | composing anything that gets written into JIRA/Confluence |
+| `docs/rules/testing/jira-confluence.md` | composing anything written into JIRA/Confluence |
 | `docs/rules/core/cicd.md` | pipelines, quality gates, headless runs (`opencode run`, `claude -p`), nightly/suite runs |
-| `docs/pipeline/00-overview.md` (+ 01–06) | execution modes (`mcp-only`/`hybrid`/`cli-first`), phase contracts, red check, observation pass, escalation — whenever PROJECT.md → "Execution mode" steers a run |
-| `docs/rules/core/<same name>.md` | the companion detail of an always-loaded rule — each one names its own trigger at the top |
+| `docs/pipeline/00-overview.md` (+ 01–06) | execution modes, phase contracts, red check, observation pass, escalation — when PROJECT.md → "Execution mode" steers a run |
+| `docs/rules/core/<same name>.md` | companion detail of an always-loaded rule — each names its trigger at the top |
 
 If a question is about a topic above, read the file. Answering from the one-line
 summary in this router is guessing, and this router does not contain the details.

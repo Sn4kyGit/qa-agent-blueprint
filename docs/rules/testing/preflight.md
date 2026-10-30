@@ -12,7 +12,7 @@ reason, before a single browser action runs.
 | Half | Mechanism | Where |
 |---|---|---|
 | Probe | `.claude/hooks/preflight.sh <KEY>` — reachability, VPN posture, secrets | bash, no MCP needed |
-| Gate | PreToolUse refuses `playwright`/`atlassian` MCP calls until a fresh pass exists | `pre-tool-guard.sh` / opencode plugin |
+| Gate | pre-tool guard refuses `playwright`/`atlassian` MCP calls until a fresh pass exists | `pre-tool-guard.sh` / opencode plugin |
 
 The gate never probes the network itself — a curl per tool call would tax
 every call. It checks only the artifact `evidence/.preflight/ok.json` that a

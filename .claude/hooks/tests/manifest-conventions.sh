@@ -469,4 +469,151 @@ sys.exit(fails)
 PY
 FAILS_B=$?
 
-exit $((FAILS_A + FAILS_B))
+python3 - "$ROOT" <<'PY'
+import glob, os, re, sys
+
+root = sys.argv[1]
+fails = 0
+
+def ok(name):
+    print(f"ok    {name}")
+
+def fail(name, why):
+    global fails
+    fails += 1
+    print(f"FAIL  {name}\n      {why}")
+
+AGENTS = [
+    "test-executor", "test-executor-cheap", "test-executor-deep",
+    "test-automator", "test-automator-cheap", "test-automator-deep",
+    "qa-manager", "failure-analyst", "bug-reporter",
+]
+
+def body(text):
+    m = re.match(r"^---\n.*?\n---\n", text, re.S)
+    return text[m.end():] if m else text
+
+def norm_tools(s):
+    return re.sub(r"mcp__(?:plugin_qa-agent-blueprint_)?(atlassian|playwright)__", r"\1_", s)
+
+def squash(s):
+    return re.sub(r"\s+", " ", s).strip()
+
+for a in AGENTS:
+    cp = os.path.join(root, ".claude", "agents", a + ".md")
+    op = os.path.join(root, "opencode", "agents", a + ".md")
+    if not (os.path.exists(cp) and os.path.exists(op)):
+        fail(f"Claude<->opencode body parity {a}", "agent file missing on one side")
+        continue
+    c = squash(norm_tools(body(open(cp).read())))
+    o = squash(norm_tools(body(open(op).read())))
+    if c == o:
+        ok(f"Claude<->opencode body parity {a}")
+    else:
+        i = next((j for j in range(min(len(c), len(o))) if c[j] != o[j]), min(len(c), len(o)))
+        lo, hi = max(0, i - 30), i + 30
+        fail(f"Claude<->opencode body parity {a}",
+             f"content drift at offset {i} (tool names normalized, whitespace ignored): "
+             f"claude ...{c[lo:hi]!r} vs opencode ...{o[lo:hi]!r}")
+
+FASTPATH = {"test-ticket", "retest-bug"}
+cmd_problems = []
+cmd_count = 0
+for p in sorted(glob.glob(os.path.join(root, "opencode", "commands", "*.md"))):
+    stem = os.path.basename(p)[:-3]
+    cmd_count += 1
+    text = open(p).read()
+    m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.S)
+    if not m:
+        cmd_problems.append(f"{stem}: no frontmatter block")
+        continue
+    fm, body_text = m.group(1), m.group(2).strip()
+    am = re.search(r"(?m)^agent:\s*(\S+)\s*$", fm)
+    agent = am.group(1) if am else None
+    if stem in FASTPATH and agent is not None:
+        cmd_problems.append(f"{stem}: Fast Path — must have no agent: field (found agent: {agent})")
+    if stem == "demo" and agent is not None:
+        cmd_problems.append(f"{stem}: demo runs in the main session and must not delegate (found agent: {agent})")
+    if stem not in FASTPATH and stem != "demo" and agent not in (None, "qa-manager"):
+        cmd_problems.append(f"{stem}: agent: must be 'qa-manager' or absent (found {agent})")
+    expected_body = f"Load skill {stem} and apply it to: $ARGUMENTS"
+    if body_text != expected_body:
+        cmd_problems.append(f"{stem}: body must be exactly {expected_body!r} (found {body_text!r})")
+if cmd_problems:
+    for prob in cmd_problems:
+        fail("command frontmatter + body lint", prob)
+else:
+    ok(f"command frontmatter + body lint ({cmd_count} commands)")
+
+skill_mcp = []
+skill_plug = []
+for sk in sorted(glob.glob(os.path.join(root, ".claude", "skills", "*", "SKILL.md"))):
+    name = os.path.basename(os.path.dirname(sk))
+    text = open(sk).read()
+    for n, line in enumerate(text.splitlines(), 1):
+        if "mcp__" in line:
+            skill_mcp.append(f"{name}/SKILL.md:{n}: {line.strip()[:70]}")
+    for m in re.finditer(r"\$CLAUDE_PLUGIN_ROOT(/[^\s`\"')]+)?", text):
+        path = (m.group(1) or "").strip("/")
+        if path:
+            alts = [mm.start() for mm in re.finditer(re.escape(path), text)
+                    if not text[max(0, mm.start() - 19):mm.start()].endswith("$CLAUDE_PLUGIN_ROOT")]
+            if not alts:
+                skill_plug.append(f"{name}/SKILL.md: {m.group(0)} has no bare relative `{path}`")
+        else:
+            s = text.rfind("\n\n", 0, m.start()) + 2
+            e = text.find("\n\n", m.start())
+            e = len(text) if e == -1 else e
+            rels = [t for t in re.findall(r"`([^`]+)`", text[s:e]) if "/" in t and not t.startswith("$")]
+            if not rels:
+                skill_plug.append(f"{name}/SKILL.md: bare $CLAUDE_PLUGIN_ROOT in a paragraph without a relative path")
+if skill_mcp:
+    for hit in skill_mcp:
+        fail("shared skills carry no mcp__ tool names", hit)
+else:
+    ok("shared skills carry no mcp__ tool names")
+if skill_plug:
+    for hit in skill_plug:
+        fail("shared skills pair $CLAUDE_PLUGIN_ROOT with a relative alternative", hit)
+else:
+    ok("shared skills pair $CLAUDE_PLUGIN_ROOT with a relative alternative")
+
+claude_path = os.path.join(root, "CLAUDE.md")
+router_path = os.path.join(root, "opencode", "ROUTER.md")
+if not (os.path.exists(claude_path) and os.path.exists(router_path)):
+    fail("CLAUDE.md <-> opencode/ROUTER.md sync", "CLAUDE.md or opencode/ROUTER.md missing")
+else:
+    claude = open(claude_path).read()
+    router = open(router_path).read()
+    allowed = [
+        (r"A Stop hook enforces this\.",
+         r"The evidence gate enforces\s+this \(no JIRA verdict without evidence, end-of-session reminder\)\."),
+        (r"The Stop hook blocks the session end without it\.",
+         r"The evidence gate blocks JIRA reporting and\s+re-engages the session without it\."),
+        (r"headless `claude -p` runs",
+         r"headless runs \(`opencode run`, `claude -p`\)"),
+    ]
+    def canon(t):
+        for a, b in allowed:
+            t = re.sub(f"(?:{a})|(?:{b})", "<allowed>", t)
+        return re.sub(r"\s+", " ", t)
+    cc, rc = canon(claude), canon(router)
+    if cc == rc:
+        ok("CLAUDE.md <-> opencode/ROUTER.md sync (only enforcement/CLI-name hunks differ)")
+    else:
+        i = next((j for j in range(min(len(cc), len(rc))) if cc[j] != rc[j]), min(len(cc), len(rc)))
+        lo, hi = max(0, i - 40), i + 40
+        fail("CLAUDE.md <-> opencode/ROUTER.md sync",
+             f"unallowed difference at offset {i} (only enforcement terminology + CLI names may differ): "
+             f"claude ...{cc[lo:hi]!r} vs opencode ...{rc[lo:hi]!r}")
+
+print()
+if fails:
+    print(f"{fails} fixture(s) failed")
+else:
+    print("all fixtures passed")
+sys.exit(fails)
+PY
+FAILS_C=$?
+
+exit $((FAILS_A + FAILS_B + FAILS_C))

@@ -19,7 +19,7 @@ orchestration to `qa-manager`.
    project file → stop and run `onboard-project` (or tell the user to). A
    half-registered product → stop and run `onboard-product`; never guess a process.
 2. **Run preflight once, before any browser or JIRA call** (the blueprint's
-   `preflight.sh <KEY>`; the PreToolUse gate enforces it). Then make the trivial
+   `preflight.sh <KEY>`; the pre-tool guard enforces it). Then make the trivial
    Atlassian read on `mcp` access. Do **not** navigate Playwright to stage for
    liveness yet. **JIRA access `browser` is the explicit exception**: intake through
    the playwright-driven JIRA UI per `docs/rules/testing/jira-browser.md` is allowed
@@ -109,9 +109,9 @@ Space-key preview. Skip silently on Linux, CI and headless runs; a failed
 `open` never blocks the report. Full rule: `docs/pipeline/06-reporting.md` →
 "Finder auto-open".
 
-## Hard rules that apply here (see `CLAUDE.md`)
+## Hard rules that apply here (see the router)
 
-Evidence is mandatory (Stop hook enforces it), no secrets anywhere in the output,
+Evidence is mandatory (the evidence gate enforces it), no secrets anywhere in the output,
 no full-repo scans — start from `memory/INDEX.md` and the project file. No stage
 browser navigation, recon or execution before readiness; no universal MR/PR
 requirement beyond the effective project's merge policy.

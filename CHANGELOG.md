@@ -8,7 +8,75 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.18.0] — 2026-10-29
+## [0.18.1] — 2026-10-29
+
+Theme: **opencode parity pass.** Every hook, rule, skill and agent now works the
+same way under opencode as under Claude Code — no dead paths, no silent drift.
+
+### Fixed — functional breaks in opencode
+- **Scaffold/version paths resolve now.** The opencode installer links
+  `projects/_template`, `projects/EXAMPLE`, `.claude-plugin` and `CHANGELOG.md`
+  (the same support links shared mode already had), so `/onboard-project`,
+  `/onboard-product`, `/re-board` and `/whats-new` no longer break on missing
+  paths.
+- **`$CLAUDE_PLUGIN_ROOT` replaced with dual-path instructions** in the five
+  affected skills. Every reference now names the plugin-mode path and the
+  relative path that works in opencode/shared/integrate via symlink.
+  `re-board` reads the blueprint version from the support-linked
+  `.claude-plugin/plugin.json` instead of requiring `claude plugin details`
+  (which does not exist under opencode).
+- **`mcp__atlassian__*` removed from the shared `report-to-jira` skill** —
+  harness-neutral wording now works under both tool-name conventions.
+- **`CLAUDE.md` file references** in rules and skills now say "the router
+  (`CLAUDE.md` in Claude Code, `.opencode/ROUTER.md` in opencode)" instead of
+  naming a file that opencode never links.
+
+### Fixed — evidence gate and security parity
+- **opencode evidence gate strengthened**: the learnings-missing message carries
+  the same routing-correction paragraph as the Claude Stop hook; the idle
+  reminder re-arms after new test activity instead of firing once per session;
+  the session-start orientation shows which declared secret keys are present
+  (names only, never values); AUTO_SECRETS resolves Keychain test-user secrets
+  on first seed just like Claude; a seeded browser-preference note says edits
+  apply after restart.
+- **Guard regex parity**: `*.env.*`, `id_rsa`/`id_ed25519` path matching and
+  FILE_PATH checks for MCP tools now match the Claude pre-tool-guard exactly.
+  `config.env.local`, `prod.env.bak` and `ssh/id_rsa_backup/key.txt` are blocked.
+- **JIRA audit parity**: `user` field uses the
+  `CLAUDE_USER_EMAIL → USER → unknown` chain; `executeWrite`/`executeDestructive`
+  log the inner tool name.
+
+### Fixed — agent and command drift
+- **"Unconfirmed candidates are not anchors."** is now present in all three
+  opencode executors (was only in the Claude bodies).
+- **`bug-reporter` under opencode gains `bash: deny`** — matches the Claude
+  `tools:` allow-list which never included Bash.
+- **`opencode/commands/demo.md` no longer pins `agent: qa-manager`** — the demo
+  skill runs in the main session and never delegates to the manager.
+- **Router table gains rows for `qa-help`, `model-setup` and `skill-review`** in
+  both `CLAUDE.md` and `opencode/ROUTER.md`.
+
+### Changed — hook terminology
+- Skills and rules now use harness-neutral language: "evidence gate" instead of
+  "Stop hook", "pre-tool guard" instead of "PreToolUse", "JIRA-write audit"
+  instead of "PostToolUse". Where the concrete implementation matters, both
+  harness mechanisms are named.
+
+### Verification
+- New parity tests in `manifest-conventions.sh`: Claude↔opencode agent body
+  parity (9 agents, tool-name-normalized), command frontmatter lint (Fast Path
+  invariant, no `agent:` on test-ticket/retest-bug), skill path lint (no bare
+  `mcp__`, `$CLAUDE_PLUGIN_ROOT` always paired with a relative alternative),
+  and ROUTER↔CLAUDE.md sync guard.
+- `install-opencode-fixtures.sh` verifies all 9 agent files are readable through
+  the symlink and all four support links resolve.
+- Full bash battery (16 suites), 145 opencode bun tests, plugin validation and
+  context budget all pass.
+
+### Upgrade
+- No migration step. Re-run `install.sh --mode opencode` (or `--mode shared`) to
+  pick up the new support links; existing installs already carrying them are
+  unchanged. Restart the harness after any install.
 
 Theme: **know which skills the evidence actually shows as used.** Skill selection
 becomes evidence-driven instead of guesswork, and slimming is a confirmed

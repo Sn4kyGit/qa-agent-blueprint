@@ -66,7 +66,7 @@ unclear, a check that was missing), not just "I should be more careful."
 Every run that produced evidence also declares what it learned, in
 `execution_summary.json` → `learnings` (`.claude/rules/core/evidence-policy.md`):
 either the new inbox entries or existing sightings/counters updated, or one
-sentence stating why there were none. The Stop hook blocks the session end when
+sentence stating why there were none. The evidence gate blocks the session end when
 that declaration is missing — the
 same firmness the evidence rule has always had, because fifteen prose reminders to
 "run retro-learn" enforced exactly nothing.

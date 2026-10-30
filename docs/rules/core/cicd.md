@@ -34,8 +34,8 @@ When this blueprint runs unattended (e.g. a nightly-regression pipeline invoking
 - **Unresolved product routing ends BLOCKED, loudly** (see
   `.claude/rules/core/product-layer.md`): ambiguous match, no match without a
   declared default, or a half-registered product. "Ask the user" degrades headless
-  into "emit a question and exit 0" — and because no test tool ever ran, the Stop
-  hook does not fire either, so the run would vanish silently. Therefore write
+  into "emit a question and exit 0" — and because no test tool ever ran, the
+  evidence gate does not fire either, so the run would vanish silently. Therefore write
   `execution_summary.json` with `verdict: BLOCKED` and post the `report-to-jira`
   BLOCKED comment **before** any tool call, exactly as for an unreachable stage.
 - **A suite run has no ticket to route from — so no component, label, or other
@@ -45,8 +45,8 @@ When this blueprint runs unattended (e.g. a nightly-regression pipeline invoking
   must be explicit *when routing is ambiguous*" is wrong here: without a ticket
   there is no routing at all, ambiguous or not. Unnamed scope is asked to
   resolve from nothing and quietly falls to the default.
-- Evidence and the Stop-hook requirement still apply unchanged.
-- **A Stop-hook block is not a crash.** When the hook blocks a headless run, the
+- Evidence and the evidence-gate requirement still apply unchanged.
+- **An evidence-gate block is not a crash.** When the gate blocks a headless run, the
   run exits non-zero with a machine-readable first line on stderr:
   `QA_EVIDENCE_MISSING:` (test tools ran, no summary written) or
   `QA_LEARNINGS_MISSING:` (summary without a `learnings` declaration). Match

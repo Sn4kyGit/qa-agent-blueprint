@@ -19,7 +19,7 @@ every routing the agent could not resolve alone feeds back into the registry:
 The same applies to a near-miss (`checkout-v2` vs. `checkout`) and to any routing
 that was resolved by a secondary signal or a default: capture it, so the table gets a real component/label
 entry instead of relying on a weak signal forever. Whether anything was captured is
-declared in `execution_summary.json` → `learnings`, and the Stop hook checks that
+declared in `execution_summary.json` → `learnings`, and the evidence gate checks that
 the declaration exists (`.claude/rules/core/evidence-policy.md`).
 
 Never invent a routing row from your own inference — only from what a human stated
@@ -41,8 +41,9 @@ no PRODUCT.md loaded.
 ## Naming
 
 - **Product key**: `[A-Z][A-Z0-9]{1,15}`, unique in the project, equal to the
-  directory name. Never `SECRET`, `CREDENTIALS` or `ENV` — `pre-tool-guard.sh`
-  blocks paths matching `*secrets*`/`*credentials*`, which would make the product
+  directory name. Never `SECRET`, `CREDENTIALS` or `ENV` — the pre-tool guard
+  (`pre-tool-guard.sh` / opencode plugin) blocks paths matching
+  `*secrets*`/`*credentials*`, which would make the product
   directory unwritable with a baffling error.
 - **Test-user secret keys**: `<KEY>_<PRODUCT>_<ROLE>_PASSWORD` for product-scoped
   users, `<KEY>_<ROLE>_PASSWORD` for project-wide ones. Existing project-wide keys

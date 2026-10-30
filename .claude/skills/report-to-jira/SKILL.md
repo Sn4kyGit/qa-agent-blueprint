@@ -14,7 +14,7 @@ finished comment and the transition you would have applied to
 `evidence/<KEY>/<TICKET>/<ts>/proposed-report.md`, set `"reported_to_jira": false`
 and `"shadow": true` in the summary, and tell the user it is waiting for review.
 No comment, no transition, no attachment — see `.claude/rules/core/security.md` →
-"Shadow mode". While shadow is on, the PreToolUse guard **mechanically blocks**
+"Shadow mode". While shadow is on, the pre-tool guard **mechanically blocks**
 the atlassian write tools (including the Cloud v2 meta-tools `executeWrite` /
 `executeDestructive`) — a blocked call is the guard working as designed, not a
 JIRA error and never a reason to retry or route around it.
@@ -32,7 +32,7 @@ MCP-shaped below. On `browser` there is **no atlassian MCP server connected
 at all** — every instruction further down that mentions ADF, Markdown
 conversion, or an MCP attachment call does not apply; the entire post path
 (comment, attachments, transition) runs through the playwright-driven UI per
-`docs/rules/testing/jira-browser.md` → "Writing". A failed `mcp__atlassian__*`
+`docs/rules/testing/jira-browser.md` → "Writing". A failed Atlassian MCP call
 call in this mode is not a JIRA outage and not a reason to BLOCK — it is the
 wrong channel for this project.
 
@@ -101,7 +101,7 @@ wrong channel for this project.
    QA agent that does that twice is one nobody reads again. The transition *names*
    remain sealed to `PROJECT.md` — this decides **whether** to transition, never
    **which** name to use.
-5. This write goes through the `PostToolUse` JIRA-write audit hook automatically
+5. This write goes through the JIRA-write audit automatically
      — no action needed from you beyond making the actual MCP call. Afterwards
      update the run's summary (`reported_to_jira`, `shadow`) and make sure its
      `skills_used` lists the skills the run actually used, `report-to-jira`

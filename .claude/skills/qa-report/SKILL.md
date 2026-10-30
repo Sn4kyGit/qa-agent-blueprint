@@ -38,8 +38,8 @@ that is already there.
      product, and the fix is a grooming session with the test owners, not a metric.
      Report the count and the age of the oldest, never a percentage.
    - **Undeclared learnings** — a run that produced evidence without declaring its
-     `learnings` means the Stop hook did not fire. That is an enforcement gap, not a
-     reporting detail: check that the hook is wired in this repo before trusting any
+     `learnings` means the evidence gate did not fire. That is an enforcement gap, not a
+     reporting detail: check that the gate is wired in this repo before trusting any
      other number in the report.
 
 4. Deliver it where the audience is. A QA lead does not read ticket comments:

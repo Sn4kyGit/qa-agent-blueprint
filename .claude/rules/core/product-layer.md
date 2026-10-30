@@ -57,7 +57,7 @@ than a component match, and the report should say so.
   the default tests the wrong product with the wrong users and reports a plausible
   green.
 - **No prose inference.** "The summary says checkout, so it's the CHECKOUT product"
-  is exactly the guessing `CLAUDE.md` rule 4 forbids. Free text may become a
+  is exactly what the router's rule 4 forbids. Free text may become a
   *proposal to a human*, never an autonomous resolution, and never headless.
 - **Labels match exactly.** `checkout-v2` ≠ `checkout`. A near-miss is a no-match
   plus a `retro-learn` capture so the routing table gets fixed.

@@ -39,10 +39,9 @@ function isSecretPath(p: string): boolean {
   // `.env.example` is the committed placeholder template — exempt, listed
   // first so it wins over the .env rules below (same ordering as the bash
   // case statement).
-  if (/\.env\.example$/.test(p)) return false
-  const base = p.split("/").pop() ?? p
-  if (base === ".env" || base.startsWith(".env.") || base.endsWith(".env")) return true
-  if (base.endsWith(".pem") || base.includes("id_rsa") || base.includes("id_ed25519")) return true
+  if (p.endsWith(".env.example")) return false
+  if (p.endsWith(".env") || p.includes(".env.")) return true
+  if (p.endsWith(".pem") || p.includes("id_rsa") || p.includes("id_ed25519")) return true
   // Lowercase: `*secret*`-style patterns must catch SECRET/ and Credentials/
   // (bash case is case-sensitive — that bug shipped once already).
   const lc = p.toLowerCase()
@@ -177,18 +176,29 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     return
   }
 
-  const filePath = typeof args.filePath === "string" ? args.filePath : ""
-  if (filePath && WRITE_TOOLS.has(tool) && isSecretPath(filePath)) {
+  const argPath = (o: Record<string, unknown> | undefined): string => {
+    for (const k of ["filePath", "file_path"]) {
+      const v = o?.[k]
+      if (typeof v === "string" && v) return v
+    }
+    return ""
+  }
+  const nested = typeof args.arguments === "object" && args.arguments !== null
+    ? args.arguments as Record<string, unknown>
+    : undefined
+  const filePath = argPath(args) || argPath(nested)
+  const pathChecked = WRITE_TOOLS.has(tool) || /^[a-zA-Z0-9-]+_/.test(tool)
+  if (filePath && pathChecked && isSecretPath(filePath)) {
     block(`refusing to write/edit a secrets file (${filePath}). Secrets are vault/env references only — see .claude/rules/core/security.md.`)
   }
   // The guard's own toggle file is a human task — an agent that can edit it
   // can grant itself secrets_read=allow, and the toggle would be theater.
-  if (filePath && WRITE_TOOLS.has(tool) && (filePath === ".qa-guard.json" || filePath.endsWith("/.qa-guard.json"))) {
+  if (filePath && pathChecked && (filePath === ".qa-guard.json" || filePath.endsWith("/.qa-guard.json"))) {
     block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
   }
 
   if (process.env.QA_ALLOW_GLOBAL_MCP !== "1") {
-    if (filePath && WRITE_TOOLS.has(tool) && globalMcpConfigPaths().has(filePath)) {
+    if (filePath && pathChecked && globalMcpConfigPaths().has(filePath)) {
       block(GLOBAL_MCP_WRITE_MSG.replace("$FILE_PATH", filePath))
     }
     if (tool === "bash" && GLOBAL_CFG_WRITER.test(typeof args.command === "string" ? args.command : "")) {
@@ -255,8 +265,20 @@ function issueKeyOf(args: Record<string, unknown> | undefined): string {
 
 async function auditJiraWrite(directory: string, tool: string, args: Record<string, unknown> | undefined, ok: boolean) {
   const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z") // same shape as `date -u +%Y-%m-%dT%H:%M:%SZ`
-  const user = process.env.USER ?? "unknown" // parity with the bash hook ($USER)
-  const line = `${ts} | tool=${tool || "unknown"} | key=${issueKeyOf(args)} | result=${ok ? "ok" : "error"} | user=${user}\n`
+  const user = process.env.CLAUDE_USER_EMAIL || process.env.USER || "unknown" // parity with the bash hook ($USER)
+  let label = tool || "unknown"
+  if (/executeWrite|executeDestructive/.test(label)) {
+    let inner = ""
+    for (const k of ["tool", "toolName", "tool_name", "name"]) {
+      const v = args?.[k]
+      if (typeof v === "string" && v) {
+        inner = v
+        break
+      }
+    }
+    if (inner) label = `${label}(${inner})`
+  }
+  const line = `${ts} | tool=${label} | key=${issueKeyOf(args)} | result=${ok ? "ok" : "error"} | user=${user}\n`
   const logDir = join(directory, "evidence", ".audit")
   await mkdir(logDir, { recursive: true })
   await appendFile(join(logDir, "jira-writes.log"), line)
@@ -488,7 +510,13 @@ Add a "learnings" object to each one (.claude/rules/core/evidence-policy.md):
 
 or, for a genuinely uneventful run, the other way round:
 
-  "learnings": { "captured": [], "none_because": "clean run, no surprises" }`
+  "learnings": { "captured": [], "none_because": "clean run, no surprises" }
+
+Anything a human had to tell you during this run — which product a ticket belongs
+to, a selector that needed a workaround, a corrected report format — belongs in the
+inbox now, so nobody has to explain it a second time. A product-routing correction
+additionally follows .claude/rules/core/product-layer.md → "Routing learns from
+being corrected".`
 
 // --------------------------------------------------------------------------
 // 4. Bootstrap (port of bootstrap_dirs + seed_browser_config)
@@ -555,7 +583,19 @@ async function bootstrap(directory: string) {
 // Harness-scoped seeds (0.9.1 split): the MCP server is launched from the
 // SESSION's cwd, so both hard-fail-on-ENOENT files belong there — not in the
 // QA home when the two differ.
-async function seedHarnessFiles(directory: string) {
+function resolveSecretsScript(home: string, sessionDir: string): string | undefined {
+  for (const dir of [home, sessionDir]) {
+    const p = join(dir, ".claude", "hooks", "resolve-secrets.sh")
+    if (existsSync(p)) return p
+  }
+  const root = join(BLUEPRINT_ROOT, ".claude", "hooks", "resolve-secrets.sh")
+  return existsSync(root) ? root : undefined
+}
+
+const seedNotes = new Map<string, { browserConfig: boolean; autoSecrets: string }>()
+
+async function seedHarnessFiles(directory: string, home: string = directory) {
+  const note = { browserConfig: false, autoSecrets: "" }
 
   // --secrets is a hard fail on ENOENT → seed the comment-only placeholder.
   const secretsFile = join(directory, ".env.playwright-secrets")
@@ -568,6 +608,12 @@ async function seedHarnessFiles(directory: string) {
     if (isRepo && !isIgnored) {
       await appendFile(join(directory, ".gitignore"), "\n# QA Agent Blueprint — Playwright MCP secrets, never commit\n.env.playwright-secrets\n").catch(() => {})
     }
+    const resolver = resolveSecretsScript(home, directory)
+    if (resolver) {
+      const r = spawnSync("bash", [resolver, directory], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: process.env })
+      const out = (r.status === 0 ? r.stdout ?? "" : "").trim()
+      if (out) note.autoSecrets = out
+    }
   }
 
   // --config is a hard fail on ENOENT too. The file is the consumer's own
@@ -576,7 +622,9 @@ async function seedHarnessFiles(directory: string) {
   const browserCfg = join(directory, ".playwright-mcp.config.json")
   if (!existsSync(browserCfg)) {
     await writeFile(browserCfg, BROWSER_CONFIG).catch(() => {})
+    note.browserConfig = true
   }
+  seedNotes.set(directory, note)
 }
 
 // --------------------------------------------------------------------------
@@ -832,6 +880,17 @@ export async function orientation(home: string, sessionDir: string = home): Prom
       lines.push(`- ${ungroomed} ungroomed learnings in memory/learnings/_inbox.md — run /retro-learn to groom and promote them (knowledge only counts once it reaches a rule, a PROJECT.md or a PRODUCT.md).`)
     }
   }
+  const keysScript = resolveSecretsScript(home, sessionDir)
+  if (keysScript) {
+    const r = spawnSync("bash", [keysScript, sessionDir, "--status"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: process.env })
+    const line = (r.status === 0 ? r.stdout ?? "" : "").trim()
+    if (line) lines.push(`- Secrets: ${line}`)
+  }
+  const seed = seedNotes.get(sessionDir)
+  if (seed?.autoSecrets) lines.push(`- ${seed.autoSecrets}`)
+  if (seed?.browserConfig) {
+    lines.push("- Created .playwright-mcp.config.json with defaults (headless, isolated) — this is YOUR browser preference dial: headful = launchOptions.headless false. The server reads it at launch, so edits apply after a restart.")
+  }
   return lines.join("\n")
 }
 
@@ -888,7 +947,7 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   // (walk-up), harness-scoped files stay with the session's directory.
   const home = await resolveQaHome(directory)
   await bootstrap(home)
-  await seedHarnessFiles(directory)
+  await seedHarnessFiles(directory, home)
 
   // Orientation is directory-level, so compute it once and inject it into each
   // new session as context (noReply — documented plugin pattern; it must not
@@ -949,6 +1008,7 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
         const keys = testActivity.get(input.sessionID) ?? new Set<string>()
         for (const k of ticketKeysOf(input?.args)) keys.add(k)
         testActivity.set(input.sessionID, keys)
+        idleReminded.delete(input.sessionID)
       }
       // Audit: never blocks, never throws (the bash hook exits 0 always).
       if (tool && JIRA_WRITE.test(tool)) {
