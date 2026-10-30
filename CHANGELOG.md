@@ -8,7 +8,46 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.18.4] — 2026-10-30
+## [0.18.5] — 2026-10-30
+
+Theme: **security hardening.** Six verified guard bypasses from the re-audit
+closed: secret-read exfiltration, guard self-disarm, shadow-mode unlock via
+Bash/fragments, JIRA REST writes outside MCP, secret-file destruction, and
+wrong-project shadow-gate resolution. Both harnesses (bash hook + TS plugin)
+updated in lockstep.
+
+### Fixed — security (Critical/High)
+- **C1 Secret-read guard rebuilt**: reader list extended (cut/tac/xxd/nl/
+  paste/od/strings/sort/diff/tar/zip/unzip/dd/hexdump/column/rev/tr/fmt/fold/
+  comm/join/uniq/wc/shred/xargs), wrapper prefixes added (sudo/env/nice/time/
+  exec/command/eval/doas), subshell execution (`bash -c 'cat .env'`) blocked,
+  exfiltration via network clients (`curl --data-binary @.env`, `wget
+  --post-file=.env`, `scp`, `rsync`) blocked unconditionally, `<` redirect
+  reads from secret files blocked. `.env` patterns now case-insensitive
+  (macOS: `.ENV` = `.env`).
+- **H1 Harness config protection**: agent writes to `settings.json`,
+  `settings.local.json`, `hooks/hooks.json`, `.claude-plugin/*` are now
+  blocked — these can disable guards, unregister hooks, or change plugin
+  manifests. Project-owned `.mcp.json`/`opencode.json` remain writable.
+- **H2 Shadow-mode unlock hardened**: MultiEdit `edits[]` now inspected, tab
+  variant (`Shadow mode:\toff`) caught, fragment edits (reconstructing the
+  phrase across two edits) caught via conservative "shadow AND off" heuristic,
+  Bash writers (`sed -i`, `echo >>` on PROJECT.md) blocked.
+- **H3 JIRA REST writes blocked**: `curl -T` (implicit PUT upload), `http`/
+  `httpie` (HTTPie method syntax), and interpreter-based writes (`python
+  requests.post`, `node fetch`) to `/rest/api/` or `/rest/agile/` are blocked.
+- **H4 Secret-file destruction blocked**: `tee`, `truncate`, `dd`, `install`,
+  `shred`, `find -delete` on secret files are blocked. `rm -Rf` (macOS-idiom
+  capital R) and `rm -r -f` (split flags) now caught.
+- **H5 Shadow-gate project resolution fixed**: issue key extracted from
+  explicit identity fields (`issueKey`/`issue_key`/`key`/`id`) first;
+  `jira_create_issue` resolves from `project_key`. Prevents shadow bypass in
+  multi-project QA homes when a comment mentions another ticket first.
+
+### Changed
+- 30 new guard fixtures (C1/H1/H2/H3/H4/H5 vectors) in `guard-fixtures.sh`.
+- Known limitation documented: `sudo -u root cat .env` (wrapper + non-flag
+  argument + reader) is not caught — common bypasses are covered.
 
 Theme: **docs & token hygiene.** Number drift across README/overview/spickzettel
 corrected, Non-Goal contradictions resolved, always-loaded budget trimmed to

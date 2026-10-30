@@ -38,14 +38,13 @@ const GUARD_PREFIX = "BLOCKED by pre-tool-guard:"
 function isSecretPath(p: string): boolean {
   // `.env.example` is the committed placeholder template — exempt, listed
   // first so it wins over the .env rules below (same ordering as the bash
-  // case statement).
-  if (p.endsWith(".env.example")) return false
-  if (p.endsWith(".env") || p.includes(".env.")) return true
-  if (p.endsWith(".pem") || p.includes("id_rsa") || p.includes("id_ed25519")) return true
-  if (p.endsWith(".auth") || /storage[._-]state/i.test(p)) return true
-  // Lowercase: `*secret*`-style patterns must catch SECRET/ and Credentials/
-  // (bash case is case-sensitive — that bug shipped once already).
+  // case statement). All matching is case-insensitive (0.18.5 M3: macOS
+  // default filesystem is case-insensitive — `.ENV` IS `.env`).
   const lc = p.toLowerCase()
+  if (lc.endsWith(".env.example")) return false
+  if (lc.endsWith(".env") || lc.includes(".env.")) return true
+  if (lc.endsWith(".pem") || lc.includes("id_rsa") || lc.includes("id_ed25519")) return true
+  if (lc.endsWith(".auth") || /storage[._-]state/i.test(p)) return true
   return lc.includes("secret") || lc.includes("credential")
 }
 
@@ -62,24 +61,23 @@ function haystackTouchesSecret(s: string): boolean {
     || /secret|credential/i.test(stripped)
 }
 
-const RM_RF = /rm\s+(-[a-zA-Z]*f[a-zA-Z]*r|-[a-zA-Z]*r[a-zA-Z]*f)\s/
+const RM_RF_A = /rm\s+((-[^ \t]+\s+)*(-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)([^ \t]*\s+|$))/
+const RM_RF_B = /rm\s+((-[^ \t]+\s+)*(-[a-zA-Z]*f[a-zA-Z]*|--force)([^ \t]*\s+|$))/
 const GIT_FORCE_PUSH = /git\s+push\s+.*(--force|-f\b)/
-// The reader must sit at a COMMAND position and the secret file must belong to
-// THAT command — otherwise a pipe followed by prose naming the file blocks
-// ordinary work, and a guard that blocks ordinary work gets switched off.
-// grep/sed/awk/jq are readers too (0.6.1 field report: `grep -o '^[A-Z_]*='`
-// on the secrets file sailed through the old list).
-// 0.11.0 (tdd §8/F1): cp|mv split OUT of the reader class — movers relocate
-// the file and stay blocked in BOTH toggle states; the READER_CORE class
-// follows the secrets_read toggle in .qa-guard.json (default: block).
-// The tail pattern covers every unambiguous secret-file class: .env*,
-// *.pem, id_rsa, id_ed25519, *.auth and storage-state. The broad
-// *secret*/*credential* substring patterns from isSecretPath stay WRITE-only.
-const SECRET_TAIL = "(\\.env([^a-zA-Z]|$)|\\.pem\\b|id_rsa|id_ed25519|\\.auth\\b|storage[._-]state)"
-const ENV_TAIL = "(\\.env([^a-zA-Z]|$))"
-const HARD_SECRET_TAIL = "(\\.pem\\b|id_rsa|id_ed25519|\\.auth\\b|storage[._-]state)"
-const ENV_READER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(cat|less|more|head|tail|grep|sed|awk|jq|source|base64)\\s+[^;&|]*${ENV_TAIL}`)
-const HARD_SECRET_READER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(cat|less|more|head|tail|grep|sed|awk|jq|source|base64)\\s+[^;&|]*${HARD_SECRET_TAIL}`)
+// 0.18.5 C1: reader list extended, wrapper prefixes added, xargs treated as
+// a reader. The wrapper group allows `sudo cat .env`, `env cat .env`, etc.
+const READER_CORE = "(cat|less|more|head|tail|grep|sed|awk|jq|source|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs)"
+const WRAPPER_PREFIX = "((sudo|env|nice|time|exec|command|eval|doas)\\s+(-[a-zA-Z]+\\s+)*)*"
+// 0.18.5 M3: case-insensitive .env patterns (macOS case-insensitive filesystem)
+const SECRET_TAIL = "(\\.[eE][nN][vV]([^a-zA-Z]|$)|\\.[pP][eE][mM]\\b|id_rsa|id_ed25519|\\.[aA][uU][tT][hH]\\b|[sS][tT][oO][rR][aA][gG][eE][._-][sS][tT][aA][tT][eE])"
+const ENV_TAIL = "(\\.[eE][nN][vV]([^a-zA-Z]|$))"
+const HARD_SECRET_TAIL = "(\\.[pP][eE][mM]\\b|id_rsa|id_ed25519|\\.[aA][uU][tT][hH]\\b|[sS][tT][oO][rR][aA][gG][eE][._-][sS][tT][aA][tT][eE])"
+const ENV_READER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*${WRAPPER_PREFIX}${READER_CORE}\\s+[^;&|]*${ENV_TAIL}`)
+const HARD_SECRET_READER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*${WRAPPER_PREFIX}${READER_CORE}\\s+[^;&|]*${HARD_SECRET_TAIL}`)
+// 0.18.5 C1: subshell execution with secret path
+const SUBSHELL_SECRET = (cmd: string) =>
+  /(^|[;&|(]|&&|\|\|)\s*(bash|sh|zsh|dash)\s+-c\s/i.test(cmd) &&
+  new RegExp(SECRET_TAIL).test(cmd)
 const ENV_MOVER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(cp|mv)\\s+[^;&|]*${SECRET_TAIL}`)
 // sed -i / awk -i edit in place — a WRITE, not a read. The flag must sit
 // directly after the command: -i, -i.bak, --in-place, -i inplace.
@@ -87,6 +85,15 @@ const ENV_INPLACE = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(sed|awk)\\s+(-[a-zA-Z]*
 // rm hardening (tdd §9/F2): plain `rm <secret>` used to sail through — only
 // rm -rf was blocked. Deleting a secret file is a human task.
 const ENV_RM = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*rm\\s+(-[a-zA-Z]+\\s+)*[^;&|]*${SECRET_TAIL}`)
+// 0.18.5 H4: additional mutating commands that destroy/overwrite secret files
+const ENV_DESTROYER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(tee|truncate|dd|install|shred)\\s[^;&|]*${SECRET_TAIL}`)
+const ENV_FIND_DELETE = new RegExp(`find\\s[^;&|]*-delete[^;&|]*${SECRET_TAIL}|find\\s[^;&|]*${SECRET_TAIL}[^;&|]*-delete`)
+// 0.18.5 C1: < redirect FROM a secret file is a read
+const ENV_REDIRECT_READ = new RegExp(`<\\s*${SECRET_TAIL}`)
+// 0.18.5 C1: exfiltration — network clients with secret path
+const EXFIL_NET = (cmd: string) =>
+  /(^|[;&|(]|&&|\|\|)\s*(curl|wget|nc|netcat|ftp|scp|sftp|rsync|ssh)\s/i.test(cmd) &&
+  new RegExp(SECRET_TAIL).test(cmd)
 // The guard's own toggle file is a human task: an agent that can write
 // .qa-guard.json can grant itself secrets_read=allow (self-escalation).
 const GUARD_CFG_WRITER = /(sed\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee\s|>>?|cp\s|mv\s|rm\s|truncate|dd\s)[^;&|]*\.qa-guard\.json/
@@ -100,12 +107,22 @@ const GUARD_CFG_INTERPRETER = /(python3?|perl|ruby|node|php)\s[^;&|]*(open|write
 // real guarantee is --secrets masking at the browser layer.
 const ENV_INTERPRETER = new RegExp(`(python3?|perl|ruby|node|php)\\s[^;&|]*(open|read|load|require|include|slurp)[^;&|]*${SECRET_TAIL}`)
 const ENV_REDIRECT = new RegExp(`>>?\\s*${SECRET_TAIL}`)
-// Bash curl/wget to JIRA REST endpoints with a write method bypasses the
-// MCP-level shadow gate and the JIRA write audit.
+// 0.18.5 H2: shadow-mode unlock via Bash writers on PROJECT.md
+const SHADOW_BASH_WRITER = (cmd: string) =>
+  /(sed\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee\s|>>?|cp\s|mv\s|truncate|dd\s)[^;&|]*PROJECT\.md/i.test(cmd) &&
+  /shadow.*off|off.*shadow/i.test(cmd)
+// 0.18.5 H3: extended JIRA REST write detection (includes HTTPie method syntax)
 const JIRA_BASH_WRITE = (cmd: string) =>
-  /(curl|wget)\s/.test(cmd) &&
-  /(-X\s*(POST|PUT|DELETE|PATCH)|--request\s*(POST|PUT|DELETE|PATCH)|-d\s|--data[= ]|--data-raw[= ]|--data-urlencode[= ]|--json[= ]|-F\s|--form[= ]|--post-data[= ]|--post-file[= ]|--method[=:]\s*(POST|PUT|DELETE|PATCH))/i.test(cmd) &&
+  /(curl|wget|http|httpie)\s/.test(cmd) &&
+  /(-X\s*(POST|PUT|DELETE|PATCH)|--request\s*(POST|PUT|DELETE|PATCH)|-d\s|--data[= ]|--data-raw[= ]|--data-urlencode[= ]|--json[= ]|-F\s|--form[= ]|--post-data[= ]|--post-file[= ]|--upload-file[= ]|-T\s|--method[=:]\s*(POST|PUT|DELETE|PATCH)|(curl|wget|http|httpie)\s+(POST|PUT|DELETE|PATCH)\s)/i.test(cmd) &&
   /\/rest\/(api|agile)\//.test(cmd)
+const JIRA_INTERPRETER_WRITE = (cmd: string) =>
+  /(python3?|perl|ruby|node|php)\s/.test(cmd) &&
+  /(requests\.(post|put|patch|delete)|urlopen|\.post\(|\.put\(|\.patch\(|\.delete\(|fetch\()/i.test(cmd) &&
+  /\/rest\/(api|agile)\//.test(cmd)
+// 0.18.5 H1: project-level harness config files (agent writes = self-escalation)
+// .mcp.json and opencode.json are NOT here: the project's own MCP config is writable by design
+const HARNESS_CFG_WRITER = /(?:sed\s+-i|\btee\b|>>?|\bcp\b|\bmv\b|\brm\b|truncate|dd\s)[^;&|]*(?:settings\.json|settings\.local\.json|hooks\/hooks\.json|\.claude-plugin\/)/
 
 // Tools whose filePath argument is a WRITE (reads are governed by opencode
 // permission denies — D8 — not by this guard, same split as Claude where the
@@ -188,7 +205,7 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
   if (!tool) {
     // fail closed: scan the raw args as both command and path
     const raw = JSON.stringify(args ?? {})
-    if (RM_RF.test(raw)) block("refusing rm -rf / rm -fr — destructive command.")
+    if (RM_RF_A.test(raw) && RM_RF_B.test(raw)) block("refusing rm -rf / rm -Rf / rm --recursive --force — destructive command.")
     if (GIT_FORCE_PUSH.test(raw)) block("refusing git push --force — see the git safety protocol before overriding this manually.")
     if (haystackTouchesSecret(raw)) block("refusing an unrecognized call touching a secrets path — failing closed.")
     return
@@ -215,9 +232,27 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
   }
   // Shadow-mode unlock via PROJECT.md is the same self-escalation class.
+  // 0.18.5 H2: scans ALL content fields (content, new_string, edits[].new_string
+  // + old_string) and uses a conservative "shadow AND off" heuristic for
+  // fragment edits that reconstruct the phrase across edits.
   if (filePath && pathChecked && (filePath.endsWith("/PROJECT.md") || filePath === "PROJECT.md")) {
-    const content = String((args as Record<string, unknown>)?.content ?? (args as Record<string, unknown>)?.new_string ?? "")
-    if (/shadow mode:\s*off/i.test(content)) {
+    const parts: string[] = []
+    const ti = args as Record<string, unknown>
+    for (const k of ["content", "new_string", "old_string"]) {
+      const v = ti?.[k]
+      if (typeof v === "string" && v) parts.push(v)
+    }
+    const edits = Array.isArray(ti?.edits) ? ti.edits : []
+    for (const e of edits) {
+      if (e && typeof e === "object") {
+        for (const k of ["new_string", "old_string"]) {
+          const v = (e as Record<string, unknown>)[k]
+          if (typeof v === "string" && v) parts.push(v)
+        }
+      }
+    }
+    const blob = parts.join(" ")
+    if (/shadow\s+mode\s*:\s*off/i.test(blob) || (/shadow/i.test(blob) && /\boff\b/i.test(blob))) {
       block("refusing to write 'Shadow mode: off' into PROJECT.md — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself.")
     }
   }
@@ -244,15 +279,28 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (tool === "bash" && GLOBAL_CFG_WRITER.test(typeof args.command === "string" ? args.command : "")) {
       block(GLOBAL_MCP_WRITE_MSG.replace("$FILE_PATH", "the command line"))
     }
+    // 0.18.5 H1: project-level harness config files — agent writes are self-escalation
+    // (.mcp.json is NOT here: the project's own MCP config is writable by design)
+    const HARNESS_CFG_MSG = "refusing to modify harness config ($FILE_PATH) — settings, hooks, and plugin manifests are human-only. An agent that can edit these can disable its own guard or unregister hooks. Modify these files yourself or use the installer."
+    if (filePath && pathChecked && /settings\.json$|settings\.local\.json$|hooks\/hooks\.json$|\.claude-plugin\//.test(filePath)) {
+      block(HARNESS_CFG_MSG.replace("$FILE_PATH", filePath))
+    }
+    if (tool === "bash" && HARNESS_CFG_WRITER.test(typeof args.command === "string" ? args.command : "")) {
+      block(HARNESS_CFG_MSG.replace("$FILE_PATH", "the command line"))
+    }
   }
 
   if (tool === "bash") {
     const command = typeof args.command === "string" ? args.command : ""
-    if (RM_RF.test(command)) block("refusing rm -rf / rm -fr — destructive command.")
+    if (RM_RF_A.test(command) && RM_RF_B.test(command)) block("refusing rm -rf / rm -Rf / rm --recursive --force — destructive command.")
     if (GIT_FORCE_PUSH.test(command)) block("refusing git push --force — see the git safety protocol before overriding this manually.")
     if (GUARD_CFG_WRITER.test(command)) block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
     if (GUARD_CFG_INTERPRETER.test(command)) block("refusing to modify .qa-guard.json via an interpreter — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
-    if (JIRA_BASH_WRITE(command)) block("refusing a Bash JIRA REST write (curl/wget with a write method to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only GET requests stay allowed.")
+    // 0.18.5 H2: shadow-mode unlock via Bash writers on PROJECT.md
+    if (SHADOW_BASH_WRITER(command)) block("refusing to modify shadow mode in PROJECT.md via Bash — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself.")
+    if (JIRA_BASH_WRITE(command)) block("refusing a Bash JIRA REST write (curl/wget/http with a write method to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only GET requests stay allowed.")
+    // 0.18.5 H3: interpreter-based JIRA REST writes
+    if (JIRA_INTERPRETER_WRITE(command)) block("refusing an interpreter-based JIRA REST write (python/node/perl/ruby HTTP write to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only requests stay allowed.")
     // Strip only the literal ".env.example" before the .env checks: the
     // template must stay writable; .env/.env.local/.env.playwright-secrets
     // still match in full.
@@ -260,10 +308,19 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (ENV_RM.test(noExample)) block("refusing to delete a secret file — removing a secret file is a human task (blocked regardless of secrets_read).")
     if (ENV_MOVER.test(noExample)) block("refusing to copy/move a secret file — secrets never leave their protected file (blocked regardless of secrets_read).")
     if (ENV_INPLACE.test(noExample)) block("refusing an in-place edit of a secret file — sed -i / awk -i is a write, not a read (blocked regardless of secrets_read).")
+    // 0.18.5 H4: additional mutating commands
+    if (ENV_DESTROYER.test(noExample)) block("refusing to write/destroy a secret file — secret files are never overwritten or truncated (blocked regardless of secrets_read).")
+    if (ENV_FIND_DELETE.test(noExample)) block("refusing to delete a secret file via find -delete — removing a secret file is a human task (blocked regardless of secrets_read).")
     // READER_CORE follows the secrets_read toggle (tdd §7); default: block.
     if (secretsRead !== "allow" && ENV_READER.test(noExample)) block("refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it).")
     // Hard secret classes are NEVER readable, regardless of the toggle.
     if (HARD_SECRET_READER.test(noExample)) block("refusing a command that reads a credential file — private keys, auth tokens and storage state never enter chat or context (blocked regardless of secrets_read).")
+    // 0.18.5 C1: subshell execution with secret path
+    if (SUBSHELL_SECRET(noExample)) block("refusing a subshell that touches a secret file — bash -c / sh -c with a secret path in the command string is a read attempt (blocked regardless of secrets_read).")
+    // 0.18.5 C1: < redirect FROM a secret file is a read
+    if (ENV_REDIRECT_READ.test(noExample)) block("refusing a command that redirects a secret file as stdin — that is a read (blocked regardless of secrets_read).")
+    // 0.18.5 C1: exfiltration — network clients with secret path
+    if (EXFIL_NET(noExample)) block("refusing a network command that references a secret file — exfiltration of credentials is never allowed (blocked regardless of secrets_read).")
     // Interpreters do NOT follow the toggle (tdd §10/§11): a regex cannot
     // tell open('.env') from open('.env','w') — allowing this class would
     // open a secret-WRITE hole, so it fails closed in both states.
@@ -301,6 +358,10 @@ function issueKeyOf(args: Record<string, unknown> | undefined): string {
     const v = args?.[k]
     if (typeof v === "string" && v) return v
   }
+  // 0.18.5 H5: for jira_create_issue the key does not exist yet — resolve from
+  // project_key. Fall back to regex only for execute* meta-tools (nested args).
+  const pk = args?.project_key ?? args?.projectKey
+  if (typeof pk === "string" && pk) return `${pk}-0`
   // execute-wrapped calls nest the key in the inner tool's arguments — first
   // ticket-shaped string wins (same regex as the bash hooks).
   const m = /[A-Z][A-Z0-9]+-[0-9]+/.exec(JSON.stringify(args ?? {}))
