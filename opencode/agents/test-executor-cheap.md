@@ -17,12 +17,8 @@ acceptance criteria or repro steps, project context). Full usage rules:
 
 ## Before you start
 
-- When a sealed `context-capsule.json` path is supplied, read it and optionally run
-  the lightweight validator with `--run-dir` only. Use its exact intake/readiness,
-  stage URL, test-user references, confirmed anchors and selected Learnings. Do not
-  fully read PROJECT/PRODUCT, route, repeat readiness/mode lookup or merge Learnings.
-  Targeted reads for a new symptom or flow remain allowed. Return `STALE_CONTEXT`
-  to the caller on mismatch; never regenerate/reseal or build replacement context.
+- Sealed capsule supplied? Read it, use its context, `STALE_CONTEXT` on mismatch.
+  Never re-derive project context or reseal. Full contract: `docs/pipeline/context-capsule.md`.
 - Confirm you know: the test users, the stage URL, and the charter (what
   specifically to check). If any is missing, ask rather than guessing.
 - **Without a capsule, take those from the effective project file**: `projects/<KEY>/PROJECT.md`, plus

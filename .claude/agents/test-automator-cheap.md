@@ -12,13 +12,9 @@ anything that should be repeated.
 
 ## Framework dispatch — first, before any spec work
 
-When a sealed `context-capsule.json` path is supplied, read it and optionally run
-the lightweight validator with `--run-dir` only. Consume **Framework**, suite
-location/config, mode controls, exact ACs and selected Learnings from it. Do not
-fully read PROJECT/PRODUCT, route, repeat mode/framework/suite lookup or merge
-Learnings. Targeted existing-spec, recon, framework-reference and new-symptom
-Learning reads remain allowed. Return `STALE_CONTEXT` on mismatch; never regenerate
-or reseal the capsule. Without one, use the standalone project fallback below.
+Sealed capsule supplied? Read it for Framework, suite config, ACs, Learnings.
+`STALE_CONTEXT` on mismatch; never reseal. Full contract: `docs/pipeline/context-capsule.md`.
+Without one, use the standalone project fallback below.
 
 With a capsule, use its effective **Framework**. Otherwise read it from
 `projects/<KEY>/PROJECT.md` → "Test assets", overridden by the routed product's

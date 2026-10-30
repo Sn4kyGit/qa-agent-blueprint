@@ -121,6 +121,26 @@ while IFS= read -r f; do
 done < <(find docs/rules -type f -name '*.md' 2>/dev/null)
 [ "$ondemand" -gt 0 ] && echo "on demand (docs/rules/): ~$((ondemand / 4)) tokens — not loaded until its topic comes up"
 
+# H8 (0.18.5): skill + agent descriptions ride in the system prompt too —
+# count them as idle cost. The budget test previously missed ~3.7k tokens
+# of always-loaded description text.
+echo
+desc_chars=0
+printf '%-46s %9s %8s\n' "DESCRIPTION LAYER (idle)" "CHARS" "~TOKENS"
+for f in .claude/skills/*/SKILL.md; do
+  [ -f "$f" ] || continue
+  d=$(sed -n '/^description:/,/^---$/p' "$f" | head -20 | wc -c | tr -d ' ')
+  desc_chars=$((desc_chars + d))
+done
+for f in .claude/agents/*.md; do
+  [ -f "$f" ] || continue
+  d=$(sed -n '/^description:/,/^---$/p' "$f" | head -10 | wc -c | tr -d ' ')
+  desc_chars=$((desc_chars + d))
+done
+desc_tokens=$((desc_chars / 4))
+printf '%-46s %9s %8s\n' "skill+agent descriptions" "$desc_chars" "$desc_tokens"
+printf '%-46s %9s %8s\n' "TRUE IDLE FLOOR (rules+descriptions)" "$((total_chars + desc_chars))" "$((total_tokens + desc_tokens))"
+
 echo
 over=0
 [ "$total_tokens" -gt "$BUDGET_TOKENS" ] && over=$((total_tokens - BUDGET_TOKENS))

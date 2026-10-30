@@ -8,7 +8,38 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.18.6] — 2026-10-30
+## [0.18.7] — 2026-10-30
+
+Theme: **token optimization.** 46KB of reference material moved from skill
+bodies to `references/` directories, always-loaded budget trimmed to 7,040
+tokens (1,360 free), qa-manager deduplicated, and the budget test now counts
+the description layer it previously missed.
+
+### Token savings
+- **C2 Vendored skills**: release-readiness (-12.3KB), qa-metrics (-10.3KB),
+  risk-based-testing (-11KB), test-reliability (-4.4KB), bug-reproduction
+  (-3.8KB), test-case-management (-3.8KB) — reference material moved to
+  `references/` subdirectories with compact summaries kept inline.
+- **H20 qa-manager**: routing/shadow/delegation/bridge-path sections reduced
+  from ~21KB to ~15KB — duplicates of always-loaded rules replaced with
+  1-line pointers.
+- **Capsule echo**: 6 agent files (executor/automator × cheap/deep/standard +
+  failure-analyst) now use 3-line capsule contract + pointer instead of
+  20+ line restatements.
+- **product-layer**: precedence/override tables moved to `docs/rules/core/`
+  — always-loaded layer shrinks from 1,725 to 992 tokens.
+- **CLAUDE.md router table**: compressed to bare routing (dropped explanation
+  clauses mirroring skill descriptions).
+
+### Budget measurement
+- **H8**: `context-budget.sh` now counts skill+agent description tokens
+  (previously uncounted — ~3.7k tokens of idle cost invisible to the gate).
+  Reports the true idle floor alongside the always-loaded layer.
+
+### Budget result
+- Always-loaded: **7,040 / 8,400** (1,360 free — target ~500 exceeded)
+- Description layer: 4,229 tokens (now measured)
+- True idle floor: 11,269 tokens
 
 Theme: **functional gaps closed.** Foreign-MCP parsing fixed, Stop-hook
 ticket-key extraction hardened, eval tiers synced, post-jira-audit finally

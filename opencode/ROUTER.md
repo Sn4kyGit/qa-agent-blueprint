@@ -34,28 +34,28 @@ project recognized → project knowledge applied → tested → evidence produce
 
 | Situation | Use |
 |---|---|
-| Test / re-test a ticket end-to-end | Skill `test-ticket` (orchestrates the rest) |
-| Re-test a fixed bug | Skill `retest-bug` — sweep from flow-map Neighbors |
-| Exploratory testing, bug reproduction | Skill `exploratory-testing` via subagent `test-executor` |
-| Regression, repeatable checks, spec maintenance | Skill `test-automation` via subagent `test-automator` (Playwright or WebdriverIO) |
-| Recon before a spec — selectors, console errors, screenshots | Skill `recon` (probe script, phase 2, `docs/pipeline/`) |
-| Test failed — defect, or outdated test case? | Skill `failure-analysis` via subagent `failure-analyst` — on FAIL, before `bug-report` |
-| Bug found | Skill `bug-report` via subagent `bug-reporter` — template per project file |
-| Report result to JIRA | Skill `report-to-jira` — format per `PROJECT.md` |
-| Fix not on stage yet | Skill `deploy-to-stage` — runbook from `PROJECT.md` |
-| New project | Skill `onboard-project` |
-| New product inside an existing project | Skill `onboard-product` |
-| Blueprint updated / "what changed?" | Skill `whats-new` (read-only) → `re-board <KEY>` (apply, each change confirmed) |
-| No Playwright suite yet for this project/product | Skill `scaffold-suite` |
-| Harness readiness / switch | Skill `agentswitch` (read-only) |
-| Present a bug/test to an audience, "lass mich probieren" | Skill `demo` — headed replay, handover; recording on request |
-| "How is testing going?", weekly/sprint summary, metrics | Skill `qa-report` |
-| End of session / something unexpected happened | Skill `retro-learn` (into `memory/learnings/_inbox.md`) |
-| Ticket orchestration & strategy | Subagent `qa-manager` |
-| Command overview / help | Skill `qa-help` |
-| QA model lanes (cheap/standard/deep) | Skill `model-setup` |
-| Skill usage & profile (dry run) | Skill `skill-review` |
-| API/GraphQL, accessibility, security (OWASP), visual regression, flaky tests, bug reports, risk scoring, release go/no-go, test cases, QA metrics | Vendored — `qa-manager` → "Specialized skills" (`.claude/skills/THIRD_PARTY_NOTICES.md`) |
+| Test / re-test a ticket end-to-end | `test-ticket` |
+| Re-test a fixed bug | `retest-bug` |
+| Exploratory testing, bug reproduction | `exploratory-testing` → `test-executor` |
+| Regression, repeatable checks, spec maintenance | `test-automation` → `test-automator` |
+| Recon before a spec | `recon` |
+| Test failed — defect or outdated? | `failure-analysis` → `failure-analyst` (on FAIL, before `bug-report`) |
+| Bug found | `bug-report` → `bug-reporter` |
+| Report result to JIRA | `report-to-jira` |
+| Fix not on stage yet | `deploy-to-stage` |
+| New project | `onboard-project` |
+| New product in existing project | `onboard-product` |
+| Blueprint updated | `whats-new` → `re-board <KEY>` |
+| No Playwright suite yet | `scaffold-suite` |
+| Harness readiness / switch | `agentswitch` |
+| Present a bug/test to audience | `demo` |
+| Testing summary / metrics | `qa-report` |
+| Session end / surprise happened | `retro-learn` |
+| Ticket orchestration & strategy | `qa-manager` |
+| Command overview / help | `qa-help` |
+| QA model lanes | `model-setup` |
+| Skill usage & profile | `skill-review` |
+| Vendored skills (API, a11y, security, visual, flaky, risk, release, test cases, metrics) | `qa-manager` → "Specialized skills" |
 
 ## Hard rules
 

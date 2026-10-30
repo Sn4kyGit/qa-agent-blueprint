@@ -56,29 +56,18 @@ unchanged fallback.
    mode the `mcp__atlassian__*` tools are not connected at all, and a failed
    call there says nothing about JIRA. Either way fetch summary, description,
    acceptance criteria, issue type, current status, fix version.
-2. **Route**: derive the project key from the ticket prefix
-   (`SHOP-1234` → `SHOP`). Read `projects/SHOP/PROJECT.md`; search its
-   `learnings.md` only for the ticket's area, component, flow and failure keywords.
-   Unknown/missing project → stop and tell the user to run `onboard-project` (or run
-   it yourself if asked to).
-   **Then route to a product, but only if `PROJECT.md` has a `## Products` section**
-   — no section means the project file is the complete context and there is no
-   product step. With one: match the ticket's components, then labels, against the
-   registry (both were already fetched with the ticket in step 1), and read
-   `products/<PRODUCT>/PRODUCT.md` plus targeted matches from its `learnings.md`.
-   What the
-   product states wins; what it omits is inherited. Ambiguity is never broken by
-   the default — ask, and headless report BLOCKED before touching any tool.
-   Infra/cross-cutting tickets route `project-wide` and load no product file. Never
-   infer a product from the summary text. Ladder, merge modes and the list of
-   fields a product may *not* override: `.claude/rules/core/product-layer.md`.
-   Carry the resolved scope into everything downstream, and re-derive it per ticket
-   — product context never carries over from the previous ticket in this session.
-2b. **Shadow mode?** On by default: only `QA_AGENT_SHADOW=0` or `Shadow mode:
-    off` in the project file grants JIRA write access. While on, run everything
-    normally but post nothing to JIRA — compose the report and
-    leave it as a proposal in the evidence dir
-    (`.claude/rules/core/security.md` → Shadow mode). Say so in your summary.
+2. **Route**: project key from ticket prefix (`SHOP-1234` → `SHOP`). Read
+   `PROJECT.md`; search `learnings.md` for area/component/flow/failure keywords.
+   Unknown project → stop and ask to run `onboard-project`. Then route to a
+   product **only if `PROJECT.md` has `## Products`** — the routing ladder,
+   merge modes, and override limits are in `.claude/rules/core/product-layer.md`
+   (always loaded). Ambiguity → ask; headless → BLOCKED. Infra/cross-cutting →
+   `project-wide`, no product file. Never infer from summary text. Re-derive per
+   ticket — product context never carries over.
+2b. **Shadow mode?** On by default (`QA_AGENT_SHADOW=0` or `Shadow mode: off`
+    in PROJECT.md unlocks). While on: run normally, compose report as
+    `proposed-report.md` in evidence dir, post nothing to JIRA
+    (`.claude/rules/core/security.md` → Shadow mode).
 3. **Apply the readiness contract** (`docs/pipeline/01a-readiness.md`) and write
    `readiness.json`: current status is allowed for this project, no unresolved
    blockers remain, every linked MR/PR required by the project's merge policy is
@@ -246,40 +235,14 @@ While a Task call runs, the user sees **nothing** — counter that mechanically:
 
 ## Specialized skills available beyond the core flow
 
-Vendored from [petrkindlmann/qa-skills](https://github.com/petrkindlmann/qa-skills)
-(see `.claude/skills/THIRD_PARTY_NOTICES.md`) — these apply to **every** onboarded
-project, not just the one you happened to work on last. Pull one in when a ticket
-needs more than the core exploratory/regression loop: `risk-based-testing`,
+Vendored skills (`.claude/skills/THIRD_PARTY_NOTICES.md`): `risk-based-testing`,
 `bug-reproduction`, `api-testing`, `accessibility-testing`, `security-testing`,
 `visual-testing`, `test-reliability`, `qa-metrics`, `test-case-management`,
-`release-readiness`.
-
-**Always point them at the current project explicitly.** Their own text says to
-read `.agents/qa-project-context.md` — this blueprint keeps that keyed per project
-at `.agents/qa-project-context/<KEY>.md` instead (one shared file would go stale
-the moment a second project exists), and **per product** at
-`.agents/qa-project-context/<KEY>/<PRODUCT>.md` once a project has products. Since
-you already resolved `<KEY>` and the product in step 2, every delegation to a
-vendored skill in this session must name that exact path (e.g. "use
-`.agents/qa-project-context/SHOP/ADMIN.md` for context") rather than letting the
-skill fall back to the generic path it mentions internally — that generic path may
-not exist, or worse, may hold a stale projection from whichever project or product
-was tested most recently. Testing two products in one session is exactly the case
-this prevents.
-
-**Check the bridge file is current before delegating, don't remember to.** A sealed
-capsule already carries the centrally verified bridge path/hash; use it directly.
-Only in the standalone fallback, inspect its frontmatter `generated_from:` (the
-source files) and `source_sha:`. Hash the sources and compare — one `shasum` call,
-no judgment involved. Mismatch, or file
-missing → regenerate it from `PROJECT.md` (+ `PRODUCT.md`) first. When a
-`flow-map.md` exists at the same level (project or product), it is one of the
-  sources: include it in `generated_from:`/`source_sha:` and append only its
-  confirmed Areas as a `## Flow map` section — never Unconfirmed candidates.
-  `retest-bug` scopes regression sweeps from those confirmed Neighbors. The product file
-must be **fully merged and self-contained**: the vendored skills read one flat file
-and never inherit, so every field they need is materialized even when its value
-came from the project.
+`release-readiness`. Delegate with the keyed bridge path
+(`.agents/qa-project-context/<KEY>[/<PRODUCT>].md`) — never the generic
+`.agents/qa-project-context.md`. A sealed capsule carries the verified bridge
+path/hash; standalone fallback: check `generated_from:`/`source_sha:` and
+regenerate on mismatch. Full delegation rules: `CLAUDE.md` → router row 7.
 
 ## What you never do yourself
 
@@ -291,11 +254,7 @@ work in their place. On a dispatcher handoff, never repeat intake or routing.
 
 ## Hard rules you enforce even when a subagent forgets
 
-- No secrets in anything you pass along or report.
-- No full-repo scans — you already have `PROJECT.md` and `learnings.md`; don't
-  re-derive project knowledge by exploring the app's source. The one exception is
-  the bounded window `failure-analysis` is allowed: the linked MR's changed **file
-  paths** (not diff content), and `git log` over a named path and version range on a
-  repo the project file explicitly declares. That is a targeted lookup with a stated
-  range — still not exploration, and still never a substitute for `PROJECT.md`.
-- Every verdict has evidence. Every JIRA write is in the project's actual format.
+No secrets in reports. No full-repo scans (bounded `failure-analysis` MR
+window excepted). Every verdict has evidence. Every JIRA write uses the
+project's format. Full rules: `.claude/rules/core/security.md` +
+`token-discipline.md`.

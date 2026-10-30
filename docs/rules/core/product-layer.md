@@ -82,3 +82,56 @@ no PRODUCT.md loaded.
 argument in `.mcp.json` and cannot vary per session. Every product's secrets are
 therefore loaded in every browser session (masked, no leak). Documented here so
 nobody "fixes" it by breaking MCP startup.
+
+## Precedence — field by field, not section by section
+
+1. Section absent from `PRODUCT.md` → the project's section applies unchanged.
+2. Field absent inside a section that *is* present → the project's value for that
+   field applies.
+3. Field present → it replaces the project's value. Never combine the two values,
+   never report both.
+4. Tables follow the merge mode named in the `PRODUCT.md` heading:
+   - **add** (Test users, Gotchas) — product rows extend the project's; a product
+     row whose key (first column) equals a project row replaces that row.
+   - **replace-by-row** (Environments) — a row replaces the project row with the
+     same Environment name; project rows not mentioned survive.
+   - **replace** (Deploy runbook, Feature & test-method matrix) — the project's
+     section is ignored entirely when the product has one. The matrix is always
+     product-owned in practice, because every product fills its own.
+   - **field-level** (Pipelines/gates, MR process, Reporting, Test assets).
+5. **Subtraction needs a token.** "Only state deviations" can otherwise only add,
+   never remove. To express "this product has no admin user", write the row with
+   the value `N/A — does not apply to this product`.
+6. `learnings.md` is never merged into one view: read both, both apply. Project
+   learnings hold for every product.
+7. `templates/`: a filename under `products/<P>/templates/` wins over the same
+   filename under `projects/<KEY>/templates/`. Nothing merges *inside* a template
+   file — a half-merged bug template produces reports no human trusts.
+8. A value missing from both files → stop and ask. Never inherit a sibling
+   product's value, never guess.
+
+## What a product may override
+
+A product may narrow scope and specialize execution detail. It may never widen a
+permission or loosen a safety constraint.
+
+| Area | Override |
+|---|---|
+| Environments, Build verification (unverified reporting mandatory), Test users, Test assets, Feature matrix, Gotchas, Confluence links, bug template | yes |
+| Deploy runbook steps | yes |
+| Gate overrides (pass rate, P0/P1, coverage) | **stricter only** — otherwise PRODUCT.md becomes a way to buy a green run |
+| "Agent may trigger deploy", "Agent may comment on MRs" | **narrowing only** (`yes→no`), never `no→yes` |
+| JIRA transitions, Readiness statuses, Merge requirement, report format | **never** — shared JIRA workflow; different transitions require a separate JIRA project |
+| Evidence obligation, path schema, `execution_summary.json` requirement | **never** |
+| Everything in `.claude/rules/core/security.md` (production ban, never merge/approve, never roll back alone, secrets-as-references, no real PII or card data), the MCP register (`token-discipline.md` → MCP budget) | **never** |
+
+Two of these are enforced structurally rather than by policing the merge, because
+they have the largest blast radius: `deploy-to-stage` reads "Agent may trigger
+deploy" **only** from `PROJECT.md`, and `report-to-jira` reads the transitions
+**only** from `PROJECT.md`. No product file can grant either, whatever a merge
+produces.
+
+This table doubles as the "which file answers field X" map for
+`.claude/rules/core/token-discipline.md`: a narrow question about a sealed field
+goes straight to `PROJECT.md` instead of loading all four files.
+
