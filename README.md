@@ -13,7 +13,7 @@ about *your* projects lives in plain Markdown files in your repo — reviewable,
 diffable, and shared with your team through Git.
 
 > **👉 [Check out the detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
-> the whole architecture rendered as a one-pager: five layers, 18 core skills,
+> the whole architecture rendered as a one-pager: five layers, 21 core skills,
 > five verdicts, and what is enforced rather than merely written down.
 
 > **This is a public blueprint.** It contains no credentials, no internal URLs, no
@@ -24,7 +24,7 @@ diffable, and shared with your team through Git.
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
 | **Contents** | 32 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 145 bun tests · 45 eval cases |
-| **Two harnesses** | Claude Code (plugin or integrate) · opencode (symlinked, model-agnostic) |
+| **Two harnesses** | Claude Code (plugin or integrate; CLI or VS Code extension) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
 ---
@@ -322,7 +322,7 @@ down:
 
 | Layer | What | When it loads |
 |---|---|---|
-| **1 · Core** | `CLAUDE.md` router + 5 rule files in `.claude/rules/core/` | always — the norms only (~6.7k tokens, measured) |
+| **1 · Core** | `CLAUDE.md` router + 5 rule files in `.claude/rules/core/` | always — the norms only (~8.3k tokens, measured) |
 | **1b · Rule details** | `docs/rules/` | on demand — the detail behind a rule, when its topic comes up |
 | **2 · Skills & subagents** | `.claude/skills/`, `.claude/agents/` | on demand |
 | **3 · Project & product** | `projects/<KEY>/` + `products/<PRODUCT>/` | active project only |
@@ -454,11 +454,10 @@ Rules are advisory. These are not:
 
 | Hook | Enforces | Fixtures |
 |---|---|---|
-| `pre-tool-guard` | No writes to `.env*` or secret-named paths, no `rm -rf`, no force-push | 23 |
-| `stop-evidence-check` | No verdict without `execution_summary.json` — **and** without a `learnings` declaration | 17 |
-| `session-start` | Orientation: projects and their products, ungroomed learnings, missing secrets file, MCP config scan (dedupe, unmasked secrets, first-run hint); plugin mode injects `CLAUDE.md` verbatim | 17 |
-| `post-jira-audit` | Every JIRA write lands in an append-only audit log, headless runs included | — |
-| `install.sh` (not a hook, same standard) | Namespacing, path rewriting, idempotency, uninstall, plugin wiring, self-setup, MCP adoption | 51 |
+| `pre-tool-guard` | No writes to `.env*` or secret-named paths, no `rm -rf`, no force-push, no Bash JIRA writes, Read raw-evidence protection | 139 |
+| `stop-evidence-check` | No verdict without `execution_summary.json` — **and** without a `learnings` declaration | 20 |
+| `session-start` | Orientation: projects and their products, ungroomed learnings, missing secrets file, MCP config scan (dedupe, unmasked secrets, first-run hint); plugin mode injects `CLAUDE.md` verbatim | 89 |
+| `install.sh` (not a hook, same standard) | Namespacing, path rewriting, idempotency, uninstall, plugin wiring, self-setup, MCP adoption, shared mode, wizard, skill profiles | 323 |
 | `context-budget` | The always-loaded layer stays inside its budget | measured, not asserted |
 
 > **Why the fixtures exist.** The PreToolUse guard silently blocked *nothing* for
@@ -725,10 +724,14 @@ CLI runner remain the cheapest repeat check.
 
 ### Not built yet, and honest about it
 
-Web only (Chromium; headless or headful) — no mobile, cross-browser or native testing. One
+Web only (Chromium; headless or headful) as the default setup — mobile and
+cross-browser via WebdriverIO + Appium/Selenium Grid are documented as reference
+(`webdriverio-testing/references/`) but not part of the shipped test stack. One
 ticket at a time — epics and releases have no rollup. No test-data lifecycle and no
 stage leases, so parallel testing on a shared stage will confuse itself. No
-write-back into a test-management system. `evidence/` grows forever. And no project
+autonomous write-back into a test-management system — `test-case-management`
+emits API/CSV payloads for human review and execution (writes follow shadow
+discipline). `evidence/` grows forever. And no project
 has been onboarded for real yet: everything here is verified against fixtures and a
 fictional reference project, which makes the first pilot the actual test —
 [docs/pilot-briefing.md](docs/pilot-briefing.md) says what that means for whoever
@@ -765,7 +768,7 @@ one-off edits.
 
 Before opening a PR: run `bash -n` on any script you touched, keep all JSON valid,
 and run every fixture suite — `for t in .claude/hooks/tests/*.sh; do bash "$t"; done`
-must print `all fixtures passed` four times. A new enforcement rule needs a new
+must print `all fixtures passed` sixteen times. A new enforcement rule needs a new
 fixture; that is not negotiable, for the reason documented above. Touched
 `install.sh`? The integrate suite is the one that catches what a dry-run cannot.
 

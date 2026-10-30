@@ -24,6 +24,30 @@ read its AGENTS.md and follow the runbook."*
    must not ask for credentials.
 4. An **empty working folder** — this guide uses `~/qa-workspace`.
 
+## VS Code walkthrough
+
+VS Code runs Claude Code via the official extension — the plugin setup is
+identical to the CLI. What differs is the starting surface:
+
+1. **Install the extension**: open VS Code → Extensions (`Cmd+Shift+X`) → search
+   "Claude Code" → install. Or from the terminal: `code --install-extension anthropic.claude-code`.
+2. **Open the workspace**: `code ~/qa-workspace` (or File → Open Folder). The
+   plugin installs exactly as in Variant A/B/C below — run the commands in the
+   VS Code integrated terminal (`Ctrl+\`` / `Cmd+\``).
+3. **Start Claude Code**: click the Claude icon in the activity bar, or run
+   "Claude Code: Open in New Tab" from the command palette (`Cmd+Shift+P`).
+   Accept the trust dialog on first open.
+4. **Browser mode**: `playwright` MCP spawns a browser — in VS Code the headless
+   default works unchanged. For headful (`"headless": false`), the browser
+   window opens alongside VS Code, not inside it.
+5. **Terminal commands**: anything referencing `claude` CLI (e.g. `claude plugin
+   marketplace add …`) runs in the integrated terminal — the same binary the
+   extension uses.
+
+No VS Code–specific plugin configuration exists; `.mcp.json`,
+`.playwright-mcp.config.json`, and `.env.playwright-secrets` live in the
+workspace folder as on any other surface.
+
 ## Variant A — marketplace CLI, no clone
 
 ```bash

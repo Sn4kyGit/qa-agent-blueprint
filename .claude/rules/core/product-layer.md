@@ -38,29 +38,17 @@ the invocation (`--product=X`) or the declared default. Details: `docs/rules/cor
 
 **Secondary signals** are consulted only when components and labels yield nothing —
 they never override an explicit component match, and a conflict between them is an
-ambiguity (the *conflicting matches* rung), not a vote to be counted:
-
-- **Epic / parent ticket** — the parent often carries the product assignment the
-  child lacks. It arrives with the ticket; no extra MCP call.
-- **Fix version / release branch** — decisive only where products release
-  separately (`storefront-2.14`). The project declares the pattern in its registry
-  or it is not used.
-- **Changed file paths in the linked MR** — precise in a monorepo with a clean
-  directory split, worthless without a linked MR. Map paths to products via the
-  registry's optional `Code paths` column.
-
-A secondary-signal match is recorded as such (`product_routed_by`) — a weaker claim
-than a component match, and the report should say so.
+ambiguity (the *conflicting matches* rung), not a vote to be counted. The three
+signal types (epic/parent, fix version, changed MR paths) and their limits:
+`docs/rules/core/product-layer.md`. A secondary-signal match is recorded as such
+(`product_routed_by`).
 
 - **A default resolves silence, never conflict.** It applies on a clean *no match*
-  only — never as a tie-breaker between *conflicting matches*. Breaking a tie with
-  the default tests the wrong product with the wrong users and reports a plausible
-  green.
-- **No prose inference.** "The summary says checkout, so it's the CHECKOUT product"
-  is exactly what the router's rule 4 forbids. Free text may become a
-  *proposal to a human*, never an autonomous resolution, and never headless.
+  only — never as a tie-breaker between *conflicting matches*.
+- **No prose inference.** Free text may become a proposal to a human, never an
+  autonomous resolution, and never headless.
 - **Labels match exactly.** `checkout-v2` ≠ `checkout`. A near-miss is a no-match
-  plus a `retro-learn` capture so the routing table gets fixed.
+  plus a `retro-learn` capture.
 - **Never merge two products into one run.** See "Tickets spanning two products".
 - Record the outcome in `execution_summary.json` (`product`, `scope`,
   `product_routed_by`) — see `.claude/rules/core/evidence-policy.md`.

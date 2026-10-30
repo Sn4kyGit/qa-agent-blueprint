@@ -20,6 +20,38 @@ pipeline can tell "the agent violated the evidence obligation" apart from a cras
 without a `learnings` declaration). See `docs/rules/core/cicd.md` for the exit
 semantics in `claude -p`.
 
+## `execution_summary.json` — full example
+
+```json
+{
+  "ticket": "SHOP-1234",
+  "project": "SHOP",
+  "product": "STOREFRONT",
+  "scope": "product",
+  "product_routed_by": "component",
+  "timestamp": "2026-09-04T14:30:00Z",
+  "verdict": "PASS",
+  "test_type": "exploratory",
+  "mode": "hybrid",
+  "environment": { "name": "stage", "version_or_build": "2.14.0-rc3", "commit": "a3f9c21" },
+  "deploy": { "from_version": "2.13.4", "to_version": "2.14.0-rc3", "pipeline_run": "…", "at": "…" },
+  "steps_executed": ["login as qa-standard", "add item to cart", "checkout"],
+  "test_cases": [
+    { "id": "TC-CHK-014", "outcome": "pass", "attempts": 2,
+      "spec": "specs/checkout/coupon.spec.ts:42", "assertion": "expected 80.10, got 90.00" }
+  ],
+  "findings": [],
+  "evidence_dir": "evidence/SHOP/SHOP-1234/20260904-143000/",
+  "reported_to_jira": true,
+  "shadow": false,
+  "learnings": {
+    "captured": ["storefront page cache served stale assets after deploy"],
+    "none_because": null
+  },
+  "skills_used": ["test-ticket", "recon", "test-automation"]
+}
+```
+
 ## `NO_TEST` — the explicit way out
 
 The gate fires whenever a test *tool* was invoked, which includes sessions that

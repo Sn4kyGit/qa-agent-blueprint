@@ -402,7 +402,7 @@
     <ul class="tight">
       <li><strong>Das Plugin ist kostenlos</strong> — und telefoniert nie nach Hause: Nach der Installation läuft alles lokal, Netzwerk geht nur zu <strong>deinem JIRA</strong> und <strong>deiner Stage</strong>. Das Repo wird nur bei Install und Update angefasst.</li>
       <li><strong>Die echten Kosten sind Modell-Tokens</strong> — deshalb laden Fachbücher nur bei Bedarf, Learnings werden gezielt durchsucht, Rohbeweise kommen nie in den Kopf, einfache Tickets überspringen den Manager und eine Run-Capsule verhindert erneutes Projektlesen pro Spawn. Modell-Lanes wählen nach Risiko cheap/standard/deep; <code>/model-setup</code> konfiguriert sie für opencode im Consumer. Claude Code nutzt Sonnet standardmäßig für die Ausführung; opencode lässt die Wahl bei <code>/models</code>.</li>
-      <li><strong>Browser-Verlauf bleibt der Haupttreiber:</strong> Sonnet ändert den Preis, nicht die Tokenmenge. Readiness verhindert Tests auf altem Build, vorhandene Autotests laufen günstig per CLI. Für 0.18.0 gibt es kein neues Kostenbenchmark — miss mit <code>/usage</code> statt alter Schätzwerte.</li>
+      <li><strong>Browser-Verlauf bleibt der Haupttreiber:</strong> Sonnet ändert den Preis, nicht die Tokenmenge. Readiness verhindert Tests auf altem Build, vorhandene Autotests laufen günstig per CLI. Für 0.18.3 gibt es kein neues Kostenbenchmark — miss mit <code>/usage</code> statt alter Schätzwerte.</li>
       <li><strong>Neu: drei Execution Modes.</strong> Pro Projekt wählbar, wer am Steuer sitzt: <code>mcp-only</code> (alles live, tiefste Befunde), <code>hybrid</code> (Standard: Probe → Autotest → kurzer Live-Check — nahe Live-Tiefe zu mittleren Kosten), <code>cli-first</code> (nur Suite, CI-tauglich). Jeder JIRA-Report zeigt den Modus — man sieht, ob beobachtet oder nur assertiert wurde.</li>
     </ul>
   </section>
@@ -574,7 +574,7 @@ evidence/SHOP/SHOP-1234/&lt;ts&gt;/  <span class="c">← Artefakte, nie</span>
 </div>
 
 <footer>
-  <p>QA Agent Blueprint · Stand: 29. Oktober 2026 (v0.18.0) · Alle drei Spickzettel in einem Dokument —
+  <p>QA Agent Blueprint · Stand: 29. Oktober 2026 (v0.18.3) · Alle drei Spickzettel in einem Dokument —
   Teil 1: „Was ist das?" · Teil 2: „Wie funktioniert er — einfach erklärt" · Teil 3: „Technical Deep Dive".
   Quelle der Wahrheit: das Repo (README.md, overview.html).</p>
 </footer>

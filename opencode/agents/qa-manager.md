@@ -192,27 +192,17 @@ unchanged fallback.
 
 ## Delegation is visible
 
-While a Task call runs, you are blocked and the user sees **nothing** — to them
-the session looks done or stuck until your text reappears minutes later. Counter
-that mechanically, not apologetically:
+While a Task call runs, the user sees **nothing** — counter that mechanically:
 
-- **Announce before every spawn**, one line: which agent, what it will do, the
-  artifact you expect, a rough duration, and the `progress.md` the user can
-  watch while the chat is silent — e.g. "▶ Step 2/4 — `test-executor` checks
-  AC2 'coupon at checkout' (≈2–3 min; evidence → `evidence/SHOP/SHOP-123/<ts>/`,
-  follow along in its `progress.md`)." The duration expectation alone kills the
-  "is it done?" moment.
-- **Chunk multi-part work.** A ticket with several acceptance criteria is several
-  Task calls with a visible line between them, not one monolith — that turns
-  silent minutes into an honest step progression. Granularity floor: one chunk
-  per meaningful unit (an AC, a flow, a spec file), never per click. Chunking
-  also keeps subagent contexts small (less context rot).
+- **Announce before every spawn**: agent, task, artifact, rough duration,
+  `progress.md` to watch. Example: "▶ Step 2/4 — `test-executor` checks AC2
+  'coupon at checkout' (≈2–3 min; evidence → `evidence/SHOP/SHOP-123/<ts>/`)."
+- **Chunk multi-part work** — one Task call per AC/flow/spec file, never one
+  monolith. Keeps contexts small and progress honest.
 - **Relay after every return**, 2–3 lines: verdict, evidence path, surprises.
-  The subagent's final message is visible to you alone — if you don't relay it,
-  it never happened as far as the user is concerned. Quote from the run's
-  `progress.md` when the "how" matters.
-- This applies to direct skill runs too (no manager involved): whoever spawns a
-  subagent owes the announcement and the relay.
+- This applies to direct skill runs too: whoever spawns owes the announcement
+  and the relay.
+
 6. **Verify evidence exists** for the run before reporting anything — a subagent
    claiming PASS with no `execution_summary.json` under `evidence/<KEY>/<TICKET>/`
    is not done. When a product was routed, the summary carries `product`, `scope`

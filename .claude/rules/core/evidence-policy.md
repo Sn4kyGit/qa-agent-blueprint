@@ -47,41 +47,18 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 
 ## `execution_summary.json` — required fields
 
-```json
-{
-  "ticket": "SHOP-1234",
-  "project": "SHOP",
-  "product": "STOREFRONT",
-  "scope": "product",
-  "product_routed_by": "component",
-  "timestamp": "2026-09-04T14:30:00Z",
-  "verdict": "PASS | FAIL | BLOCKED | NEEDS_REVIEW | NO_TEST",
-  "test_type": "exploratory | regression | mixed",
-  "mode": "mcp-only | hybrid | cli-first",
-  "environment": { "name": "stage", "version_or_build": "2.14.0-rc3", "commit": "a3f9c21" },
-  "deploy": { "from_version": "2.13.4", "to_version": "2.14.0-rc3", "pipeline_run": "…", "at": "…" },
-  "steps_executed": ["login as qa-standard", "add item to cart", "checkout"],
-  "test_cases": [
-    { "id": "TC-CHK-014", "outcome": "pass | fail | skipped | flaky", "attempts": 2,
-      "spec": "specs/checkout/coupon.spec.ts:42", "assertion": "expected 80.10, got 90.00" }
-  ],
-  "failure_analysis": { "class": "…", "confidence": "…", "human_decision_required": true },
-  "findings": [
-    { "severity": "P1", "summary": "coupon code silently ignored", "ticket_filed": "SHOP-1240",
-      "test_case": "TC-CHK-014", "cause_class": "product-defect" }
-  ],
-  "blocked_reason": "<why, on BLOCKED only>",
-  "no_test_reason": "<why, on NO_TEST only>",
-  "evidence_dir": "evidence/SHOP/SHOP-1234/20260904-143000/",
-  "reported_to_jira": true,
-  "shadow": false,
-  "learnings": {
-    "captured": ["storefront page cache served stale assets after deploy"],
-    "none_because": null
-  },
-  "skills_used": ["test-ticket", "recon", "test-automation"]
-}
-```
+Required: `ticket`, `project`, `timestamp`, `verdict`
+(`PASS|FAIL|BLOCKED|NEEDS_REVIEW|NO_TEST`), `test_type`
+(`exploratory|regression|mixed`), `mode` (`mcp-only|hybrid|cli-first`),
+`environment{name,version_or_build,commit}`,
+`deploy{from_version,to_version,pipeline_run,at}`, `steps_executed[]`,
+`test_cases[{id,outcome,attempts,spec,assertion}]`,
+`findings[{severity,summary,ticket_filed,test_case,cause_class}]`,
+`evidence_dir`, `reported_to_jira`, `shadow`,
+`learnings{captured[],none_because}`, `skills_used[]`.
+
+Conditional: `product`, `scope`, `product_routed_by` — only with `## Products`;
+`blocked_reason` — BLOCKED only; `no_test_reason` — NO_TEST only.
 
 `findings` is empty on a clean PASS. `verdict: BLOCKED` still requires a summary of
 why (env down, stage not deployed, no test data, routing

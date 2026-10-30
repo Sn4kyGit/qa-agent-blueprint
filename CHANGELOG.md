@@ -8,6 +8,36 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.18.4] — 2026-10-30
+
+Theme: **docs & token hygiene.** Number drift across README/overview/spickzettel
+corrected, Non-Goal contradictions resolved, always-loaded budget trimmed to
+restore the ~500-token reserve, retro-learn and qa-manager prompts deduplicated,
+and a VS Code walkthrough added.
+
+### Fixed — documentation
+- **Number drift corrected**: skill counts (21 core, not 18), fixture counts
+  (139/20/89/323), "sixteen times" (not "four"), token claims (~8.3k, not
+  ~6.7k), footer versions (0.18.3). All claims now match the shipped files.
+- **Non-Goal contradictions resolved**: README "Not built yet" section now
+  acknowledges `webdriverio-testing` references (mobile/cross-browser via
+  Appium/Selenium Grid) and scopes `test-case-management` as payload
+  generation for human review — no autonomous write-back.
+- **VS Code walkthrough added**: `docs/quickstart-plugin.md` covers extension
+  install, workspace opening, browser mode, and terminal commands. README
+  harness table mentions VS Code as a Claude Code surface.
+
+### Fixed — token budget
+- **Always-loaded layer trimmed**: `evidence-policy.md` JSON example moved to
+  `docs/rules/core/evidence-policy.md` (compact field list kept inline);
+  `product-layer.md` secondary-signal details moved to on-demand docs. Budget
+  restored to ~417/387 free tokens (was 30/1).
+- **retro-learn deduplicated**: Groom/Promote details (215 lines) moved to
+  `docs/rules/core/retro-learn.md`; skill body keeps capture flow + compact
+  summaries. ~3k tokens saved per session-end load.
+- **qa-manager delegation condensed**: detailed "Delegation is visible"
+  section trimmed to essentials + example. ~300 tokens saved per spawn.
+
 ## [0.18.3] — 2026-10-30
 
 Theme: **functional gaps closed.** The pipeline artifacts now have producers,

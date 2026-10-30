@@ -191,7 +191,7 @@ Beschreibung. Ein Subagent hat zusätzlich ein eigenes Kontextfenster und eine e
 Werkzeugliste — er läuft abgeschottet und gibt nur ein Ergebnis zurück. Deshalb sind alle
 Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptkontext nicht fluten.
 
-### Die 18 eigenen Skills — der Ticket-Ablauf
+### Die 21 eigenen Skills — der Ticket-Ablauf
 
 | Skill | Was er tut | Wann er greift |
 | --- | --- | --- |
@@ -409,7 +409,7 @@ Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gl
 
 | Bereich | Absicherung |
 | --- | --- |
-| Hooks (Guard, Stop, SessionStart) | 189 Fixtures — jede Regel mit eigenem Fall |
+| Hooks (Guard, Stop, SessionStart) | 16 Suites mit >1.000 Assertions — jede Regel mit eigenem Fall |
 | Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption) | 119 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses |
 | Kontextkosten | gemessen — Budget-Check, 8.372 von 8.400 Token belegt |
 | Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 45 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
@@ -468,7 +468,7 @@ ohne Overrides oder nutzt die unter `/model-setup` konfigurierten Modelle und Va
 | wiederholte Flows | vorhandene Specs über den CLI-Runner |
 
 **Ehrlichkeit:** Die Modell-Lane verändert den Preis der Browser-Tokens, nicht ihre Menge.
-Für 0.18.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
+Für 0.18.3 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
 sind deshalb keine Zusage. Miss deine eigenen Abläufe mit `/usage` und den Session-Logs.
 
 ## Häufige Fragen
@@ -494,7 +494,7 @@ arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätesten
 16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
 stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
 Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
-Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.18.0 steht noch aus.
+Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.18.3 steht noch aus.
 
 #### ?Wie effizient ist eine Session?
 
@@ -563,7 +563,7 @@ verbinden — dann `/onboard-project` und das Interview beantworten. Danach hei�
 es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Agent testet
 vollständig, postet aber nichts, bis du es freigibst.
 
-QA Agent Blueprint · Stand: 29. Oktober 2026 (0.18.0) —
+QA Agent Blueprint · Stand: 29. Oktober 2026 (0.18.3) —
 aktualisiert auf Repo-Stand (32 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 45 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,

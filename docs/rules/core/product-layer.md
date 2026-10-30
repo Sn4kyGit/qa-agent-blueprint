@@ -28,6 +28,24 @@ or from a resolution that actually happened twice.
 Headless specifics — including why a routing BLOCKED must be written as a full test
 result *before* any tool runs — are in `docs/rules/core/cicd.md`.
 
+## Secondary signals — the three types and their limits
+
+Secondary signals are consulted only when components and labels yield nothing.
+They never override an explicit component match; a conflict between two secondary
+signals is an ambiguity, not a vote.
+
+- **Epic / parent ticket** — the parent often carries the product assignment the
+  child lacks. It arrives with the ticket; no extra MCP call.
+- **Fix version / release branch** — decisive only where products release
+  separately (`storefront-2.14`). The project declares the pattern in its registry
+  or it is not used.
+- **Changed file paths in the linked MR** — precise in a monorepo with a clean
+  directory split, worthless without a linked MR. Map paths to products via the
+  registry's optional `Code paths` column.
+
+A secondary-signal match is recorded as `product_routed_by` with a weaker claim
+than a component match — the report should say so.
+
 ## Tickets spanning two products
 
 Do not model a multi-product run. Run once per product: run directories

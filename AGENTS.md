@@ -330,7 +330,7 @@ change to **rules, skills, or the router**, also run the behavioral evals and
 update the norm→test matrix (`evals/COVERAGE.md`) if you touched a norm:
 
 ```bash
-for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 6x "all fixtures passed"
+for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 16x "all fixtures passed"
 claude plugin validate .
 bash evals/run.sh                                        # behavioral gate: exit 1 below 0.9
 # or billed per-token via OpenRouter instead of subscription quota (key in
