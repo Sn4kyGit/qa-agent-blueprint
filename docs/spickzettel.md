@@ -55,6 +55,7 @@ Teil 1 · Allgemein
 - **Demo geben** (`/demo`): Bug oder Testlauf sichtbar vorführen (Slow-Mo), auf Wunsch selbst klicken lassen; Video nur auf ausdrückliche Anfrage
 - **Einrichten & pflegen**: `/onboard-project` (einmalig), `/re-board` (nach Updates), `/whats-new` („was ist neu?")
 - **Skill-Nutzung prüfen** (`/skill-review`): welche Skills sind belegt genutzt (`used`), wofür liegen keine Daten vor (`unknown`) — nie „unbenutzt". Profil-Vorschläge (`full`/`standard`/`minimal`/`custom`) nur als Dry-run; umgesetzt nur nach ausdrücklicher Bestätigung und nur im integrate-Modus
+- **Performance-Analyse** (`/perf-analysis`): Session-Dauer, Phasen-Breakdown, Token-Verbrauch, Bottlenecks und konkrete Verbesserungsvorschläge — „Warum ist das so langsam?", „Performance verbessern"
 
 ## Das Team: ein Dirigent + vier Spezialisten
 
@@ -96,8 +97,8 @@ damit Menschen die Urteile fällen.
 ## Was kostet das?
 
 - **Das Plugin ist kostenlos** — und telefoniert nie nach Hause: Nach der Installation läuft alles lokal, Netzwerk geht nur zu **deinem JIRA** und **deiner Stage**. Das Repo wird nur bei Install und Update angefasst.
-- **Die echten Kosten sind Modell-Tokens** — deshalb laden Fachbücher nur bei Bedarf, Learnings werden gezielt durchsucht, Rohbeweise kommen nie in den Kopf, einfache Tickets überspringen den Manager und eine Run-Capsule verhindert erneutes Projektlesen pro Spawn. Modell-Lanes wählen nach Risiko cheap/standard/deep; `/model-setup` konfiguriert sie für opencode im Consumer. Claude Code nutzt Sonnet standardmäßig für die Ausführung; opencode lässt die Wahl bei `/models`.
-- **Browser-Verlauf bleibt der Haupttreiber:** Sonnet ändert den Preis, nicht die Tokenmenge. Readiness verhindert Tests auf altem Build, vorhandene Autotests laufen günstig per CLI. Für 0.18.8 gibt es kein neues Kostenbenchmark — miss mit `/usage` statt alter Schätzwerte.
+- **Die echten Kosten sind Modell-Tokens** — deshalb laden Fachbücher nur bei Bedarf, Learnings werden gezielt durchsucht, Rohbeweise kommen nie in den Kopf, einfache Tickets überspringen den Manager und eine Run-Capsule verhindert erneutes Projektlesen pro Spawn. Modell-Lanes wählen nach Risiko cheap/standard/deep; `/model-setup` konfiguriert sie für opencode im Consumer. Claude Code nutzt Sonnet standardmäßig für die Ausführung; opencode lässt die Wahl bei `/models`. `/perf-analysis` misst Dauer, Token-Verbrauch und Bottlenecks.
+- **Browser-Verlauf bleibt der Haupttreiber:** Sonnet ändert den Preis, nicht die Tokenmenge. Readiness verhindert Tests auf altem Build, vorhandene Autotests laufen günstig per CLI. Für 0.19.0 gibt es kein neues Kostenbenchmark — miss mit `/usage` statt alter Schätzwerte.
 - **Neu: drei Execution Modes.** Pro Projekt wählbar, wer am Steuer sitzt: `mcp-only` (alles live, tiefste Befunde), `hybrid` (Standard: Probe → Autotest → kurzer Live-Check — nahe Live-Tiefe zu mittleren Kosten), `cli-first` (nur Suite, CI-tauglich). Jeder JIRA-Report zeigt den Modus — man sieht, ob beobachtet oder nur assertiert wurde.
 
 Teil 2 · Technik — einfach erklärt
@@ -241,6 +242,6 @@ evidence/SHOP/SHOP-1234/<ts>/  ← Artefakte, nie
 | **Secrets nie im Transkript** | Keychain-Resolver schreibt `.env.playwright-secrets`, Werte erscheinen nirgends; `qa-secrets.mjs` injiziert sie wertefrei in Runner und MCP-Server; der Guard-Hook blockt jeden Schreibzugriff auf `.env*`-Pfade, direktes Lesen ist ein menschlicher Opt-in. |
 | **Kontext-Budget gemessen** | Immer geladene Ebene: 7.040 von 8.400 Token — ein Test schlägt fehl, wenn sie wächst; alles andere lädt bei Bedarf. |
 
-QA Agent Blueprint · Stand: 30. Oktober 2026 (v0.18.8) · Alle drei Spickzettel in einem Dokument —
+QA Agent Blueprint · Stand: 30. Oktober 2026 (v0.19.0) · Alle drei Spickzettel in einem Dokument —
 Teil 1: „Was ist das?" · Teil 2: „Wie funktioniert er — einfach erklärt" · Teil 3: „Technical Deep Dive".
 Quelle der Wahrheit: das Repo (README.md, overview.html).

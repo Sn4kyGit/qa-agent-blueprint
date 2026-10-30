@@ -55,7 +55,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
 Unter **opencode** (modell-agnostisch, Modell = deine `/models`-Wahl): `install.sh --mode opencode --target <projekt> --yes` vom Clone aus — Details: [Quickstart opencode](https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md).
 Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: `install.sh --mode shared` — beide bleiben ohne Re-Onboarding startbereit, `/agentswitch` prüft read-only.
 
-Ende-zu-Ende verifiziert (claude 2.1.263): registriert 32 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
+Ende-zu-Ende verifiziert (claude 2.1.263): registriert 33 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
 
 ## Der Ablauf
 
@@ -134,6 +134,7 @@ zeigt jederzeit `/qa-agent-blueprint:qa-help` — auch direkt in der Session.
 | /retro-learn | Hält Learnings fest, verdichtet sie und befördert Bewährtes in Regeln und Projektdateien | „Session abschließen" |
 | /whats-new | Zeigt, was sich am Blueprint seit dem Onboarding geändert hat — und was ein /re-board lohnt | „Was ist neu?" |
 | /skill-review | Skill-Nutzungsanalyse: jeder installierte Skill ist `used` (in den `skills_used`-Datensätzen) oder `unknown` (keine Daten) — nie „unbenutzt". Profile (`full`/`standard`/`minimal`/`custom`) nur als Dry-run-Vorschlag, umgesetzt nur nach ausdrücklicher Bestätigung und nur im integrate-Modus | „Welche Skills nutzen wir eigentlich?" |
+| /perf-analysis | Performance-Analyse: Session-Dauer, Phasen-Breakdown, Token-Verbrauch, Bottlenecks und konkrete Verbesserungsvorschläge | „Warum ist das so langsam?", „Performance-Analyse" |
 | /demo | Präsentiert eine Bug-Repro oder einen fertigen Testlauf sichtbar: Headed-Slow-Mo-Wiederholung + Demo-Karte, Selbst-ausprobieren-Modus, .webm-Aufzeichnung nur auf ausdrückliche Anfrage — niemals automatisch | „Präsentier den Bug", „Lass mich probieren" |
 | /qa-help | Diese Übersicht, direkt in der Session — antwortet in der Sprache, in der man fragt | „Welche Befehle gibt es?" |
 
@@ -212,6 +213,7 @@ Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptk
 | /whats-new | Liest den Versionsstempel im PROJECT.md gegen die installierte Plugin-Version und rendert die CHANGELOG-Abschnitte dazwischen — in der Sprache der Frage, mit dem Hinweis, welche Änderung ein /re-board lohnt. Reine Orientierung, startet keine Arbeit. | „Was hat sich geändert?", nach einem Update |
 | /skill-review | Liest die `skills_used`-Nutzungsdaten und klassifiziert jeden installierten Skill als used oder unknown — nie „unused": fehlende Daten sind unknown, kein Freigabegrund. Ohne Daten ist alles unknown und die Coverage 0%. Read-only; ein Profil-Vorschlag (full/standard/minimal/custom) bleibt ein Dry-run mit exakter Exclude-Liste, bis der Nutzer die konkrete Liste ausdrücklich bestätigt — und greift nur in einer integrate-Installation. | „Welche Skills brauchen wir wirklich?" |
 | /qa-report | Liest alle `execution_summary.json` zurück: Pass-Rate pro Produkt, P0/P1, BLOCKED- und NO\_TEST-Gründe, Routing-Qualität, Learning-Durchsatz. Nennt ausdrücklich, was das Schema nicht hergibt. | „Wie läuft's?", Wochen- oder Sprintbericht |
+| /perf-analysis | Liest `execution_summary.json` (Timing-Felder), `run.json`, `session-perf.log` und `evals/results/history.log`: Session-Dauer, Phasen-Breakdown, Token-Verbrauch, Bottlenecks, Verbesserungsvorschläge. Read-only, ehrliche „nicht berechenbar"-Meldungen. | „Warum ist das so langsam?", „Performance verbessern" |
 | /retro-learn | Capture → Groom → Promote. Klassifiziert eine Überraschung nach Reichweite (Projekt, Produkt, projektübergreifend) und befördert sie beim zweiten Auftreten in eine Regel oder Projektdatei. | Session-Ende, oder wöchentlich zum Verdichten |
 
 ### Die 10 Spezialisten — vendored & blueprint-adapted
@@ -412,7 +414,7 @@ Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gl
 | Hooks (Guard, Stop, SessionStart) | 16 Suites mit >1.000 Assertions — jede Regel mit eigenem Fall |
 | Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption) | 323 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses |
 | Kontextkosten | gemessen — Budget-Check, 7.040 von 8.400 Token belegt |
-| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 45 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
+| Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 46 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
 | Ein echtes Projekt, ein echtes Ticket | **nie** — genau das ist der Pilot |
 
 Der erste gelaufene Eval-Case war lehrreich: die Antwort war präziser als der Grader — sie
@@ -468,7 +470,7 @@ ohne Overrides oder nutzt die unter `/model-setup` konfigurierten Modelle und Va
 | wiederholte Flows | vorhandene Specs über den CLI-Runner |
 
 **Ehrlichkeit:** Die Modell-Lane verändert den Preis der Browser-Tokens, nicht ihre Menge.
-Für 0.18.8 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
+Für 0.19.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
 sind deshalb keine Zusage. Miss deine eigenen Abläufe mit `/usage` und den Session-Logs.
 
 ## Häufige Fragen
@@ -479,7 +481,7 @@ Die Fragen, die im Gespräch immer kommen — beantwortet ohne Fachjargon.
 
 Gar nicht im Kopf — alles liegt als normale Textdateien in deinem Projektordner,
 einsehbar und per Git teilbar. Fünf Schubladen: das **Handbuch** (immer dabei,
-nur die Regeln), die **Fachbücher** (32 Skills, laden nur bei Bedarf), die
+nur die Regeln), die **Fachbücher** (33 Skills, laden nur bei Bedarf), die
 **Projektakte** (Umgebungen, Testuser, Runbooks — einmal eingerichtet), das
 **Lerntagebuch** (Überraschungen aus Läufen) und die **Beweise**
 (Screenshots, Logs — als Datei, nie im Gedächtnis). Der Clou: Am Ende jeder Session
@@ -494,7 +496,7 @@ arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätesten
 16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
 stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
 Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
-Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.18.8 steht noch aus.
+Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.19.0 steht noch aus.
 
 #### ?Wie effizient ist eine Session?
 
@@ -564,8 +566,8 @@ verbinden — dann `/onboard-project` und das Interview beantworten. Danach hei�
 es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Agent testet
 vollständig, postet aber nichts, bis du es freigibst.
 
-QA Agent Blueprint · Stand: 30. Oktober 2026 (0.18.8) —
-aktualisiert auf Repo-Stand (32 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 45 Eval-Cases,
+QA Agent Blueprint · Stand: 30. Oktober 2026 (0.19.0) —
+aktualisiert auf Repo-Stand (33 Skills, 9 Subagents, Fixture-Batterie + 152 bun-Tests, 46 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
 Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,

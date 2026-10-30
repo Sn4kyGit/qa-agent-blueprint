@@ -13,7 +13,7 @@ about *your* projects lives in plain Markdown files in your repo — reviewable,
 diffable, and shared with your team through Git.
 
 > **👉 [Check out the detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
-> the whole architecture rendered as a one-pager: five layers, 21 core skills,
+> the whole architecture rendered as a one-pager: five layers, 22 core skills,
 > five verdicts, and what is enforced rather than merely written down.
 
 > **This is a public blueprint.** It contains no credentials, no internal URLs, no
@@ -361,7 +361,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 ## What's in the box
 
 <details>
-<summary><b>21 core skills</b> — the ticket workflow</summary>
+<summary><b>22 core skills</b> — the ticket workflow</summary>
 
 | Skill | Purpose |
 |---|---|
@@ -385,6 +385,7 @@ section, no extra reads — byte for byte the behavior from before the layer exi
 | `/retro-learn` | Capture, groom and promote learnings |
 | `/whats-new` | What changed in the blueprint since a project was onboarded — and what calls for `/re-board` |
 | `/skill-review` | Skill-usage analysis: every skill `used` or `unknown` from the `skills_used` records — never "unused", read-only; profile changes (`full`/`standard`/`minimal`/`custom`) are dry-run proposals |
+| `/perf-analysis` | Performance analysis: session duration, phase breakdown, token usage, bottlenecks, and concrete improvement suggestions |
 | `/demo` | Present a bug repro or finished test run to an audience: headed slow-mo replay + demo card, hands-on mode ("lass mich probieren"), .webm recording only on explicit request — never automatically |
 
 </details>
@@ -405,7 +406,7 @@ than by guesswork.
 
 Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
 by `/test-automation` when a project's declared framework is webdriverio (not
-invoked directly; see its SKILL.md). 21 + 10 + 1 = the 33 skills from the header.
+invoked directly; see its SKILL.md). 22 + 10 + 1 = the 33 skills from the header.
 
 </details>
 
