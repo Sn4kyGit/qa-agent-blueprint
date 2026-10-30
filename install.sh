@@ -2064,6 +2064,13 @@ run_integrate() {
   integrate_docs
   rewrite_namespaced_paths   # must run AFTER every copy — it rewrites what was added
 
+  # H18 (0.18.8): record the installed blueprint version so cross-version
+  # updates and uninstalls can distinguish "ours" from "modified after install".
+  local bp_version
+  bp_version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$REPO_ROOT/.claude-plugin/plugin.json" | head -1)"
+  printf '{"blueprint_version":"%s","mode":"integrate","installed_at":"%s"}\n' \
+    "${bp_version:-unknown}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$TARGET/.qa-blueprint-install.json"
+
   next_step "Run: claude mcp list → authenticate the 'atlassian' server via /mcp (OAuth 2.1)"
   next_step "Start Claude Code in $TARGET and run /onboard-project to onboard your first project"
   next_step "Review .bak-$TS backups once satisfied, then delete them"
@@ -2518,6 +2525,15 @@ run_opencode_move() {
     exit 1
   fi
   if [ "$DRY_RUN" -eq 0 ]; then mkdir -p "$new"; fi
+
+  # H19 (0.18.8): preflight the FUTURE state before moving anything — if the
+  # new target has a legacy opencode.jsonc and the move carries opencode.json,
+  # the post-move preflight would BLOCK after data has already been moved,
+  # leaving a half-migrated state with no recovery path.
+  if [ -f "$old/opencode.json" ] && [ -f "$new/opencode.jsonc" ] && [ ! -f "$new/opencode.json" ]; then
+    err "BLOCKED: $new has opencode.jsonc but the move would bring opencode.json — merge them manually first (rename opencode.jsonc to opencode.json, or remove it)."
+    exit 1
+  fi
 
   if [ "$YES" -ne 1 ] && [ "$DRY_RUN" -eq 0 ]; then
     printf 'Move the QA home from %s to %s? Data moves, links are re-created there and removed here. [y/N] ' "$old" "$new"

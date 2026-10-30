@@ -92,9 +92,8 @@ for us to see what actually happened without reading your tickets.
   is the feature working, not failing. Two things speed it up: run the CLI suite (it
   is the only producer of the per-case history) and rule on `NEEDS_REVIEW` failures
   promptly, since a confirmed ruling is what teaches it.
-- **`evals/`** — eight semantic test cases exist and have never been run: the
-  `claude plugin eval` runner is in early access and refused to start here. They are
-  runnable by hand (see `evals/README.md`).
+- **`evals/`** — 45 behavioral eval cases with a scored judge and gate runner
+  (`evals/run.sh`, exit < 0.9 fails); run touched norms per `evals/COVERAGE.md`.
 - **No mobile, cross-browser or non-web testing.** Chromium, headless, web only.
 - **No test-data lifecycle, no stage leases.** Parallel testing on a shared stage
   will produce confusing failures; coordinate manually for now.

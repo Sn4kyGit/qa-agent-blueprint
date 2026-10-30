@@ -87,7 +87,7 @@ Teil 1 · Allgemein
 - **Passwörter sieht er nie:** Testuser-Logins & JIRA-Token liegen im macOS-Schlüsselbund; er sieht nur „6/6 Logins vorhanden".
 - **Kein Urteil ohne Beweise:** Jeder Lauf endet mit Screenshots, Logs und einem maschinenlesbaren Protokoll — ein Hook blockt sonst das Session-Ende.
 - **Jeder JIRA-Schreibzugriff** landet in einem Audit-Log — nachvollziehbar, auch im automatisierten Lauf.
-- **Selbsttests (Fixtures) beweisen die Durchsetzung:** kleine Skripte, die jeden Türsteher mit Probe-Anfragen füttern und prüfen, dass er wirklich blockt — **147 davon**, sie laufen bei jeder Änderung. Ein Türsteher ohne Selbsttest wäre Dekoration: Einer hatte in der Vergangenheit monatelang still *nichts* blockiert — und in der Review sah alles korrekt aus.
+- **Selbsttests (Fixtures) beweisen die Durchsetzung:** kleine Skripte, die jeden Türsteher mit Probe-Anfragen füttern und prüfen, dass er wirklich blockt — **400+ davon**, sie laufen bei jeder Änderung. Ein Türsteher ohne Selbsttest wäre Dekoration: Einer hatte in der Vergangenheit monatelang still *nichts* blockiert — und in der Review sah alles korrekt aus.
 
 **Merksatz:** Er ersetzt nicht die QA — er nimmt ihr die wiederholbare Fleißarbeit ab
 (Ticket lesen, Umgebung prüfen, Flows durchklicken, Beweise sichern, Ticket befüllen),
@@ -97,7 +97,7 @@ damit Menschen die Urteile fällen.
 
 - **Das Plugin ist kostenlos** — und telefoniert nie nach Hause: Nach der Installation läuft alles lokal, Netzwerk geht nur zu **deinem JIRA** und **deiner Stage**. Das Repo wird nur bei Install und Update angefasst.
 - **Die echten Kosten sind Modell-Tokens** — deshalb laden Fachbücher nur bei Bedarf, Learnings werden gezielt durchsucht, Rohbeweise kommen nie in den Kopf, einfache Tickets überspringen den Manager und eine Run-Capsule verhindert erneutes Projektlesen pro Spawn. Modell-Lanes wählen nach Risiko cheap/standard/deep; `/model-setup` konfiguriert sie für opencode im Consumer. Claude Code nutzt Sonnet standardmäßig für die Ausführung; opencode lässt die Wahl bei `/models`.
-- **Browser-Verlauf bleibt der Haupttreiber:** Sonnet ändert den Preis, nicht die Tokenmenge. Readiness verhindert Tests auf altem Build, vorhandene Autotests laufen günstig per CLI. Für 0.18.3 gibt es kein neues Kostenbenchmark — miss mit `/usage` statt alter Schätzwerte.
+- **Browser-Verlauf bleibt der Haupttreiber:** Sonnet ändert den Preis, nicht die Tokenmenge. Readiness verhindert Tests auf altem Build, vorhandene Autotests laufen günstig per CLI. Für 0.18.8 gibt es kein neues Kostenbenchmark — miss mit `/usage` statt alter Schätzwerte.
 - **Neu: drei Execution Modes.** Pro Projekt wählbar, wer am Steuer sitzt: `mcp-only` (alles live, tiefste Befunde), `hybrid` (Standard: Probe → Autotest → kurzer Live-Check — nahe Live-Tiefe zu mittleren Kosten), `cli-first` (nur Suite, CI-tauglich). Jeder JIRA-Report zeigt den Modus — man sieht, ob beobachtet oder nur assertiert wurde.
 
 Teil 2 · Technik — einfach erklärt
@@ -239,8 +239,8 @@ evidence/SHOP/SHOP-1234/<ts>/  ← Artefakte, nie
 | **Plugin-Modus ohne Drift** | Plugins laden kein `CLAUDE.md` — der Session-Start-Hook injiziert es **wortwörtlich**. Ein Router-Text für beide Installationsarten. |
 | **MCP = Vertrag über Namen** | Hooks/Skills matchen auf `playwright`/`atlassian`; Pflicht-Flags `--secrets` + `--output-dir`; der Rest ist frei wählbar (`.playwright-mcp.config.json`). |
 | **Secrets nie im Transkript** | Keychain-Resolver schreibt `.env.playwright-secrets`, Werte erscheinen nirgends; `qa-secrets.mjs` injiziert sie wertefrei in Runner und MCP-Server; der Guard-Hook blockt jeden Schreibzugriff auf `.env*`-Pfade, direktes Lesen ist ein menschlicher Opt-in. |
-| **Kontext-Budget gemessen** | Immer geladene Ebene: 8.372 von 8.400 Token — ein Test schlägt fehl, wenn sie wächst; alles andere lädt bei Bedarf. |
+| **Kontext-Budget gemessen** | Immer geladene Ebene: 7.040 von 8.400 Token — ein Test schlägt fehl, wenn sie wächst; alles andere lädt bei Bedarf. |
 
-QA Agent Blueprint · Stand: 29. Oktober 2026 (v0.18.3) · Alle drei Spickzettel in einem Dokument —
+QA Agent Blueprint · Stand: 30. Oktober 2026 (v0.18.8) · Alle drei Spickzettel in einem Dokument —
 Teil 1: „Was ist das?" · Teil 2: „Wie funktioniert er — einfach erklärt" · Teil 3: „Technical Deep Dive".
 Quelle der Wahrheit: das Repo (README.md, overview.html).

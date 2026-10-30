@@ -153,7 +153,7 @@ Router plus fünf Regeldateien: alles, was binden muss, bevor irgendein Skill ge
 Das Detail dahinter liegt in `docs/rules/` und wird gelesen, wenn sein Thema kommt —
 jede Datei nennt ihren Auslöser oben.
 
-CLAUDE.md + .claude/rules/core/ · gemessen 8.372 Token, Budget 8.400
+CLAUDE.md + .claude/rules/core/ · gemessen 7.040 Token, Budget 8.400
 
 #### 2Skills & Subagents
 
@@ -309,11 +309,11 @@ Der wichtigste Teil, weil Regeln beratend sind und Hooks nicht.
 
 | Mechanik | Erzwingt | Fixtures |
 | --- | --- | --- |
-| pre-tool-guard | Keine Schreibzugriffe auf `.env*` oder secret-benannte Pfade, kein `rm -rf`, kein Force-Push; Secret-Lesungen sind ein menschlicher Opt-in (`secrets_read` in `.qa-guard.json`), Agenten-Edits daran sind verweigert; `qa-secrets.mjs` injiziert Zugangsdaten wertefrei in Runner und MCP-Server | 107 |
+| pre-tool-guard | Keine Schreibzugriffe auf `.env*` oder secret-benannte Pfade, kein `rm -rf`, kein Force-Push; Secret-Lesungen sind ein menschlicher Opt-in (`secrets_read` in `.qa-guard.json`), Agenten-Edits daran sind verweigert; `qa-secrets.mjs` injiziert Zugangsdaten wertefrei in Runner und MCP-Server | 139 |
 | stop-evidence-check | Kein Verdikt ohne `execution_summary.json` — und ohne deklarierte `learnings`. Block-Meldungen tragen maschinenlesbare Marker (`QA_EVIDENCE_MISSING:` / `QA_LEARNINGS_MISSING:`), damit eine Pipeline eine Policy-Verletzung von einem Crash unterscheiden kann | 20 |
-| session-start | Orientierung: Projekte samt Produkten, ungegroomte Learnings, Secrets-Status — Env-Datei fehlt, oder Keychain-Statuszeile (`n/m keys present`, Fehlende namentlich), plus JIRA-PAT aus der Keychain in die Session exportiert. MCP-Config-Scan (Dedupe, unmaskierte Secrets, Erstlauf-Hinweis). Im Plugin-Modus injiziert er die `CLAUDE.md` des Plugins **wortwörtlich** — ein Router-Text, keine Drift zwischen Installationsarten | 62 |
+| session-start | Orientierung: Projekte samt Produkten, ungegroomte Learnings, Secrets-Status — Env-Datei fehlt, oder Keychain-Statuszeile (`n/m keys present`, Fehlende namentlich), plus JIRA-PAT aus der Keychain in die Session exportiert. MCP-Config-Scan (Dedupe, unmaskierte Secrets, Erstlauf-Hinweis). Im Plugin-Modus injiziert er die `CLAUDE.md` des Plugins **wortwörtlich** — ein Router-Text, keine Drift zwischen Installationsarten | 89 |
 | post-jira-audit | Jeder JIRA-Schreibzugriff landet im Audit-Log, auch headless | — |
-| install.sh | Kein Hook, gleicher Anspruch: Namespacing, Pfad-Rewriting, Idempotenz, Uninstall, Plugin-Verdrahtung, Self-Setup, MCP-Adoption — je Harness eine eigene Batterie | 119 |
+| install.sh | Kein Hook, gleicher Anspruch: Namespacing, Pfad-Rewriting, Idempotenz, Uninstall, Plugin-Verdrahtung, Self-Setup, MCP-Adoption — je Harness eine eigene Batterie | 323 |
 | context-budget | Die immer geladene Ebene bleibt im Budget — gemessen statt behauptet | Check |
 
 **Warum es diese Fixtures gibt.** Der Guard-Hook hat über die gesamte Lebenszeit
@@ -410,8 +410,8 @@ Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gl
 | Bereich | Absicherung |
 | --- | --- |
 | Hooks (Guard, Stop, SessionStart) | 16 Suites mit >1.000 Assertions — jede Regel mit eigenem Fall |
-| Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption) | 119 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses |
-| Kontextkosten | gemessen — Budget-Check, 8.372 von 8.400 Token belegt |
+| Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption) | 323 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses |
+| Kontextkosten | gemessen — Budget-Check, 7.040 von 8.400 Token belegt |
 | Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes) | 45 Eval-Cases — ein eigenes Skript fährt sie über `claude -p` oder OpenRouter |
 | Ein echtes Projekt, ein echtes Ticket | **nie** — genau das ist der Pilot |
 
@@ -451,7 +451,7 @@ Netzwerk-Ziele im Betrieb sind **dein JIRA** und **deine Stage**.
 Keine Telemetrie, keine Lizenz-Checks.
 
 Die echten Kosten sind **Modell-Tokens**. Die immer geladene Ebene ist gemessen
-(~8.300 Tokens) und gedeckelt; Skills und Detailregeln laden bei Bedarf. Learnings
+(~7.040 Tokens) und gedeckelt; Skills und Detailregeln laden bei Bedarf. Learnings
 werden ticketbezogen durchsucht, rohe Evidence nicht eingelesen, und einfache
 Tickets überspringen die Manager-Ebene. Eine versiegelte Run-Capsule ersetzt bei
 jedem weiteren Agenten-Spawn das erneute Lesen und Mergen des Projektkontexts.
@@ -468,7 +468,7 @@ ohne Overrides oder nutzt die unter `/model-setup` konfigurierten Modelle und Va
 | wiederholte Flows | vorhandene Specs über den CLI-Runner |
 
 **Ehrlichkeit:** Die Modell-Lane verändert den Preis der Browser-Tokens, nicht ihre Menge.
-Für 0.18.3 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
+Für 0.18.8 liegt kein neues Kostenbenchmark vor; ältere Euro- und Ticket-Schätzungen
 sind deshalb keine Zusage. Miss deine eigenen Abläufe mit `/usage` und den Session-Logs.
 
 ## Häufige Fragen
@@ -479,7 +479,7 @@ Die Fragen, die im Gespräch immer kommen — beantwortet ohne Fachjargon.
 
 Gar nicht im Kopf — alles liegt als normale Textdateien in deinem Projektordner,
 einsehbar und per Git teilbar. Fünf Schubladen: das **Handbuch** (immer dabei,
-nur die Regeln), die **Fachbücher** (30 Skills, laden nur bei Bedarf), die
+nur die Regeln), die **Fachbücher** (32 Skills, laden nur bei Bedarf), die
 **Projektakte** (Umgebungen, Testuser, Runbooks — einmal eingerichtet), das
 **Lerntagebuch** (Überraschungen aus Läufen) und die **Beweise**
 (Screenshots, Logs — als Datei, nie im Gedächtnis). Der Clou: Am Ende jeder Session
@@ -494,11 +494,11 @@ arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätesten
 16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
 stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
 Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
-Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.18.3 steht noch aus.
+Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.18.8 steht noch aus.
 
 #### ?Wie effizient ist eine Session?
 
-Die immer geladene Ebene ist ~8.300 Tokens (gemessen, per Test gedeckelt). Browser-Arbeit
+Die immer geladene Ebene ist ~7.040 Tokens (gemessen, per Test gedeckelt). Browser-Arbeit
 läuft in abgeschotteten Teil-Sessions; einfache Tickets gehen direkt an genau einen
 Execution-Agenten, komplexe übergeben fertiges Intake und Readiness an den Manager.
 Vorhandene Specs laufen über den CLI-Runner. Die Execution Modes bestimmen, wo sich
@@ -542,7 +542,8 @@ Fehlgriff nicht zweimal passiert.
 Nein — niemals, egal wer fragt oder wie es formuliert ist. Nur Stage. Verlangt ein Ticket
 eine Prod-Verifizierung, meldet der Agent BLOCKED mit Grund, statt kreativ zu werden.
 Deploys darf er nur auf Stage und nur, wenn das Projekt es ausdrücklich erlaubt; MRs
-kommentieren oder mergen darf er nie.
+mergen oder freigeben darf er nie. MR-Kommentare sind eine Projektentscheidung
+(Vorgabe: nein).
 
 #### ?Muss ich programmieren können oder Befehle kennen?
 
@@ -563,7 +564,7 @@ verbinden — dann `/onboard-project` und das Interview beantworten. Danach hei�
 es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Agent testet
 vollständig, postet aber nichts, bis du es freigibst.
 
-QA Agent Blueprint · Stand: 29. Oktober 2026 (0.18.3) —
+QA Agent Blueprint · Stand: 30. Oktober 2026 (0.18.8) —
 aktualisiert auf Repo-Stand (32 Skills, 9 Subagents, Fixture-Batterie + 145 bun-Tests, 45 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,

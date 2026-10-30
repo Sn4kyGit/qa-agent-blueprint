@@ -29,7 +29,7 @@ Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if
 
 1. **Threat model:** Has the team identified key assets, threat actors, and attack surfaces? If not, do a lightweight threat model before writing tests — it tells you which categories matter most.
 2. **Auth mechanism:** Session cookies, JWT, OAuth 2.0/OIDC, API keys, or MFA? Each has distinct negative-path tests (alg confusion, session fixation, state tampering).
-3. **Compliance requirements:** SOC 2, HIPAA, PCI DSS, GDPR? These mandate specific controls — map them with `compliance-testing`; this skill only proves the controls behave.
+3. **Compliance requirements:** SOC 2, HIPAA, PCI DSS, GDPR? These mandate specific controls — map them with upstream qa-skills `compliance-testing` (not vendored); this skill only proves the controls behave.
 4. **Existing security tooling:** Already running OSV-Scanner, Snyk, Dependabot, Semgrep, or ZAP? Check CI config for existing security stages before adding duplicates.
 5. **API surface:** REST, GraphQL, gRPC? Each protocol has specific injection and authorization vectors.
 6. **Deployment model:** Cloud (AWS/GCP/Azure), containers, serverless? Cloud-metadata endpoints are prime SSRF targets and misconfiguration is A02.

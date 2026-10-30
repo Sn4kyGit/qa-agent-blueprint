@@ -7,7 +7,7 @@ report, without burning the token budget.
 ## The layers
 
 ```
-Layer 1 – Global core (always loaded, ~8.3k tokens measured 2026-10-30)
+Layer 1 – Global core (always loaded, ~7.0k tokens measured 2026-10-30)
   CLAUDE.md (router) + .claude/rules/core/*.md — the NORMS only
   QA principles, token discipline, product routing, evidence, security
   ↳ docs/rules/ holds the DETAIL behind each of them, read on demand

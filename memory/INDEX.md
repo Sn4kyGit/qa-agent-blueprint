@@ -31,7 +31,7 @@ keep a plain row — the product layer is optional (`.claude/rules/core/product-
 ## Rules — always loaded (the norms)
 
 `.claude/rules/core/` is in the prompt of every session, so it holds only what must
-bind before any skill is loaded. Measured cost: ~8.3k tokens including the router.
+bind before any skill is loaded. Measured cost: ~7.0k tokens including the router.
 
 | File | Contents |
 |---|---|

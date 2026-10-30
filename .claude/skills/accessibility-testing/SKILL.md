@@ -215,7 +215,7 @@ it yet.
 **Audit evidence to collect:** automated scan results per page, manual checklists with
 tester/date, screen reader results with AT versions, accessibility statement, VPAT for
 enterprise sales, and a remediation plan for known issues. For the full legal/VPAT/consent
-mapping, see `compliance-testing`.
+mapping, see upstream qa-skills `compliance-testing` (not vendored).
 
 ## Anti-Patterns
 

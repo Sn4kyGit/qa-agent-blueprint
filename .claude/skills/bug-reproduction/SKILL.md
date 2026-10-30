@@ -325,6 +325,6 @@ Full descriptions and corrections:
   diagnoses true flakiness, go there to stabilize or quarantine; here you only diagnose.
 - The bridge file `.agents/qa-project-context/<KEY>.md` — stack, test runner, environment
   matrix, and known-flaky areas that shape every step above. Check it first.
-- **systematic-debugging** (`superpowers:systematic-debugging`) — The general root-cause
+- **systematic-debugging** (external optional: `superpowers:systematic-debugging`) — The general root-cause
   debugging loop once you have a deterministic repro; this skill produces that repro and
   the failing test that guards the eventual fix.

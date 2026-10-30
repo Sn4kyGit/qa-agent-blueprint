@@ -8,7 +8,43 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.18.7] — 2026-10-30
+## [0.18.8] — 2026-10-30
+
+Theme: **documentation & installer cleanup.** CHANGELOG heading restored,
+fixture claims synced across all doc pairs, stale eval descriptions fixed,
+vendored skill pointers corrected, installer gets a version stamp and a
+move preflight, and minor doc/UX fixes throughout.
+
+### Fixed — documentation
+- **CHANGELOG 0.18.2 heading restored** — the security-fix history is readable
+  again (was merged under 0.18.3).
+- **Fixture claims synced**: overview.md/html now match README (139/20/89/323).
+- **pilot-briefing.md**: evals description updated (was "8 cases, never run";
+  now "45 cases with scored runner").
+- **Vendored skill pointers**: `compliance-testing` references marked as
+  upstream-not-vendored; `superpowers:` pointer marked as external-optional.
+- **Token claims updated**: ~7.0k (was ~8.3k — the 0.18.7 trim invalidated
+  the old number).
+- **Footer versions**: 0.18.8, date 30. Oktober 2026 (all four one-pagers).
+- **FAQ fixed**: "30 Skills" → 32; MR comments are a project decision, not
+  "never" (merging is never allowed).
+- **On-demand table**: `jira-browser.md` and `retro-learn.md` rows added to
+  CLAUDE.md and ROUTER.md.
+- **Bun test count**: 152 (was 145).
+- **LICENSE file added** (MIT, matching plugin.json declaration).
+- **README doc map**: quickstart-opencode + overview.html added.
+
+### Fixed — installer
+- **H17 Rollback docs**: AGENTS.md no longer documents a non-existent
+  `plugin --uninstall` path; points at `claude plugin uninstall` instead.
+- **H18 Version stamp**: integrate mode writes `.qa-blueprint-install.json`
+  with the blueprint version + install timestamp.
+- **H19 Move preflight**: `--move` checks for `opencode.jsonc` conflicts
+  BEFORE moving data, preventing half-migrated states.
+
+### Changed
+- Spickzettel fixture counts unified (400+, was inconsistent 147/400+).
+- "sixteen times" corrected to "fifteen times plus `within budget` once".
 
 Theme: **token optimization.** 46KB of reference material moved from skill
 bodies to `references/` directories, always-loaded budget trimmed to 7,040
@@ -187,6 +223,8 @@ writes, and plugin mode enforces raw-evidence Read protection.
 ### Upgrade
 - No migration step. Pipeline artifacts and recon.json appear from the next
   test run; guard changes apply on session start.
+
+## [0.18.2] — 2026-10-30
 
 Theme: **five guard holes closed.** The pre-tool guard now blocks the
 self-escalation and bypass classes the audit found — verified with live

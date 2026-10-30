@@ -104,8 +104,9 @@ just detail that would otherwise cost every session:
 | `docs/rules/testing/playwright-mcp.md` | before/while driving the browser via MCP |
 | `docs/rules/testing/playwright-cli.md` | writing or running specs via the CLI runner |
 | `docs/rules/testing/jira-confluence.md` | composing anything written into JIRA/Confluence |
-| `docs/rules/core/cicd.md` | pipelines, quality gates, headless runs (`opencode run`, `claude -p`), nightly/suite runs |
-| `docs/pipeline/00-overview.md` (+ 01–06) | execution modes, phase contracts, red check, observation pass, escalation — when PROJECT.md → "Execution mode" steers a run |
+| `docs/rules/testing/jira-browser.md` | JIRA access via browser (no MCP) — reading tickets, commenting |
+| `docs/rules/core/cicd.md` | pipelines, quality gates, headless `claude -p` runs, nightly/suite runs |
+| `docs/rules/core/retro-learn.md` | running a Groom batch or Promote pass (capture flow is in the skill) |
 | `docs/rules/core/<same name>.md` | companion detail of an always-loaded rule — each names its trigger at the top |
 
 If a question is about a topic above, read the file. Answering from the one-line

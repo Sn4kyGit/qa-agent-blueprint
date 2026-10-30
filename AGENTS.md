@@ -286,7 +286,9 @@ claude plugin uninstall qa-agent-blueprint
 claude plugin marketplace remove qa-agent-blueprint-marketplace
 ```
 
-(Clone path: `install.sh --mode plugin --uninstall --target <consumer-repo>`.)
+(Clone path: the installer's `--uninstall` supports `integrate|opencode|shared`
+modes only. For plugin mode, use `claude plugin uninstall` +
+`claude plugin marketplace remove` above — they remove the same settings keys.)
 
 ## opencode: wrong target folder? Move, don't re-onboard
 opencode commands are per-folder — they exist only where the installer

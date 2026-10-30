@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 32 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 145 bun tests · 45 eval cases |
+| **Contents** | 32 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 152 bun tests · 45 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate; CLI or VS Code extension) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
@@ -322,7 +322,7 @@ down:
 
 | Layer | What | When it loads |
 |---|---|---|
-| **1 · Core** | `CLAUDE.md` router + 5 rule files in `.claude/rules/core/` | always — the norms only (~8.3k tokens, measured) |
+| **1 · Core** | `CLAUDE.md` router + 5 rule files in `.claude/rules/core/` | always — the norms only (~7.0k tokens, measured) |
 | **1b · Rule details** | `docs/rules/` | on demand — the detail behind a rule, when its topic comes up |
 | **2 · Skills & subagents** | `.claude/skills/`, `.claude/agents/` | on demand |
 | **3 · Project & product** | `projects/<KEY>/` + `products/<PRODUCT>/` | active project only |
@@ -691,7 +691,7 @@ Details: `.claude/rules/core/security.md` · `docs/artifact-strategy.md`.
 The plugin is MIT — free. The git repo is contacted exactly twice in its life:
 at install, and when you explicitly update. Everything else is local.
 
-The real cost is **model tokens**. The always-loaded layer is measured (~8.3k)
+The real cost is **model tokens**. The always-loaded layer is measured (~7.0k)
 and capped by a test; skills and detailed rules load on demand. Project files
 stay compact, Learnings are searched by ticket keywords, raw evidence is not
 read back, and browser transcripts stay inside execution subagents.
@@ -747,6 +747,8 @@ runs it.
 | [docs/execution-modes.md](docs/execution-modes.md) | **Deutsch, für Anwender**: die drei Execution Modes (mcp-only / hybrid / cli-first), was sie bringen, wie man umstellt |
 | [docs/pipeline/](docs/pipeline/) | The phase knowledge behind the modes: contracts, red check, observation pass, escalation |
 | [docs/quickstart-plugin.md](docs/quickstart-plugin.md) | Plugin on a fresh machine: JIRA + stage URL only, no app repo — CLI, clone, or manual wiring |
+| [docs/quickstart-opencode.md](docs/quickstart-opencode.md) | opencode setup: symlinked, model-agnostic, `/models` choice |
+| [docs/overview.html](https://sn4kygit.github.io/qa-agent-blueprint/overview.html) | One-page overview (German) — the big picture |
 | [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
 | [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
 | [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |
@@ -768,7 +770,7 @@ one-off edits.
 
 Before opening a PR: run `bash -n` on any script you touched, keep all JSON valid,
 and run every fixture suite — `for t in .claude/hooks/tests/*.sh; do bash "$t"; done`
-must print `all fixtures passed` sixteen times. A new enforcement rule needs a new
+must print `all fixtures passed` fifteen times plus `within budget` once. A new enforcement rule needs a new
 fixture; that is not negotiable, for the reason documented above. Touched
 `install.sh`? The integrate suite is the one that catches what a dry-run cannot.
 
