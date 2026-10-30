@@ -1097,6 +1097,11 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   // equivalent).
   const testActivity = new Map<string, Set<string>>()
   const idleReminded = new Set<string>()
+  // 0.19.0: per-session performance accumulator (token usage + tool count).
+  // Usage is extracted from tool output metadata when available; written to
+  // evidence/.audit/session-perf.log at session.idle (mirror of the bash hook).
+  interface PerfAccum { input: number; output: number; cacheCreate: number; cacheRead: number; tools: number }
+  const perfBySession = new Map<string, PerfAccum>()
 
   async function gateMessageFor(sessionID: string): Promise<string | null> {
     const keys = testActivity.get(sessionID)
@@ -1152,6 +1157,22 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
           await auditJiraWrite(home, tool, input?.args, !failed)
         } catch { /* logging must never break a session */ }
       }
+      // 0.19.0: accumulate performance data (tool count + usage metadata if present)
+      {
+        const sid = input?.sessionID ?? ""
+        if (sid) {
+          const acc = perfBySession.get(sid) ?? { input: 0, output: 0, cacheCreate: 0, cacheRead: 0, tools: 0 }
+          acc.tools += 1
+          const md = output?.metadata as Record<string, unknown> | undefined
+          if (md) {
+            acc.input += Number(md.input_tokens ?? md.inputTokens ?? 0) || 0
+            acc.output += Number(md.output_tokens ?? md.outputTokens ?? 0) || 0
+            acc.cacheCreate += Number(md.cache_creation_input_tokens ?? md.cacheCreationInputTokens ?? 0) || 0
+            acc.cacheRead += Number(md.cache_read_input_tokens ?? md.cacheReadInputTokens ?? 0) || 0
+          }
+          perfBySession.set(sid, acc)
+        }
+      }
     },
 
     event: async ({ event }: { event: { type: string; properties?: Record<string, unknown> } }) => {
@@ -1174,6 +1195,21 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
       }
       if (event?.type !== "session.idle") return
       const sessionID = String(event.properties?.sessionID ?? "")
+      // 0.19.0: write session performance log before the evidence gate
+      // (only when evidence/ is scaffolded — mirrors the bash hook's early exit)
+      {
+        const acc = perfBySession.get(sessionID)
+        if (acc && existsSync(join(home, "evidence"))) {
+          try {
+            const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z")
+            const logDir = join(home, "evidence", ".audit")
+            await mkdir(logDir, { recursive: true })
+            const line = `${ts} | input=${acc.input} | output=${acc.output} | cache_create=${acc.cacheCreate} | cache_read=${acc.cacheRead} | tools=${acc.tools}\n`
+            await appendFile(join(logDir, "session-perf.log"), line)
+          } catch { /* logging must never break a session */ }
+          perfBySession.delete(sessionID)
+        }
+      }
       if (idleReminded.has(sessionID)) return
       const msg = await gateMessageFor(sessionID)
       if (!msg) return

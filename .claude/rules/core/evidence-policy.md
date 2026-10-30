@@ -34,6 +34,8 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
   artifacts are copied into the run dir above.
 - `evidence/.audit/jira-writes.log` — append-only, one line per JIRA write, written
   by the JIRA-write audit, never by the agent directly.
+- `evidence/.audit/session-perf.log` — append-only, one line per session with
+  token usage totals, written by the Stop hook from transcript metadata.
 
 ## Capture matrix
 
@@ -130,6 +132,20 @@ The skills the run **actually** used (field above), never the planned ones. Opti
 retro-fitted. Whoever writes the summary declares it; a flow with no summary
 step of its own (`bug-report`, `recon`) is listed by the orchestrator.
 `/skill-review` reads it back `used`/`unknown` — absent data is never "unused".
+
+## Timing & performance fields — optional (0.19.0)
+
+Optional fields for performance analysis. Old summaries without them stay
+valid; the schema tolerates extras. Declared by whoever writes the summary:
+
+- `started_at` / `finished_at` — RFC3339 UTC, the run's wall-clock bounds
+- `duration_s` — total seconds (alternative to computing from timestamps)
+- `phases{intake,readiness,recon,planning,execution,verification,reporting}` — seconds per phase
+- `session{model,delegations,tool_calls}` — what the run cost in agent terms
+
+`evidence/.audit/session-perf.log` — append-only, one line per session with
+token usage totals (input/output/cache_create/cache_read/tools), written by
+the Stop hook from transcript usage metadata. Never content, never secrets.
 
 ## PII & secrets in evidence
 

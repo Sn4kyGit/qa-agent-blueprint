@@ -48,7 +48,12 @@ semantics in `claude -p`.
     "captured": ["storefront page cache served stale assets after deploy"],
     "none_because": null
   },
-  "skills_used": ["test-ticket", "recon", "test-automation"]
+  "skills_used": ["test-ticket", "recon", "test-automation"],
+  "started_at": "2026-09-04T14:00:00Z",
+  "finished_at": "2026-09-04T14:47:23Z",
+  "duration_s": 2843,
+  "phases": { "intake": 120, "readiness": 60, "recon": 300, "planning": 180, "execution": 1800, "verification": 240, "reporting": 143 },
+  "session": { "model": "sonnet", "delegations": 4, "tool_calls": 47 }
 }
 ```
 

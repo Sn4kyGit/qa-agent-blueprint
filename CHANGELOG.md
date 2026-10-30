@@ -8,7 +8,37 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.18.8] — 2026-10-30
+## [0.19.0] — 2026-10-30
+
+Theme: **performance analysis.** New `/perf-analysis` skill with token
+tracking, session timing, phase breakdown, bottleneck detection, and
+concrete improvement suggestions. Schema extended with optional timing
+fields; session-perf.log captures token usage metadata.
+
+### Added
+- **`/perf-analysis` skill** (33rd skill): analyzes session duration, phase
+  breakdown, token usage, flake rates, and bottleneck patterns. Produces
+  actionable improvement suggestions mapped to specific skills/workflows.
+  Read-only; reports "not computable" for gaps rather than estimating.
+- **`perf-analysis.py` script**: stdlib analyzer reading
+  `execution_summary.json` (timing fields), `run.json`, `session-perf.log`,
+  and `evals/results/history.log`. Markdown output + `--json`.
+- **Token tracking**: Stop hook extracts usage metadata (input/output/
+  cache_create/cache_read/tools) from transcript `message.usage` — numbers
+  only, never content. Written to `evidence/.audit/session-perf.log`.
+  TS plugin mirrors this via `tool.execute.after` accumulation.
+- **Schema extension**: optional `started_at`/`finished_at`/`duration_s`/
+  `phases{}`/`session{}` fields in `execution_summary.json`. Old summaries
+  remain valid; the schema tolerates extras.
+- **`references/improvement-patterns.md`**: bottleneck → fix mapping
+  (execution dominance, flake rate, blocked rate, delegation overhead,
+  cache hit rate, duration).
+- **Eval case** `perf-analysis-honesty` (hard tier): grader checks that
+  analysis reports only data-derived numbers and stays read-only.
+
+### Changed
+- Skill count: 32 → 33. Command count: 21 → 22. Eval cases: 45 → 46.
+- `evidence-policy.md` documents timing fields and `session-perf.log`.
 
 Theme: **documentation & installer cleanup.** CHANGELOG heading restored,
 fixture claims synced across all doc pairs, stale eval descriptions fixed,

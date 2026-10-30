@@ -44,6 +44,56 @@ done
 
 [ -d "$CWD/evidence" ] || exit 0   # nothing to enforce if evidence/ isn't even scaffolded
 
+# --- session performance log (0.19.0) ---
+# Extract token usage metadata from the transcript and append one line to
+# evidence/.audit/session-perf.log. Only usage NUMBERS are read (input_tokens,
+# output_tokens, cache_creation, cache_read) — never message content. This is
+# structured harness metadata, not transcript mining (the data boundary is
+# about secrets/content, not usage counts). Format mirrors jira-writes.log.
+log_session_perf() {
+  [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  local _perf_data
+  _perf_data="$(python3 - "$TRANSCRIPT" <<'PYEOF' 2>/dev/null
+import json, sys
+path = sys.argv[1]
+total_in = total_out = cache_create = cache_read = tool_calls = 0
+try:
+    with open(path) as f:
+        for line in f:
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            if obj.get("type") != "assistant":
+                continue
+            msg = obj.get("message") or {}
+            usage = msg.get("usage") or {}
+            total_in += usage.get("input_tokens", 0) or 0
+            total_out += usage.get("output_tokens", 0) or 0
+            cache_create += usage.get("cache_creation_input_tokens", 0) or 0
+            cache_read += usage.get("cache_read_input_tokens", 0) or 0
+            content = msg.get("content") or []
+            for c in content:
+                if isinstance(c, dict) and c.get("type") == "tool_use":
+                    tool_calls += 1
+except Exception:
+    pass
+print(f"{total_in} {total_out} {cache_create} {cache_read} {tool_calls}")
+PYEOF
+)"
+  [ -n "$_perf_data" ] || return 0
+  local _ts _logdir _logfile
+  _ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  _logdir="$CWD/evidence/.audit"
+  mkdir -p "$_logdir" 2>/dev/null || return 0
+  _logfile="$_logdir/session-perf.log"
+  printf '%s | input=%s | output=%s | cache_create=%s | cache_read=%s | tools=%s\n' \
+    "$_ts" $(echo "$_perf_data") >> "$_logfile" 2>/dev/null
+}
+
+log_session_perf
+
 # Signal: did this session actually INVOKE a test tool (not just mention one in
 # prose or in a file being written/edited — this repo's own docs/rules talk
 # about "execution_summary.json" and "verdict: PASS/FAIL" constantly, so a

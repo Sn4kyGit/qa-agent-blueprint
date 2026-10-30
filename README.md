@@ -23,7 +23,7 @@ diffable, and shared with your team through Git.
 | | |
 |---|---|
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 32 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 152 bun tests · 45 eval cases |
+| **Contents** | 33 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 152 bun tests · 46 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate; CLI or VS Code extension) · opencode (symlinked, model-agnostic) |
 | **License** | MIT |
 
@@ -405,7 +405,7 @@ than by guesswork.
 
 Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
 by `/test-automation` when a project's declared framework is webdriverio (not
-invoked directly; see its SKILL.md). 21 + 10 + 1 = the 32 skills from the header.
+invoked directly; see its SKILL.md). 21 + 10 + 1 = the 33 skills from the header.
 
 </details>
 

@@ -55,6 +55,7 @@ project recognized → project knowledge applied → tested → evidence produce
 | Command overview / help | `qa-help` |
 | QA model lanes | `model-setup` |
 | Skill usage & profile | `skill-review` |
+| Session performance, duration, bottlenecks, costs | `perf-analysis` |
 | Vendored skills (API, a11y, security, visual, flaky, risk, release, test cases, metrics) | `qa-manager` → "Specialized skills" |
 
 ## Hard rules

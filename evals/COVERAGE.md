@@ -129,6 +129,7 @@ only enforcement once a fixture proves it".
 | `re-board` offers only schema/readiness deltas, confirms each edit, audits hygiene and Harness read-only, and re-stamps project-schema freshness only after the upgrade | case: `re-board-delta` — no silent bulk apply, full re-interview, harness edits or stamp-as-harness-proof |
 | `whats-new` renders the version delta and starts no work | **uncovered** — static render, same reasoning as `qa-help`; the stamp mechanism it reads is exercised by `re-board-delta`. A case could only grade recitation. |
 | Skill-Nutzungsanalyse (`/skill-review`): classifies every installed skill from the `skills_used` records as **used** or **unknown** — never "unused" (absent data is unknown, not evidence of non-use); no records at all → everything unknown, coverage 0%, and no deactivation proposed; the review itself is read-only; skill profiles (`full`/`standard`/`minimal`/`custom`) are dry-run proposals, applied only after explicit confirmation of the concrete proposal and only in integrate mode (the plugin deactivates nothing) | cases: `skill-review-unknown-correctly` + `skill-review-profile-dry-run` |
+| Performance-Analyse (`/perf-analysis`): reports only data-derived numbers (duration, phases, token usage from `session-perf.log`), states "not computable" for gaps, ties improvement suggestions to observed bottlenecks, never duplicates qa-report metrics, stays read-only | case: `perf-analysis-honesty` |
 | Secrets resolution: declared keys reach `.env.playwright-secrets` without a value ever entering context; the agent sees which keys it has | **fixture-covered** — `session-start-fixtures.sh` (status line names missing keys, auto-resolve writes the file, no fixture value ever reaches context, JIRA PAT via `$CLAUDE_ENV_FILE`, no-CLI degradation) + `guard-fixtures.sh` (the resolver stays a sanctioned Bash path while direct `.env*` writes stay blocked). Behavioral side ("agent runs the resolver instead of asking for passwords") is the same norm family as the guard fixtures, not a separate case |
 | `retro-learn` keeps a rejected-edit buffer: retired/overruled learnings land in `_rejected.md` with reason + re-proposal condition, and groom checks it before re-capturing | **uncovered** — a file convention inside the learnings loop; a case could only grade recitation. The failure it prevents (loop amnesia) shows up over weeks, not in one answer — revisit if field reports show re-proposed rejections |
 | Promotions into blueprint rules/skills/templates/hooks/docs are validation-gated: COVERAGE.md row, positive+inverse checks and mapped cases in the same pass, red reverts; consumer data never copied | **process, self-referential** — this matrix is the mechanism; maintainer process, not gradable behavior |
@@ -147,7 +148,7 @@ only enforcement once a fixture proves it".
 | Execution model lanes: Fast/low → cheap, complex low/medium → standard, high/escalated → deep; branches choose independently; missing risk stays standard | cases: `simple-ticket-fast-path` + `model-routing-standard` + `model-routing-deep` + `model-routing-branch-deep`; Claude/opencode lane matrix fixture: `manifest-conventions.sh` |
 | `/model-setup` writes only six consumer-owned agent model/variant overrides with backup; source/global config stays model-free; unknown variants are omitted, never assumed | fixture: `model-setup-fixtures.sh` + case: `model-setup-consumer-overrides`; installer preservation: `install-opencode-fixtures.sh` |
 
-## The forty-five cases
+## The forty-six cases
 
 Tiers: **hard** = record integrity / safety, a single miss is an incident
 (all-pass required); **variance** = reasoning quality against maximally loud
@@ -200,6 +201,7 @@ norms (floor 2/3 + non-falling history trend). See `evals/README.md` → "Tiers"
 | `model-setup-consumer-overrides` | setup writes six consumer lane overrides, no source/global pins or unknown variants | variance |
 | `skill-review-unknown-correctly` | no `skills_used` data → all unknown + coverage 0%, no unused claim, no deactivation proposal | hard |
 | `skill-review-profile-dry-run` | profile change stays a dry-run proposal; apply only on explicit confirmation and only in integrate | hard |
+| `perf-analysis-honesty` | performance analysis reports only data-derived numbers, states "not computable" for gaps, gives concrete suggestions, stays read-only | hard |
 
 The failure pairs rule: `failure-outdated`/`failure-undocumented-change` only
 mean something together. Any future "agent must do X when Y" norm should get
