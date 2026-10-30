@@ -42,6 +42,7 @@ function isSecretPath(p: string): boolean {
   if (p.endsWith(".env.example")) return false
   if (p.endsWith(".env") || p.includes(".env.")) return true
   if (p.endsWith(".pem") || p.includes("id_rsa") || p.includes("id_ed25519")) return true
+  if (p.endsWith(".auth") || /storage[._-]state/i.test(p)) return true
   // Lowercase: `*secret*`-style patterns must catch SECRET/ and Credentials/
   // (bash case is case-sensitive — that bug shipped once already).
   const lc = p.toLowerCase()
@@ -57,12 +58,13 @@ function haystackTouchesSecret(s: string): boolean {
   const stripped = s.replaceAll(".env.example", "")
   return /\.env(\.|"|'|$)/.test(stripped)
     || /\.pem\b|id_rsa|id_ed25519/i.test(stripped)
+    || /\.auth\b|storage[._-]state/i.test(stripped)
     || /secret|credential/i.test(stripped)
 }
 
 const RM_RF = /rm\s+(-[a-zA-Z]*f[a-zA-Z]*r|-[a-zA-Z]*r[a-zA-Z]*f)\s/
 const GIT_FORCE_PUSH = /git\s+push\s+.*(--force|-f\b)/
-// The reader must sit at a COMMAND position and the .env file must belong to
+// The reader must sit at a COMMAND position and the secret file must belong to
 // THAT command — otherwise a pipe followed by prose naming the file blocks
 // ordinary work, and a guard that blocks ordinary work gets switched off.
 // grep/sed/awk/jq are readers too (0.6.1 field report: `grep -o '^[A-Z_]*='`
@@ -70,24 +72,40 @@ const GIT_FORCE_PUSH = /git\s+push\s+.*(--force|-f\b)/
 // 0.11.0 (tdd §8/F1): cp|mv split OUT of the reader class — movers relocate
 // the file and stay blocked in BOTH toggle states; the READER_CORE class
 // follows the secrets_read toggle in .qa-guard.json (default: block).
-const ENV_READER = /(^|[;&|(]|&&|\|\|)\s*(cat|less|more|head|tail|grep|sed|awk|jq|source)\s+[^;&|]*\.env([^a-zA-Z]|$)/
-const ENV_MOVER = /(^|[;&|(]|&&|\|\|)\s*(cp|mv)\s+[^;&|]*\.env([^a-zA-Z]|$)/
+// The tail pattern covers every unambiguous secret-file class: .env*,
+// *.pem, id_rsa, id_ed25519, *.auth and storage-state. The broad
+// *secret*/*credential* substring patterns from isSecretPath stay WRITE-only.
+const SECRET_TAIL = "(\\.env([^a-zA-Z]|$)|\\.pem\\b|id_rsa|id_ed25519|\\.auth\\b|storage[._-]state)"
+const ENV_TAIL = "(\\.env([^a-zA-Z]|$))"
+const HARD_SECRET_TAIL = "(\\.pem\\b|id_rsa|id_ed25519|\\.auth\\b|storage[._-]state)"
+const ENV_READER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(cat|less|more|head|tail|grep|sed|awk|jq|source|base64)\\s+[^;&|]*${ENV_TAIL}`)
+const HARD_SECRET_READER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(cat|less|more|head|tail|grep|sed|awk|jq|source|base64)\\s+[^;&|]*${HARD_SECRET_TAIL}`)
+const ENV_MOVER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(cp|mv)\\s+[^;&|]*${SECRET_TAIL}`)
 // sed -i / awk -i edit in place — a WRITE, not a read. The flag must sit
 // directly after the command: -i, -i.bak, --in-place, -i inplace.
-const ENV_INPLACE = /(^|[;&|(]|&&|\|\|)\s*(sed|awk)\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)\s[^;&|]*\.env([^a-zA-Z]|$)/
-// rm hardening (tdd §9/F2): plain `rm <.env*>` used to sail through — only
-// rm -rf was blocked. Deleting a secrets file is a human task.
-const ENV_RM = /(^|[;&|(]|&&|\|\|)\s*rm\s+(-[a-zA-Z]+\s+)*[^;&|]*\.env([^a-zA-Z]|$)/
+const ENV_INPLACE = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(sed|awk)\\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)\\s[^;&|]*${SECRET_TAIL}`)
+// rm hardening (tdd §9/F2): plain `rm <secret>` used to sail through — only
+// rm -rf was blocked. Deleting a secret file is a human task.
+const ENV_RM = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*rm\\s+(-[a-zA-Z]+\\s+)*[^;&|]*${SECRET_TAIL}`)
 // The guard's own toggle file is a human task: an agent that can write
 // .qa-guard.json can grant itself secrets_read=allow (self-escalation).
 const GUARD_CFG_WRITER = /(sed\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee\s|>>?|cp\s|mv\s|rm\s|truncate|dd\s)[^;&|]*\.qa-guard\.json/
+// Interpreter one-liners that WRITE .qa-guard.json: same self-escalation,
+// different mechanism.
+const GUARD_CFG_INTERPRETER = /(python3?|perl|ruby|node|php)\s[^;&|]*(open|write|writeFile|require|include|slurp)[^;&|]*\.qa-guard\.json/
 // The next-most-likely bypass class: interpreter one-liners that OPEN the
 // file. The open/read/load keyword is required so `python3 -c "note='.env
 // template'"` — merely mentioning the name — stays allowed (audit F4: the
 // false-positive rate must stay visible in fixtures). Best-effort net; the
 // real guarantee is --secrets masking at the browser layer.
-const ENV_INTERPRETER = /(python3?|perl|ruby|node|php)\s[^;&|]*(open|read|load|require|include|slurp)[^;&|]*\.env([^a-zA-Z]|$)/
-const ENV_REDIRECT = />>?\s*\.env/
+const ENV_INTERPRETER = new RegExp(`(python3?|perl|ruby|node|php)\\s[^;&|]*(open|read|load|require|include|slurp)[^;&|]*${SECRET_TAIL}`)
+const ENV_REDIRECT = new RegExp(`>>?\\s*${SECRET_TAIL}`)
+// Bash curl/wget to JIRA REST endpoints with a write method bypasses the
+// MCP-level shadow gate and the JIRA write audit.
+const JIRA_BASH_WRITE = (cmd: string) =>
+  /(curl|wget)\s/.test(cmd) &&
+  /(-X\s*(POST|PUT|DELETE|PATCH)|--request\s*(POST|PUT|DELETE|PATCH)|-d\s|--data[= ]|--data-raw[= ]|--data-urlencode[= ]|--json[= ]|-F\s|--form[= ]|--post-data[= ]|--post-file[= ]|--method[=:]\s*(POST|PUT|DELETE|PATCH))/i.test(cmd) &&
+  /\/rest\/(api|agile)\//.test(cmd)
 
 // Tools whose filePath argument is a WRITE (reads are governed by opencode
 // permission denies — D8 — not by this guard, same split as Claude where the
@@ -196,6 +214,13 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
   if (filePath && pathChecked && (filePath === ".qa-guard.json" || filePath.endsWith("/.qa-guard.json"))) {
     block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
   }
+  // Shadow-mode unlock via PROJECT.md is the same self-escalation class.
+  if (filePath && pathChecked && (filePath.endsWith("/PROJECT.md") || filePath === "PROJECT.md")) {
+    const content = String((args as Record<string, unknown>)?.content ?? (args as Record<string, unknown>)?.new_string ?? "")
+    if (/shadow mode:\s*off/i.test(content)) {
+      block("refusing to write 'Shadow mode: off' into PROJECT.md — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself.")
+    }
+  }
 
   if (process.env.QA_ALLOW_GLOBAL_MCP !== "1") {
     if (filePath && pathChecked && globalMcpConfigPaths().has(filePath)) {
@@ -211,20 +236,24 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (RM_RF.test(command)) block("refusing rm -rf / rm -fr — destructive command.")
     if (GIT_FORCE_PUSH.test(command)) block("refusing git push --force — see the git safety protocol before overriding this manually.")
     if (GUARD_CFG_WRITER.test(command)) block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
+    if (GUARD_CFG_INTERPRETER.test(command)) block("refusing to modify .qa-guard.json via an interpreter — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
+    if (JIRA_BASH_WRITE(command)) block("refusing a Bash JIRA REST write (curl/wget with a write method to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only GET requests stay allowed.")
     // Strip only the literal ".env.example" before the .env checks: the
     // template must stay writable; .env/.env.local/.env.playwright-secrets
     // still match in full.
     const noExample = command.replaceAll(".env.example", "")
-    if (ENV_RM.test(noExample)) block("refusing to delete a .env* file — removing a secrets file is a human task (blocked regardless of secrets_read).")
-    if (ENV_MOVER.test(noExample)) block("refusing to copy/move a .env* file — secrets never leave their protected file (blocked regardless of secrets_read).")
-    if (ENV_INPLACE.test(noExample)) block("refusing an in-place edit of a .env* file — sed -i / awk -i is a write, not a read (blocked regardless of secrets_read).")
+    if (ENV_RM.test(noExample)) block("refusing to delete a secret file — removing a secret file is a human task (blocked regardless of secrets_read).")
+    if (ENV_MOVER.test(noExample)) block("refusing to copy/move a secret file — secrets never leave their protected file (blocked regardless of secrets_read).")
+    if (ENV_INPLACE.test(noExample)) block("refusing an in-place edit of a secret file — sed -i / awk -i is a write, not a read (blocked regardless of secrets_read).")
     // READER_CORE follows the secrets_read toggle (tdd §7); default: block.
     if (secretsRead !== "allow" && ENV_READER.test(noExample)) block("refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it).")
+    // Hard secret classes are NEVER readable, regardless of the toggle.
+    if (HARD_SECRET_READER.test(noExample)) block("refusing a command that reads a credential file — private keys, auth tokens and storage state never enter chat or context (blocked regardless of secrets_read).")
     // Interpreters do NOT follow the toggle (tdd §10/§11): a regex cannot
     // tell open('.env') from open('.env','w') — allowing this class would
     // open a secret-WRITE hole, so it fails closed in both states.
-    if (ENV_INTERPRETER.test(noExample)) block("refusing a command that appears to read a .env* file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status.")
-    if (ENV_REDIRECT.test(noExample)) block("refusing a command that writes into a .env* file directly — use the vault/secrets workflow instead.")
+    if (ENV_INTERPRETER.test(noExample)) block("refusing a command that appears to read a secret file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status.")
+    if (ENV_REDIRECT.test(noExample)) block("refusing a command that writes into a secret file directly — use the vault/secrets workflow instead.")
   }
 }
 

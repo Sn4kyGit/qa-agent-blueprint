@@ -97,7 +97,7 @@ if [ -z "$TOOL_NAME" ]; then
   # anchored reader checks below cannot be trusted on a raw JSON blob), and an
   # unparsable call that looks like an Atlassian write is treated as one for
   # the shadow gate further down — fail safe on both axes.
-  if printf '%s' "$INPUT" | sed 's/\.env\.example//g' | grep -qiE '\.env(\.|"|'"'"'|$)|\.pem|id_rsa|id_ed25519|secret|credential'; then
+  if printf '%s' "$INPUT" | sed 's/\.env\.example//g' | grep -qiE '\.env(\.|"|'"'"'|$)|\.pem|id_rsa|id_ed25519|secret|credential|\.auth|storage.state'; then
     block "refusing an unrecognized call touching a secrets path — failing closed."
   fi
   if printf '%s' "$INPUT" | grep -qiE 'atlassian__?[a-z]*(create|edit|add|transition|update|delete|executeWrite|executeDestructive)'; then
@@ -123,6 +123,7 @@ is_secret_path() {
     *.env.example|*/.env.example) return 1 ;;
     *.env|*.env.*|*/.env|*/.env.*) return 0 ;;
     *.pem|*id_rsa*|*id_ed25519*) return 0 ;;
+    *.auth|*storage-state*|*storage_state*) return 0 ;;
   esac
   case "$lc" in
     *secret*|*credential*) return 0 ;;
@@ -145,6 +146,19 @@ if [ -n "$FILE_PATH" ]; then
   esac
 fi
 
+# 1c. Shadow-mode unlock via PROJECT.md is the same self-escalation class: an
+# agent that can write "Shadow mode: off" into PROJECT.md can ungate its own
+# JIRA writes. Only a human editing the file outside the agent may flip it.
+if [ -n "$FILE_PATH" ]; then
+  case "$FILE_PATH" in
+    */PROJECT.md|PROJECT.md)
+      SHADOW_CONTENT="$(get_json 'import re; ti=d.get("tool_input") or {}; c=str(ti.get("content") or ti.get("new_string") or ""); print("yes" if re.search(r"shadow mode:[ ]*off", c, re.IGNORECASE) else "")')"
+      if [ "$SHADOW_CONTENT" = "yes" ]; then
+        block "refusing to write 'Shadow mode: off' into PROJECT.md — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself."
+      fi ;;
+  esac
+fi
+
 # 2. Bash: block destructive/secret-touching commands.
 if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; then
   if printf '%s' "$COMMAND" | grep -qE 'rm[[:space:]]+(-[a-zA-Z]*f[a-zA-Z]*r|-[a-zA-Z]*r[a-zA-Z]*f)[[:space:]]'; then
@@ -158,33 +172,49 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # and must stay writable, e.g. `cat > .env.example`. Only that exact substring
   # is stripped, so `.env`, `.env.local` and `.env.playwright-secrets` still match
   # in full. Destructive-command checks above deliberately use the raw command.
+  # The tail pattern covers every unambiguous secret-file class: .env*,
+  # *.pem, id_rsa, id_ed25519, *.auth and storage-state. The broad
+  # *secret*/*credential* substring patterns from is_secret_path stay
+  # WRITE-only — as a reader regex they would block ordinary grep/cat on
+  # files whose names merely contain those words.
   COMMAND_NO_EXAMPLE="$(printf '%s' "$COMMAND" | sed 's/\.env\.example//g')"
+  ENV_TAIL='(\.env([^a-zA-Z]|$))'
+  HARD_SECRET_TAIL='(\.pem\b|id_rsa|id_ed25519|\.auth\b|storage[._-]state)'
+  SECRET_TAIL="($ENV_TAIL|$HARD_SECRET_TAIL)"
 
   # The toggle file via shell: sed -i/tee/redirects/cp/mv/rm on .qa-guard.json
   # are the same self-escalation as a Write to it (check 1b).
   if printf '%s' "$COMMAND" | grep -qE '(sed[[:space:]]+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee[[:space:]]|>>?|cp[[:space:]]|mv[[:space:]]|rm[[:space:]]|truncate|dd[[:space:]])[^;&|]*\.qa-guard\.json'; then
     block "refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow)."
   fi
+  # Interpreter one-liners that WRITE .qa-guard.json: same self-escalation,
+  # different mechanism. python3 -c "open('.qa-guard.json','w')...", node -e
+  # "require('fs').writeFileSync('.qa-guard.json',...)", etc. The open/write/
+  # writeFile keyword is required so `python3 -c "note='.qa-guard.json'"` —
+  # merely mentioning the name — stays allowed.
+  if printf '%s' "$COMMAND" | grep -qiE '(python3?|perl|ruby|node|php)[[:space:]][^;&|]*(open|write|writeFile|require|include|slurp)[^;&|]*\.qa-guard\.json'; then
+    block "refusing to modify .qa-guard.json via an interpreter — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow)."
+  fi
 
   # rm hardening (0.11.0, tdd §9/F2): deleting a secrets file is a human
   # task. Plain `rm <.env*>` (and rm -f) used to sail through — only rm -rf
   # was blocked. Blocked regardless of the secrets_read toggle.
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*rm[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*[^;&|]*\.env([^a-zA-Z]|$)'; then
-    block "refusing to delete a .env* file — removing a secrets file is a human task (blocked regardless of secrets_read)."
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*rm[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*[^;&|]*$SECRET_TAIL"; then
+    block "refusing to delete a secret file — removing a secret file is a human task (blocked regardless of secrets_read)."
   fi
 
   # cp/mv are NOT readers (tdd §8/F1): they relocate the secrets file out of
   # its protected context. Blocked in BOTH toggle states.
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cp|mv)[[:space:]]+[^;&|]*\.env([^a-zA-Z]|$)'; then
-    block "refusing to copy/move a .env* file — secrets never leave their protected file (blocked regardless of secrets_read)."
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*(cp|mv)[[:space:]]+[^;&|]*$SECRET_TAIL"; then
+    block "refusing to copy/move a secret file — secrets never leave their protected file (blocked regardless of secrets_read)."
   fi
 
   # sed -i / awk -i edit in place — a WRITE, not a read (tdd §8/F1). The flag
   # must sit directly after the command: `-i`, `-i.bak`, `--in-place`,
   # `-i inplace`. A -i *string* inside the sed script is a rare accepted
   # false positive (fail closed beats a write slipping through as a "read").
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(sed|awk)[[:space:]]+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)[[:space:]][^;&|]*\.env([^a-zA-Z]|$)'; then
-    block "refusing an in-place edit of a .env* file — sed -i / awk -i is a write, not a read (blocked regardless of secrets_read)."
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*(sed|awk)[[:space:]]+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)[[:space:]][^;&|]*$SECRET_TAIL"; then
+    block "refusing an in-place edit of a secret file — sed -i / awk -i is a write, not a read (blocked regardless of secrets_read)."
   fi
 
   # The reader has to sit at a COMMAND position (line start, or after ; && || |) and
@@ -198,8 +228,14 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # Listing key NAMES is exactly what resolve-secrets.sh --status exists for.
   # 0.11.0: this READER_CORE class (cp/mv and * -i split out above) follows the
   # secrets_read toggle in .qa-guard.json — default stays block.
-  if [ "$SECRETS_READ" != "allow" ] && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|more|head|tail|grep|sed|awk|jq|source)[[:space:]]+[^;&|]*\.env([^a-zA-Z]|$)'; then
+  if [ "$SECRETS_READ" != "allow" ] && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|more|head|tail|grep|sed|awk|jq|source|base64)[[:space:]]+[^;&|]*$ENV_TAIL"; then
     block "refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it)."
+  fi
+  # Hard secret classes (private keys, auth tokens, storage state) are NEVER
+  # readable, regardless of the secrets_read toggle — they are not a comfort
+  # opt-in, they are credentials.
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|more|head|tail|grep|sed|awk|jq|source|base64)[[:space:]]+[^;&|]*$HARD_SECRET_TAIL"; then
+    block "refusing a command that reads a credential file — private keys, auth tokens and storage state never enter chat or context (blocked regardless of secrets_read)."
   fi
   # The next-most-likely bypass class: interpreter one-liners that OPEN the
   # file (python3 -c "print(open('.env').read())" et al.). The open/read/load
@@ -212,11 +248,20 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # This class does NOT follow the toggle (tdd §10/§11): a regex cannot tell
   # open('.env') from open('.env','w') — allowing it in allow-mode would open
   # a secret-WRITE hole, so it fails closed in both states.
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '(python3?|perl|ruby|node|php)[[:space:]][^;&|]*(open|read|load|require|include|slurp)[^;&|]*\.env([^a-zA-Z]|$)'; then
-    block "refusing a command that appears to read a .env* file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status."
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(python3?|perl|ruby|node|php)[[:space:]][^;&|]*(open|read|load|require|include|slurp)[^;&|]*$SECRET_TAIL"; then
+    block "refusing a command that appears to read a secret file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status."
   fi
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '>>?[[:space:]]*\.env'; then
-    block "refusing a command that writes into a .env* file directly — use the vault/secrets workflow instead."
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE ">>?[[:space:]]*$SECRET_TAIL"; then
+    block "refusing a command that writes into a secret file directly — use the vault/secrets workflow instead."
+  fi
+
+  # S3: Bash curl/wget to JIRA REST endpoints with a write method bypasses the
+  # MCP-level shadow gate and the JIRA write audit. Block the same class of
+  # write the MCP gate handles (create/edit/add/transition/update/delete).
+  if printf '%s' "$COMMAND" | grep -qE '(curl|wget)[[:space:]]' \
+    && printf '%s' "$COMMAND" | grep -qiE '(-X[[:space:]]*(POST|PUT|DELETE|PATCH)|--request[[:space:]]*(POST|PUT|DELETE|PATCH)|-d[[:space:]]|--data[=[:space:]]|--data-raw[=[:space:]]|--data-urlencode[=[:space:]]|--json[=[:space:]]|-F[[:space:]]|--form[=[:space:]]|--post-data[=[:space:]]|--post-file[=[:space:]]|--method[=:]*(POST|PUT|DELETE|PATCH))' \
+    && printf '%s' "$COMMAND" | grep -qE '/rest/(api|agile)/'; then
+    block "refusing a Bash JIRA REST write (curl/wget with a write method to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only GET requests stay allowed."
   fi
 fi
 

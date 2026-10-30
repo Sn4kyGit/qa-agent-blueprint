@@ -8,6 +8,9 @@
 *.key
 id_rsa*
 id_ed25519*
+*.auth
+*storage-state*
+*storage_state*
 
 # Evidence — local test artifacts, gitignored per docs/artifact-strategy.md
 evidence/*

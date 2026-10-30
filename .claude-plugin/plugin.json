@@ -1,6 +1,6 @@
 {
   "name": "qa-agent-blueprint",
-  "version": "0.18.1",
+  "version": "0.18.2",
   "description": "Ticket-driven QA Manager + Tester for Claude Code and opencode: JIRA ticket in, tested ticket out, with mandatory evidence, project-conformant bug reports, and a capture-groom-promote learning loop.",
   "author": {
     "name": "qa-agent-blueprint contributors"

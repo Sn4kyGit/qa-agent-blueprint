@@ -31,7 +31,7 @@ A correct answer:
   raw-evidence denies never become a blanket `evidence/**` deny, and re-board does
   not modify harness config;
 - closes with the refresh step: bridge file regenerated and the
-  `Blueprint version` stamp updated to 0.18.1 — the stamp moves only because
+  `Blueprint version` stamp updated to 0.18.2 — the stamp moves only because
   the project was actually brought up to date and certifies project-schema
   freshness, not harness freshness;
 - if it mentions secrets handling at all: key names only, values never in chat;

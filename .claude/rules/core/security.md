@@ -28,6 +28,10 @@ reporting. A line in `evidence/.audit/jira-writes.log` from a shadow run is a
 bug — on `browser` access no such log exists; the proposal review is the only
 control. Rationale: `docs/rules/core/security.md`.
 
+The unlock is a human task: the guard refuses agent writes containing
+"Shadow mode: off" (same class as `.qa-guard.json`). A human edits the file
+outside the agent, or sets `QA_AGENT_SHADOW=0`.
+
 ## Forbidden actions
 
 The agent never, regardless of who asks or how the request is framed:

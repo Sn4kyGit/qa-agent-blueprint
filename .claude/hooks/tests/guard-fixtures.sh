@@ -297,6 +297,36 @@ check "toggle: Edit .qa-guard.json"        2 '{"tool_name":"Edit","tool_input":{
 check "toggle: redirect > .qa-guard.json"  2 "$(tog_bash '"echo \"{}\" > .qa-guard.json"')"
 check "toggle: sed -i .qa-guard.json"      2 "$(tog_bash '"sed -i s/block/allow/ .qa-guard.json"')"
 check "toggle: rm .qa-guard.json"          2 "$(tog_bash '"rm .qa-guard.json"')"
+
+# --- S1: interpreter self-escalation on .qa-guard.json (same class as Write)
+check "toggle: python write .qa-guard.json" 2 "$(tog_bash '"python3 -c \"open('"'"'.qa-guard.json'"'"', '"'"'w'"'"').write('"'"'{}'"'"')\""')"
+check "toggle: node writeFile .qa-guard.json" 2 "$(tog_bash '"node -e \"require('"'"'fs'"'"').writeFileSync('"'"'.qa-guard.json'"'"', '"'"'{}'"'"')\""')"
+check "toggle: python mention .qa-guard.json ok" 0 "$(tog_bash 'python3 -c "note='\"'\"'.qa-guard.json'\"'\"'"')"
+
+# --- S2: shadow-mode unlock via PROJECT.md is a human task
+check "shadow: Write PROJECT.md with Shadow mode off" 2 '{"tool_name":"Write","tool_input":{"file_path":"projects/SHOP/PROJECT.md","content":"## Reporting\nShadow mode: off\n"},"cwd":"'"$TOG"'"}'
+check "shadow: Edit PROJECT.md with Shadow mode off" 2 '{"tool_name":"Edit","tool_input":{"file_path":"projects/SHOP/PROJECT.md","new_string":"Shadow mode: off"},"cwd":"'"$TOG"'"}'
+check "shadow: Write PROJECT.md without unlock ok" 0 '{"tool_name":"Write","tool_input":{"file_path":"projects/SHOP/PROJECT.md","content":"## Gotchas\nShared stage."},"cwd":"'"$TOG"'"}'
+
+# --- S3: Bash curl/wget JIRA REST writes bypass the MCP shadow gate
+check "shadow: curl POST JIRA comment" 2 '{"tool_name":"Bash","tool_input":{"command":"curl -X POST https://jira.example.com/rest/api/2/issue/SHOP-1/comment -d \"{}\""},"cwd":"'"$TOG"'"}'
+check "shadow: curl PUT JIRA issue" 2 '{"tool_name":"Bash","tool_input":{"command":"curl -X PUT https://jira.example.com/rest/api/2/issue/SHOP-1 -d \"{}\""},"cwd":"'"$TOG"'"}'
+check "shadow: curl DELETE JIRA issue" 2 '{"tool_name":"Bash","tool_input":{"command":"curl -X DELETE https://jira.example.com/rest/api/2/issue/SHOP-1"},"cwd":"'"$TOG"'"}'
+check "shadow: curl GET JIRA read ok" 0 '{"tool_name":"Bash","tool_input":{"command":"curl https://jira.example.com/rest/api/2/issue/SHOP-1"},"cwd":"'"$TOG"'"}'
+check "shadow: curl POST non-JIRA ok" 0 '{"tool_name":"Bash","tool_input":{"command":"curl -X POST https://api.example.com/data -d \"{}\""},"cwd":"'"$TOG"'"}'
+
+# --- S4: reader guard covers all secret file classes, not just .env*
+check "toggle: allow, cat id_rsa" 2 "$(tog_bash '"cat id_rsa"')"
+check "toggle: allow, cat deploy.pem" 2 "$(tog_bash '"cat deploy.pem"')"
+check "toggle: allow, base64 .env" 0 "$(tog_bash '"base64 .env"')"
+check "toggle: allow, cat storage-state.json" 2 "$(tog_bash '"cat storage-state.json"')"
+check "toggle: allow, cat id_rsa via interpreter" 2 "$(tog_bash '"python3 -c \"print(open('"'"'id_rsa'"'"').read())\""')"
+
+# --- S5: *.auth / storage-state protected
+check "toggle: Write .auth file" 2 "$(tog_write "$TOG/session.auth")"
+check "toggle: Write storage-state.json" 2 "$(tog_write "$TOG/storage-state.json")"
+check "toggle: Write plain file ok" 0 "$(tog_write "$TOG/notes.md")"
+
 rm -rf "$TOG" 2>/dev/null
 
 echo

@@ -8,7 +8,40 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.18.1] — 2026-10-29
+## [0.18.2] — 2026-10-30
+
+Theme: **five guard holes closed.** The pre-tool guard now blocks the
+self-escalation and bypass classes the audit found — verified with live
+exit-code fixtures on both harnesses.
+
+### Fixed — security guard gaps
+- **`.qa-guard.json` interpreter self-escalation**: `python3 -c "open('.qa-guard.json','w')"`,
+  `node -e "require('fs').writeFileSync(...)"` and similar interpreter writes are
+  now blocked — same class as the existing Write/Edit/shell-writer protection.
+- **Shadow-mode unlock via `PROJECT.md`**: agent writes containing
+  "Shadow mode: off" are refused. The unlock is a human task (edit the file
+  outside the agent, or set `QA_AGENT_SHADOW=0`), same philosophy as
+  `.qa-guard.json`.
+- **Bash curl/wget JIRA REST writes**: `curl -X POST|PUT|DELETE .../rest/api/...`
+  previously bypassed both the MCP-level shadow gate and the JIRA write audit.
+  Now blocked when Shadow is on; read-only `GET` and non-JIRA POSTs stay open.
+- **Reader guard covers all credential classes**: `cat id_rsa`, `cat deploy.pem`,
+  `cat *.auth`, `cat *storage-state*` are blocked regardless of the
+  `secrets_read` toggle — private keys and auth tokens are never a comfort
+  opt-in. `base64` is now a recognized reader command.
+- **`*.auth` and storage-state files** are protected secret paths: denied for
+  Write/Edit, Bash reads, interpreter reads and Bash writes; added to the
+  template `.gitignore` and both Read-deny lists.
+
+### Verification
+- 15 new negative fixtures in `guard-fixtures.sh` and 5 new parity tests in
+  `opencode/tests/guard.test.ts` — all verified live against the guard with
+  concrete exit codes. Full bash battery (16 suites), 150 opencode bun tests,
+  plugin validation and context budget pass.
+
+### Upgrade
+- No migration step. The guard changes apply on the next session start after
+  updating.
 
 Theme: **opencode parity pass.** Every hook, rule, skill and agent now works the
 same way under opencode as under Claude Code — no dead paths, no silent drift.

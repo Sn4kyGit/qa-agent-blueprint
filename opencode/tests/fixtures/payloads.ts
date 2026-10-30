@@ -25,10 +25,13 @@ export function bashBefore(command: string): BeforeCall {
   }
 }
 
-export function fileBefore(tool: "write" | "edit" | "read", filePath: string): BeforeCall {
+export function fileBefore(tool: "write" | "edit" | "read", filePath: string, content?: string, newString?: string): BeforeCall {
+  const args: Record<string, unknown> = { filePath }
+  if (content !== undefined) args.content = content
+  if (newString !== undefined) args.new_string = newString
   return {
     input: { tool, sessionID: SESSION_ID, callID: "tool_fixture" },
-    output: { args: { filePath } },
+    output: { args },
   }
 }
 

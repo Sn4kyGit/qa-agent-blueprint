@@ -371,6 +371,51 @@ describe("secrets_read toggle (opencode)", () => {
     await expect(run(h, bashBefore("sed -i s/block/allow/ .qa-guard.json"))).rejects.toThrow(/qa-guard\.json/)
     await expect(run(h, bashBefore("rm .qa-guard.json"))).rejects.toThrow(/qa-guard\.json/)
   })
+
+  test("S1: interpreter self-escalation on .qa-guard.json is blocked", async () => {
+    const dir = await qaHome('{"secrets_read":"allow"}')
+    const h = await hooksIn(dir)
+    await expect(run(h, bashBefore("python3 -c \"open('.qa-guard.json', 'w').write('{}')\""))).rejects.toThrow(/qa-guard\.json/)
+    await expect(run(h, bashBefore("node -e \"require('fs').writeFileSync('.qa-guard.json', '{}')\""))).rejects.toThrow(/qa-guard\.json/)
+    await expect(run(h, bashBefore("python3 -c \"note='.qa-guard.json'\""))).resolves.toBeUndefined()
+  })
+
+  test("S2: shadow-mode unlock via PROJECT.md is blocked", async () => {
+    const dir = await qaHome()
+    const h = await hooksIn(dir)
+    await expect(run(h, fileBefore("write", join(dir, "projects/SHOP/PROJECT.md"), "Shadow mode: off"))).rejects.toThrow(/shadow/i)
+    await expect(run(h, fileBefore("edit", join(dir, "projects/SHOP/PROJECT.md"), undefined, "Shadow mode: off"))).rejects.toThrow(/shadow/i)
+    await expect(run(h, fileBefore("write", join(dir, "projects/SHOP/PROJECT.md"), "Shared stage."))).resolves.toBeUndefined()
+  })
+
+  test("S3: Bash curl/wget JIRA REST writes are blocked", async () => {
+    const dir = await qaHome()
+    const h = await hooksIn(dir)
+    await expect(run(h, bashBefore("curl -X POST https://jira.example.com/rest/api/2/issue/SHOP-1/comment -d '{}'"))).rejects.toThrow(/JIRA REST write/)
+    await expect(run(h, bashBefore("curl -X PUT https://jira.example.com/rest/api/2/issue/SHOP-1 -d '{}'"))).rejects.toThrow(/JIRA REST write/)
+    await expect(run(h, bashBefore("curl -X DELETE https://jira.example.com/rest/api/2/issue/SHOP-1"))).rejects.toThrow(/JIRA REST write/)
+    await expect(run(h, bashBefore("curl https://jira.example.com/rest/api/2/issue/SHOP-1"))).resolves.toBeUndefined()
+    await expect(run(h, bashBefore("curl -X POST https://api.example.com/data -d '{}'"))).resolves.toBeUndefined()
+  })
+
+  test("S4: reader guard covers all secret file classes", async () => {
+    const dir = await qaHome('{"secrets_read":"allow"}')
+    const h = await hooksIn(dir)
+    await expect(run(h, bashBefore("cat id_rsa"))).rejects.toThrow(/credential file/)
+    await expect(run(h, bashBefore("cat deploy.pem"))).rejects.toThrow(/credential file/)
+    await expect(run(h, bashBefore("cat storage-state.json"))).rejects.toThrow(/credential file/)
+    await expect(run(h, bashBefore("python3 -c \"print(open('id_rsa').read())\""))).rejects.toThrow(/secret/)
+    await expect(run(h, bashBefore("base64 .env"))).resolves.toBeUndefined()
+    await expect(run(h, bashBefore("cat scratch-output.txt"))).resolves.toBeUndefined()
+  })
+
+  test("S5: *.auth and storage-state are protected secret paths", async () => {
+    const dir = await qaHome()
+    const h = await hooksIn(dir)
+    await expect(run(h, fileBefore("write", join(dir, "session.auth")))).rejects.toThrow(/secrets? file/)
+    await expect(run(h, fileBefore("write", join(dir, "storage-state.json")))).rejects.toThrow(/secrets? file/)
+    await expect(run(h, fileBefore("write", join(dir, "notes.md")))).resolves.toBeUndefined()
+  })
 })
 
 // Foreign MCP gate (field report 2026-09-22: a GLOBAL gitlab MCP server
