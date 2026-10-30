@@ -211,23 +211,23 @@ for name in "${CASES[@]}"; do
     suffix="$name"; [ "$RUNS" -gt 1 ] && suffix="$name.run$i"
     # Per run, not per case: each run gets its own materialized copy so a
     # write from run 1 can't leak into run 2's filesystem.
-    answer_cwd="$REPO"
-    [ -d "$HERE/$name/scenario" ] && answer_cwd="$(materialize_case "$name")"
-    before_list=""
-    [ "$answer_cwd" != "$REPO" ] && before_list="$(cd "$answer_cwd" && find . -type f | sort)"
+    # H11 (0.18.5): ALWAYS materialize — running in $REPO exposes graders/
+    # criteria.md to the answer agent (contamination). The opencode runner
+    # already does this; this aligns run.sh.
+    answer_cwd="$(materialize_case "$name")"
+    before_list="$(cd "$answer_cwd" && find . -type f | sort)"
     if gen_answer "$answer_cwd" "$OUT/$suffix.answer.md" "$(cat "$HERE/$name/prompt.md")"; then
-      if [ "$answer_cwd" != "$REPO" ]; then
-        after_list="$(cd "$answer_cwd" && find . -type f | sort)"
-        {
-          printf '\n\n---\nHARNESS FACT (appended by the runner; ground truth, not the agent): '
-          printf 'files the session actually created on disk (empty = it wrote nothing):\n'
-          comm -13 <(printf '%s\n' "$before_list") <(printf '%s\n' "$after_list") | sed 's/^/  /'
+      after_list="$(cd "$answer_cwd" && find . -type f | sort)"
+      {
+        printf '\n\n---\nHARNESS FACT (appended by the runner; ground truth, not the agent): '
+        printf 'files the session actually created on disk (empty = it wrote nothing):\n'
+        comm -13 <(printf '%s\n' "$before_list") <(printf '%s\n' "$after_list") | sed 's/^/  /'
         } >> "$OUT/$suffix.answer.md"
-      fi
       answer_files+=("$OUT/$suffix.answer.md")
     else
       printf '  %-26s run %s FAILED to execute — see %s\n' "" "$i" "$OUT/$suffix.answer.md"
     fi
+    rm -rf "$answer_cwd" 2>/dev/null  # H11: always clean up the materialized copy
   done
   passes=0; scored=0
   if [ "$JUDGE" -eq 1 ] && [ -f "$criteria" ] && [ "${#answer_files[@]}" -gt 0 ]; then

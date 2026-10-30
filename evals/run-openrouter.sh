@@ -74,4 +74,9 @@ if [ "$has_model_flag" -eq 0 ]; then
 fi
 
 echo "OpenRouter gate: model=$OR_MODEL judge=$OR_JUDGE_MODEL (billing: per-token, nicht Subscription)"
-exec bash "$HERE/run.sh" "$@"
+# M7 (0.18.5): `exec` replaces the process image — the EXIT trap never fires
+# and the shim is orphaned. Use a regular call + explicit cleanup instead.
+bash "$HERE/run.sh" "$@"
+rc=$?
+kill "$SHIM_PID" 2>/dev/null || true
+exit "$rc"

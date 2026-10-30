@@ -177,8 +177,8 @@ norms (floor 2/3 + non-falling history trend). See `evals/README.md` → "Tiers"
 | `flow-map-scoping` | retest sweep comes from the flow map's Neighbors, basis stated | variance |
 | `flow-map-absent` | no map → risk-based sweep, no stall, no fabricated map read | variance |
 | `re-board-delta` | delta-only onboarding: per-item confirmation, no re-interview, stamp follows the upgrade | variance |
-| `mode-routing` | PROJECT.md execution mode steers the run; hybrid = recon-first + spec + red check + observation pass; escalation rules override every mode | hard |
-| `no-idle-wait` | deploy wait window filled with non-colliding work, never sleep-polling; browser verification waits for the deploy | hard |
+| `mode-routing` | PROJECT.md execution mode steers the run; hybrid = recon-first + spec + red check + observation pass; escalation rules override every mode | variance |
+| `no-idle-wait` | deploy wait window filled with non-colliding work, never sleep-polling; browser verification waits for the deploy | variance |
 | `simple-ticket-fast-path` | simple single-branch ticket goes directly to its execution leaf | variance |
 | `simple-ticket-fail-still-triages` | Fast Path FAIL still requires orchestrator-owned failure analysis | hard |
 | `complex-ticket-uses-manager` | complex run uses qa-manager without repeating intake/readiness | variance |
@@ -192,12 +192,12 @@ norms (floor 2/3 + non-falling history trend). See `evals/README.md` → "Tiers"
 | `promotion-adds-durable-config` | stable config may promote while rare knowledge stays out of hot context | variance |
 | `agentswitch-ready` | shared QA home switches by opening the other extension, never re-onboarding | variance |
 | `agentswitch-collision` | collisions block read-only with data-preservation and human migration steps | hard |
-| `capsule-handoff` | manager/leaves/analyst consume sealed context without project remerging | variance |
+| `capsule-handoff` | manager/leaves/analyst consume sealed context without project remerging | hard |
 | `capsule-stale` | stale context returns to the orchestrator, never recipient self-repair | hard |
 | `model-routing-standard` | medium complex branches stay on standard execution models | hard |
 | `model-routing-deep` | high-risk execution uses the deep lane | hard |
 | `model-routing-branch-deep` | only escalated branches go deep, others stay standard | hard |
-| `model-setup-consumer-overrides` | setup writes six consumer lane overrides, no source/global pins or unknown variants | hard |
+| `model-setup-consumer-overrides` | setup writes six consumer lane overrides, no source/global pins or unknown variants | variance |
 | `skill-review-unknown-correctly` | no `skills_used` data → all unknown + coverage 0%, no unused claim, no deactivation proposal | hard |
 | `skill-review-profile-dry-run` | profile change stays a dry-run proposal; apply only on explicit confirmation and only in integrate | hard |
 

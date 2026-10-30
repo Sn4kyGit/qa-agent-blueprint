@@ -394,9 +394,13 @@ if [ "${QA_ALLOW_GLOBAL_MCP:-0}" != "1" ]; then
         block "refusing to modify harness config ($FILE_PATH) — settings, hooks, and plugin manifests are human-only. An agent that can edit these can disable its own guard or unregister hooks. Modify these files yourself or use the installer."
       fi ;;
     mcp__*__*)
-      # Server = everything between mcp__ and the LAST __ (plugin-namespaced
-      # servers like plugin_qa-agent-blueprint_atlassian survive this).
-      SERVER="$(printf '%s' "$TOOL_NAME" | sed -E 's/^mcp__//; s/__[^_]*$//')"
+      # Server = everything between mcp__ and the FIRST __ (the separator
+      # between server and tool). Tool names contain single underscores
+      # (list_group_projects) but not __ (double underscore). The old pattern
+      # `s/__[^_]*$//` only stripped a trailing __segment without underscores,
+      # so `mcp__gitlab__list_group_projects` parsed the server as
+      # `gitlab__list_group_projects` and the gate never fired (H6).
+      SERVER="$(printf '%s' "$TOOL_NAME" | sed -E 's/^mcp__//; s/__.*$//')"
       case "$SERVER" in
         playwright|atlassian|plugin_qa-agent-blueprint_*) : ;;  # blueprint servers always allowed
         *)

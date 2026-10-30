@@ -92,6 +92,39 @@ playwright_cli = re.compile(
     r'|(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?(?:test|e2e|test:e2e|test:ui)\b)'
 )
 ticket_key = re.compile(r'\b[A-Z][A-Z0-9]+-\d+\b')
+# H7 (0.18.5): TC-IDs (TC-CHK-014) collide with the ticket regex at the
+# <CAT>-<NNN> tail. Exclude them, and only count keys from identity-bearing
+# fields (issueKey/issue_key/key/id) — not from free text like comments.
+tc_id = re.compile(r'\bTC-[A-Z]+-\d+\b')
+
+def is_real_ticket_key(k):
+    """Exclude TC-IDs and other non-ticket patterns."""
+    if tc_id.match(k):
+        return False
+    return True
+
+def extract_identity_keys(obj):
+    """Extract ticket keys from identity fields only (not free text)."""
+    found = set()
+    if isinstance(obj, dict):
+        for ik in ("issueKey", "issue_key", "key", "id"):
+            v = obj.get(ik)
+            if isinstance(v, str):
+                for m in ticket_key.findall(v):
+                    if is_real_ticket_key(m):
+                        found.add(m)
+        # For Bash commands: --grep KEY-123 or TICKET=KEY-123 patterns
+        if obj.get("type") == "tool_use" and obj.get("name") == "Bash":
+            cmd = (obj.get("input") or {}).get("command") or ""
+            for m in re.findall(r'(?:--grep|TICKET=|ticket[=:])\s*([A-Z][A-Z0-9]+-\d+)', cmd):
+                if is_real_ticket_key(m):
+                    found.add(m)
+        for v in obj.values():
+            found |= extract_identity_keys(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            found |= extract_identity_keys(v)
+    return found
 
 keys = set()
 
@@ -110,10 +143,10 @@ def walk(node):
                     active = True
             if active:
                 found = True
-                # Tie the run to its ticket(s): every KEY-123 in the activity's
-                # input payload counts — the issueKey of a JIRA write, the
-                # --grep of a CLI run, the URL of a ticket page.
-                for m in ticket_key.findall(json.dumps(node.get("input") or {})):
+                # H7: extract keys from identity fields only, not from free text
+                # (a comment mentioning another ticket must not expand the
+                # demanded evidence set).
+                for m in extract_identity_keys(node.get("input") or {}):
                     keys.add(m)
         for v in node.values():
             if walk(v):

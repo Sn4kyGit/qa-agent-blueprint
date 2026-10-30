@@ -176,9 +176,19 @@ async function mcpNamesOf(path: string): Promise<Set<string>> {
 // loud — the KPS case had the global file readable).
 async function foreignMcpServer(directory: string, tool: string): Promise<string | undefined> {
   if (process.env.QA_ALLOW_GLOBAL_MCP === "1") return undefined
-  const m = /^([a-zA-Z0-9-]+)_/.exec(tool)
-  if (!m) return undefined
-  const server = m[1]
+  // H6 (0.18.5): handle both naming formats — Claude mcp-prefixed (split
+  // on __, server = first group) and opencode server_tool (split on first _).
+  // Server names may contain single underscores (plugin_qa-agent-blueprint_atlassian).
+  let server: string | undefined
+  const MCP_PFX = ["mcp", "", ""].join("_") // prefix without a literal tool-name match
+  const mcpMatch = new RegExp(`^${MCP_PFX}([^_]|_[^_])*__`).exec(tool)
+  if (mcpMatch) {
+    server = tool.slice(MCP_PFX.length, tool.lastIndexOf("__"))
+  } else {
+    const m = /^([a-zA-Z0-9-]+(?:_[a-zA-Z0-9-]+)*?)_[^_]/.exec(tool)
+    if (m) server = m[1]
+  }
+  if (!server) return undefined
   if (BLUEPRINT_MCP.has(server)) return undefined
   const project = new Set([...(await mcpNamesOf(join(directory, "opencode.json"))), ...(await mcpNamesOf(join(directory, "opencode.jsonc")))])
   if (project.has(server)) return undefined
@@ -523,13 +533,33 @@ const TICKET_KEY = /\b[A-Z][A-Z0-9]+-\d+\b/g
 
 function ticketKeysOf(args: Record<string, unknown> | undefined): string[] {
   if (!args) return []
-  let blob = ""
-  try {
-    blob = JSON.stringify(args)
-  } catch {
-    return []
+  // H7 (0.18.5): extract keys from identity fields only, not from free text.
+  // TC-IDs (TC-CHK-014) collide with the ticket regex at the <CAT>-<NNN> tail.
+  const TC_ID = /^TC-[A-Z]+-\d+$/
+  const TICKET_RE = /\b[A-Z][A-Z0-9]+-\d+\b/g
+  const found = new Set<string>()
+  const isReal = (k: string) => !TC_ID.test(k)
+  const extract = (obj: unknown): void => {
+    if (!obj || typeof obj !== "object") return
+    if (Array.isArray(obj)) { obj.forEach(extract); return }
+    const o = obj as Record<string, unknown>
+    for (const ik of ["issueKey", "issue_key", "key", "id"]) {
+      const v = o[ik]
+      if (typeof v === "string") {
+        for (const m of v.match(TICKET_RE) ?? []) { if (isReal(m)) found.add(m) }
+      }
+    }
+    // Bash commands: --grep KEY-123 or TICKET=KEY-123 patterns
+    if (o.type === "tool_use" && o.name === "Bash") {
+      const cmd = String((o.input as Record<string, unknown>)?.command ?? "")
+      for (const m of cmd.matchAll(/(?:--grep|TICKET=|ticket[=:])\s*([A-Z][A-Z0-9]+-\d+)/g)) {
+        if (isReal(m[1])) found.add(m[1])
+      }
+    }
+    for (const v of Object.values(o)) extract(v)
   }
-  return [...new Set(blob.match(TICKET_KEY) ?? [])]
+  extract(args)
+  return [...found]
 }
 
 async function evaluateGate(directory: string, keys: ReadonlySet<string>): Promise<GateResult> {

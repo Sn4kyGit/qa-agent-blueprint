@@ -8,7 +8,45 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.18.5] — 2026-10-30
+## [0.18.6] — 2026-10-30
+
+Theme: **functional gaps closed.** Foreign-MCP parsing fixed, Stop-hook
+ticket-key extraction hardened, eval tiers synced, post-jira-audit finally
+has fixture coverage, hook matchers unified across install modes, and eval
+cases are materialized to prevent grader contamination.
+
+### Fixed — functional breaks
+- **H6 Foreign-MCP gate**: server extraction from `mcp__<server>__<tool>` now
+  splits on the FIRST `__` (tool names contain single underscores like
+  `list_group_projects`). The old `s/__[^_]*$//` pattern broke on any tool
+  name with underscores — the gate never fired in practice.
+- **H7 Stop-hook ticket keys**: extracted from identity fields only
+  (`issueKey`/`issue_key`/`key`/`id`, `--grep KEY-`), not from free text.
+  TC-IDs (`TC-CHK-014`) excluded — they collided with the ticket regex at
+  the `<CAT>-<NNN>` tail and demanded evidence for unsatisfiable paths.
+
+### Fixed — testing infrastructure
+- **C3 post-jira-audit fixtures**: 16 new assertions covering write logging,
+  executeWrite inner-tool names, error-response mapping, QA-home walk-up,
+  secret-value exclusion, and plugin-namespaced tools. The hook's compliance
+  log now has proven test coverage.
+- **H9 Eval-tier sync**: 5 tier files created/aligned to match COVERAGE.md;
+  new parity fixture in `manifest-conventions.sh` enforces tier↔matrix
+  agreement on every test run.
+- **H11 Eval contamination**: `run.sh` now materializes every case into a
+  tempdir (like `run-opencode.sh`) — graders/criteria.md are no longer
+  visible to the answer agent.
+- **H12 Hook-matcher parity**: `.claude/settings.json` matchers synced to
+  `hooks/hooks.json` (added `Read`, anchored atlassian write regex). New
+  parity fixture enforces agreement.
+- **M7 OpenRouter shim**: `exec bash run.sh` replaced with call+cleanup —
+  the EXIT trap now fires and the shim is killed.
+- **M9 message-parity**: minimum-size assertion prevents vacuous passes.
+
+### Changed
+- 6 eval tier files added/updated (agentswitch-collision, agentswitch-ready,
+  readiness-*, simple-ticket-fail-still-triages, capsule-handoff).
+- `post-jira-audit-fixtures.sh` added to the test battery (17 suites total).
 
 Theme: **security hardening.** Six verified guard bypasses from the re-audit
 closed: secret-read exfiltration, guard self-disarm, shadow-mode unlock via

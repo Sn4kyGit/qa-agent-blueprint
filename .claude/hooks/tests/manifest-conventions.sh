@@ -616,4 +616,85 @@ sys.exit(fails)
 PY
 FAILS_C=$?
 
-exit $((FAILS_A + FAILS_B + FAILS_C))
+# --- D: hook matcher parity — hooks.json ↔ settings.json (H12) ---
+echo
+echo "== hook matcher parity (hooks.json ↔ settings.json) =="
+python3 - <<'PY'
+import json, sys
+fails = 0
+with open("hooks/hooks.json") as f:
+    h = json.load(f)
+with open(".claude/settings.json") as f:
+    s = json.load(f)
+
+def matchers(hooks_obj, event):
+    return sorted(
+        hook.get("matcher", "")
+        for hook in hooks_obj.get("hooks", {}).get(event, [])
+    )
+
+for event in ("PreToolUse", "PostToolUse"):
+    hm = matchers(h, event)
+    sm = matchers(s, event)
+    if hm != sm:
+        print(f"FAIL  {event}: hooks.json={hm} vs settings.json={sm}")
+        fails += 1
+    else:
+        print(f"ok    {event}: {len(hm)} matchers agree")
+
+# Check that the atlassian write matcher is anchored (jira_)? prefix
+for source, obj in [("hooks.json", h), ("settings.json", s)]:
+    for hook in obj.get("hooks", {}).get("PostToolUse", []):
+        m = hook.get("matcher", "")
+        if "atlassian" in m and "(jira_)?" not in m:
+            print(f"FAIL  {source} PostToolUse: atlassian matcher not anchored: {m}")
+            fails += 1
+
+print()
+if fails:
+    print(f"{fails} fixture(s) failed")
+else:
+    print("all fixtures passed")
+sys.exit(fails)
+PY
+FAILS_D=$?
+
+# --- E: eval tier files ↔ COVERAGE.md parity (H9) ---
+echo
+echo "== eval tier parity (tier files are source of truth) =="
+python3 - <<'PY'
+import os, re, sys
+fails = 0
+co = open("evals/COVERAGE.md").read()
+# Parse COVERAGE.md tier column: | `case-name` | ... | tier |
+tier_rows = {}
+for m in re.finditer(r'\|\s*`([a-z][a-z0-9-]+)`\s*\|[^|]*\|\s*(hard|variance)\s*\|', co):
+    tier_rows[m.group(1)] = m.group(2)
+for case_dir in sorted(os.listdir("evals")):
+    path = os.path.join("evals", case_dir, "tier")
+    if not os.path.isfile(path):
+        continue
+    tier = open(path).read().strip()
+    if case_dir not in tier_rows:
+        print(f"FAIL  {case_dir}: tier file says '{tier}' but COVERAGE.md has no row")
+        fails += 1
+    elif tier_rows[case_dir] != tier:
+        print(f"FAIL  {case_dir}: tier file='{tier}' vs COVERAGE.md='{tier_rows[case_dir]}'")
+        fails += 1
+    else:
+        print(f"ok    {case_dir}: {tier}")
+for case_dir in sorted(tier_rows):
+    path = os.path.join("evals", case_dir, "tier")
+    if not os.path.isfile(path):
+        print(f"FAIL  {case_dir}: COVERAGE.md says '{tier_rows[case_dir]}' but no tier file exists")
+        fails += 1
+print()
+if fails:
+    print(f"{fails} fixture(s) failed")
+else:
+    print("all fixtures passed")
+sys.exit(fails)
+PY
+FAILS_E=$?
+
+exit $((FAILS_A + FAILS_B + FAILS_C + FAILS_D + FAILS_E))

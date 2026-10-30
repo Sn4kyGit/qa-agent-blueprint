@@ -60,7 +60,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit",
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read",
         "hooks": [
           {
             "type": "command",
@@ -69,7 +69,7 @@
         ]
       },
       {
-        "matcher": "mcp__.*atlassian__.*(create|edit|add|transition|update|delete|executeWrite|executeDestructive).*",
+        "matcher": "mcp__.*atlassian__(jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive).*",
         "hooks": [
           {
             "type": "command",
@@ -98,7 +98,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__.*atlassian__.*(create|edit|add|transition|update|delete|executeWrite|executeDestructive).*",
+        "matcher": "mcp__.*atlassian__(jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive).*",
         "hooks": [
           {
             "type": "command",

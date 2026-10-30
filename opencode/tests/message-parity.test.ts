@@ -41,6 +41,10 @@ describe("block-message parity (bash guard ↔ opencode plugin)", () => {
   test("the message sets are identical", async () => {
     const bash = await bashMessages()
     const ts = await tsMessages()
+    // M9 (0.18.5): assert minimum sizes — a refactor that renames `block(` to
+    // `deny(` would shrink both sets to empty and pass vacuously.
+    expect(bash.size, "bash guard must have at least 20 block messages").toBeGreaterThanOrEqual(20)
+    expect(ts.size, "opencode plugin must have at least 20 block messages").toBeGreaterThanOrEqual(20)
     const onlyBash = [...bash].filter((m) => !ts.has(m))
     const onlyTs = [...ts].filter((m) => !bash.has(m))
     // Drift shows up here with the offending message(s) named explicitly.
