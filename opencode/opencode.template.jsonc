@@ -1,4 +1,4 @@
-// blueprint-version: 0.19.5
+// blueprint-version: 0.19.6
 // opencode config template for the qa-agent-blueprint — merged into the
 // consumer's opencode.json(c) by `install.sh --mode opencode`. Contract:
 // docs/opencode-port-plan.md (D4 router via instructions, D5 tool-name
@@ -30,7 +30,7 @@
       // land as evidence files in --output-dir and are referenced by path.
       "command": [
         "npx",
-        "@playwright/mcp@latest",
+        "@playwright/mcp@0.0.84",
         "--config",
         ".playwright-mcp.config.json",
         "--secrets",

@@ -126,7 +126,7 @@ qa-agent-blueprint`, then restart — see `CHANGELOG.md` for what changed.)*
      ```json
      "atlassian": {
        "command": "uvx",
-       "args": ["mcp-atlassian"],
+       "args": ["mcp-atlassian==0.23.1"],
        "env": { "JIRA_URL": "https://jira.<firma>.tld" }
      }
      ```

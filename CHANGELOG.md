@@ -8,7 +8,25 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.19.5] — 2026-11-02
+## [0.19.6] — 2026-11-02
+
+Theme: **security audit — supply chain & exfiltration.** Dependencies pinned,
+git-based exfiltration blocked, preflight/audit artifacts protected.
+
+### Fixed — security
+- **H7 Supply chain pinned**: `@playwright/mcp@0.0.84` (was `@latest` — every
+  cold npx resolved the newest release). `uvx mcp-atlassian==0.23.1` (was
+  unpinned). Both a compromised release could execute with consumer
+  credentials and full browser control.
+- **M3 git exfiltration**: `git add/commit/stash/archive` with secret paths
+  blocked — staging credentials into the repository is now prevented.
+- **M5b Artifact protection**: `evidence/.preflight/` and `evidence/.audit/`
+  are now human-only — agent writes to preflight gate markers and audit logs
+  are blocked. Prevents gate forgery and audit-trail tampering.
+
+### Changed
+- All MCP config references updated to pinned versions.
+- Both harnesses (bash hook + TS plugin) updated in lockstep.
 
 Theme: **security audit — guard gaps.** Reader bypasses via find/git closed,
 egress honesty documented, evidence verdict validation added.

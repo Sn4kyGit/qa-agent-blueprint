@@ -153,7 +153,7 @@ normalize_path() {
 # NEW classes: hook scripts, rules, skills, agents, scripts, and .git/ (C1/H8).
 # An agent that can rewrite its own guard/rules/skills/agents has total
 # self-escalation. All checks use the normalized path.
-HUMAN_ONLY='(\.qa-guard\.json|project\.md|product\.md|settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin/|hooks/.*\.sh|rules/.*\.md|skills/.*/skill\.md|skills/.*/references/|skills/.*/templates/|agents/.*\.md|scripts/.*\.(py|sh|mjs)|\.git/(hooks|config|info)/|\.git/config)'
+HUMAN_ONLY='(\.qa-guard\.json|project\.md|product\.md|settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin/|hooks/.*\.sh|rules/.*\.md|skills/.*/skill\.md|skills/.*/references/|skills/.*/templates/|agents/.*\.md|scripts/.*\.(py|sh|mjs)|\.git/(hooks|config|info)/|\.git/config|\.preflight/|\.audit/)'
 if [ -n "$FILE_PATH" ]; then
   NORM_FP="$(normalize_path "$FILE_PATH")"
   if printf '%s' "$NORM_FP" | grep -qE "$HUMAN_ONLY"; then
@@ -286,6 +286,11 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   fi
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "find[[:space:]][^;&|]*-delete[^;&|]*$SECRET_TAIL|find[[:space:]][^;&|]*$SECRET_TAIL[^;&|]*-delete"; then
     block "refusing to delete a secret file via find -delete — removing a secret file is a human task (blocked regardless of secrets_read)."
+  fi
+  # M3 (0.19.6): git-based exfiltration — git add/commit/stash/archive with
+  # a secret file stages it into the repository (and potentially pushes it).
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE 'git[[:space:]]+(add|commit|stash|archive)[[:space:]][^;&|]*$SECRET_TAIL'; then
+    block "refusing to stage/commit a secret file — git add/commit/stash/archive with a secret path puts credentials into the repository (blocked regardless of secrets_read)."
   fi
 
   # sed -i / awk -i edit in place — a WRITE, not a read (tdd §8/F1). The flag

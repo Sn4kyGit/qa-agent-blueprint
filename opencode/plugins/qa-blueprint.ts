@@ -260,7 +260,7 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
   }
 
   // 0.19.3 C1+H5+H8: human-only file classes — agent writes are self-escalation
-  const HUMAN_ONLY = /(\.qa-guard\.json|project\.md|product\.md|settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin\/|hooks\/.*\.sh|rules\/.*\.md|skills\/.*\/skill\.md|skills\/.*\/references\/|skills\/.*\/templates\/|agents\/.*\.md|scripts\/.*\.(py|sh|mjs)|\.git\/(hooks|config|info)\/|\.git\/config)/
+  const HUMAN_ONLY = /(\.qa-guard\.json|project\.md|product\.md|settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin\/|hooks\/.*\.sh|rules\/.*\.md|skills\/.*\/skill\.md|skills\/.*\/references\/|skills\/.*\/templates\/|agents\/.*\.md|scripts\/.*\.(py|sh|mjs)|\.git\/(hooks|config|info)\/|\.git\/config|\.preflight\/|\.audit\/)/
   if (filePath && pathChecked && HUMAN_ONLY.test(normFp)) {
     block(HUMAN_ONLY_MSG.replace("$FILE_PATH", filePath))
   }
@@ -357,6 +357,8 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     // 0.18.5 H4: additional mutating commands
     if (ENV_DESTROYER.test(noExample)) block("refusing to write/destroy a secret file — secret files are never overwritten or truncated (blocked regardless of secrets_read).")
     if (ENV_FIND_DELETE.test(noExample)) block("refusing to delete a secret file via find -delete — removing a secret file is a human task (blocked regardless of secrets_read).")
+    // M3 (0.19.6): git-based exfiltration
+    if (/git\s+(add|commit|stash|archive)\s[^;&|]*/i.test(noExample) && new RegExp(SECRET_TAIL).test(noExample)) block("refusing to stage/commit a secret file — git add/commit/stash/archive with a secret path puts credentials into the repository (blocked regardless of secrets_read).")
     // READER_CORE follows the secrets_read toggle (tdd §7); default: block.
     if (secretsRead !== "allow" && ENV_READER.test(noExample)) block("refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it).")
     // Hard secret classes are NEVER readable, regardless of the toggle.

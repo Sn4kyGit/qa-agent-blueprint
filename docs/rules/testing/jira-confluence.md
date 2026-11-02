@@ -18,7 +18,7 @@ DC consumer `.mcp.json` variant (no secrets in the file):
 ```json
 "atlassian": {
   "command": "uvx",
-  "args": ["mcp-atlassian"],
+  "args": ["mcp-atlassian==0.23.1"],
   "env": {
     "JIRA_URL": "https://jira.example.local",
     "ENABLED_TOOLS": "jira_get_issue,jira_search,jira_create_issue,jira_update_issue,jira_add_comment,jira_get_transitions,jira_transition_issue,jira_batch_get_changelogs,jira_get_project_issue_types,jira_get_create_fields,jira_download_attachments"

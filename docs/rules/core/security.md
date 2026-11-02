@@ -36,7 +36,7 @@ levels, in order of preference:
      file*: everything in it is masked everywhere, so it holds only the keys
      browser logins need — never `STAGE_BASE_URL`, or the stage URL would be
      masked in every snapshot);
-   - wrapper: `node .claude/scripts/qa-secrets.mjs mcp STAGE_USER STAGE_PASSWORD -- npx @playwright/mcp@latest …`
+   - wrapper: `node .claude/scripts/qa-secrets.mjs mcp STAGE_USER STAGE_PASSWORD -- npx @playwright/mcp@0.0.84 …`
      builds an *ephemeral* mask file (mode-0700 tmpdir, deleted on server
      exit) containing only the named keys — no second durable secret store.
 
