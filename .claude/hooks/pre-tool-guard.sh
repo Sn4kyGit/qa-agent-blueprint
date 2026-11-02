@@ -315,7 +315,7 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # zsh/dash group is handled separately below (subshell -c).
   READER_CORE='(cat|less|more|head|tail|grep|sed|awk|jq|source|\.|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs|split|csplit)'
   WRAPPER_PREFIX='((sudo|env|nice|time|exec|command|eval|doas)[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*)*'
-  if [ "$SECRETS_READ" != "allow" ] && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*${WRAPPER_PREFIX}${READER_CORE}[[:space:]]+[^;&|]*$ENV_TAIL"; then
+  if [ "$SECRETS_READ" != "allow" ] && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qiE "(^|[;&|(]|&&|\|\|)[[:space:]]*${WRAPPER_PREFIX}${READER_CORE}[[:space:]]+[^;&|]*$ENV_TAIL"; then
     block "refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it)."
   fi
   # Hard secret classes (private keys, auth tokens, storage state) are NEVER
@@ -332,6 +332,14 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qiE "(^|[;&|(]|&&|\|\|)[[:space:]]*(bash|sh|zsh|dash)[[:space:]]+-c[[:space:]]" \
     && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "$SECRET_TAIL"; then
     block "refusing a subshell that touches a secret file — bash -c / sh -c with a secret path in the command string is a read attempt (blocked regardless of secrets_read)."
+  fi
+  # M4 (0.19.5): find -exec and git show/cat-file/log read secret files
+  # without a reader verb at command position.
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qiE 'find[[:space:]][^;&|]*(-exec|-print0|[^;&|]*)[^;&|]*$SECRET_TAIL'; then
+    block "refusing to use find with a secret file — find -exec/-print0 can read secret content (blocked regardless of secrets_read)."
+  fi
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qiE 'git[[:space:]]+(show|cat-file|grep|log|diff)[[:space:]][^;&|]*$SECRET_TAIL'; then
+    block "refusing to read a secret file via git — git show/cat-file/log can extract file content from history (blocked regardless of secrets_read)."
   fi
   # The next-most-likely bypass class: interpreter one-liners that OPEN the
   # file (python3 -c "print(open('.env').read())" et al.). The open/read/load

@@ -60,6 +60,16 @@ Stop, delete the artifact, retake it correctly, and capture how it happened as a
 learning (`memory/learnings/_inbox.md`) — this is a process gap, not a one-off to
 shrug off.
 
+## Honest limits (0.19.5)
+
+The guard is **defense-in-depth, not a sandbox**. It blocks known patterns via
+regex — it cannot enumerate every way to read a file or send data. A determined
+prompt-injection attacker can exfiltrate non-secret data via `curl` to arbitrary
+hosts, encode data in URLs, or use uncommon tools. The real guarantees are:
+(1) secret files are unreadable via known paths, (2) `--secrets` masks values
+at the browser layer, (3) shadow mode blocks JIRA writes by default. Never
+treat the guard as the only line of defense.
+
 ## Details, read when the topic comes up
 
 `docs/rules/core/security.md` — Credential flow (runner injection / MCP substitution / direct-read opt-in), credential sources (vault CLI, or a credential MCP server), key naming + lookup, Mechanical enforcement (rules are advisory, hooks are not). Read it when wiring credentials or touching a hook.

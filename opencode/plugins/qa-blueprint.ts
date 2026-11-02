@@ -363,6 +363,9 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (HARD_SECRET_READER.test(noExample)) block("refusing a command that reads a credential file — private keys, auth tokens and storage state never enter chat or context (blocked regardless of secrets_read).")
     // 0.18.5 C1: subshell execution with secret path
     if (SUBSHELL_SECRET(noExample)) block("refusing a subshell that touches a secret file — bash -c / sh -c with a secret path in the command string is a read attempt (blocked regardless of secrets_read).")
+    // M4 (0.19.5): find -exec and git show/cat-file/log read secret files
+    if (/find\s[^;&|]*(-exec|-print0|[^;&|]*)[^;&|]*/i.test(noExample) && new RegExp(SECRET_TAIL).test(noExample)) block("refusing to use find with a secret file — find -exec/-print0 can read secret content (blocked regardless of secrets_read).")
+    if (/git\s+(show|cat-file|grep|log|diff)\s[^;&|]*/i.test(noExample) && new RegExp(SECRET_TAIL).test(noExample)) block("refusing to read a secret file via git — git show/cat-file/log can extract file content from history (blocked regardless of secrets_read).")
     // 0.18.5 C1: < redirect FROM a secret file is a read
     if (ENV_REDIRECT_READ.test(noExample)) block("refusing a command that redirects a secret file as stdin — that is a read (blocked regardless of secrets_read).")
     // 0.18.5 C1: exfiltration — network clients with secret path

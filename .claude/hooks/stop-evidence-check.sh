@@ -262,7 +262,13 @@ try:
     with open(path) as fh:
         d = json.load(fh)
 except Exception:
-    # Unparseable summary is a separate problem; don't also claim it lacks learnings.
+    sys.exit(0)
+# M6 (0.19.5): verdict enum validation — a fabricated summary with verdict
+# "super-green" or empty should not pass the gate.
+VALID_VERDICTS = {"PASS", "FAIL", "BLOCKED", "NEEDS_REVIEW", "NO_TEST"}
+v = d.get("verdict", "")
+if v and v not in VALID_VERDICTS:
+    print(path)
     sys.exit(0)
 l = d.get("learnings")
 if not isinstance(l, dict):

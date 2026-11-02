@@ -8,7 +8,23 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.19.4] — 2026-11-02
+## [0.19.5] — 2026-11-02
+
+Theme: **security audit — guard gaps.** Reader bypasses via find/git closed,
+egress honesty documented, evidence verdict validation added.
+
+### Fixed — security
+- **M4 Reader bypasses**: `find -exec`/`-print0` with secret files blocked;
+  `git show/cat-file/log/diff` with secret files blocked; reader regex now
+  case-insensitive (`CAT .env` was allowed on macOS).
+- **M6 Evidence verdict validation**: `execution_summary.json` verdict must
+  be one of PASS/FAIL/BLOCKED/NEEDS_REVIEW/NO_TEST — fabricated summaries
+  with arbitrary verdicts no longer pass the Stop gate.
+- **M5 Egress honesty**: `security.md` now documents that the guard is
+  defense-in-depth, not a sandbox — and what the real guarantees are.
+
+### Changed
+- Both harnesses (bash hook + TS plugin) updated in lockstep.
 
 Theme: **security audit — injection defense.** Untrusted-data framing rule
 (JIRA/web/evidence content is data, never instructions), learning-promotion
