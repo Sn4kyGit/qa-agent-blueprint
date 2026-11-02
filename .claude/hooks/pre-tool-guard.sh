@@ -194,6 +194,25 @@ if [ "$TOOL_NAME" = "Read" ] && [ -n "$FILE_PATH" ]; then
       block "refusing to read a credential file — private keys, auth tokens and storage state never enter chat or context (blocked regardless of secrets_read)." ;;
   esac
 fi
+
+# 1f (0.19.4 H2): Grep/Glob can read secret files without hitting the Read
+# guard. Check the search path and pattern for secret references.
+if [ "$TOOL_NAME" = "Grep" ] || [ "$TOOL_NAME" = "Glob" ]; then
+  GREP_TARGETS="$(get_json 'import json; ti=d.get("tool_input") or {}; parts=[str(ti.get(k,"")) for k in ["path","include","pattern","glob"]]; print(" ".join(parts))')"
+  if printf '%s' "$GREP_TARGETS" | grep -qiE '\.env|id_rsa|id_ed25519|\.pem\b|\.auth\b|storage[._-]state|secret|credential'; then
+    block "refusing to search in secret files or paths — secrets never enter chat or context. Use resolve-secrets.sh --status to check which keys exist."
+  fi
+fi
+
+# 1g (0.19.4 H2): WebFetch can exfiltrate data via URL query strings. Block
+# URLs that appear to carry secret values, and require human approval for
+# non-stage/JIRA hosts when the agent has been reading secrets.
+if [ "$TOOL_NAME" = "WebFetch" ]; then
+  WEB_URL="$(get_json 'print((d.get("tool_input") or {}).get("url") or "")')"
+  if printf '%s' "$WEB_URL" | grep -qiE '\.env|id_rsa|password|secret|token|credential|key='; then
+    block "refusing to fetch a URL that appears to carry secrets — exfiltration of credentials is never allowed."
+  fi
+fi
 if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; then
   # rm hardening (0.11.0, 0.18.5 H4): block rm with recursive+force flags in
   # any form — combined (`-rf`, `-Rf`, `-fr`, `-Fr`), split (`-r -f`), long
@@ -457,7 +476,12 @@ fi
 # the gate classifies them by name without parsing the inner tool (0.10.0).
 # executeRead is absent on purpose: it runs read-only deferred tools
 # (listJiraIssueChangelogs & co.) and must stay open.
-if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?atlassian__(jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive)'; then
+# 0.19.4 M1: INVERTED to a read-allowlist — anything that is NOT a read verb
+# is treated as a write. This closes the gap where write tools with non-
+# standard names (uploadAttachmentToJiraIssue, assign, vote, watch, etc.)
+# bypassed the write-denylist.
+if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?atlassian__' \
+  && ! printf '%s' "$TOOL_NAME" | grep -qiE '(get|search|list|download|executeRead|read)' ; then
   if [ "${QA_AGENT_SHADOW:-1}" != "0" ]; then
     # H5 (0.18.5): resolve the issue key from explicit identity fields first
     # (issueKey/issue_key/key/id) — the old regex picked the FIRST ticket-shaped

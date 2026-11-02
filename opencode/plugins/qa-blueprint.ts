@@ -300,6 +300,23 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     }
   }
 
+  // 0.19.4 H2: Grep/Glob can read secret files without hitting the Read guard
+  if (tool === "grep" || tool === "glob") {
+    const ti = args as Record<string, unknown>
+    const targets = [ti.path, ti.include, ti.pattern, ti.glob].filter(Boolean).join(" ")
+    if (/\.env|id_rsa|id_ed25519|\.pem\b|\.auth\b|storage[._-]state|secret|credential/i.test(targets)) {
+      block("refusing to search in secret files or paths — secrets never enter chat or context. Use resolve-secrets.sh --status to check which keys exist.")
+    }
+  }
+
+  // 0.19.4 H2: WebFetch can exfiltrate data via URL query strings
+  if (tool === "webfetch") {
+    const url = String((args as Record<string, unknown>)?.url ?? "")
+    if (/\.env|id_rsa|password|secret|token|credential|key=/i.test(url)) {
+      block("refusing to fetch a URL that appears to carry secrets — exfiltration of credentials is never allowed.")
+    }
+  }
+
   if (process.env.QA_ALLOW_GLOBAL_MCP !== "1") {
     if (filePath && pathChecked && globalMcpConfigPaths().has(filePath)) {
       block(GLOBAL_MCP_WRITE_MSG.replace("$FILE_PATH", filePath))
@@ -380,7 +397,8 @@ async function secretsReadMode(home: string): Promise<"block" | "allow"> {
 // executeDestructive are the Atlassian v2 meta-tools for DEFERRED tools
 // (uploadAttachmentToJiraIssue & co.) — writes by definition; executeRead is
 // deliberately absent (read-only deferred tools must stay open).
-const JIRA_WRITE = /^atlassian_(?:jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive)/i
+// 0.19.4 M1: INVERTED to read-allowlist — anything not a read verb is a write
+const JIRA_WRITE = /^atlassian_(?!.*(?:get|search|list|download|executeRead|read))/i
 
 function issueKeyOf(args: Record<string, unknown> | undefined): string {
   for (const k of ["issueKey", "issue_key", "key", "id"]) {
@@ -439,7 +457,7 @@ async function shadowGateBlocks(directory: string, tool: string, args: Record<st
     // fail closed: an unparsable call that looks like an Atlassian write is one.
     // `__?` mirrors the bash fallback (1–2 underscores: opencode tool names use
     // one, a raw Claude-style payload carries `atlassian__createJiraIssue`).
-    if (!/atlassian__?(jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive)/i.test(JSON.stringify(args ?? {}))) return false
+    if (!/atlassian__?(?!.*(?:get|search|list|download|executeRead|read))/i.test(JSON.stringify(args ?? {}))) return false
     tool = "atlassian_create"
   }
   if (!JIRA_WRITE.test(tool)) return false

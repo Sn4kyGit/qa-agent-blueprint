@@ -87,16 +87,19 @@ delete. Clear only graduated/deduped/rejected from `_inbox.md`.
 Full grooming rules, retirement format, and classification details:
 `docs/rules/core/retro-learn.md` → "Groom".
 
-## Promote (gate: seen in ≥ 2 sessions)
+## Promote (gate: seen in ≥ 2 sessions + human approval for sensitive targets)
 
 At `seen: 2`, merge the entry into its named candidate target — condensing
-replacement edit, not narrative append. Remove superseded gotchas in the same
-edit. Keep volatile history in `learnings.md`/`evidence/`. Targets: rule file,
-skill, template/hook/docs, `PROJECT.md`, `PRODUCT.md`, `flow-map.md` (evidence
-gate: needs a second independent sighting with provenance note).
+replacement edit, not narrative append. **Promotions into `.claude/rules/`,
+`SKILL.md`, hooks, or templates require explicit human confirmation** — write
+the proposed change to a proposal file and wait for the user to approve before
+applying. This prevents poisoned learnings from becoming standing instructions.
+Promotions into `PROJECT.md`, `PRODUCT.md`, `flow-map.md`, and `learnings.md`
+proceed on the `seen: 2` gate alone (flow-map additionally needs a second
+independent sighting with provenance note).
 
-Full promotion targets, flow-map evidence gate, and conflict handling:
-`docs/rules/core/retro-learn.md` → "Promote".
+Full promotion targets, flow-map evidence gate, human-approval rule, and
+conflict handling: `docs/rules/core/retro-learn.md` → "Promote".
 
 ## Housekeeping
 
