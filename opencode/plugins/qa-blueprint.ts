@@ -136,6 +136,10 @@ const GIT_HOSTING_INTERPRETER_WRITE = (cmd: string) =>
 // 0.18.5 H1: project-level harness config files (agent writes = self-escalation)
 // .mcp.json and opencode.json are NOT here: the project's own MCP config is writable by design
 const HARNESS_CFG_WRITER = /(?:sed\s+-i|\btee\b|>>?|\bcp\b|\bmv\b|\brm\b|truncate|dd\s)[^;&|]*(?:settings\.json|settings\.local\.json|hooks\/hooks\.json|\.claude-plugin\/)/
+// 0.19.3 C1+H8: expanded human-only Bash writer (matches bash guard)
+const HUMAN_ONLY_BASH_WRITER = /(sed\s+-i|tee\s|>>?|cp\s|mv\s|rm\s|truncate|dd\s|install\s|rsync\s|ed\s|perl\s+-[a-zA-Z]*i|ruby\s+-[a-zA-Z]*i|git\s+(apply|checkout|restore|reset|stash|config)|tar\s+-|unzip\s|ln\s+-s?)[^;&|]*(settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin\/|hooks\/.*\.sh|rules\/|skills\/|agents\/|scripts\/|project\.md|\.qa-guard\.json|\.git\/(hooks|config))/i
+// 0.19.3 H6: interpreter writes to human-only files
+const HUMAN_ONLY_INTERPRETER = /(python3?|perl|ruby|node|php)\s[^;&|]*(open|write|writeFile|require|include|slurp|file_put_contents|File\.write)[^;&|]*(project\.md|\.qa-guard\.json|settings\.json|hooks\.json|\.git\/)/i
 
 // Tools whose filePath argument is a WRITE (reads are governed by opencode
 // permission denies — D8 — not by this guard, same split as Claude where the
@@ -246,37 +250,38 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     : undefined
   const filePath = argPath(args) || argPath(nested)
   const pathChecked = WRITE_TOOLS.has(tool) || /^[a-zA-Z0-9-]+_/.test(tool)
+
+  // 0.19.3 H5: normalize path (collapse //, strip /./, lowercase) before matching
+  const normalizePath = (p: string) => p.replace(/\/+/g, "/").replace(/\/\.\//g, "/").replace(/\/$/, "").toLowerCase()
+  const normFp = filePath ? normalizePath(filePath) : ""
+
   if (filePath && pathChecked && isSecretPath(filePath)) {
     block(`refusing to write/edit a secrets file (${filePath}). Secrets are vault/env references only — see .claude/rules/core/security.md.`)
   }
-  // The guard's own toggle file is a human task — an agent that can edit it
-  // can grant itself secrets_read=allow, and the toggle would be theater.
-  if (filePath && pathChecked && (filePath === ".qa-guard.json" || filePath.endsWith("/.qa-guard.json"))) {
-    block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
+
+  // 0.19.3 C1+H5+H8: human-only file classes — agent writes are self-escalation
+  const HUMAN_ONLY = /(\.qa-guard\.json|project\.md|product\.md|settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin\/|hooks\/.*\.sh|rules\/.*\.md|skills\/.*\/skill\.md|skills\/.*\/references\/|skills\/.*\/templates\/|agents\/.*\.md|scripts\/.*\.(py|sh|mjs)|\.git\/(hooks|config|info)\/|\.git\/config)/
+  if (filePath && pathChecked && HUMAN_ONLY.test(normFp)) {
+    block(HUMAN_ONLY_MSG.replace("$FILE_PATH", filePath))
   }
-  // Shadow-mode unlock via PROJECT.md is the same self-escalation class.
-  // 0.18.5 H2: scans ALL content fields (content, new_string, edits[].new_string
-  // + old_string) and uses a conservative "shadow AND off" heuristic for
-  // fragment edits that reconstruct the phrase across edits.
-  if (filePath && pathChecked && (filePath.endsWith("/PROJECT.md") || filePath === "PROJECT.md")) {
-    const parts: string[] = []
+
+  // 0.19.3 C2: Write-then-Bash script indirection — scan executable writes
+  if (filePath && /\.(sh|py|mjs|bash|zsh)$/i.test(filePath)) {
     const ti = args as Record<string, unknown>
-    for (const k of ["content", "new_string", "old_string"]) {
+    const parts: string[] = []
+    for (const k of ["content", "new_string"]) {
       const v = ti?.[k]
       if (typeof v === "string" && v) parts.push(v)
     }
-    const edits = Array.isArray(ti?.edits) ? ti.edits : []
-    for (const e of edits) {
+    for (const e of (Array.isArray(ti?.edits) ? ti.edits : [])) {
       if (e && typeof e === "object") {
-        for (const k of ["new_string", "old_string"]) {
-          const v = (e as Record<string, unknown>)[k]
-          if (typeof v === "string" && v) parts.push(v)
-        }
+        const v = (e as Record<string, unknown>).new_string
+        if (typeof v === "string" && v) parts.push(v)
       }
     }
     const blob = parts.join(" ")
-    if (/shadow\s+mode\s*:\s*off/i.test(blob) || (/shadow/i.test(blob) && /\boff\b/i.test(blob))) {
-      block("refusing to write 'Shadow mode: off' into PROJECT.md — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself.")
+    if (/(\.env|id_rsa|id_ed25519|\.pem\b|\.auth\b|storage[._-]state|\.qa-guard\.json|settings\.json|PROJECT\.md|shadow.*mode|secrets_read)/i.test(blob)) {
+      block(SCRIPT_CONTENT_MSG.replace("$FILE_PATH", filePath))
     }
   }
   // Read tool: raw evidence stays out of context (plugin-mode enforcement).
@@ -302,15 +307,6 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (tool === "bash" && GLOBAL_CFG_WRITER.test(typeof args.command === "string" ? args.command : "")) {
       block(GLOBAL_MCP_WRITE_MSG.replace("$FILE_PATH", "the command line"))
     }
-    // 0.18.5 H1: project-level harness config files — agent writes are self-escalation
-    // (.mcp.json is NOT here: the project's own MCP config is writable by design)
-    const HARNESS_CFG_MSG = "refusing to modify harness config ($FILE_PATH) — settings, hooks, and plugin manifests are human-only. An agent that can edit these can disable its own guard or unregister hooks. Modify these files yourself or use the installer."
-    if (filePath && pathChecked && /settings\.json$|settings\.local\.json$|hooks\/hooks\.json$|\.claude-plugin\//.test(filePath)) {
-      block(HARNESS_CFG_MSG.replace("$FILE_PATH", filePath))
-    }
-    if (tool === "bash" && HARNESS_CFG_WRITER.test(typeof args.command === "string" ? args.command : "")) {
-      block(HARNESS_CFG_MSG.replace("$FILE_PATH", "the command line"))
-    }
   }
 
   if (tool === "bash") {
@@ -321,6 +317,14 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (GUARD_CFG_INTERPRETER.test(command)) block("refusing to modify .qa-guard.json via an interpreter — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
     // 0.18.5 H2: shadow-mode unlock via Bash writers on PROJECT.md
     if (SHADOW_BASH_WRITER(command)) block("refusing to modify PROJECT.md via Bash — PROJECT.md is a human-edited config file (the shadow-mode unlock, product routing and project config are human tasks). Edit it yourself or use the Write/Edit tools with human approval.")
+    // 0.19.3 H8: git config mutations are human-only
+    if (/git\s+config\s+\S+\s+\S+/.test(command)) block(GIT_CONFIG_MSG.replace("$FILE_PATH", "the command line"))
+    // 0.19.3 H8: git apply/checkout/restore/reset/stash are human-only
+    if (/git\s+(apply|checkout|restore|reset|stash)(\s|$)/.test(command)) block(GIT_MODIFY_MSG.replace("$FILE_PATH", "the command line"))
+    // 0.19.3 C1+H8: expanded Bash-writer check for human-only files
+    if (HUMAN_ONLY_BASH_WRITER.test(command)) block(HUMAN_ONLY_BASH_MSG.replace("$FILE_PATH", "the command line"))
+    // 0.19.3 H6: interpreter writes to PROJECT.md / .qa-guard.json / settings
+    if (HUMAN_ONLY_INTERPRETER.test(command)) block(HUMAN_ONLY_INTERP_MSG.replace("$FILE_PATH", "the command line"))
     if (JIRA_BASH_WRITE(command)) block("refusing a Bash JIRA REST write (curl/wget/http with a write method to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only GET requests stay allowed.")
     // 0.18.5 H3: interpreter-based JIRA REST writes
     if (JIRA_INTERPRETER_WRITE(command)) block("refusing an interpreter-based JIRA REST write (python/node/perl/ruby HTTP write to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only requests stay allowed.")
@@ -423,6 +427,12 @@ async function auditJiraWrite(directory: string, tool: string, args: Record<stri
 // off" in projects/<KEY>/PROJECT.md) or QA_AGENT_SHADOW=0 is set. Fails safe:
 // an unresolvable ticket key or unreadable project file keeps the gate closed.
 const SHADOW_MSG = "refusing a JIRA write while Shadow Mode is on (default). Compose the report as evidence/<KEY>/<TICKET>/<ts>/proposed-report.md instead. Unlock: 'Shadow mode: off' in projects/<KEY>/PROJECT.md, or QA_AGENT_SHADOW=0."
+const HUMAN_ONLY_MSG = "refusing to write to a human-only file ($FILE_PATH) — the guard's config, hook scripts, rules, skills, agents, scripts, project config, and .git/ internals are human tasks. An agent that can edit these can disable its own guard, override safety rules, or plant persistent backdoors. Modify these files yourself or use the installer."
+const SCRIPT_CONTENT_MSG = "refusing to write a script that references secret paths or protected config ($FILE_PATH) — Write-then-Bash is the same as a direct read/write. Inline the content in a Bash command instead so the guard can evaluate it."
+const GIT_CONFIG_MSG = "refusing to modify git config ($FILE_PATH) — git config (core.sshCommand, core.hooksPath, remote.*, etc.) is a human task. An agent that can change git config can plant persistent backdoors or redirect pushes."
+const GIT_MODIFY_MSG = "refusing to modify files via git ($FILE_PATH) — git apply/checkout/restore/reset/stash can overwrite protected files. Use the Write/Edit tools for individual file changes."
+const HUMAN_ONLY_BASH_MSG = "refusing to modify a human-only file via Bash ($FILE_PATH) — guard config, hooks, rules, skills, agents, scripts, project config, and .git/ internals are human tasks."
+const HUMAN_ONLY_INTERP_MSG = "refusing to modify a human-only file via an interpreter ($FILE_PATH) — guard config, project config, and .git/ internals are human tasks."
 
 async function shadowGateBlocks(directory: string, tool: string, args: Record<string, unknown> | undefined): Promise<boolean> {
   if (!tool) {

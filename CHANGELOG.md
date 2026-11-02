@@ -8,7 +8,44 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.19.2] — 2026-11-02
+## [0.19.3] — 2026-11-02
+
+Theme: **security audit — guard self-protection.** Comprehensive security
+audit found the guard does not protect its own source code, rules, skills,
+agents, or .git/ internals. Write-then-Bash script indirection bypasses
+all content checks. QA-home walk-up is spoofable via planted markers.
+Path matching is case-sensitive and normalization-bypassable. Closed.
+
+### Fixed — critical security gaps
+- **C1 Guard self-protection**: agent writes to hook scripts, rules, skills,
+  agents, scripts, and `.git/` internals (hooks/config/info) are now blocked
+  — these are human-only. An agent that can rewrite its own guard has total
+  self-escalation.
+- **C2 Write-then-Bash indirection**: scripts written via Write that reference
+  secret paths or protected config are blocked before landing. A script
+  written and then executed via Bash bypasses all command-level checks.
+- **C3 QA-home walk-up hardened**: outermost marker wins instead of nearest.
+  A planted `.qa-home` + `.qa-guard.json` in a cloned repo can no longer
+  hijack the QA home.
+
+### Fixed — high security gaps
+- **H5 Path normalization**: `//`, `/./`, and case variants (`.QA-GUARD.JSON`)
+  are normalized before pattern matching — closes macOS case-insensitive
+  filesystem bypasses.
+- **H6 Interpreter writes to PROJECT.md**: `python3 -c "open('PROJECT.md',...)"`
+  and similar interpreter-based writes to human-only files are blocked.
+- **H8 git config + git apply protection**: `git config core.sshCommand`,
+  `git apply`, `git checkout`, `git reset`, `git stash` are blocked —
+  persistent RCE and file-overwrite vectors.
+- **All PROJECT.md writes blocked**: PROJECT.md is human-edited config;
+  agent writes (including fragment edits and Bash writers) are blocked.
+
+### Changed
+- 20+ new guard fixtures (C1/C2/C3/H5/H6/H8 vectors + controls).
+- Human-only file class: `.qa-guard.json`, `PROJECT.md`, `PRODUCT.md`,
+  `settings.json`, `hooks.json`, `.claude-plugin/`, `hooks/*.sh`, `rules/`,
+  `skills/`, `agents/`, `scripts/`, `.git/(hooks|config|info)`.
+- Both harnesses (bash hook + TS plugin) updated in lockstep.
 
 Theme: **guard hardening (fuzz round 2).** Systematic self-testing found
 and closed 5 more bypasses: shadow-mode unlock via `sed s/on/off/`,

@@ -26,17 +26,21 @@ FILE_PATH="$(get_json 'print((d.get("tool_input") or {}).get("file_path") or "")
 CWD="$(get_json 'print(d.get("cwd") or "")')"; CWD="${CWD:-$PWD}"
 SESSION_CWD="$CWD"  # MCP config is harness-scoped (the session's cwd), NOT QA-home data — the foreign-MCP gate below reads .mcp.json from here
 
-# QA home discovery (0.9.1): the session may run in a subfolder of the QA
-# home — the shadow gate's PROJECT.md and the preflight artifact live at the
-# root. Walk up to the nearest .qa-home marker or the legacy trio.
+# QA home discovery (0.9.1, hardened 0.19.3 C3): the session may run in a
+# subfolder of the QA home. Walk up and find the OUTERMOST marker below $HOME
+# — not the nearest. A planted `.qa-home` + `.qa-guard.json` in a cloned
+# product repo must NOT hijack the QA home. The outermost marker is the real
+# home; inner markers are subfolders.
 d="$CWD"
+FOUND_QA_HOME=""
 while : ; do
   if [ -e "$d/.qa-home" ] || { [ -d "$d/projects" ] && [ -d "$d/memory" ] && [ -d "$d/evidence" ]; }; then
-    CWD="$d"; break
+    FOUND_QA_HOME="$d"  # keep updating — outermost wins
   fi
   if { [ -n "${HOME:-}" ] && [ "$d" = "$HOME" ]; } || [ "$d" = "/" ]; then break; fi
   d="$(dirname "$d")"
 done
+[ -n "$FOUND_QA_HOME" ] && CWD="$FOUND_QA_HOME"
 
 block() {
   echo "BLOCKED by pre-tool-guard: $1" >&2
@@ -136,33 +140,36 @@ if [ -n "$FILE_PATH" ] && is_secret_path "$FILE_PATH"; then
   block "refusing to write/edit a secrets file ($FILE_PATH). Secrets are vault/env references only — see .claude/rules/core/security.md."
 fi
 
-# 1b. The guard's own toggle file is a human task: an agent that can write
-# .qa-guard.json can grant itself secrets_read=allow, and the toggle would be
-# theater. Same philosophy as the global-MCP-config gate below.
+# 0.19.3: path normalization — collapse //, strip /./, lowercase for case-
+# insensitive filesystems (macOS). Applied before ALL pattern matching so
+# .QA-GUARD.JSON, .claude/./settings.json, .claude//settings.json cannot
+# bypass the protected-file checks (audit findings F1/F2).
+normalize_path() {
+  printf '%s' "$1" | sed -e 's://*:/:g' -e 's:/\./:/:g' -e 's:/$::' | tr '[:upper:]' '[:lower:]'
+}
+
+# 0.19.3 C1+H5+H8: human-only file classes — the agent must never write these.
+# Covers: guard config (1b), project config (1c), harness config (H1), and the
+# NEW classes: hook scripts, rules, skills, agents, scripts, and .git/ (C1/H8).
+# An agent that can rewrite its own guard/rules/skills/agents has total
+# self-escalation. All checks use the normalized path.
+HUMAN_ONLY='(\.qa-guard\.json|project\.md|product\.md|settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin/|hooks/.*\.sh|rules/.*\.md|skills/.*/skill\.md|skills/.*/references/|skills/.*/templates/|agents/.*\.md|scripts/.*\.(py|sh|mjs)|\.git/(hooks|config|info)/|\.git/config)'
 if [ -n "$FILE_PATH" ]; then
-  case "$FILE_PATH" in
-    .qa-guard.json|*/.qa-guard.json)
-      block "refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow)." ;;
-  esac
+  NORM_FP="$(normalize_path "$FILE_PATH")"
+  if printf '%s' "$NORM_FP" | grep -qE "$HUMAN_ONLY"; then
+    block "refusing to write to a human-only file ($FILE_PATH) — the guard's config, hook scripts, rules, skills, agents, scripts, project config, and .git/ internals are human tasks. An agent that can edit these can disable its own guard, override safety rules, or plant persistent backdoors. Modify these files yourself or use the installer."
+  fi
 fi
 
-# 1c. Shadow-mode unlock via PROJECT.md is the same self-escalation class: an
-# agent that can write "Shadow mode: off" into PROJECT.md can ungate its own
-# JIRA writes. Only a human editing the file outside the agent may flip it.
-# 0.18.5 H2: closes four bypass vectors — (1) MultiEdit edits[] not inspected,
-# (2) tab variant `Shadow mode:\toff` (write-check used [ ]* but gate used
-# [[:space:]]*), (3) Bash writers (sed -i/echo >> on PROJECT.md), (4) fragment
-# edits that reconstruct the phrase across two edits. The check now scans ALL
-# content fields (content, new_string, edits[].new_string+old_string) and uses
-# a conservative "shadow AND off in the same payload" heuristic for fragments.
-if [ -n "$FILE_PATH" ]; then
-  case "$FILE_PATH" in
-    */PROJECT.md|PROJECT.md)
-      SHADOW_CONTENT="$(get_json 'import re, json; ti=d.get("tool_input") or {}; parts=[]; [parts.append(str(v)) for v in [ti.get("content"), ti.get("new_string"), ti.get("old_string")] if v]; [parts.append(str(e.get(k,""))) for e in (ti.get("edits") or []) for k in ("new_string","old_string")]; blob=" ".join(parts); print("yes" if re.search(r"shadow\s+mode\s*:\s*off", blob, re.IGNORECASE) or (re.search(r"shadow", blob, re.IGNORECASE) and re.search(r"\boff\b", blob, re.IGNORECASE)) else "")')"
-      if [ "$SHADOW_CONTENT" = "yes" ]; then
-        block "refusing to write 'Shadow mode: off' into PROJECT.md — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself."
-      fi ;;
-  esac
+# 0.19.3 C2: Write-then-Bash script indirection — a script written via Write
+# and executed via Bash moves sensitive strings out of the guard's command
+# check. Scan Write/Edit content to executable paths (.sh, .py, .mjs, shebang)
+# for secret-access patterns before the write lands.
+if [ -n "$FILE_PATH" ] && printf '%s' "$FILE_PATH" | grep -qiE '\.(sh|py|mjs|bash|zsh)$|(^|/)(Makefile)$'; then
+  SCRIPT_CONTENT="$(get_json 'import re; ti=d.get("tool_input") or {}; parts=[]; [parts.append(str(v)) for v in [ti.get("content"), ti.get("new_string")] if v]; [parts.append(str(e.get("new_string",""))) for e in (ti.get("edits") or [])]; blob=" ".join(parts); print("yes" if re.search(r"(\.env|id_rsa|id_ed25519|\.pem\b|\.auth\b|storage[._-]state|\.qa-guard\.json|settings\.json|PROJECT\.md|shadow.*mode|secrets_read)", blob, re.IGNORECASE) else "")')"
+  if [ "$SCRIPT_CONTENT" = "yes" ]; then
+    block "refusing to write a script that references secret paths or protected config ($FILE_PATH) — Write-then-Bash is the same as a direct read/write. Inline the content in a Bash command instead so the guard can evaluate it."
+  fi
 fi
 
 # 1d. Raw evidence stays out of the model context: screenshots, traces, videos,
@@ -389,28 +396,33 @@ if [ "${QA_ALLOW_GLOBAL_MCP:-0}" != "1" ]; then
       case "$FILE_PATH" in
         "$HOME/.claude.json"|"$HOME/.config/opencode/opencode.json"|"$HOME/.config/opencode/opencode.jsonc")
           block "refusing to modify global MCP config ($FILE_PATH) — MCP config is project-scoped here: a project's servers live in its own .mcp.json / opencode.json, never in global config (~/.claude.json, ~/.config/opencode). Another project's data is never used or touched — global config edits are a human task. Escape hatch: QA_ALLOW_GLOBAL_MCP=1." ;;
-        # H1 (0.18.5): harness config files that can disable guards, add foreign
-        # MCP servers, or change hook registration — agent writes are self-escalation.
-        # The installer writes these during setup (it runs outside the hook), so
-        # blocking agent writes does not affect installation.
-        # .mcp.json and opencode.json are NOT here: the project's own MCP config
-        # is writable by design (that is how the project declares its servers).
-        */.claude/settings.json|*/.claude/settings.local.json|\
-        .claude/settings.json|.claude/settings.local.json|\
-        */hooks/hooks.json|hooks/hooks.json|\
-        */.claude-plugin/plugin.json|*/.claude-plugin/marketplace.json|\
-        .claude-plugin/plugin.json|.claude-plugin/marketplace.json)
-          block "refusing to modify harness config ($FILE_PATH) — settings, hooks, and plugin manifests are human-only. An agent that can edit these can disable its own guard or unregister hooks. Modify these files yourself or use the installer." ;;
       esac ;;
     Bash)
       if printf '%s' "$COMMAND" | grep -qE '(sed[[:space:]]+-i|tee[[:space:]]|>>?|cp[[:space:]]|mv[[:space:]]|rm[[:space:]]|truncate|dd[[:space:]])[^;&|]*(\.claude\.json|\.config/opencode/opencode\.jsonc?)'; then
         FILE_PATH="the command line"
         block "refusing to modify global MCP config ($FILE_PATH) — MCP config is project-scoped here: a project's servers live in its own .mcp.json / opencode.json, never in global config (~/.claude.json, ~/.config/opencode). Another project's data is never used or touched — global config edits are a human task. Escape hatch: QA_ALLOW_GLOBAL_MCP=1."
       fi
-      # H1: same for project-level harness config via Bash writers
-      if printf '%s' "$COMMAND" | grep -qE '(sed[[:space:]]+-i|tee[[:space:]]|>>?|cp[[:space:]]|mv[[:space:]]|rm[[:space:]]|truncate|dd[[:space:]])[^;&|]*(settings\.json|settings\.local\.json|hooks/hooks\.json|\.claude-plugin/)'; then
+      # 0.19.3 H8: git config mutations are human-only (core.sshCommand,
+      # core.hooksPath, remote.* = persistent RCE / redirect vectors)
+      if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+config[[:space:]]+[^[:space:]]+[[:space:]]+[^[:space:]]'; then
         FILE_PATH="the command line"
-        block "refusing to modify harness config ($FILE_PATH) — settings, hooks, and plugin manifests are human-only. An agent that can edit these can disable its own guard or unregister hooks. Modify these files yourself or use the installer."
+        block "refusing to modify git config ($FILE_PATH) — git config (core.sshCommand, core.hooksPath, remote.*, etc.) is a human task. An agent that can change git config can plant persistent backdoors or redirect pushes."
+      fi
+      # 0.19.3 H8: git apply/checkout/restore/reset/stash are human-only
+      if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+(apply|checkout|restore|reset|stash)([[:space:]]|$)'; then
+        FILE_PATH="the command line"
+        block "refusing to modify files via git ($FILE_PATH) — git apply/checkout/restore/reset/stash can overwrite protected files. Use the Write/Edit tools for individual file changes."
+      fi
+      # 0.19.3 C1+H8: expanded Bash-writer check for human-only files
+      if printf '%s' "$COMMAND" | grep -qiE '(sed[[:space:]]+-i|tee[[:space:]]|>>?|cp[[:space:]]|mv[[:space:]]|rm[[:space:]]|truncate|dd[[:space:]]|install[[:space:]]|rsync[[:space:]]|ed[[:space:]]|perl[[:space:]]+-[a-zA-Z]*i|ruby[[:space:]]+-[a-zA-Z]*i|git[[:space:]]+(apply|checkout|restore|reset|stash|config)|tar[[:space:]]+-|unzip[[:space:]]|ln[[:space:]]+-s?)[^;&|]*(settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin/|hooks/.*\.sh|rules/|skills/|agents/|scripts/|project\.md|\.qa-guard\.json|\.git/(hooks|config))'; then
+        FILE_PATH="the command line"
+        block "refusing to modify a human-only file via Bash ($FILE_PATH) — guard config, hooks, rules, skills, agents, scripts, project config, and .git/ internals are human tasks."
+      fi
+      # 0.19.3 H6: interpreter writes to PROJECT.md / .qa-guard.json / settings
+      if printf '%s' "$COMMAND" | grep -qiE '(python3?|perl|ruby|node|php)[[:space:]]' \
+        && printf '%s' "$COMMAND" | grep -qiE '(open|write|writeFile|require|include|slurp|file_put_contents|File\.write)[^;&|]*(project\.md|\.qa-guard\.json|settings\.json|hooks\.json|\.git/)'; then
+        FILE_PATH="the command line"
+        block "refusing to modify a human-only file via an interpreter ($FILE_PATH) — guard config, project config, and .git/ internals are human tasks."
       fi ;;
     mcp__*__*)
       # Server = everything between mcp__ and the FIRST __ (the separator

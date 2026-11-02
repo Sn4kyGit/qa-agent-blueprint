@@ -385,12 +385,12 @@ describe("secrets_read toggle (opencode)", () => {
     await expect(run(h, bashBefore("python3 -c \"note='.qa-guard.json'\""))).resolves.toBeUndefined()
   })
 
-  test("S2: shadow-mode unlock via PROJECT.md is blocked", async () => {
+  test("S2: PROJECT.md writes are human-only (0.19.3)", async () => {
     const dir = await qaHome()
     const h = await hooksIn(dir)
-    await expect(run(h, fileBefore("write", join(dir, "projects/SHOP/PROJECT.md"), "Shadow mode: off"))).rejects.toThrow(/shadow/i)
-    await expect(run(h, fileBefore("edit", join(dir, "projects/SHOP/PROJECT.md"), undefined, "Shadow mode: off"))).rejects.toThrow(/shadow/i)
-    await expect(run(h, fileBefore("write", join(dir, "projects/SHOP/PROJECT.md"), "Shared stage."))).resolves.toBeUndefined()
+    await expect(run(h, fileBefore("write", join(dir, "projects/SHOP/PROJECT.md"), "Shadow mode: off"))).rejects.toThrow(/human-only/)
+    await expect(run(h, fileBefore("edit", join(dir, "projects/SHOP/PROJECT.md"), undefined, "Shadow mode: off"))).rejects.toThrow(/human-only/)
+    await expect(run(h, fileBefore("write", join(dir, "projects/SHOP/PROJECT.md"), "Shared stage."))).rejects.toThrow(/human-only/)
   })
 
   test("S3: Bash curl/wget JIRA REST writes are blocked", async () => {
