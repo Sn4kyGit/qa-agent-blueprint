@@ -66,7 +66,7 @@ const RM_RF_B = /rm\s+((-[^ \t]+\s+)*(-[a-zA-Z]*f[a-zA-Z]*|--force)([^ \t]*\s+|$
 const GIT_FORCE_PUSH = /git\s+push\s+.*(--force|-f\b)/
 // 0.18.5 C1: reader list extended, wrapper prefixes added, xargs treated as
 // a reader. The wrapper group allows `sudo cat .env`, `env cat .env`, etc.
-const READER_CORE = "(cat|less|more|head|tail|grep|sed|awk|jq|source|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs)"
+const READER_CORE = "(cat|less|more|head|tail|grep|sed|awk|jq|source|\\.|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs|split|csplit)"
 const WRAPPER_PREFIX = "((sudo|env|nice|time|exec|command|eval|doas)\\s+(-[a-zA-Z]+\\s+)*)*"
 // 0.18.5 M3: case-insensitive .env patterns (macOS case-insensitive filesystem)
 const SECRET_TAIL = "(\\.[eE][nN][vV]([^a-zA-Z]|$)|\\.[pP][eE][mM]\\b|id_rsa|id_ed25519|\\.[aA][uU][tT][hH]\\b|[sS][tT][oO][rR][aA][gG][eE][._-][sS][tT][aA][tT][eE])"
@@ -86,7 +86,7 @@ const ENV_INPLACE = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(sed|awk)\\s+(-[a-zA-Z]*
 // rm -rf was blocked. Deleting a secret file is a human task.
 const ENV_RM = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*rm\\s+(-[a-zA-Z]+\\s+)*[^;&|]*${SECRET_TAIL}`)
 // 0.18.5 H4: additional mutating commands that destroy/overwrite secret files
-const ENV_DESTROYER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(tee|truncate|dd|install|shred)\\s[^;&|]*${SECRET_TAIL}`)
+const ENV_DESTROYER = new RegExp(`(^|[;&|(]|&&|\\|\\|)\\s*(tee|truncate|dd|install|shred|ln)\\s[^;&|]*${SECRET_TAIL}`)
 const ENV_FIND_DELETE = new RegExp(`find\\s[^;&|]*-delete[^;&|]*${SECRET_TAIL}|find\\s[^;&|]*${SECRET_TAIL}[^;&|]*-delete`)
 // 0.18.5 C1: < redirect FROM a secret file is a read
 const ENV_REDIRECT_READ = new RegExp(`<\\s*${SECRET_TAIL}`)
@@ -105,12 +105,14 @@ const GUARD_CFG_INTERPRETER = /(python3?|perl|ruby|node|php)\s[^;&|]*(open|write
 // template'"` — merely mentioning the name — stays allowed (audit F4: the
 // false-positive rate must stay visible in fixtures). Best-effort net; the
 // real guarantee is --secrets masking at the browser layer.
-const ENV_INTERPRETER = new RegExp(`(python3?|perl|ruby|node|php)\\s[^;&|]*(open|read|load|require|include|slurp)[^;&|]*${SECRET_TAIL}`)
+const ENV_INTERPRETER = new RegExp(`(python3?|perl|ruby|node|php)\\s[^;&|]*(open|read|load|require|include|slurp|file_get_contents|fread|fgets|file\\()[^;&|]*${SECRET_TAIL}`)
 const ENV_REDIRECT = new RegExp(`>>?\\s*${SECRET_TAIL}`)
 // 0.18.5 H2: shadow-mode unlock via Bash writers on PROJECT.md
+// 0.19.2: block ALL Bash writes to PROJECT.md — `sed -i s/on/off/` flips
+// shadow mode without containing "shadow" or "off" as words. PROJECT.md is
+// human-edited config; agents have no legitimate reason to write it via Bash.
 const SHADOW_BASH_WRITER = (cmd: string) =>
-  /(sed\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee\s|>>?|cp\s|mv\s|truncate|dd\s)[^;&|]*PROJECT\.md/i.test(cmd) &&
-  /shadow.*off|off.*shadow/i.test(cmd)
+  /(sed\s+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee\s|>>?|cp\s|mv\s|truncate|dd\s|install\s|rsync\s|ed\s)[^;&|]*PROJECT\.md/i.test(cmd)
 // 0.18.5 H3: extended JIRA REST write detection (includes HTTPie method syntax)
 const JIRA_BASH_WRITE = (cmd: string) =>
   /(curl|wget|http|httpie)\s/.test(cmd) &&
@@ -125,7 +127,7 @@ const JIRA_INTERPRETER_WRITE = (cmd: string) =>
 const GIT_API_URL = /(api\.github\.com|github\.com\/api|gitlab\.com\/api|api\.gitlab|bitbucket\.org\/api|api\.bitbucket|\/api\/v4\/projects|\/api\/v3\/repos|\/repos\/.*\/(commits|git\/refs|branches|releases|trees|contents))/i
 const GIT_HOSTING_BASH_WRITE = (cmd: string) =>
   /(curl|wget|http|httpie)\s/.test(cmd) &&
-  /(-X\s*(POST|PUT|DELETE|PATCH)|--request\s*(POST|PUT|DELETE|PATCH)|-d\s|--data[= ]|--data-raw[= ]|--json[= ]|--upload-file[= ]|-T\s|--method[=:]\s*(POST|PUT|DELETE|PATCH))/i.test(cmd) &&
+  /(-X\s*(POST|PUT|DELETE|PATCH)|--request\s*(POST|PUT|DELETE|PATCH)|-d\s|--data[= ]|--data-raw[= ]|--json[= ]|--upload-file[= ]|--post-file[= ]|--post-data[= ]|-T\s|--method[=:]\s*(POST|PUT|DELETE|PATCH))/i.test(cmd) &&
   GIT_API_URL.test(cmd)
 const GIT_HOSTING_INTERPRETER_WRITE = (cmd: string) =>
   /(python3?|perl|ruby|node|php)\s/.test(cmd) &&
@@ -318,7 +320,7 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (GUARD_CFG_WRITER.test(command)) block("refusing to modify .qa-guard.json — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
     if (GUARD_CFG_INTERPRETER.test(command)) block("refusing to modify .qa-guard.json via an interpreter — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow).")
     // 0.18.5 H2: shadow-mode unlock via Bash writers on PROJECT.md
-    if (SHADOW_BASH_WRITER(command)) block("refusing to modify shadow mode in PROJECT.md via Bash — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself.")
+    if (SHADOW_BASH_WRITER(command)) block("refusing to modify PROJECT.md via Bash — PROJECT.md is a human-edited config file (the shadow-mode unlock, product routing and project config are human tasks). Edit it yourself or use the Write/Edit tools with human approval.")
     if (JIRA_BASH_WRITE(command)) block("refusing a Bash JIRA REST write (curl/wget/http with a write method to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only GET requests stay allowed.")
     // 0.18.5 H3: interpreter-based JIRA REST writes
     if (JIRA_INTERPRETER_WRITE(command)) block("refusing an interpreter-based JIRA REST write (python/node/perl/ruby HTTP write to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only requests stay allowed.")

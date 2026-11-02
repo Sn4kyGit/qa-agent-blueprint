@@ -228,13 +228,15 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
     block "refusing to modify .qa-guard.json via an interpreter — the guard's own toggle is a human task (an agent that can edit it can grant itself secrets_read=allow)."
   fi
 
-  # H2 (0.18.5): shadow-mode unlock via Bash writers on PROJECT.md — same
-  # self-escalation as the Write/Edit check 1c. Covers sed -i, echo >>,
-  # tee, cp, mv, and interpreter writes targeting PROJECT.md with "shadow"
-  # and "off" in the same command.
-  if printf '%s' "$COMMAND" | grep -qiE '(sed[[:space:]]+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee[[:space:]]|>>?|cp[[:space:]]|mv[[:space:]]|truncate|dd[[:space:]])[^;&|]*PROJECT\.md' \
-    && printf '%s' "$COMMAND" | grep -qiE 'shadow.*off|off.*shadow'; then
-    block "refusing to modify shadow mode in PROJECT.md via Bash — the shadow-mode unlock is a human task (an agent that can flip it can grant itself JIRA write access). Unlock via QA_AGENT_SHADOW=0 or edit PROJECT.md yourself."
+  # H2 (0.18.5, hardened 0.19.2): shadow-mode unlock via Bash writers on
+  # PROJECT.md — same self-escalation as the Write/Edit check 1c. Blocks ALL
+  # Bash writes to PROJECT.md (sed -i, tee, redirect, cp, mv, truncate, dd):
+  # a Bash write that modifies "Shadow mode: on" to "off" (e.g. `sed -i
+  # s/on/off/`) does not contain "shadow" or "off" as words, so the old
+  # word-based check was bypassable. PROJECT.md is a human-edited config
+  # file — agents have no legitimate reason to write it via Bash.
+  if printf '%s' "$COMMAND" | grep -qiE '(sed[[:space:]]+(-[a-zA-Z]*i[a-zA-Z.]*|--in-place)|tee[[:space:]]|>>?|cp[[:space:]]|mv[[:space:]]|truncate|dd[[:space:]]|install[[:space:]]|rsync[[:space:]]|ed[[:space:]])[^;&|]*PROJECT\.md'; then
+    block "refusing to modify PROJECT.md via Bash — PROJECT.md is a human-edited config file (the shadow-mode unlock, product routing and project config are human tasks). Edit it yourself or use the Write/Edit tools with human approval."
   fi
 
   # rm hardening (0.11.0, tdd §9/F2): deleting a secrets file is a human
@@ -250,10 +252,10 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
     block "refusing to copy/move a secret file — secrets never leave their protected file (blocked regardless of secrets_read)."
   fi
 
-  # H4 (0.18.5): additional mutating commands that destroy/overwrite secret
-  # files — tee, truncate, dd, find -delete, install, shred. Previously only
-  # rm/cp/mv/sed -i were covered; these all write or destroy the file.
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*(tee|truncate|dd|install|shred)[[:space:]][^;&|]*$SECRET_TAIL"; then
+  # H4 (0.18.5, hardened 0.19.2): additional mutating commands that destroy/
+  # overwrite/symlink secret files — tee, truncate, dd, find -delete, install,
+  # shred, ln (symlink attack). Previously only rm/cp/mv/sed -i were covered.
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*(tee|truncate|dd|install|shred|ln)[[:space:]][^;&|]*$SECRET_TAIL"; then
     block "refusing to write/destroy a secret file — secret files are never overwritten or truncated (blocked regardless of secrets_read)."
   fi
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "find[[:space:]][^;&|]*-delete[^;&|]*$SECRET_TAIL|find[[:space:]][^;&|]*$SECRET_TAIL[^;&|]*-delete"; then
@@ -285,7 +287,7 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # and xargs treated as a reader (it reads stdin). The wrapper group allows
   # `sudo cat .env`, `env cat .env`, `sudo -u root cat .env` etc. The bash/sh/
   # zsh/dash group is handled separately below (subshell -c).
-  READER_CORE='(cat|less|more|head|tail|grep|sed|awk|jq|source|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs)'
+  READER_CORE='(cat|less|more|head|tail|grep|sed|awk|jq|source|\.|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs|split|csplit)'
   WRAPPER_PREFIX='((sudo|env|nice|time|exec|command|eval|doas)[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*)*'
   if [ "$SECRETS_READ" != "allow" ] && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*${WRAPPER_PREFIX}${READER_CORE}[[:space:]]+[^;&|]*$ENV_TAIL"; then
     block "refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it)."
@@ -316,7 +318,7 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # This class does NOT follow the toggle (tdd §10/§11): a regex cannot tell
   # open('.env') from open('.env','w') — allowing it in allow-mode would open
   # a secret-WRITE hole, so it fails closed in both states.
-  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(python3?|perl|ruby|node|php)[[:space:]][^;&|]*(open|read|load|require|include|slurp)[^;&|]*$SECRET_TAIL"; then
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(python3?|perl|ruby|node|php)[[:space:]][^;&|]*(open|read|load|require|include|slurp|file_get_contents|fread|fgets|file\()[^;&|]*$SECRET_TAIL"; then
     block "refusing a command that appears to read a secret file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status."
   fi
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE ">>?[[:space:]]*$SECRET_TAIL"; then
@@ -361,7 +363,7 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # repository mutations (commits, refs, branches, trees, releases).
   # Read-only GET requests stay allowed.
   if printf '%s' "$COMMAND" | grep -qE '(curl|wget|http|httpie)[[:space:]]' \
-    && printf '%s' "$COMMAND" | grep -qiE '(-X[[:space:]]*(POST|PUT|DELETE|PATCH)|--request[[:space:]]*(POST|PUT|DELETE|PATCH)|-d[[:space:]]|--data[=[:space:]]|--data-raw[=[:space:]]|--json[=[:space:]]|--upload-file[=[:space:]]|-T[[:space:]]|--method[=:]*(POST|PUT|DELETE|PATCH))' \
+    && printf '%s' "$COMMAND" | grep -qiE '(-X[[:space:]]*(POST|PUT|DELETE|PATCH)|--request[[:space:]]*(POST|PUT|DELETE|PATCH)|-d[[:space:]]|--data[=[:space:]]|--data-raw[=[:space:]]|--json[=[:space:]]|--upload-file[=[:space:]]|--post-file[=[:space:]]|--post-data[=[:space:]]|-T[[:space:]]|--method[=:]*(POST|PUT|DELETE|PATCH))' \
     && printf '%s' "$COMMAND" | grep -qiE '(api\.github\.com|github\.com/api|gitlab\.com/api|api\.gitlab|bitbucket\.org/api|api\.bitbucket|/api/v4/projects|/api/v3/repos|/repos/.*/(commits|git/refs|branches|releases|trees|contents))'; then
     block "refusing a git hosting REST write (curl/wget/http with a write method to a GitHub/GitLab/Bitbucket API endpoint) — code changes go through git so the safety protocol applies. Read-only GET requests stay allowed."
   fi

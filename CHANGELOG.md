@@ -8,7 +8,32 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.19.1] — 2026-11-02
+## [0.19.2] — 2026-11-02
+
+Theme: **guard hardening (fuzz round 2).** Systematic self-testing found
+and closed 5 more bypasses: shadow-mode unlock via `sed s/on/off/`,
+`wget --post-file` to git hosting APIs, `php file_get_contents`, `split`
+on secret files, and `ln -sf` symlink attacks.
+
+### Fixed — security guard gaps
+- **Shadow-mode Bash writer hardened**: ALL Bash writes to PROJECT.md are
+  now blocked (was: only those containing "shadow"/"off"). `sed -i
+  s/on/off/ PROJECT.md` flipped shadow mode without those words.
+- **`--post-file`/`--post-data` in git hosting check**: `wget
+  --post-file=x.json https://api.github.com/...` bypassed the write-method
+  detection.
+- **`php file_get_contents` in interpreter check**: PHP's file-read
+  function wasn't in the keyword list.
+- **`split`/`csplit` in reader list**: `split .env part_` copied secret
+  content into new files.
+- **`ln` in destroyer list**: `ln -sf /tmp/evil .env` replaced a secret
+  file with a symlink.
+
+### Changed
+- 6 new guard fixtures (dot-source, php, split, ln, sed-on-off, tee).
+- Reader list extended with `. (dot-source)`, `split`, `csplit`.
+- Interpreter keywords extended with `file_get_contents|fread|fgets|file(`.
+- Both harnesses (bash hook + TS plugin) updated in lockstep.
 
 Theme: **git hosting API guard.** Field report: a GitLab Commits API push
 bypassed the git-level guard — `git push --force` is blocked, but REST API

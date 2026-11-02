@@ -71,6 +71,10 @@ check "Bash sed reads .env"            2 '{"tool_name":"Bash","tool_input":{"com
 check "Bash awk reads .env"            2 '{"tool_name":"Bash","tool_input":{"command":"awk -F= \"{print $1}\" .env"}}'
 check "Bash jq reads .env"             2 '{"tool_name":"Bash","tool_input":{"command":"jq . .env"}}'
 check "Bash source .env"               2 '{"tool_name":"Bash","tool_input":{"command":"source .env"}}'
+check "Bash dot-source .env"           2 '{"tool_name":"Bash","tool_input":{"command":". .env"}}'
+check "Bash php file_get_contents .env" 2 '{"tool_name":"Bash","tool_input":{"command":"php -r \"echo file_get_contents(\".env\");\""}}'
+check "Bash split .env"                2 '{"tool_name":"Bash","tool_input":{"command":"split .env part_"}}'
+check "Bash ln -sf .env"               2 '{"tool_name":"Bash","tool_input":{"command":"ln -sf /tmp/evil .env"}}'
 # Interpreter one-liners that OPEN the file (audit 2026-09-18, F4)
 check "python3 open().read() .env"     2 '{"tool_name":"Bash","tool_input":{"command":"python3 -c \"print(open(\".env\").read())\""}}'
 check "ruby File.read .env"            2 '{"tool_name":"Bash","tool_input":{"command":"ruby -e \"puts File.read(\".env\")\""}}'
@@ -393,6 +397,8 @@ check "Write .mcp.json ok (project-owned)" 0 '{"tool_name":"Write","tool_input":
 check "Bash sed shadow off in PROJECT.md blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"sed -i '"'"'s/Shadow mode: on/Shadow mode: off/'"'"' projects/SHOP/PROJECT.md"},"cwd":"'"$TOG"'"}'
 check "Bash echo shadow off in PROJECT.md blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"echo '"'"'Shadow mode: off'"'"' >> projects/SHOP/PROJECT.md"},"cwd":"'"$TOG"'"}'
 check "Edit fragment shadow+off in PROJECT.md blocked" 2 '{"tool_name":"Edit","tool_input":{"file_path":"projects/SHOP/PROJECT.md","old_string":"Shadow mode: on","new_string":"off"}}'
+check "Bash sed s/on/off/ in PROJECT.md blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"sed -i s/on/off/ projects/SHOP/PROJECT.md"},"cwd":"'"$TOG"'"}'
+check "Bash tee PROJECT.md blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"echo x | tee projects/SHOP/PROJECT.md"},"cwd":"'"$TOG"'"}'
 
 # --- H3: JIRA REST writes via curl -T and interpreters
 check "curl -T to JIRA REST blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"curl -T payload.json https://jira.example.com/rest/api/2/issue"},"cwd":"'"$TOG"'"}'
@@ -405,6 +411,8 @@ check "curl POST GitHub commits API blocked" 2 '{"tool_name":"Bash","tool_input"
 check "curl POST GitHub refs API blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"curl -X POST -d '"'"'{\"ref\":\"refs/heads/new\",\"sha\":\"abc\"}'"'"' https://api.github.com/repos/owner/repo/git/refs"},"cwd":"'"$TOG"'"}'
 check "python requests.post to GitLab API blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"python3 -c \"import requests; requests.post('"'"'https://gitlab.com/api/v4/projects/123/repository/commits'"'"')\""},"cwd":"'"$TOG"'"}'
 check "curl GET GitHub API allowed" 0 '{"tool_name":"Bash","tool_input":{"command":"curl https://api.github.com/repos/owner/repo/commits"},"cwd":"'"$TOG"'"}'
+check "wget --post-file to GitHub blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"wget --post-file=x.json https://api.github.com/repos/owner/repo/commits"},"cwd":"'"$TOG"'"}'
+check "curl --post-file to GitLab blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"curl --post-file=x.json https://gitlab.com/api/v4/projects/1/repository/commits"},"cwd":"'"$TOG"'"}'
 
 # --- H4: secret destruction
 check "tee .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"echo EVIL=1 | tee .env"},"cwd":"'"$TOG"'"}'
