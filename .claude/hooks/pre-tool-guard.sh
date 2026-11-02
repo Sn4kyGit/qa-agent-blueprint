@@ -354,6 +354,23 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
     && printf '%s' "$COMMAND" | grep -qE '/rest/(api|agile)/'; then
     block "refusing an interpreter-based JIRA REST write (python/node/perl/ruby HTTP write to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only requests stay allowed."
   fi
+
+  # S3b: Git hosting REST API writes bypass `git push` (field report: a
+  # GitLab Commits API push was invisible to the git-level guard). Block
+  # curl/wget/http writes to GitHub/GitLab/Bitbucket API endpoints for
+  # repository mutations (commits, refs, branches, trees, releases).
+  # Read-only GET requests stay allowed.
+  if printf '%s' "$COMMAND" | grep -qE '(curl|wget|http|httpie)[[:space:]]' \
+    && printf '%s' "$COMMAND" | grep -qiE '(-X[[:space:]]*(POST|PUT|DELETE|PATCH)|--request[[:space:]]*(POST|PUT|DELETE|PATCH)|-d[[:space:]]|--data[=[:space:]]|--data-raw[=[:space:]]|--json[=[:space:]]|--upload-file[=[:space:]]|-T[[:space:]]|--method[=:]*(POST|PUT|DELETE|PATCH))' \
+    && printf '%s' "$COMMAND" | grep -qiE '(api\.github\.com|github\.com/api|gitlab\.com/api|api\.gitlab|bitbucket\.org/api|api\.bitbucket|/api/v4/projects|/api/v3/repos|/repos/.*/(commits|git/refs|branches|releases|trees|contents))'; then
+    block "refusing a git hosting REST write (curl/wget/http with a write method to a GitHub/GitLab/Bitbucket API endpoint) — code changes go through git so the safety protocol applies. Read-only GET requests stay allowed."
+  fi
+  # Interpreter-based git hosting API writes: python/node/perl/ruby.
+  if printf '%s' "$COMMAND" | grep -qiE '(python3?|perl|ruby|node|php)[[:space:]]' \
+    && printf '%s' "$COMMAND" | grep -qiE '(requests\.(post|put|patch|delete)|urlopen|\.post\(|\.put\(|\.patch\(|\.delete\(|fetch\()' \
+    && printf '%s' "$COMMAND" | grep -qiE '(api\.github\.com|github\.com/api|gitlab\.com/api|api\.gitlab|bitbucket\.org/api|api\.bitbucket|/api/v4/projects|/api/v3/repos|/repos/.*/(commits|git/refs|branches|releases|trees|contents))'; then
+    block "refusing an interpreter-based git hosting REST write (python/node/perl/ruby HTTP write to a GitHub/GitLab/Bitbucket API endpoint) — code changes go through git so the safety protocol applies."
+  fi
 fi
 
 # 2b. MCP config stays project-scoped (field report 2026-09-22: a GLOBAL

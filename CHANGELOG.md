@@ -8,7 +8,25 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.19.0] — 2026-10-30
+## [0.19.1] — 2026-11-02
+
+Theme: **git hosting API guard.** Field report: a GitLab Commits API push
+bypassed the git-level guard — `git push --force` is blocked, but REST API
+writes to GitHub/GitLab/Bitbucket repository endpoints are not. Closed.
+
+### Fixed — security guard gaps
+- **Git hosting REST API writes blocked**: `curl`/`wget`/`http` with write
+  methods (POST/PUT/DELETE/PATCH) to GitHub, GitLab, or Bitbucket API
+  endpoints for repository mutations (commits, refs, branches, releases,
+  trees, contents) are now blocked — code changes go through `git` so the
+  safety protocol applies. Read-only GET requests stay allowed.
+- **Interpreter-based git hosting writes blocked**: `python requests.post`,
+  `node fetch`, etc. to the same endpoints are blocked.
+
+### Changed
+- 5 new guard fixtures (GitLab Commits API, GitHub commits/refs API,
+  interpreter writes, GET allowed).
+- Both harnesses (bash hook + TS plugin) updated in lockstep.
 
 Theme: **performance analysis.** New `/perf-analysis` skill with token
 tracking, session timing, phase breakdown, bottleneck detection, and

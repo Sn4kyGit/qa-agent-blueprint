@@ -399,6 +399,13 @@ check "curl -T to JIRA REST blocked" 2 '{"tool_name":"Bash","tool_input":{"comma
 check "python requests.post to JIRA REST blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"python3 -c \"import requests; requests.post('"'"'https://jira.example.com/rest/api/2/issue'"'"')\""},"cwd":"'"$TOG"'"}'
 check "http POST to JIRA REST blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"http POST https://jira.example.com/rest/api/2/issue"},"cwd":"'"$TOG"'"}'
 
+# --- S3b: Git hosting REST API writes bypass git push
+check "curl POST GitLab Commits API blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"curl -X POST -H \"PRIVATE-TOKEN: xxx\" -d '"'"'{\"branch\":\"main\",\"commit_message\":\"x\",\"actions\":[]}'"'"' https://gitlab.com/api/v4/projects/123/repository/commits"},"cwd":"'"$TOG"'"}'
+check "curl POST GitHub commits API blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"curl -X POST -H \"Authorization: token xxx\" -d '"'"'{\"message\":\"x\",\"tree\":\"abc\",\"parents\":[]}'"'"' https://api.github.com/repos/owner/repo/commits"},"cwd":"'"$TOG"'"}'
+check "curl POST GitHub refs API blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"curl -X POST -d '"'"'{\"ref\":\"refs/heads/new\",\"sha\":\"abc\"}'"'"' https://api.github.com/repos/owner/repo/git/refs"},"cwd":"'"$TOG"'"}'
+check "python requests.post to GitLab API blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"python3 -c \"import requests; requests.post('"'"'https://gitlab.com/api/v4/projects/123/repository/commits'"'"')\""},"cwd":"'"$TOG"'"}'
+check "curl GET GitHub API allowed" 0 '{"tool_name":"Bash","tool_input":{"command":"curl https://api.github.com/repos/owner/repo/commits"},"cwd":"'"$TOG"'"}'
+
 # --- H4: secret destruction
 check "tee .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"echo EVIL=1 | tee .env"},"cwd":"'"$TOG"'"}'
 check "truncate .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"truncate -s 0 .env"},"cwd":"'"$TOG"'"}'

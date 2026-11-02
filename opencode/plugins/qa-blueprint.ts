@@ -120,6 +120,17 @@ const JIRA_INTERPRETER_WRITE = (cmd: string) =>
   /(python3?|perl|ruby|node|php)\s/.test(cmd) &&
   /(requests\.(post|put|patch|delete)|urlopen|\.post\(|\.put\(|\.patch\(|\.delete\(|fetch\()/i.test(cmd) &&
   /\/rest\/(api|agile)\//.test(cmd)
+// 0.19.1: git hosting REST API writes bypass `git push` (field report: GitLab
+// Commits API push was invisible to the git-level guard).
+const GIT_API_URL = /(api\.github\.com|github\.com\/api|gitlab\.com\/api|api\.gitlab|bitbucket\.org\/api|api\.bitbucket|\/api\/v4\/projects|\/api\/v3\/repos|\/repos\/.*\/(commits|git\/refs|branches|releases|trees|contents))/i
+const GIT_HOSTING_BASH_WRITE = (cmd: string) =>
+  /(curl|wget|http|httpie)\s/.test(cmd) &&
+  /(-X\s*(POST|PUT|DELETE|PATCH)|--request\s*(POST|PUT|DELETE|PATCH)|-d\s|--data[= ]|--data-raw[= ]|--json[= ]|--upload-file[= ]|-T\s|--method[=:]\s*(POST|PUT|DELETE|PATCH))/i.test(cmd) &&
+  GIT_API_URL.test(cmd)
+const GIT_HOSTING_INTERPRETER_WRITE = (cmd: string) =>
+  /(python3?|perl|ruby|node|php)\s/.test(cmd) &&
+  /(requests\.(post|put|patch|delete)|urlopen|\.post\(|\.put\(|\.patch\(|\.delete\(|fetch\()/i.test(cmd) &&
+  GIT_API_URL.test(cmd)
 // 0.18.5 H1: project-level harness config files (agent writes = self-escalation)
 // .mcp.json and opencode.json are NOT here: the project's own MCP config is writable by design
 const HARNESS_CFG_WRITER = /(?:sed\s+-i|\btee\b|>>?|\bcp\b|\bmv\b|\brm\b|truncate|dd\s)[^;&|]*(?:settings\.json|settings\.local\.json|hooks\/hooks\.json|\.claude-plugin\/)/
@@ -311,6 +322,8 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (JIRA_BASH_WRITE(command)) block("refusing a Bash JIRA REST write (curl/wget/http with a write method to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only GET requests stay allowed.")
     // 0.18.5 H3: interpreter-based JIRA REST writes
     if (JIRA_INTERPRETER_WRITE(command)) block("refusing an interpreter-based JIRA REST write (python/node/perl/ruby HTTP write to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only requests stay allowed.")
+    if (GIT_HOSTING_BASH_WRITE(command)) block("refusing a git hosting REST write (curl/wget/http with a write method to a GitHub/GitLab/Bitbucket API endpoint) — code changes go through git so the safety protocol applies. Read-only GET requests stay allowed.")
+    if (GIT_HOSTING_INTERPRETER_WRITE(command)) block("refusing an interpreter-based git hosting REST write (python/node/perl/ruby HTTP write to a GitHub/GitLab/Bitbucket API endpoint) — code changes go through git so the safety protocol applies.")
     // Strip only the literal ".env.example" before the .env checks: the
     // template must stay writable; .env/.env.local/.env.playwright-secrets
     // still match in full.
