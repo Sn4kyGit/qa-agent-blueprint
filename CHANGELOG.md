@@ -8,7 +8,26 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.19.6] — 2026-11-02
+## [0.19.7] — 2026-11-02
+
+Theme: **seen: 2 evidence verification.** The promotion gate was self-attested
+— the same agent that captures a learning also bumps its counter. Now sightings
+are counted from distinct `execution_summary.json` runs, making the gate
+mechanically verifiable.
+
+### Added
+- **`verify-sightings.py`** (`.claude/scripts/`): scans
+  `evidence/**/execution_summary.json` for `learnings.captured[]` entries and
+  counts distinct runs referencing each. Compares against self-attested
+  `seen: N` in `_inbox.md`. Reports inflated counters.
+- **`verify-sightings` eval case** (hard tier): grader checks that the agent
+  verifies sightings against evidence before promoting.
+
+### Changed
+- `retro-learn` Groom step now runs sighting verification before promotion.
+- Promotion gate renamed to "verified seen ≥ 2" — only evidence-backed
+  sightings count.
+- COVERAGE.md: 47 cases (was 46).
 
 Theme: **security audit — supply chain & exfiltration.** Dependencies pinned,
 git-based exfiltration blocked, preflight/audit artifacts protected.

@@ -84,22 +84,31 @@ Batch of ≤ 10, oldest first. Dedup check per entry (inbox + scoped learnings +
 otherwise → product learnings). Retire stale entries to `_rejected.md`, never
 delete. Clear only graduated/deduped/rejected from `_inbox.md`.
 
+**Verify sightings before promotion** (0.19.7): run
+`python3 .claude/scripts/verify-sightings.py --since 90` to count distinct
+`execution_summary.json` runs referencing each entry. Compare against the
+self-attested `seen: N` in `_inbox.md`. If `self_attested > verified`, the
+counter is inflated — do not promote until resolved (check for duplicate
+captures or non-independent sightings).
+
 Full grooming rules, retirement format, and classification details:
 `docs/rules/core/retro-learn.md` → "Groom".
 
-## Promote (gate: seen in ≥ 2 sessions + human approval for sensitive targets)
+## Promote (gate: verified seen ≥ 2 + human approval for sensitive targets)
 
-At `seen: 2`, merge the entry into its named candidate target — condensing
-replacement edit, not narrative append. **Promotions into `.claude/rules/`,
-`SKILL.md`, hooks, or templates require explicit human confirmation** — write
-the proposed change to a proposal file and wait for the user to approve before
-applying. This prevents poisoned learnings from becoming standing instructions.
-Promotions into `PROJECT.md`, `PRODUCT.md`, `flow-map.md`, and `learnings.md`
-proceed on the `seen: 2` gate alone (flow-map additionally needs a second
-independent sighting with provenance note).
+At `seen: 2`, **verify the sightings against evidence first** (see Groom step).
+Only promote when the entry has ≥ 2 distinct runs in `execution_summary.json`.
+Then merge into its named candidate target — condensing replacement edit, not
+narrative append. **Promotions into `.claude/rules/`, `SKILL.md`, hooks, or
+templates require explicit human confirmation** — write the proposed change to
+a proposal file and wait for the user to approve before applying. This prevents
+poisoned learnings from becoming standing instructions. Promotions into
+`PROJECT.md`, `PRODUCT.md`, `flow-map.md`, and `learnings.md` proceed on the
+verified `seen: 2` gate alone (flow-map additionally needs a second independent
+sighting with provenance note).
 
-Full promotion targets, flow-map evidence gate, human-approval rule, and
-conflict handling: `docs/rules/core/retro-learn.md` → "Promote".
+Full promotion targets, flow-map evidence gate, human-approval rule, sighting
+verification, and conflict handling: `docs/rules/core/retro-learn.md` → "Promote".
 
 ## Housekeeping
 

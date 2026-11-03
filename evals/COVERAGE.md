@@ -134,6 +134,7 @@ only enforcement once a fixture proves it".
 | `retro-learn` keeps a rejected-edit buffer: retired/overruled learnings land in `_rejected.md` with reason + re-proposal condition, and groom checks it before re-capturing | **uncovered** — a file convention inside the learnings loop; a case could only grade recitation. The failure it prevents (loop amnesia) shows up over weeks, not in one answer — revisit if field reports show re-proposed rejections |
 | Promotions into blueprint rules/skills/templates/hooks/docs are validation-gated: COVERAGE.md row, positive+inverse checks and mapped cases in the same pass, red reverts; consumer data never copied | **process, self-referential** — this matrix is the mechanism; maintainer process, not gradable behavior |
 | Consumer promotions condense durable hot context instead of appending narrative; stable config may be added, rare knowledge stays keyword-searchable | case pair: `promotion-condenses-existing-section` + `promotion-adds-durable-config` |
+| `seen: 2` promotion gate is evidence-verified: sightings counted from distinct `execution_summary.json` runs, not self-attested counters; inflated counters block promotion | case: `verify-sightings` |
 | Flow-map seeding/promotion is evidence-gated: steps yield candidates only; anchors and Neighbors need sources/basis; only executed flows get confirmation stamps | case pair: `flow-map-seed-verified` + `flow-map-seed-insufficient-evidence` |
 | Promoted routing rows are re-measured once: pending line in the project's learnings file, confirmed or contradicted by `product_routed_by` in later summaries | **deliberately advisory** — auditable retroactively via `/qa-report`'s `weak_or_manual` count on evidence; not gradable from one answer |
 | Auto-groom: past any threshold (≥ 5 entries, oldest > 14 days, or ≥ 16 KB) the hint becomes a directive for one bounded oldest-first batch plus eligible promotions; real single entries count, the legacy dated template example does not | fixture: `session-start-fixtures.sh` (count/age/bytes/single/example) + `opencode/tests/bootstrap.test.ts` (parity) — actual file-changing groom behavior remains uncovered |
@@ -148,7 +149,7 @@ only enforcement once a fixture proves it".
 | Execution model lanes: Fast/low → cheap, complex low/medium → standard, high/escalated → deep; branches choose independently; missing risk stays standard | cases: `simple-ticket-fast-path` + `model-routing-standard` + `model-routing-deep` + `model-routing-branch-deep`; Claude/opencode lane matrix fixture: `manifest-conventions.sh` |
 | `/model-setup` writes only six consumer-owned agent model/variant overrides with backup; source/global config stays model-free; unknown variants are omitted, never assumed | fixture: `model-setup-fixtures.sh` + case: `model-setup-consumer-overrides`; installer preservation: `install-opencode-fixtures.sh` |
 
-## The forty-six cases
+## The forty-seven cases
 
 Tiers: **hard** = record integrity / safety, a single miss is an incident
 (all-pass required); **variance** = reasoning quality against maximally loud
@@ -191,6 +192,7 @@ norms (floor 2/3 + non-falling history trend). See `evals/README.md` → "Tiers"
 | `flow-map-unconfirmed-scoping` | unconfirmed candidates do not control retest scope | variance |
 | `promotion-condenses-existing-section` | promotion merges durable wording and removes superseded duplication | variance |
 | `promotion-adds-durable-config` | stable config may promote while rare knowledge stays out of hot context | variance |
+| `verify-sightings` | seen: 2 gate verified against evidence runs, inflated counters block promotion | hard |
 | `agentswitch-ready` | shared QA home switches by opening the other extension, never re-onboarding | variance |
 | `agentswitch-collision` | collisions block read-only with data-preservation and human migration steps | hard |
 | `capsule-handoff` | manager/leaves/analyst consume sealed context without project remerging | hard |
