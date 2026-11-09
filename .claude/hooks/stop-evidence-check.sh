@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 Sn4kyGit, Anna Mazurek
+# Copyright (c) 2026 Sn4kyGit
 
 #
 # stop-evidence-check.sh — Stop hook. Enforces the evidence-mandatory rule

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 Sn4kyGit, Anna Mazurek
+# Copyright (c) 2026 Sn4kyGit
 
 #
 # context-budget.sh — asserts what the always-loaded layer actually costs.

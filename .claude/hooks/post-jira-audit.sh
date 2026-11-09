@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 Sn4kyGit, Anna Mazurek
+# Copyright (c) 2026 Sn4kyGit
 
 #
 # post-jira-audit.sh — PostToolUse hook (matcher: mcp__atlassian__.*(create|

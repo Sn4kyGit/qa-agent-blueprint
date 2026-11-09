@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 Sn4kyGit, Anna Mazurek
+# Copyright (c) 2026 Sn4kyGit
 
 #
 # pre-tool-guard.sh — PreToolUse hook (matchers: Bash|Write|Edit|MultiEdit|

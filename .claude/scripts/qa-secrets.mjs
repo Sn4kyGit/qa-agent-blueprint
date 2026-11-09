@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2026 Sn4kyGit, Anna Mazurek
+// Copyright (c) 2026 Sn4kyGit
 
 // qa-secrets — the blueprint's Level-1/Level-2 credential entry point
 // (tdd.md 0.11.0, §1/§3/§4): loads ONLY the named keys from the existing
