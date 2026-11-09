@@ -4,750 +4,282 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Sn4kyGit/qa-agent-blueprint)](https://github.com/Sn4kyGit/qa-agent-blueprint/releases)
 
-**⭐ If you find this useful, please star the repo — it helps others discover it!**
+**Turn Claude Code or opencode into a QA Manager that tests tickets autonomously.**
 
-**A Git blueprint that turns Claude Code or opencode into a learning QA
-Manager + Tester.** Hand it a JIRA ticket — it tests or re-tests the ticket
-autonomously, produces evidence, reports back in your project's format, and
-remembers what it learned. Harness-agnostic: Claude Code as a plugin,
-opencode via symlinks (model = your `/models` choice, the blueprint pins
-none).
+Hand it a JIRA ticket — it tests or re-tests the ticket, produces evidence, reports
+back in your project's format, and remembers what it learned.
 
-> **TL;DR**: JIRA ticket in → tested ticket out, with mandatory evidence,
-> project-conformant bug reports, and a learning loop that remembers what it
-> learned. 33 skills, 9 subagents, 4 hooks, security-audited, dual-harness.
+```
+/test-ticket SHOP-1234
+→ reads the ticket, routes to your project
+→ tests it (exploratory + regression)
+→ produces evidence (screenshots, logs, summary)
+→ reports back to JIRA
+→ captures learnings for next time
+```
 
-
-Exploratory testing runs through Playwright MCP, regression through the Playwright
-CLI runner, tickets through the Atlassian MCP server. Everything the agent knows
-about *your* projects lives in plain Markdown files in your repo — reviewable,
-diffable, and shared with your team through Git.
-
-> **👉 [Check out the detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
-> the whole architecture rendered as a one-pager: five layers, 22 core skills,
-> five verdicts, and what is enforced rather than merely written down.
-
-> **This is a public blueprint.** It contains no credentials, no internal URLs, no
-> customer systems. Everything site-specific is onboarded into `projects/<KEY>/`
-> at your end.
-
-| | |
-|---|---|
-| **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
-| **Contents** | 33 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 152 bun tests · 46 eval cases |
-| **Two harnesses** | Claude Code (plugin or integrate; CLI or VS Code extension) · opencode (symlinked, model-agnostic) |
-| **License** | Apache 2.0 |
+**⭐ Star this repo if you find it useful — it helps others discover it!**
 
 ---
 
-## 1 · What it is
+## Quick start
 
-A QA colleague that lives in your repo. You type `/test-ticket SHOP-1234`. The agent then:
+```bash
+# 1. Install (Claude Code)
+claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
+claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
+
+# 2. Restart Claude Code, then onboard your project
+/onboard-project
+
+# 3. Test a ticket
+/test-ticket SHOP-1234
+```
+
+That's it. The agent knows your project because it reads the files in your repo.
+
+---
+
+## What makes it different
+
+| | Ordinary AI testing | QA Agent Blueprint |
+|---|---|---|
+| **Project knowledge** | Generic, forgets between sessions | Reads `PROJECT.md` + `PRODUCT.md` — test users, environments, deploy runbook, gotchas |
+| **Evidence** | "Looks good!" | Mandatory `execution_summary.json` + screenshots — a Stop hook *enforces* it |
+| **Learning** | Starts fresh every session | Every run declares what it learned — the hook checks the declaration |
+| **Token cost** | Burns context re-reading files | 7k always-loaded budget, on-demand skills, Fast Path for simple tickets |
+| **Security** | Trusts the agent | Guard blocks secrets, destructive commands, self-escalation — audited |
+
+**Five things that make it different** (read more below):
+
+1. **It knows your projects** — test users as vault references, environments, deploy
+   runbook, report format. Multi-product? Each product file states only what differs.
+2. **Evidence is mandatory and enforced** — no verdict without artifacts. A Stop hook
+   blocks the session end otherwise.
+3. **Learning is enforced too** — every run declares what it learned. "Explain once,
+   never again."
+4. **Token-efficient by design** — slim router, on-demand skills, Fast Path for simple
+   tickets, browser transcripts stay in subagents.
+5. **Security-audited** — guard blocks secret reads, shadow mode, destructive commands,
+   self-escalation. 47+ fixtures prove it.
+
+---
+
+## How it works
 
 ```mermaid
 flowchart LR
   A["Read ticket<br/>Atlassian MCP"] --> B["Route to project<br/>SHOP-1234 → projects/SHOP/"]
   B --> C["Route to product<br/>component → STOREFRONT"]
   C --> D["Readiness<br/>status, merge, deployed build"]
-  D --> E["Test<br/>direct leaf or manager, mode-conformant"]
+  D --> E["Test<br/>direct leaf or manager"]
   E --> F["Evidence<br/>screenshots, logs, summary"]
   F --> G["Report to JIRA<br/>comment, attachments, transition"]
   G --> H["Capture learnings<br/>enforced, not suggested"]
 ```
 
-In words: *"Ah — project SHOP, product STOREFRONT, so test user `qa-standard`,
-stage needs a deploy first, checkout is behind the `NEW_CHECKOUT` flag, report as a
-JIRA comment with screenshots, transition to Verify."* None of that was in the
-prompt. All of it came from files the agent read because the ticket key told it to.
+**33 skills · 9 subagents · 4 hooks · 2 MCP servers** — all in plain Markdown
+files in your repo. Reviewable, diffable, shared with your team through Git.
 
-### The five things that make it different
-
-1. **It knows your projects — and their products.** A project file holds test users
-   (as vault references, never passwords), environments, deploy runbook, pipelines,
-   report format and gotchas. If one JIRA project covers several products with
-   different test methods, features or test users, each product adds a short file
-   stating only what *differs*.
-2. **Evidence is mandatory, and enforced.** No verdict without artifacts and a
-   machine-readable `execution_summary.json`. A Stop hook blocks the session end
-   otherwise — it is not a polite request.
-3. **Learning is enforced too.** Every run declares what it learned, or why nothing
-   came up. The same Stop hook checks the declaration; the SessionStart hook shows
-   how much is waiting to be groomed. "Explain once, never again" stops depending
-   on goodwill.
-4. **It is token-efficient on purpose.** A slim router, on-demand skills and
-   targeted Learning lookups, Sonnet execution roles in Claude Code, and a Fast
-   Path that sends simple tickets straight to one execution leaf. Browser
-   transcripts stay inside subagents; readiness stops tests against a build that
-   is not deployed.
-5. **Rules are advisory; hooks are not.** Anything that must hold — evidence,
-   secrets, destructive commands, learning capture — is enforced by a hook with
-   fixtures proving it blocks.
+> 📖 **[Detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
+> the whole architecture on one page (English).
 
 ---
 
-## 2 · Install — Claude Code (plugin)
+## Install
 
-> **You need:** [Claude Code](https://claude.com/claude-code) ≥ 2.x, git access
-> to this repo while it is private (`gh auth login` — it is git under the hood).
-
-**Not sure which way in? Take the guided wizard.** Clone the repo and run
-`install.sh` with no flags — it walks you through everything one question at a
-time, explains each choice, and writes nothing until you confirm:
-
-```bash
-git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
-~/qa-blueprint/install.sh --target ~/qa-workspace
-```
-
-Which mode? **plugin** — trying it out, zero footprint (recommended default);
-**integrate** — one repo long-term, reviewable and editable in your commits;
-**opencode** — your own model (Kimi, GLM, GPT, …) instead of Claude Code;
-**shared** — alternating the two harnesses in one QA home. The wizard also asks
-JIRA (Cloud by default, Data Center with its URL) and browser mode (headless by
-default); model lanes are optional — `--model-setup now`, or skip and run
-`/model-setup` later, nothing is written unless you choose it. `--yes` stays
-automation-safe: it skips the wizard and takes the defaults — pass
-`--jira`/`--browser`/`--model-setup` to script anything else. Details:
-[docs/integration.md](docs/integration.md#the-guided-wizard).
-
-**Step 1 — the easiest way: tell your agent.** Open Claude Code inside the
-project you want tested and paste:
-
-> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> as a Claude Code plugin
-> in this project. Read its **AGENTS.md** first and follow the runbook there —
-> then tell me which steps need me (JIRA auth, secrets, onboarding).
-
-The agent runs the install, checks prerequisites (and installs what is
-missing, with your OK), and hands back exactly the steps only a human can do.
-
-<details>
-<summary><b>Step 1 alternative — two commands yourself</b></summary>
+### Claude Code (plugin — recommended)
 
 ```bash
 claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
 ```
 
-`--scope project` enables the plugin only here; drop the flag to enable it
-everywhere.
+Restart Claude Code and accept the trust dialog. That's it.
 
-</details>
-
-**Step 2 — restart Claude Code** and accept the trust dialog. Done installing.
-
-Nothing is copied into your project — rules, skills, agents and hooks load
-from the plugin; only your own data (`projects/`, `memory/`, `evidence/`)
-lives in your repo. On first session start the SessionStart hook bootstraps
-those folders plus a `.env.playwright-secrets` placeholder.
-
-➡️ Continue at **[4 · After the install](#4--after-the-install-both-harnesses)**.
-
----
-
-## 3 · Install — opencode (any model: Kimi, GLM, MiMo, GPT, …)
-
-The same blueprint under [opencode](https://opencode.ai) — **the model is
-your `/models` choice, the blueprint pins none.** Want Kimi? Connect the
-provider, pick Kimi in `/models`, done. The installer **symlinks** the
-blueprint into your QA home (nothing copied), so updates are a `git pull`.
-
-> **You need:** Node.js ≥ 18 · opencode (`npm install -g opencode-ai`) ·
-> python3 · git access to this repo while it is private
-> (`brew install gh && gh auth login`).
-
-**Step 1 — the easiest way: tell your agent.** Open opencode in the folder you
-want as your QA home (e.g. `~/qa-workspace`) and paste:
-
-> Set up <https://github.com/Sn4kyGit/qa-agent-blueprint> for opencode in this
-> project. Read its **AGENTS.md** first and follow the opencode runbook there —
-> then tell me which steps need me (provider connect, JIRA auth, onboarding).
-
-The agent clones the repo, runs the installer, and hands back exactly the
-steps only a human can do.
-
-<details>
-<summary><b>Step 1 alternative — run the installer yourself</b></summary>
+**Or use the installer wizard** (guided, one question at a time):
 
 ```bash
 git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
-mkdir -p ~/qa-workspace
-~/qa-blueprint/install.sh --mode opencode --target ~/qa-workspace --yes
+~/qa-blueprint/install.sh --target <your-project>
 ```
 
-The installer links the surface, seeds `.env.playwright-secrets` (placeholder)
-and `.playwright-mcp.config.json` (headless default), and merges
-`opencode/opencode.template.jsonc` into your `opencode.json` — existing MCP
-server names win (your own `atlassian` entry survives re-installs), only the
-playwright contract flags are force-upgraded, and your existing file is
-backed up first.
+### opencode (any model: Kimi, GLM, GPT, …)
+
+```bash
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
+~/qa-blueprint/install.sh --mode opencode --target <your-project> --yes
+```
+
+Model-agnostic — use whatever model you have via `/models`. The blueprint pins none.
+
+### Both harnesses (shared QA home)
+
+```bash
+~/qa-blueprint/install.sh --mode shared --target <your-project>
+```
+
+Alternating Claude Code and opencode in one QA home, no re-onboarding.
+
+### Prerequisites
+
+- Node.js ≥ 18 (`brew install node`)
+- Claude Code (`npm install -g @anthropic-ai/claude-code`) or opencode (`npm install -g opencode-ai`)
+- GitHub auth (`gh auth login`) — needed while the repo is private
+
+<details>
+<summary><b>Manual install</b> (no wizard)</summary>
+
+1. Add the marketplace: `claude plugin marketplace add Sn4kyGit/qa-agent-blueprint`
+2. Install the plugin: `claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace`
+3. Restart and accept the trust dialog.
+
+The plugin registers hooks, skills, agents, and MCP servers automatically.
 
 </details>
-
-**Step 2 — provider + model** (the "configure it for Kimi" part — nothing
-blueprint-side to change): in opencode, `/connect` → pick your provider
-(Moonshot/Kimi, OpenRouter, a coding plan, …) → enter the API key. Then
-`/models` → pick the model (e.g. Kimi K3).
-
-**Step 3 — verify**, in `~/qa-workspace`:
-
-```bash
-opencode run "list your available skills"
-```
-
-should show the 32 blueprint skills; `/test-ticket`, `/retest-bug`,
-`/qa-report` etc. appear as commands.
-
-**Updating:** `cd ~/qa-blueprint && git pull` — live after a restart; if the
-template gained keys, re-run the installer (idempotent, never removes your
-entries). **Uninstall:** `install.sh --mode opencode --target ~/qa-workspace
---uninstall` removes only the symlinks; your data and `opencode.json` stay.
-
-**Wrong folder?** Commands live where the blueprint is installed — if the
-installer went into `~/qa-workspace` but you want the commands in your
-project workspace, move the whole QA home (data comes along, nothing is
-overwritten):
-
-```bash
-~/qa-blueprint/install.sh --mode opencode --target ~/qa-workspace \
-  --move ~/my-project --yes
-```
-
-**Several workspaces:** run the installer once per folder — each gets the
-same commands via symlinks. Note that each folder is then its own QA home
-(own `projects/`, `memory/`, `evidence/`); learnings do not flow between
-them. One shared home for everything is usually what you want. **One customer
-with several repos:** make the customer workspace the home and keep the repos
-as subfolders — a session started inside a subfolder finds the home by
-walking up (`.qa-home` marker), so data always lands at the root, never
-duplicated into the repo folder.
-
-Deep dive incl. edge cases: [docs/quickstart-opencode.md](docs/quickstart-opencode.md).
-
-➡️ Continue at **[4 · After the install](#4--after-the-install-both-harnesses)**.
 
 ---
 
-## 4 · After the install (both harnesses)
+## After the install
 
-1. **JIRA auth** — Cloud: authorize the `atlassian` MCP server
-   (Claude Code: `/mcp`; opencode: `opencode mcp auth atlassian`). Data
-   Center: replace the `atlassian` entry with the local `mcp-atlassian`
-   server (keep the **name** `atlassian` — hooks match on it) and store a PAT
-   in the macOS keychain, service `JIRA_PAT_<jira-host>`; the blueprint
-   resolves it into the session, so the token lives in no file and no chat.
-   JIRA only via web UI (no tokens possible)? That is supported too —
-   declare `JIRA access: browser` in the project file.
-2. **Browser mode** — `.playwright-mcp.config.json` ships headless; set
-   `"launchOptions": { "headless": false }` to watch the agent work. Applies
-   after a restart.
-3. Fill `.env.playwright-secrets` with your test users (values are masked in
-   transcripts).
-4. Run `/onboard-project` — needs the JIRA project key, deployment kind, and
-   the stage URL.
-5. **Shadow mode is ON by default**: JIRA comments are composed into the
-   evidence dir (`proposed-report.md`), never posted, until you write
-   `Shadow mode: off` in the project file or set `QA_AGENT_SHADOW=0`.
-
-Preview everything the installer would do, without changing anything:
-`./install.sh --dry-run`.
-
-<details>
-<summary>Other ways in — clone + installer, manual settings.json</summary>
-
-#### The classic way: clone + installer
-
-```bash
-git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git
-cd qa-agent-blueprint
-./install.sh            # guided wizard: mode, JIRA, browser, optional model lanes
-```
-
-Run in a fresh clone it sets up the blueprint repo itself. Run it **from inside
-your own project** and the wizard asks which way in you want — integrate,
-plugin, opencode or shared — and explains the trade-off before you pick. Pick
-**plugin** for the recommended starting mode. Nothing is written before the final
-confirmation, and every
-wizard answer has a flag (`--mode`, `--jira`, `--browser`, `--model-setup`) for
-scripted runs — `--yes` skips the wizard and takes the defaults (Cloud,
-headless, no model setup), it does not answer the wizard's preference questions.
-
-#### Plugin-only via settings.json
-
-The two CLI commands above write exactly two keys into settings. If you prefer
-to wire them by hand (e.g. committing the enablement for your team), add these
-to your project's `.claude/settings.json`:
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "qa-agent-blueprint": {
-      "source": { "source": "github", "repo": "Sn4kyGit/qa-agent-blueprint" }
-    }
-  },
-  "enabledPlugins": {
-    "qa-agent-blueprint@qa-agent-blueprint-marketplace": true
-  }
-}
-```
-
-Restart Claude Code and accept the trust dialog — same bootstrap as above.
-
-</details>
+1. **Onboard your project**: `/onboard-project` — fills `PROJECT.md` from the template
+   (test users, environments, deploy runbook, report format)
+2. **Add products** (optional): `/onboard-product` — for JIRA projects covering
+   several products with different test methods
+3. **First test**: `/test-ticket SHOP-1234`
+4. **Shadow mode is ON by default** — the agent composes reports but posts nothing
+   until you write `Shadow mode: off` in the project file
 
 ### Updating
 
 ```bash
 claude plugin marketplace update qa-agent-blueprint-marketplace
-claude plugin update --scope project qa-agent-blueprint   # restart afterwards
+claude plugin update --scope project qa-agent-blueprint
 ```
-
-Updates touch only the plugin cache — your own data (`projects/`, `memory/`,
-`evidence/`) is never modified. What changed is in
-[CHANGELOG.md](CHANGELOG.md); releases are SemVer git tags, and pinning back
-is `claude plugin uninstall` + reinstall.
-
-For more details — detection matrix, per-file collision policy, plugin
-mechanics, FAQ — have a look at [docs/integration.md](docs/integration.md).
-
-### First session
-
-Either way, then start Claude Code in your project:
-
-```
-/mcp                    # one-time: authorize "atlassian" (OAuth 2.1)
-/onboard-project        # teach it your first project (~30–60 min, interactive)
-                        # → read docs/pilot-briefing.md first; it lists what to collect
-/onboard-product        # only if that JIRA project covers several products
-/test-ticket SHOP-123   # test a ticket end to end
-```
-
-Prerequisites: Node.js LTS (≥ 18) and npm · Claude Code CLI · an Atlassian Cloud
-site · optionally a vault/password manager for test-user credentials.
-
----
-
-## How knowledge is organized
-
-Five layers, each with its own loading behavior — this is what keeps the token cost
-down:
-
-| Layer | What | When it loads |
-|---|---|---|
-| **1 · Core** | `CLAUDE.md` router + 5 rule files in `.claude/rules/core/` | always — the norms only (~7.0k tokens, measured) |
-| **1b · Rule details** | `docs/rules/` | on demand — the detail behind a rule, when its topic comes up |
-| **2 · Skills & subagents** | `.claude/skills/`, `.claude/agents/` | on demand |
-| **3 · Project & product** | `projects/<KEY>/` + `products/<PRODUCT>/` | active project only |
-| **4 · Learning system** | `memory/` | grows, gets consolidated |
-| **5 · Evidence** | `evidence/<KEY>/<TICKET>/<ts>/` | never — referenced by path |
-
-### Projects and products
-
-```
-projects/SHOP/
-├── PROJECT.md              # applies to ALL products; holds the routing registry
-├── learnings.md
-├── templates/bug-report.md
-└── products/               # absent entirely for single-product projects
-    ├── STOREFRONT/
-    │   ├── PRODUCT.md      # states ONLY what differs (~60 lines)
-    │   └── learnings.md
-    └── ADMIN/
-```
-
-A product **inherits** the project file and overrides only what it names. Some
-fields are **sealed** and can never be overridden — JIRA transitions and report
-format belong to the JIRA workflow, and deploy authorization is read from the
-project file alone, so no product file can grant itself permission to deploy.
-
-Tickets route to a product by JIRA component, then label, then secondary signals
-(epic, fix version, changed paths in the linked MR). Ambiguous? It asks — and in
-headless CI it reports BLOCKED rather than guess. A declared default resolves
-*silence*, never a *conflict*.
-
-**Single-product projects see none of this.** No `products/` directory, no routing
-section, no extra reads — byte for byte the behavior from before the layer existed.
 
 ---
 
 ## What's in the box
 
-<details>
-<summary><b>22 core skills</b> — the ticket workflow</summary>
+| Component | Count | What it does |
+|---|---|---|
+| **Skills** | 33 | Test workflows, bug reports, analysis, reporting, learning |
+| **Subagents** | 9 | qa-manager, test-executor, test-automator, failure-analyst, bug-reporter (+ cheap/deep lanes) |
+| **Hooks** | 4 | SessionStart (bootstrap), PreToolUse (guard), Stop (evidence gate), PostToolUse (audit) |
+| **MCP servers** | 2 | playwright (browser), atlassian (JIRA) |
+| **Always-loaded rules** | 5 | evidence-policy, product-layer, qa-principles, security, token-discipline |
+| **On-demand docs** | 12 | Detailed rules, read when the topic comes up |
+| **Tests** | 17 suites + 152 bun | Fixture battery, manifest conventions, eval cases (46) |
 
-| Skill | Purpose |
+### Skills you'll use most
+
+| Command | What it does |
 |---|---|
-| `/qa-help` | Show every command, plus the plain-language phrasing that also triggers it |
-| `/agentswitch` | Read-only check for alternating Claude Code and opencode in one shared QA home — never installs or re-onboards |
-| `/model-setup` | Configure cheap/standard/deep opencode models per execution role, with source and global config left untouched |
-| `/test-ticket` | Full workflow: read → route → stage-check → test → evidence → report |
-| `/retest-bug` | Focused re-test of a fixed bug + a tight regression sweep |
-| `/exploratory-testing` | Chartered SBTM session via Playwright MCP |
-| `/test-automation` | Write/run deterministic specs via the CLI runner |
-| `/recon` | Recon before the spec: probe run writes `recon.json` with the real selectors (pipeline phase 2) |
-| `/failure-analysis` | A failing test triaged: real defect, or is the test case itself outdated? Proposes, never applies |
-| `/bug-report` | A bug report exactly per the project's (or product's) template |
-| `/report-to-jira` | Comment + attachments + the correct workflow transition |
-| `/deploy-to-stage` | The project's deploy runbook, with safety checks |
+| `/test-ticket KEY-123` | Full workflow: read → route → test → evidence → report |
+| `/retest-bug KEY-123` | Focused re-test + regression sweep |
+| `/qa-report` | Aggregate evidence into metrics |
+| `/perf-analysis` | Duration, token usage, bottlenecks |
+| `/retro-learn` | Capture, groom, promote learnings |
 | `/onboard-project` | Teach the agent a new project |
-| `/onboard-product` | Teach it one product of a project (5–15 min, differences only) |
-| `/re-board` | Delta-onboarding: bring an existing project up to the current blueprint schema — the upgrade path after an update |
-| `/scaffold-suite` | Create the Playwright project the evidence policy needs — config *is* the capture matrix |
-| `/qa-report` | Aggregate the evidence into metrics: pass rate, P0/P1, BLOCKED reasons, routing quality |
-| `/retro-learn` | Capture, groom and promote learnings |
-| `/whats-new` | What changed in the blueprint since a project was onboarded — and what calls for `/re-board` |
-| `/skill-review` | Skill-usage analysis: every skill `used` or `unknown` from the `skills_used` records — never "unused", read-only; profile changes (`full`/`standard`/`minimal`/`custom`) are dry-run proposals |
-| `/perf-analysis` | Performance analysis: session duration, phase breakdown, token usage, bottlenecks, and concrete improvement suggestions |
-| `/demo` | Present a bug repro or finished test run to an audience: headed slow-mo replay + demo card, hands-on mode ("lass mich probieren"), .webm recording only on explicit request — never automatically |
-
-</details>
 
 <details>
-<summary><b>10 specialist skills</b> — vendored &amp; blueprint-adapted, MIT</summary>
+<summary><b>All 33 skills</b></summary>
 
-`api-testing` · `accessibility-testing` · `security-testing` · `visual-testing` ·
-`risk-based-testing` · `bug-reproduction` · `test-reliability` · `qa-metrics` ·
-`test-case-management` · `release-readiness`
+**Core workflow**: test-ticket, retest-bug, exploratory-testing, test-automation, recon, failure-analysis, bug-report, report-to-jira, deploy-to-stage, onboard-project, onboard-product, re-board, scaffold-suite, qa-report, retro-learn, whats-new, skill-review, perf-analysis, demo, qa-help, agentswitch, model-setup
 
-From [petrkindlmann/qa-skills](https://github.com/petrkindlmann/qa-skills),
-adapted where upstream behavior would conflict with the blueprint's norms
-(secrets flow, shadow discipline, stage-only, report routing) — the per-skill
-change list is `.claude/skills/THIRD_PARTY_NOTICES.md`. `qa-manager` reaches for one when a
-ticket calls for it — driven by the product's feature/test-method matrix rather
-than by guesswork.
+**Vendored** (MIT, from [petrkindlmann/qa-skills](https://github.com/petrkindlmann/qa-skills)): api-testing, accessibility-testing, security-testing, visual-testing, risk-based-testing, bug-reproduction, test-reliability, qa-metrics, test-case-management, release-readiness
 
-Plus `webdriverio-testing` — WDIO-specific spec conventions, loaded automatically
-by `/test-automation` when a project's declared framework is webdriverio (not
-invoked directly; see its SKILL.md). 22 + 10 + 1 = the 33 skills from the header.
+**Framework**: webdriverio-testing (loaded automatically when the project uses WDIO)
 
 </details>
-
-<details>
-<summary><b>9 subagents</b> — separate context windows and risk-selected model lanes</summary>
-
-| Subagent | Role |
-|---|---|
-| `qa-manager` | Orchestrates one ticket end to end; decides strategy, delegates, quality-gates the result |
-| `test-executor[-cheap|-deep]` | Exploratory testing via Playwright MCP: cheap Fast Path, standard complex work, deep high/escalated |
-| `test-automator[-cheap|-deep]` | Deterministic specs via the CLI runner, with the same risk-selected model lanes |
-| `failure-analyst` | Triages a FAIL before a bug is filed — holds no `Write`, so it can never edit a test green |
-| `bug-reporter` | Composes the bug report against the project's template |
-
-Execution lanes follow risk: Fast/low → cheap, complex low/medium → standard,
-high/escalated → deep, independently per branch. Claude maps them to
-haiku/sonnet/opus. opencode inherits by default; `/model-setup` writes actual
-provider/model and optional supported variants only into consumer `opencode.json`.
-
-A 30-step browser session stays inside `test-executor`; only a verdict comes back.
-
-</details>
-
-### Which skills do you actually use? — `/skill-review`
-
-Skills load on demand, so over time the honest question is which ones your
-team ever reaches. `/skill-review` answers it from the `skills_used` records:
-every installed skill is **used** (it appears in the records) or **unknown**
-(no data) — never "unused", because absent data is not evidence of non-use.
-No records at all means every skill is unknown and coverage is 0%. The review
-is read-only: it deactivates nothing.
-
-It may propose a **skill profile** — `full` (everything, the default),
-`standard`, `minimal` or `custom` — as a dry-run that names the exact exclude
-list. A profile is applied only after your explicit confirmation of that
-concrete proposal, and only in an **integrate** installation (skills are copied
-into your repo there and can be excluded). The plugin — and the symlinked
-opencode surface — ship the full set and deactivate nothing, and no profile is
-ever applied automatically.
 
 ---
 
 ## What is enforced, not just written down
 
-Rules are advisory. These are not:
-
-| Hook | Enforces | Fixtures |
-|---|---|---|
-| `pre-tool-guard` | No writes to `.env*` or secret-named paths, no `rm -rf`, no force-push, no Bash JIRA writes, Read raw-evidence protection | 139 |
-| `stop-evidence-check` | No verdict without `execution_summary.json` — **and** without a `learnings` declaration | 20 |
-| `session-start` | Orientation: projects and their products, ungroomed learnings, missing secrets file, MCP config scan (dedupe, unmasked secrets, first-run hint); plugin mode injects `CLAUDE.md` verbatim | 89 |
-| `install.sh` (not a hook, same standard) | Namespacing, path rewriting, idempotency, uninstall, plugin wiring, self-setup, MCP adoption, shared mode, wizard, skill profiles | 323 |
-| `context-budget` | The always-loaded layer stays inside its budget | measured, not asserted |
-
-> **Why the fixtures exist.** The PreToolUse guard silently blocked *nothing* for
-> the entire life of this repo: its Python expressions were mis-quoted, the parser
-> failed, every check was skipped — and it looked correct in review. A hook counts
-> as enforcement only once a test proves it blocks. `install.sh` has its own
-> end-to-end suite because it is the one artifact that writes into *other people's*
-> repos: it integrates into a throwaway repo, checks that the namespaced path
-> rewriting leaves no dangling reference, that a second run changes nothing, and
-> that uninstall removes only what it added. Run everything with
-> `for t in .claude/hooks/tests/*.sh; do bash "$t"; done`.
-
----
-
-## The learning loop
-
-```
-Capture  →  Groom  →  Promote
-(enforced)  (visible)  (automatic on the 2nd sighting)
-```
-
-- **Capture** — every run declares its `learnings` in the summary: what went into
-  `memory/learnings/_inbox.md`, or one sentence on why nothing did. The Stop hook
-  blocks a session that skips the declaration.
-- **Groom** — `/retro-learn` dedupes, bumps `seen:` counters, deletes what no
-  longer holds. SessionStart reports the backlog so it cannot grow quietly.
-- **Promote** — seen twice, it moves into a rule, a `PROJECT.md` or a `PRODUCT.md`,
-  where it is loaded automatically and never explained again. Flow knowledge
-  (which flows exist, their anchors, their neighbors) moves into `flow-map.md` —
-  and `retest-bug` scopes its regression sweeps from it instead of improvising.
-- **Routing improves itself** — a rule a human states once lands in the product
-  registry immediately; a single case answered twice is promoted into it. An
-  exception never becomes a rule.
-
----
-
-## What you configure
-
-| Thing | Where | Notes |
-|---|---|---|
-| Project knowledge | `projects/<KEY>/PROJECT.md` | Written by `/onboard-project`, never guessed |
-| Product knowledge | `projects/<KEY>/products/<PRODUCT>/` | Optional; only what differs |
-| Quality gates | `PROJECT.md` → gate overrides | Defaults: pass rate ≥ 80%, P0 = 0, P1 ≤ 5 |
-| Report format & transitions | `PROJECT.md` → Reporting | `jira-cloud` or `plain-text`; fetched from JIRA during onboarding, never guessed |
-| Deploy trigger | `PROJECT.md` → "How a deploy is triggered" | The exact command (`gh workflow run …`) or "manual". `/deploy-to-stage` preflights it and reports BLOCKED if it is missing |
-| Shadow mode | **On by default** — off via `QA_AGENT_SHADOW=0` or `PROJECT.md` → Reporting | Tests fully, posts nothing; grant write access after the first weeks of reviewed proposals |
-| MCP servers | `.mcp.json` + register in `docs/rules/core/token-discipline.md` | Declared set, not a fixed number — see below. A CI CLI is a Bash command, not a server |
-| Context budget | `.claude/hooks/tests/context-budget.sh` | What every session pays before a skill loads; the check fails when it grows |
-| Evidence retention | `docs/artifact-strategy.md` | Documented, **not implemented** — nothing prunes `evidence/` yet |
-
-**MCP servers are a register, not a limit.** `playwright` and `atlassian` are in it
-because a QA agent cannot work without a browser and a ticket system. Adding a
-third — a vault server for test-user credentials, say — is a deliberate decision:
-wire it in `.mcp.json` and give it a row with its reason. The agent never adds one
-on its own initiative; it proposes, you decide. A credential server may resolve a
-*reference* for the tool that needs it and must never surface a value into the
-transcript, a file, a ticket, or an artifact.
-
-**The MCP contract: name is contract, source and taste are free.** Hooks and
-skills match on the server *names* (`playwright`, `atlassian`), and the
-playwright server must carry `--secrets` (password masking), `--output-dir`
-inside `evidence/`, and `--image-responses omit` (screenshots stay files, not
-model input). Everything else — headless vs. headful, isolated vs.
-persistent profile, viewport, browser channel — is your preference, dialed in
-the consumer-owned `.playwright-mcp.config.json` (seeded with safe defaults on
-first run; the server reads it at launch, so edits apply after a restart).
-Bringing your own same-named server is legitimate when it honors the contract —
-but note a project `.mcp.json` entry does **not** override the plugin's server;
-Claude Code runs both, so pick one source per name. Details:
-`docs/rules/testing/playwright-mcp.md`.
-
----
-
-## Bringing it into an existing repo
-
-Already have your own `CLAUDE.md`, skills, and `.mcp.json`? Three supported paths.
-**Trying it out → plugin. One repo, long-term → integrate. Alternating Claude
-Code and opencode in one QA home → shared.**
-
-| | **A) Checkout + integrate** | **B) Plugin** |
-|---|---|---|
-| Lands in your repo | Rules, skills, agents, hooks — copied, namespaced | Nothing but your own data (`projects/`, `memory/`, `evidence/`) |
-| Logic lives in | Your repo, in your commits | The plugin cache, updated via `/plugin` |
-| Commands | `/test-ticket`, `/onboard-project`, … | `/qa-agent-blueprint:test-ticket`, … |
-| Best when | You want it reviewable and editable by your team | You want zero footprint across many repos |
-| Setup | `install.sh` once | `install.sh` writes the two keys, then restart |
-
-**A — integrate.** Preview first, it changes nothing:
-
-```bash
-git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/tools/qa-agent-blueprint
-cd ~/work/your-project
-~/tools/qa-agent-blueprint/install.sh --dry-run   # prints the full plan
-~/tools/qa-agent-blueprint/install.sh             # or --yes for non-interactive
-```
-
-Every step is reported as `ADDED` / `MERGED` / `SKIPPED` / `WARN`. Merges are
-non-destructive by design: your `CLAUDE.md` gets a marked block appended (with a
-backup), rules and hooks are namespaced under `qa-blueprint/` so they cannot
-collide, `.mcp.json` merges by server name with yours winning **as long as your
-playwright entry carries the contract flags** (`--secrets`, `--output-dir`,
-`--image-responses omit` — missing or invalid values are upgraded additively,
-with a backup and your wrapper/preferences preserved), and a name collision
-in skills or agents is skipped with a warning rather than overwritten. Running it
-twice changes nothing. `--uninstall` removes only what it added.
-
-**B — plugin.** Same script, pick option 2 — it merges the two required keys into
-your `.claude/settings.json` (with a backup, keeping everything else, and doing
-nothing on a re-run):
-
-```bash
-~/tools/qa-agent-blueprint/install.sh --mode plugin --target .
-```
-
-It registers the marketplace against your **local checkout**, which is the honest
-default: the code you enabled is the code you can read. To track a remote instead,
-change the source afterwards — repository, plugin and marketplace all share the
-name `qa-agent-blueprint`, so the enabled-plugin key stays as is:
-
-```json
-"source": { "source": "github", "repo": "Sn4kyGit/qa-agent-blueprint" }
-```
-
-Restart Claude Code and accept the trust dialog. Since plugins don't load
-`CLAUDE.md`, a SessionStart hook injects the plugin's `CLAUDE.md` verbatim as
-session context (one router text, no drift between install modes) and creates
-`projects/`, `memory/`, `evidence/` plus a `.env.playwright-secrets` placeholder —
-the Playwright server exits at startup without that file, which otherwise shows up
-only as a connection error.
-
-**C — shared (Claude Code + opencode).** Both harnesses stay start-ready in the
-same QA home; the Claude plugin is disabled to prevent duplicate registration.
-The installer creates selective `.claude` links, the opencode surface, both MCP
-configs and the full router while preserving `projects/`, `memory/`, `evidence/`
-and consumer-owned `.agents/`:
-
-```bash
-~/tools/qa-agent-blueprint/install.sh --mode shared --target . --dry-run
-~/tools/qa-agent-blueprint/install.sh --mode shared --target . --yes
-```
-
-Restart each harness and authenticate Atlassian once per harness. After that,
-switching means opening the other extension — no re-onboarding. `/agentswitch
-claude` or `/agentswitch opencode` performs a read-only readiness/collision
-check. Shared stage runs remain sequential.
-
-Full detection matrix, per-file collision policy, plugin/shared mechanics and an FAQ:
-**[docs/integration.md](docs/integration.md)**.
-
----
-
-## Test user passwords: one-time Keychain setup (macOS)
-
-Filling `.env.playwright-secrets` by hand still works exactly as before
-(`Secrets source: env-file` — the default). But if a project declares
-`Secrets source: keychain` (asked during `/onboard-project`, or added to an
-existing project in two minutes via `/re-board`), the blueprint keeps that
-file filled for you. One-time setup, per secret key:
-
-1. **Find the key names.** Open `projects/<PROJECT-KEY>/PROJECT.md` →
-   **Test users** and look at the **Env/secret key** column. Those are the
-   *full* key names, e.g. `SHOP_QA_STANDARD_PASSWORD`. (Confusingly close to
-   the project key `SHOP` — but the placeholder here is always the complete
-   secret-key name from that column.)
-2. **Store each key once** in the macOS Keychain. The service name must be
-   the secret key, exactly as written in the table:
-
-   ```bash
-   security add-generic-password -s SHOP_QA_STANDARD_PASSWORD -a qa -w
-   ```
-
-   `-w` with no value after it makes macOS prompt for the password (typed
-   invisibly, never echoed). Prefer clicking? *Keychain Access* → new
-   password item: **Name** = the secret key, **Account** = `qa` — same thing.
-3. **Done.** The blueprint's resolver writes `.env.playwright-secrets` from
-   there — at onboarding, on `/re-board`, and whenever the file is missing.
-   Every session start shows a status line (`n/m keys present`, missing ones
-   by name), so the agent knows which logins it *has* instead of inventing
-   credentials. Values are never printed anywhere: not in chat, not in
-   tickets, not in evidence.
-
-**Or let the agent do the storing** (it offers this during onboarding and
-`/re-board`): `--import` migrates values you already hand-filled into
-`.env.playwright-secrets` into the keychain; `--capture` asks you for each
-missing key via a native macOS dialog with hidden input — you type into a GUI
-box, never into the chat. Both live in the blueprint's `resolve-secrets.sh`
-and never print a value.
-
-Useful later:
-
-```bash
-# rotate a password (updates the existing item)
-security add-generic-password -s SHOP_QA_STANDARD_PASSWORD -a qa -w -U
-# remove one
-security delete-generic-password -s SHOP_QA_STANDARD_PASSWORD -a qa
-```
-
-**JIRA Data Center PAT** works the same way, one level up: service
-`JIRA_PAT_<jira-host>` (e.g. `JIRA_PAT_jira.example.com`), account `jira`.
-The session-start hook exports it into each session via the official
-`$CLAUDE_ENV_FILE` mechanism — the token lives in no file and no `~/.zshrc`
-export. CI/non-macOS: keep exporting `JIRA_PERSONAL_TOKEN`, that always wins.
+| Rule | How it's enforced |
+|---|---|
+| No verdict without evidence | Stop hook blocks session end |
+| Every run declares learnings | Stop hook checks the declaration |
+| Secrets never enter context | PreToolUse guard blocks reads |
+| Shadow mode (no JIRA writes) | Guard blocks writes by default |
+| No destructive commands | Guard blocks rm -rf, force push |
+| No guard self-escalation | Agent can't edit guard/rules/skills |
 
 ---
 
 ## Security & privacy
 
-- **No secrets in this repo, and none in context.** Credentials are vault paths or
-  env keys — never values, not in chat, code, tickets, or screenshots.
-- **Nothing phones home.** After install, everything runs from the local copy —
-  no telemetry, no license checks, no calls to this repo. The network is touched
-  for exactly two things: your JIRA and your stage.
-- Playwright MCP runs with `--secrets .env.playwright-secrets`, so passwords are
-  masked in every tool response, and defaults to an isolated browser profile, so
-  no state leaks between runs (both preferences aside from `--secrets`/
-  `--output-dir` — see the MCP contract above).
-- Hook-level enforcement blocks `rm -rf`, force pushes, and writes to `.env*`
-  files; a permissions denylist prevents reads of known secret patterns.
-- Stage only. Never production — regardless of who asks or how it is framed.
-- `evidence/` is gitignored. Raw artifacts (`.mcp-out`, images, videos, traces
-  and binary captures) are also denied to Read in both harnesses, while
-  structured summaries and curated JSON/Markdown remain available to reporting
-  and analysis. `.claudeignore` documents intent; permissions enforce it.
-
-Details: `.claude/rules/core/security.md` · `docs/artifact-strategy.md`.
+- **No telemetry** — nothing leaves your machine
+- **No license checks** — Apache 2.0, free forever
+- **Secrets are references** — vault paths or env keys, never values
+- **Stage-only** — never production
+- **Guard is defense-in-depth** — regex-based, audited, 47+ fixtures prove it blocks
 
 ---
 
 ## What does it cost to run?
 
-The plugin is MIT — free. The git repo is contacted exactly twice in its life:
-at install, and when you explicitly update. Everything else is local.
+- **Always-loaded context**: ~7k tokens (budget: 8.4k, measured)
+- **Skill bodies**: loaded on demand, ~2-7k tokens per skill
+- **Browser transcripts**: stay inside subagents (never in your context)
+- **Fast Path**: simple tickets skip the manager → fewer tokens
 
-The real cost is **model tokens**. The always-loaded layer is measured (~7.0k)
-and capped by a test; skills and detailed rules load on demand. Project files
-stay compact, Learnings are searched by ticket keywords, raw evidence is not
-read back, and browser transcripts stay inside execution subagents.
-
-Claude Code uses Sonnet for the two execution roles, while complex orchestration
-and failure analysis still inherit the main model. Simple tickets skip the
-manager layer, complex tickets reuse completed intake/readiness, and no stage
-browser starts before merge/build readiness. A sealed, size-bounded
-`context-capsule.json` hands effective config and relevant knowledge to every
-agent without another PROJECT/PRODUCT merge. opencode deliberately leaves every
-model choice to `/models`.
-
-The dominant context cost is still the browser snapshot history — Sonnet changes
-its price, not its size. Use `/usage` and the session logs to measure your own
-flows; this release does not carry a new benchmark, so older dollar and
-per-ticket estimates are not repeated as promises. Existing specs through the
-CLI runner remain the cheapest repeat check.
+The blueprint is token-efficient by design. A typical test run costs 50-150k
+input tokens (mostly browser interaction) and 5-15k output tokens.
 
 ---
 
 ## Deliberate non-goals
 
-- **No memory server.** Semantic recall solves a different problem than promotion —
-  and relieves the pressure to condense knowledge into the files that load for
-  free. A local store also isn't shared with your team, which is the whole point.
-  Reasoning and the conditions under which to revisit: `docs/memory-layers.md`.
-- **No pipeline edits.** The agent consumes quality gates; it never edits workflow
-  definitions or disables a gate to get a green run.
-- **No merges, approvals, or rollbacks.** It comments test results; humans decide.
+- No memory server — knowledge lives in plain Markdown, shared via Git
+- No pipeline editing — the blueprint runs in your pipeline, not the other way around
+- No merges, approvals, or rollbacks — it comments, humans decide
+- No autonomous write-back to test management — payloads for human review only
 
-### Not built yet, and honest about it
+<details>
+<summary><b>Not built yet, and honest about it</b></summary>
 
-Web only (Chromium; headless or headful) as the default setup — mobile and
-cross-browser via WebdriverIO + Appium/Selenium Grid are documented as reference
-(`webdriverio-testing/references/`) but not part of the shipped test stack. One
-ticket at a time — epics and releases have no rollup. No test-data lifecycle and no
-stage leases, so parallel testing on a shared stage will confuse itself. No
-autonomous write-back into a test-management system — `test-case-management`
-emits API/CSV payloads for human review and execution (writes follow shadow
-discipline). `evidence/` grows forever. And no project
-has been onboarded for real yet: everything here is verified against fixtures and a
-fictional reference project, which makes the first pilot the actual test —
-[docs/pilot-briefing.md](docs/pilot-briefing.md) says what that means for whoever
-runs it.
+- Web only (Chromium) as default — mobile/cross-browser via WDIO+Appium is reference-only
+- One ticket at a time — epics and releases have no rollup
+- No test-data lifecycle or stage leases — parallel testing on shared stages will confuse itself
+- No project has been onboarded for real yet — everything is verified against fixtures
+  and a fictional reference project. The first pilot is the actual test.
+
+</details>
+
+---
+
+## Bringing it into an existing repo
+
+```bash
+# Plugin mode (recommended — nothing copied into your repo)
+claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
+claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace
+
+# Or integrate mode (copies files into your repo, reviewable by your team)
+git clone https://github.com/Sn4kyGit/qa-agent-blueprint.git ~/qa-blueprint
+~/qa-blueprint/install.sh --mode integrate --target <your-project>
+```
+
+| | Plugin (A) | Integrate (B) |
+|---|---|---|
+| **Lands in your repo** | Nothing (plugin cache) | Rules, skills, agents, hooks |
+| **Logic lives in** | Plugin cache, updated via `/plugin` | Your repo, in your commits |
+| **Commands** | `/qa-agent-blueprint:test-ticket` | `/test-ticket` |
+| **Best when** | Zero footprint across many repos | Reviewable and editable by your team |
+
+---
+
+## Test user passwords: Keychain setup (macOS)
+
+```bash
+security add-generic-password -s SHOP_QA_STANDARD_PASSWORD -a qa -w
+```
+
+Keys are declared in `PROJECT.md` → "Test users". Values live in the macOS
+keychain or `.env.playwright-secrets` (gitignored). The agent sees key names,
+never values.
 
 ---
 
@@ -755,38 +287,25 @@ runs it.
 
 | Document | Contents |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | The five layers and why they are token-efficient |
-| [docs/execution-modes.md](docs/execution-modes.md) | **Deutsch, für Anwender**: die drei Execution Modes (mcp-only / hybrid / cli-first), was sie bringen, wie man umstellt |
-| [docs/pipeline/](docs/pipeline/) | The phase knowledge behind the modes: contracts, red check, observation pass, escalation |
-| [docs/quickstart-plugin.md](docs/quickstart-plugin.md) | Plugin on a fresh machine: JIRA + stage URL only, no app repo — CLI, clone, or manual wiring |
-| [docs/quickstart-opencode.md](docs/quickstart-opencode.md) | opencode setup: symlinked, model-agnostic, `/models` choice |
-| [docs/overview.html](https://sn4kygit.github.io/qa-agent-blueprint/overview.html) | One-page overview (German) — the big picture |
-| [docs/integration.md](docs/integration.md) | Integrate vs. plugin, detection matrix, FAQ |
-| [docs/artifact-strategy.md](docs/artifact-strategy.md) | Evidence capture, retention, PII |
-| [docs/memory-layers.md](docs/memory-layers.md) | Repo learnings vs. auto memory; no memory server |
-| [evals/README.md](evals/README.md) | Behavioral conformance — 45 cases with a scored runner and gate; the norm→test matrix is [evals/COVERAGE.md](evals/COVERAGE.md) |
-| [docs/pilot-briefing.md](docs/pilot-briefing.md) | **Read before the first real onboarding**: what to collect, shadow mode, what is known unfinished |
-| [docs/rules/](docs/rules/) | The detail behind each always-loaded rule, read on demand |
-| [docs/runbooks/stage-deploy-general.md](docs/runbooks/stage-deploy-general.md) | Generic stage-deploy scaffold |
-
-Inside the repo, `memory/INDEX.md` is the map the agent reads first.
+| [Detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html) | Architecture on one page |
+| [docs/quickstart-plugin.md](docs/quickstart-plugin.md) | Plugin install walkthrough |
+| [docs/quickstart-opencode.md](docs/quickstart-opencode.md) | opencode install walkthrough |
+| [docs/architecture.md](docs/architecture.md) | Five layers, token budgets |
+| [docs/pilot-briefing.md](docs/pilot-briefing.md) | Read before the first real onboarding |
+| [docs/rules/](docs/rules/) | Detailed rules, read on demand |
+| [evals/COVERAGE.md](evals/COVERAGE.md) | Norm → test matrix (46 cases) |
 
 ---
 
 ## Contributing
 
-One hard rule: **never commit project-specific data.** Keep `projects/_template/`
-generic, keep real onboardings in your private fork, and route durable improvements
-through `/retro-learn` so they land in rules, skills, or templates instead of as
-one-off edits.
+See [CONTRIBUTING.md](CONTRIBUTING.md) — fork, test, PR. Good first issues welcome.
 
-Before opening a PR: run `bash -n` on any script you touched, keep all JSON valid,
-and run every fixture suite — `for t in .claude/hooks/tests/*.sh; do bash "$t"; done`
-must print `all fixtures passed` fifteen times plus `within budget` once. A new enforcement rule needs a new
-fixture; that is not negotiable, for the reason documented above. Touched
-`install.sh`? The integrate suite is the one that catches what a dry-run cannot.
+**Key rules**: no project data in commits, no secrets, no dependency additions (stdlib only).
+
+---
 
 ## License
 
-Apache 2.0. Methodology draws on Google testing standards (AAA pattern, quality gates),
-OWASP Top 10 smoke testing, and blameless SRE retrospective practice (5-Whys RCA).
+[Apache 2.0](LICENSE). Methodology draws on Google testing standards, OWASP Top 10,
+and blameless SRE retrospective practice.
