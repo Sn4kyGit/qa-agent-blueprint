@@ -538,7 +538,9 @@ describe("foreign MCP gate (opencode)", () => {
   test("blocks writes to global MCP config files", async () => {
     const home = await mkdtemp(join(tmpdir(), "qa-fakehome-"))
     const dir = await tempProject()
-    await withEnv({ HOME: home }, async () => {
+    // Set XDG_CONFIG_HOME explicitly so the guard's path construction matches
+    // the test paths on all platforms (CI may have XDG_CONFIG_HOME preset).
+    await withEnv({ HOME: home, XDG_CONFIG_HOME: join(home, ".config") }, async () => {
       const h = await hooksIn(dir)
       await expect(run(h, fileBefore("edit", join(home, ".claude.json")))).rejects.toThrow(/global MCP config/)
       await expect(run(h, fileBefore("write", join(home, ".config", "opencode", "opencode.json")))).rejects.toThrow(/global MCP config/)
@@ -550,7 +552,7 @@ describe("foreign MCP gate (opencode)", () => {
   test("allows writes to the project's own MCP config", async () => {
     const home = await mkdtemp(join(tmpdir(), "qa-fakehome-"))
     const dir = await tempProject()
-    await withEnv({ HOME: home }, async () => {
+    await withEnv({ HOME: home, XDG_CONFIG_HOME: join(home, ".config") }, async () => {
       const h = await hooksIn(dir)
       await expect(run(h, fileBefore("write", join(dir, ".mcp.json")))).resolves.toBeUndefined()
       await expect(run(h, bashBefore(`echo '{}' > ${dir}/opencode.json`))).resolves.toBeUndefined()
