@@ -77,6 +77,11 @@ the file stays the single source, values never enter the agent context
 - **Vault prefix**: `<e.g. vault://qa/ or op://QA/>` — combined with the relative
   paths below. Stated here because this is where the agent reads it.
 
+**Key names are read from this table only — never enumerated from
+`.env.playwright-secrets`, even names-only** (`rg`/`grep`/`cut`/… on the file
+is a forbidden read per `.claude/rules/core/security.md`). Check which keys
+exist: `resolve-secrets.sh --status` (names only, never values).
+
 | Role | Purpose | Vault path (relative) | Env/secret key |
 |---|---|---|---|
 | `qa-standard` | default user journey | `<key>/qa-standard` | `<KEY>_QA_STANDARD_PASSWORD` |

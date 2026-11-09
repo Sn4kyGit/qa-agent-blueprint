@@ -66,7 +66,7 @@ const RM_RF_B = /rm\s+((-[^ \t]+\s+)*(-[a-zA-Z]*f[a-zA-Z]*|--force)([^ \t]*\s+|$
 const GIT_FORCE_PUSH = /git\s+push\s+.*(--force|-f\b)/
 // 0.18.5 C1: reader list extended, wrapper prefixes added, xargs treated as
 // a reader. The wrapper group allows `sudo cat .env`, `env cat .env`, etc.
-const READER_CORE = "(cat|less|more|head|tail|grep|sed|awk|jq|source|\\.|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs|split|csplit)"
+const READER_CORE = "(cat|less|more|head|tail|grep|egrep|fgrep|rg|ag|ack|sed|awk|gawk|mawk|nawk|jq|source|\\.|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs|split|csplit|zcat|xzcat|bzcat|lz4cat|vi|vim|view|nano|ed|ex|emacs|bat|most|busybox|timeout|nohup|stdbuf|setsid|script|osascript|lua|deno|bun|Rscript)"
 const WRAPPER_PREFIX = "((sudo|env|nice|time|exec|command|eval|doas)\\s+(-[a-zA-Z]+\\s+)*)*"
 // 0.18.5 M3: case-insensitive .env patterns (macOS case-insensitive filesystem)
 const SECRET_TAIL = "(\\.[eE][nN][vV]([^a-zA-Z]|$)|\\.[pP][eE][mM]\\b|id_rsa|id_ed25519|\\.[aA][uU][tT][hH]\\b|[sS][tT][oO][rR][aA][gG][eE][._-][sS][tT][aA][tT][eE])"
@@ -375,6 +375,10 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     // Interpreters do NOT follow the toggle (tdd §10/§11): a regex cannot
     // tell open('.env') from open('.env','w') — allowing this class would
     // open a secret-WRITE hole, so it fails closed in both states.
+    // A2 (0.19.8): perl/ruby one-liner flags
+    if (/((perl|ruby)\\s+-[a-zA-Z]*[npe][a-zA-Z]*\\s)/i.test(noExample) && new RegExp(SECRET_TAIL).test(noExample)) block("refusing a perl/ruby one-liner that reads a secret file — -n/-p/-e flags read the file without an explicit open keyword (blocked regardless of secrets_read).")
+    // A3 (0.19.8): variable indirection
+    if (/(^|[;&|(]|\\s)[a-zA-Z_][a-zA-Z0-9_]*=[^;&|]*/.test(noExample) && /\\$[a-zA-Z_]/.test(noExample) && ENV_READER.test(noExample)) block("refusing a command that reads a secret file via variable indirection — assigning a secret path to a variable and then reading it is the same as a direct read (blocked regardless of secrets_read).")
     if (ENV_INTERPRETER.test(noExample)) block("refusing a command that appears to read a secret file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status.")
     if (ENV_REDIRECT.test(noExample)) block("refusing a command that writes into a secret file directly — use the vault/secrets workflow instead.")
   }

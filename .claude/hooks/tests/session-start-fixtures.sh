@@ -347,7 +347,7 @@ KC_B_PASSWORD=fixture-value-BBB
 # --- end qa-blueprint managed block ---
 EOF
 KC1CTX="$(context_for "$KC1")"
-check_contains "status line counts present keys" "$KC1CTX" "keychain secrets: 2/3 present"
+check_contains "status line counts present keys" "$KC1CTX" "declared keys: 2/3 present"
 check_contains "missing key is NAMED" "$KC1CTX" "KC_C_PASSWORD"
 check_absent   "resolved values never reach context" "$KC1CTX" "fixture-value-AAA"
 check_absent   "resolved values never reach context (2)" "$KC1CTX" "fixture-value-BBB"
@@ -372,7 +372,7 @@ if [ -f "$KC2/.env.playwright-secrets" ] \
 else
   printf 'FAIL  %s\n' "auto-resolve writes the file when it was missing"; fails=$((fails + 1))
 fi
-check_contains "auto-resolve reports key names" "$KC2CTX" "resolve-secrets: 2/3 keychain keys resolved"
+check_contains "auto-resolve reports key names" "$KC2CTX" "resolve-secrets: 2/3 keys resolved"
 check_contains "auto-resolve names the missing key + one-time command" "$KC2CTX" "security add-generic-password -s KC_C_PASSWORD -a qa -w"
 check_absent   "auto-resolve leaks no value into context" "$KC2CTX" "fixture-value-AAA"
 check_absent   "auto-resolve leaks no value into context (2)" "$KC2CTX" "fixture-value-BBB"

@@ -147,9 +147,10 @@ if os.path.isdir(projects_dir):
                 for k in kkeys:
                     key_source.setdefault(k, ksrc or psrc)
 
+all_keys = sorted(key_source.keys())
 keychain_keys = sorted(k for k, s in key_source.items() if s == "keychain")
-if not keychain_keys:
-    sys.exit(0)  # no keychain declarations — env-file everywhere, stay silent
+if not all_keys:
+    sys.exit(0)  # no declared keys at all — stay silent
 
 def read_file():
     try:
@@ -167,15 +168,17 @@ def present_keys(text):
     return found
 
 if mode == "status":
+    # 0.19.8: report ALL declared keys (keychain + env-file), not just keychain.
+    # This is the sanctioned existence channel — names only, never values.
     have = present_keys(read_file())
-    missing = [k for k in keychain_keys if k not in have]
+    missing = [k for k in all_keys if k not in have]
     if missing:
-        print("keychain secrets: %d/%d present in .env.playwright-secrets — missing: %s "
-              "(resolve: run the blueprint's resolve-secrets.sh, or /re-board)"
-              % (len(keychain_keys) - len(missing), len(keychain_keys), ", ".join(missing)))
+        print("declared keys: %d/%d present in .env.playwright-secrets — missing: %s "
+              "(resolve: run the blueprint's resolve-secrets.sh, or fill the file)"
+              % (len(all_keys) - len(missing), len(all_keys), ", ".join(missing)))
     else:
-        print("keychain secrets: %d/%d present in .env.playwright-secrets"
-              % (len(keychain_keys), len(keychain_keys)))
+        print("declared keys: %d/%d present in .env.playwright-secrets"
+              % (len(all_keys), len(all_keys)))
     sys.exit(0)
 
 # --- shared keychain helpers (import/capture/resolve) -------------------------
@@ -223,11 +226,14 @@ if mode == "import":
             skipped.append(k)
             continue
         (imported if keychain_store(k, values[k]) else failed).append(k)
-    print("resolve-secrets --import: %d stored in keychain%s%s%s"
-          % (len(imported),
-             ", %d already present (skipped — --force overwrites)" % len(skipped) if skipped else "",
-             ", %d declared but not in the file" % len(not_in_file) if not_in_file else "",
-             ", %d FAILED" % len(failed) if failed else ""))
+    if keychain_keys:
+        print("resolve-secrets --import: %d stored in keychain%s%s%s"
+              % (len(imported),
+                 ", %d already present (skipped — --force overwrites)" % len(skipped) if skipped else "",
+                 ", %d declared but not in the file" % len(not_in_file) if not_in_file else "",
+                 ", %d FAILED" % len(failed) if failed else ""))
+    else:
+        print("resolve-secrets --import: no vault-sourced keys — env-file mode, nothing to import.")
     for k in imported:
         print("  stored %s" % k)
     for k in not_in_file + failed:
@@ -245,7 +251,10 @@ if mode == "capture":
         sys.exit(0)
     targets = [k for k in keychain_keys if force or not keychain_has(k)]
     if not targets:
-        print("resolve-secrets --capture: all declared keys are already in the keychain.")
+        if keychain_keys:
+            print("resolve-secrets --capture: all declared keys are already in the keychain.")
+        else:
+            print("resolve-secrets --capture: no vault-sourced keys — env-file mode, fill .env.playwright-secrets manually.")
     stored, skipped = [], []
     for k in targets:
         dialog = ('display dialog "Password for %s (account: qa) — stored directly into '
@@ -328,7 +337,7 @@ except Exception as e:
     print("resolve-secrets: cannot write %s: %s" % (SECRETS_FILE, e), file=sys.stderr)
     sys.exit(0)
 
-print("resolve-secrets: %d/%d keychain keys resolved into .env.playwright-secrets%s"
+print("resolve-secrets: %d/%d keys resolved into .env.playwright-secrets%s"
       % (len(resolved), len(keychain_keys),
          " (%d kept from previous run)" % kept if kept else ""))
 for k in missing:

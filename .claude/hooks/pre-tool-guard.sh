@@ -318,7 +318,13 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # and xargs treated as a reader (it reads stdin). The wrapper group allows
   # `sudo cat .env`, `env cat .env`, `sudo -u root cat .env` etc. The bash/sh/
   # zsh/dash group is handled separately below (subshell -c).
-  READER_CORE='(cat|less|more|head|tail|grep|sed|awk|jq|source|\.|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs|split|csplit)'
+  # 0.19.8 A1: extended reader list — rg (ripgrep), egrep/fgrep, gawk/mawk/nawk,
+  # compressed file readers (zcat/xzcat/bzcat/lz4cat), editors (vi/vim/nano/ed/
+  # ex/emacs/bat/most), busybox-style prefixes (timeout/nohup/stdbuf/setsid/
+  # script), and other interpreters (osascript/lua/deno/bun/Rscript). A reader
+  # allowlist that misses one verb is a bypass (0.19.8 field report: rg on
+  # .env.playwright-secrets listed key names).
+  READER_CORE='(cat|less|more|head|tail|grep|egrep|fgrep|rg|ag|ack|sed|awk|gawk|mawk|nawk|jq|source|\.|base64|cut|tac|xxd|nl|paste|od|strings|sort|diff|tar|zip|unzip|dd|hexdump|column|rev|tr|fmt|fold|comm|join|uniq|wc|shred|xargs|split|csplit|zcat|xzcat|bzcat|lz4cat|vi|vim|view|nano|ed|ex|emacs|bat|most|busybox|timeout|nohup|stdbuf|setsid|script|osascript|lua|deno|bun|Rscript)'
   WRAPPER_PREFIX='((sudo|env|nice|time|exec|command|eval|doas)[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*)*'
   if [ "$SECRETS_READ" != "allow" ] && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qiE "(^|[;&|(]|&&|\|\|)[[:space:]]*${WRAPPER_PREFIX}${READER_CORE}[[:space:]]+[^;&|]*$ENV_TAIL"; then
     block "refusing a command that reads a .env* file — secrets never enter chat or context by default. To check which keys exist: resolve-secrets.sh --status. Direct reads are a comfort opt-in: secrets_read=allow in .qa-guard.json (a human task — the guard refuses edits to it)."
@@ -337,6 +343,14 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qiE "(^|[;&|(]|&&|\|\|)[[:space:]]*(bash|sh|zsh|dash)[[:space:]]+-c[[:space:]]" \
     && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "$SECRET_TAIL"; then
     block "refusing a subshell that touches a secret file — bash -c / sh -c with a secret path in the command string is a read attempt (blocked regardless of secrets_read)."
+  fi
+  # A3 (0.19.8): variable indirection — `f=.env; cat "$f"` splits the secret
+  # path and the reader into different segments, defeating the segment-scoped
+  # check. Requires BOTH a secret-path assignment AND a reader using $variable.
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(^|[;&|(]|\s)[a-zA-Z_][a-zA-Z0-9_]*=[^;&|]*$SECRET_TAIL" \
+    && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE '\$[a-zA-Z_]' \
+    && printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qiE "${READER_CORE}"; then
+    block "refusing a command that reads a secret file via variable indirection — assigning a secret path to a variable and then reading it is the same as a direct read (blocked regardless of secrets_read)."
   fi
   # M4 (0.19.5): find -exec and git show/cat-file/log read secret files
   # without a reader verb at command position.
@@ -359,6 +373,12 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
   # a secret-WRITE hole, so it fails closed in both states.
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE "(python3?|perl|ruby|node|php)[[:space:]][^;&|]*(open|read|load|require|include|slurp|file_get_contents|fread|fgets|file\()[^;&|]*$SECRET_TAIL"; then
     block "refusing a command that appears to read a secret file via an interpreter — interpreter payloads cannot be classified read-vs-write reliably, so this class stays blocked even with secrets_read=allow. To check which keys exist: resolve-secrets.sh --status."
+  fi
+  # A2 (0.19.8): interpreter one-liner flags that inherently read files
+  # (`perl -ne`, `perl -pe`, `ruby -ne`, `ruby -pe`, `python -` with stdin)
+  # bypass the keyword check because the flag does the reading.
+  if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qiE "(perl|ruby)[[:space:]]+-[a-zA-Z]*[npe][a-zA-Z]*[[:space:]][^;&|]*$SECRET_TAIL"; then
+    block "refusing a perl/ruby one-liner that reads a secret file — -n/-p/-e flags read the file without an explicit open keyword (blocked regardless of secrets_read)."
   fi
   if printf '%s' "$COMMAND_NO_EXAMPLE" | grep -qE ">>?[[:space:]]*$SECRET_TAIL"; then
     block "refusing a command that writes into a secret file directly — use the vault/secrets workflow instead."

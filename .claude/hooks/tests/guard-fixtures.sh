@@ -452,6 +452,17 @@ check "C1 control: Write normal file" 0 '{"tool_name":"Write","tool_input":{"fil
 check "C1 control: Write .mcp.json" 0 '{"tool_name":"Write","tool_input":{"file_path":".mcp.json"}}'
 check "C1 control: Bash normal" 0 '{"tool_name":"Bash","tool_input":{"command":"npx playwright test"}}'
 
+# === 0.19.8 Key-name leak fixes ===
+check "A1 rg .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"rg -o \"^[A-Z_]+=\" .env.playwright-secrets"}}'
+check "A1 egrep .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"egrep \"^[A-Z_]+=\" .env"}}'
+check "A1 gawk .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"gawk -F= \"{print \\$1}\" .env.playwright-secrets"}}'
+check "A1 vim .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"vim .env"}}'
+check "A1 zcat .env.gz blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"zcat .env.gz"}}'
+check "A2 perl -ne .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"perl -ne \"print \\$1 if /^([A-Z_]+)=/\" .env.playwright-secrets"}}'
+check "A2 ruby -ne .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"ruby -ne \"puts \\$1 if /^([A-Z_]+)=/\" .env"}}'
+check "A3 variable indirection blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"f=.env; cat \\$f"}}'
+check "A1 control: echo .env allowed" 0 '{"tool_name":"Bash","tool_input":{"command":"echo the .env file exists"}}'
+
 rm -rf "$TOG" 2>/dev/null
 
 echo

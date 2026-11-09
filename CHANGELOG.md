@@ -8,7 +8,34 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.19.7] — 2026-11-02
+## [0.19.8] — 2026-11-02
+
+Theme: **key-name leak closed.** Field report: the executor listed key NAMES
+from `.env.playwright-secrets` during login (values not exposed). The guard's
+reader allowlist missed `rg`, `egrep`, `gawk`, `perl -ne`, editors, and
+variable indirection. Closed.
+
+### Fixed — security
+- **A1 Reader allowlist extended**: `rg`, `ag`, `ack`, `egrep`, `fgrep`,
+  `gawk`/`mawk`/`nawk`, `zcat`/`xzcat`/`bzcat`/`lz4cat`, editors (`vi`/`vim`/
+  `nano`/`ed`/`ex`/`emacs`/`bat`/`most`), `busybox`-style prefixes, `osascript`,
+  `lua`/`deno`/`bun`/`Rscript` added to `READER_CORE`.
+- **A2 Interpreter one-liner flags**: `perl -ne`/`-pe`, `ruby -ne`/`-pe` (file
+  reads via flags, no explicit `open` keyword) now blocked.
+- **A3 Variable indirection**: `f=.env; cat "$f"` (secret path assigned to a
+  variable, reader uses `$var`) now blocked.
+
+### Changed
+- **`resolve-secrets.sh --status`** now reports ALL declared keys (keychain +
+  env-file), not just keychain-sourced ones. This is the sanctioned existence
+  channel — names only, never values. Previously silent for env-file projects,
+  which pushed agents toward reading the file.
+- **Test users template**: "Key names are read from this table only — never
+  enumerated from `.env.playwright-secrets`, even names-only."
+- **Executor agent**: same rule added to all lane variants.
+- 10 new guard fixtures (rg, egrep, gawk, vim, zcat, perl -ne, ruby -ne,
+  variable indirection, controls).
+- Both harnesses (bash hook + TS plugin) updated in lockstep.
 
 Theme: **seen: 2 evidence verification.** The promotion gate was self-attested
 — the same agent that captures a learning also bumps its counter. Now sightings
