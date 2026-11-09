@@ -103,6 +103,66 @@ reviewable and diffable through Git.
 
 ---
 
+## Who's at the wheel — three execution modes
+
+One line in the project file decides how a ticket is tested: live via browser (MCP)
+or through a pre-written script (CLI) — or the tactical mix. Every JIRA report
+carries the mode, so it is clear whether a result was observed or merely asserted.
+
+| Mode | How it's tested | Cost | When |
+|---|---|---|---|
+| `mcp-only` | Model drives live, every step | High | New project, exploratory, visual, high risk |
+| `hybrid` (default) | Probe → spec via CLI → red probe → short live check | Medium | The everyday case; pays off from the first retest |
+| `cli-first` | The suite only; MCP only on unclear failures | Low | Maintained suite, regression, pipeline |
+
+Four rules keep hybrid mode honest: no blindly written spec (recon first),
+positive and specific assertions, the **red probe** (a spec that was never red
+proves nothing) and the observation channel in every run. Escalation is automatic:
+visual ticket, high risk, missing recon or unclear failure → always live.
+
+---
+
+## Knowledge architecture
+
+```
+projects/SHOP/
+├── PROJECT.md          ← applies to ALL products, holds the routing registry
+├── learnings.md
+├── flow-map.md         ← curated by /retro-learn: flows, anchors, neighbors
+├── templates/bug-report.md
+└── products/           ← completely absent in single-product projects
+    ├── STOREFRONT/     ← lists ONLY what differs (~60 lines)
+    └── ADMIN/
+```
+
+**The trick**: wherever a rule says `PROJECT.md`, it means the *effective* project
+file — the project file merged with the routed product file. No routed product
+means nothing merged, behavior exactly as before.
+
+**Routing ladder**: explicit → component → label → project-wide → secondary
+signals → default → ask. A default resolves *silence*, never a *conflict*.
+
+**What a product may override**: environments, test users, test assets, feature
+matrix, gotchas → yes. Quality gates → stricter only. Deploy/MR permissions →
+restricting only. JIRA transitions, report format, mandatory evidence → never.
+
+---
+
+## The learning loop
+
+**Capture is enforced.** Every run declares what it learned — or why nothing
+came up. A Stop hook blocks the session end if the declaration is missing.
+
+**Grooming is visible.** Session start reports the number of ungroomed entries
+so no backlog grows silently.
+
+**Promotion is the goal.** Seen twice means: into a rule, a project or product
+file — there it is loaded automatically and never explained again. Flow knowledge
+moves into the **flow map** (`flow-map.md`): `/retest-bug` aims its regression
+sweeps at the neighboring flows curated there, instead of guessing.
+
+---
+
 ## Install
 
 ### Claude Code (plugin — recommended)
