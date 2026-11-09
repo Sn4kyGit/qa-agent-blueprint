@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QA Agent Blueprint — QA Agent Blueprint — AI QA Manager for Claude Code & opencode</title>
+<title>QA Agent Blueprint — AI QA Manager for Claude Code & opencode</title>
 <style>
   :root {
     --bg: #0b0d12;
@@ -251,751 +251,754 @@
   <p class="kicker">Claude Code & opencode · AI QA Manager</p>
   <h1>QA Agent Blueprint</h1>
   <p class="lede">
-    Macht Claude Code oder opencode zu einem ticketgetriebenen QA-Manager und Tester: JIRA-Ticket rein,
-    getestetes Ticket raus — mit Pflicht-Evidence, projekt- und produktspezifischem Wissen
-    und einem Lernkreislauf, der erzwungen wird statt erwünscht zu sein.
-    Neu hier? Unten beantwortet die Rubrik <strong>Häufige Fragen</strong> in einfacher
-    Sprache, wie Gedächtnis, Kosten und Sicherheit funktionieren.
+    Turns Claude Code or opencode into a ticket-driven QA manager and tester: JIRA ticket in,
+    tested ticket out — with mandatory evidence, project- and product-specific knowledge
+    and a learning loop that is enforced rather than merely encouraged.
+    New here? The <strong>FAQ</strong> section below explains in plain language
+    how memory, cost and security work.
   </p>
   <div class="stats">
     <div class="stat"><div class="n">32</div><div class="l">Skills</div></div>
     <div class="stat"><div class="n">9</div><div class="l">Subagents</div></div>
-    <div class="stat"><div class="n">5+10</div><div class="l">Regeln (immer / on demand)</div></div>
+    <div class="stat"><div class="n">5+10</div><div class="l">Rules (always / on demand)</div></div>
     <div class="stat"><div class="n">4</div><div class="l">Hooks</div></div>
-    <div class="stat"><div class="n">Fixtures+145</div><div class="l">Fixture-Suiten + bun-Tests</div></div>
-    <div class="stat"><div class="n">45</div><div class="l">Eval-Cases</div></div>
-    <div class="stat"><div class="n">8,3k</div><div class="l">Token immer geladen</div></div>
+    <div class="stat"><div class="n">Fixtures+145</div><div class="l">Fixture suites + bun tests</div></div>
+    <div class="stat"><div class="n">45</div><div class="l">Eval cases</div></div>
+    <div class="stat"><div class="n">8,3k</div><div class="l">Tokens always loaded</div></div>
   </div>
 </header>
 
 <section>
   <h2>Installation</h2>
-  <p class="sub">Am einfachsten: dem Agenten sagen. In Claude Code (im Projekt, das getestet werden soll) einfügen:</p>
+  <p class="sub">Easiest: tell the agent. Paste this into Claude Code (in the project to be tested):</p>
   <pre><code>Set up https://github.com/Sn4kyGit/qa-agent-blueprint as a Claude Code
 plugin in this project. Read its AGENTS.md first and follow the runbook.</code></pre>
-  <p>Oder selbst zwei Befehle — <code>--scope project</code> aktiviert nur hier, ohne Flag überall:</p>
+  <p>Or run the two commands yourself — <code>--scope project</code> enables it here only, without the flag everywhere:</p>
   <pre><code>claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
 claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-marketplace</code></pre>
-  <p>Unter <strong>opencode</strong> (modell-agnostisch, Modell = deine <code>/models</code>-Wahl): <code>install.sh --mode opencode --target &lt;projekt&gt; --yes</code> vom Clone aus — Details: <a href="https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md">Quickstart opencode</a>.</p>
-  <p>Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: <code>install.sh --mode shared</code> — beide bleiben ohne Re-Onboarding startbereit, <code>/agentswitch</code> prüft read-only.</p>
-  <p class="note">Ende-zu-Ende verifiziert (claude 2.1.263): registriert 33 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (<code>gh auth login</code>) — darunter läuft schlicht git. Alternativ: Clone + <code>install.sh</code> (siehe README).</p>
+  <p>Under <strong>opencode</strong> (model-agnostic, model = your <code>/models</code> choice): <code>install.sh --mode opencode --target &lt;projekt&gt; --yes</code> from the clone — details: <a href="https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md">Quickstart opencode</a>.</p>
+  <p>For alternating Claude Code and opencode sessions in the same QA home: <code>install.sh --mode shared</code> — both stay ready to go without re-onboarding, <code>/agentswitch</code> checks read-only.</p>
+  <p class="note">Verified end to end (claude 2.1.263): registers 33 skills, 9 subagents, 4 hooks and both MCP servers. While the repo is private, the fetch needs GitHub auth (<code>gh auth login</code>) — it is git under the hood. Alternative: clone + <code>install.sh</code> (see README).</p>
 </section>
 
 <section>
-  <h2>Der Ablauf</h2>
+  <h2>The flow</h2>
   <div class="flow">
     <span class="step">Ticket</span><span class="arrow">→</span>
-    <span class="step">Projekt erkannt</span><span class="arrow">→</span>
-    <span class="step">Produkt erkannt</span><span class="arrow">→</span>
-    <span class="step">Wissen angewendet</span><span class="arrow">→</span>
-    <span class="step">getestet</span><span class="arrow">→</span>
+    <span class="step">Project identified</span><span class="arrow">→</span>
+    <span class="step">Product identified</span><span class="arrow">→</span>
+    <span class="step">Knowledge applied</span><span class="arrow">→</span>
+    <span class="step">tested</span><span class="arrow">→</span>
     <span class="step">Evidence</span><span class="arrow">→</span>
-    <span class="step">berichtet</span><span class="arrow">→</span>
-    <span class="step">gelernt</span>
+    <span class="step">reported</span><span class="arrow">→</span>
+    <span class="step">learned</span>
   </div>
-  <p class="note">Jede Stufe hat eine Datei als Quelle und, wo es zählt, einen Hook als Durchsetzung.</p>
+  <p class="note">Every stage has a file as its source and, where it counts, a hook as enforcement.</p>
 </section>
 
 <section>
-  <h2>Wer am Steuer sitzt — drei Execution Modes</h2>
+  <h2>Who's at the wheel — three execution modes</h2>
   <p class="sub">
-    Seit 0.12.0 entscheidet eine Zeile in der Projektdatei, wie ein Ticket getestet wird:
-    live per Browser (MCP) oder über ein vorher geschriebenes Skript (CLI) — oder die taktische
-    Mischung. Jeder JIRA-Report trägt den Modus, damit klar ist, ob ein Ergebnis beobachtet
-    oder nur assertiert wurde.
+    Since 0.12.0 one line in the project file decides how a ticket is tested:
+    live via browser (MCP) or through a pre-written script (CLI) — or the tactical
+    mix. Every JIRA report carries the mode, so it is clear whether a result was observed
+    or merely asserted.
   </p>
   <table>
-    <tr><th>Modus</th><th>Wie getestet wird</th><th>Kosten</th><th>Wann</th></tr>
-    <tr><td>mcp-only</td><td>Modell steuert live, jeder Schritt</td><td><span class="pill never">hoch</span></td><td>Neues Projekt, explorativ, visuell, hohes Risiko</td></tr>
-    <tr><td>hybrid (Standard)</td><td>Probe → Spec per CLI → Rotprobe → kurzer Live-Check</td><td><span class="pill warn">mittel</span></td><td>Der Normalfall; rechnet sich ab dem ersten Retest</td></tr>
-    <tr><td>cli-first</td><td>Nur die Suite; MCP nur bei unklarem Fehlschlag</td><td><span class="pill ok">niedrig</span></td><td>Gepflegte Suite, Regression, Pipeline</td></tr>
+    <tr><th>Mode</th><th>How it's tested</th><th>Cost</th><th>When</th></tr>
+    <tr><td>mcp-only</td><td>Model drives live, every step</td><td><span class="pill never">high</span></td><td>New project, exploratory, visual, high risk</td></tr>
+    <tr><td>hybrid (default)</td><td>Probe → spec via CLI → red probe → short live check</td><td><span class="pill warn">medium</span></td><td>The everyday case; pays off from the first retest</td></tr>
+    <tr><td>cli-first</td><td>The suite only; MCP only on unclear failures</td><td><span class="pill ok">low</span></td><td>Maintained suite, regression, pipeline</td></tr>
   </table>
   <p class="note">
-    Vier Regeln machen den Hybridmodus ehrlich: keine blind geschriebene Spec (Recon zuerst),
-    positive und spezifische Assertions, die <strong>Rotprobe</strong> (eine Spec, die nie rot
-    war, beweist nichts) und der Beobachtungskanal in jedem Lauf. Eskaliert wird automatisch:
-    visuelles Ticket, hohes Risiko, fehlende Recon oder unklarer Fehlschlag → immer live.
-    Umstellen: <code>Mode</code> in <code>PROJECT.md</code> — bei Bestandsprojekten bietet
-    <code>/re-board</code> die Sektion im Dialog an. Ausführlich (deutsch):
+    Four rules keep hybrid mode honest: no blindly written spec (recon first),
+    positive and specific assertions, the <strong>red probe</strong> (a spec that was never red
+    proves nothing) and the observation channel in every run. Escalation is automatic:
+    visual ticket, high risk, missing recon or unclear failure → always live.
+    Switch it: <code>Mode</code> in <code>PROJECT.md</code> — for existing projects
+    <code>/re-board</code> offers the section in dialog. Full write-up (in German):
     <a href="https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/execution-modes.md">docs/execution-modes.md</a>.
   </p>
 </section>
 
 <section class="cmds">
-  <h2>Befehle im Überblick</h2>
+  <h2>Commands at a glance</h2>
   <p class="sub">
-    Kein Auswendiglernen nötig: „Teste SHOP-1234" oder „wie läuft's mit dem Testing?" routet
-    genauso wie der Slash-Befehl — Deutsch oder Englisch, die Befehle sind nur die explizite,
-    garantierte Form. Im Plugin-Modus heißen sie <code>/qa-agent-blueprint:&lt;name&gt;</code>. Die komplette Liste
-    zeigt jederzeit <code>/qa-agent-blueprint:qa-help</code> — auch direkt in der Session.
+    No memorizing needed: “Test SHOP-1234” or “how's testing going?” routes
+    exactly like the slash command — German or English, the commands are just the explicit,
+    guaranteed form. In plugin mode they are called <code>/qa-agent-blueprint:&lt;name&gt;</code>. The full list
+    is available any time via <code>/qa-agent-blueprint:qa-help</code> — right in the session.
   </p>
 
-  <h3>Ticket testen</h3>
+  <h3>Test a ticket</h3>
   <table>
-    <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
-    <tr><td>/test-ticket</td><td>Der Haupteinstieg: Ticket lesen, routen, Stage prüfen, Strategie wählen, Evidence erzeugen, Verdikt zurückmelden</td><td>„Teste SHOP-1234"</td></tr>
-    <tr><td>/retest-bug</td><td>Spielt die Repro-Schritte eines gefixten Bugs nach, dann enger Regressions-Sweep um die Fundstelle — aus der Flow-Map des Produkts abgeleitet, wenn eine existiert</td><td>„Der Fix für WEB-456 ist auf Stage — prüf das"</td></tr>
-    <tr><td>/exploratory-testing</td><td>Gecharterte, zeitboxte Session im Browser — für neue Features und unklares Verhalten ohne Spec</td><td>„Schau dir die neue Checkout-Seite mal an"</td></tr>
-    <tr><td>/test-automation</td><td>Schreibt oder fährt deterministische Specs im Framework der Suite (Playwright oder WebdriverIO), sobald ein Ablauf verstanden und wiederholungswürdig ist</td><td>„Automatisiere den Login-Flow"</td></tr>
-    <tr><td>/recon</td><td>Aufklärung vor der Spec: Probe-Lauf schreibt <code>recon.json</code> mit den echten Selektoren, Konsolenfehlern und Screenshots ins Run-Verzeichnis — gegen blind geratene Specs</td><td>„Erkunde die Seite vor dem Test"</td></tr>
+    <tr><th>Command</th><th>What it does</th><th>Typical phrasing</th></tr>
+    <tr><td>/test-ticket</td><td>The main entry point: read the ticket, route it, check stage, choose the strategy, produce evidence, report the verdict back</td><td>“Test SHOP-1234”</td></tr>
+    <tr><td>/retest-bug</td><td>Replays the repro steps of a fixed bug, then a tight regression sweep around the finding — derived from the product's flow map when one exists</td><td>“The fix for WEB-456 is on stage — check it”</td></tr>
+    <tr><td>/exploratory-testing</td><td>A chartered, timeboxed session in the browser — for new features and unclear behavior without a spec</td><td>“Take a look at the new checkout page”</td></tr>
+    <tr><td>/test-automation</td><td>Writes or runs deterministic specs in the suite's framework (Playwright or WebdriverIO) once a flow is understood and worth repeating</td><td>“Automate the login flow”</td></tr>
+    <tr><td>/recon</td><td>Recon before the spec: a probe run writes <code>recon.json</code> with the real selectors, console errors and screenshots into the run directory — against blindly guessed specs</td><td>“Explore the page before the test”</td></tr>
   </table>
 
-  <h3>Auf ein Ergebnis reagieren</h3>
+  <h3>React to a result</h3>
   <table>
-    <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
-    <tr><td>/failure-analysis</td><td>Triagiert jeden FAIL vor dem Bug-Ticket: echtes Defizit oder veralteter Testfall? Läuft automatisch</td><td>„Warum ist der Test rot?"</td></tr>
-    <tr><td>/bug-report</td><td>Gießt eine Fundstelle in die Bug-Vorlage des Projekts — mit Duplikat-Check</td><td>„Mach ein Ticket aus dem Fund"</td></tr>
-    <tr><td>/report-to-jira</td><td>Kommentar, Anhänge und Workflow-Transition zurück nach JIRA — im Shadow-Modus nur als Vorschlag</td><td>„Melde das Ergebnis zurück"</td></tr>
-    <tr><td>/deploy-to-stage</td><td>Fährt das Deploy-Runbook des Projekts mit Sicherheitschecks, wenn der Fix fehlt</td><td>„Bring den Fix auf Stage"</td></tr>
+    <tr><th>Command</th><th>What it does</th><th>Typical phrasing</th></tr>
+    <tr><td>/failure-analysis</td><td>Triages every FAIL before the bug ticket: real defect or outdated test case? Runs automatically</td><td>“Why is the test red?”</td></tr>
+    <tr><td>/bug-report</td><td>Pours a finding into the project's bug template — with a duplicate check</td><td>“Turn the finding into a ticket”</td></tr>
+    <tr><td>/report-to-jira</td><td>Comment, attachments and workflow transition back to JIRA — in shadow mode only as a proposal</td><td>“Report the result back”</td></tr>
+    <tr><td>/deploy-to-stage</td><td>Runs the project's deploy runbook with safety checks when the fix isn't there yet</td><td>“Get the fix onto stage”</td></tr>
   </table>
 
-  <h3>Einrichten</h3>
+  <h3>Set up</h3>
   <table>
-    <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
-    <tr><td>/onboard-project</td><td>Das einmalige Interview pro JIRA-Projekt (~30–60 min): Umgebungen, Testuser, Runbook, Gates</td><td>„Richte das Projekt SHOP ein"</td></tr>
-    <tr><td>/onboard-product</td><td>Die kurze Variante (5–15 min) für ein Produkt im Projekt — nur Abweichungen</td><td>„Das Projekt hat jetzt auch eine Admin-App"</td></tr>
-    <tr><td>/re-board</td><td>Delta-Onboarding: bringt ein Bestandsprojekt auf den aktuellen Blueprint-Stand — der Upgrade-Pfad nach einem Update</td><td>„Hol das Onboarding für SHOP nach"</td></tr>
-    <tr><td>/scaffold-suite</td><td>Erzeugt das Playwright-Projekt samt erster Smoke-Spec, wenn es noch keine Test-Assets gibt</td><td>„Leg eine Test-Suite an"</td></tr>
+    <tr><th>Command</th><th>What it does</th><th>Typical phrasing</th></tr>
+    <tr><td>/onboard-project</td><td>The one-time interview per JIRA project (~30–60 min): environments, test users, runbook, gates</td><td>“Set up the project SHOP”</td></tr>
+    <tr><td>/onboard-product</td><td>The short version (5–15 min) for a product inside the project — deltas only</td><td>“The project now also has an admin app”</td></tr>
+    <tr><td>/re-board</td><td>Delta onboarding: brings an existing project up to the current blueprint level — the upgrade path after an update</td><td>“Bring the onboarding for SHOP up to date”</td></tr>
+    <tr><td>/scaffold-suite</td><td>Creates the Playwright project with a first smoke spec when there are no test assets yet</td><td>“Create a test suite”</td></tr>
   </table>
 
-  <h3>Wissen &amp; Meta</h3>
+  <h3>Learnings &amp; meta</h3>
   <table>
-    <tr><th>Befehl</th><th>Was er tut</th><th>Typische Formulierung</th></tr>
-    <tr><td>/qa-report</td><td>Aggregiert alle Evidence-Läufe: Pass-Rate, P0/P1, BLOCKED-Gründe — pro Projekt und Produkt</td><td>„Wie läuft's mit dem Testing?"</td></tr>
-    <tr><td>/retro-learn</td><td>Hält Learnings fest, verdichtet sie und befördert Bewährtes in Regeln und Projektdateien</td><td>„Session abschließen"</td></tr>
-    <tr><td>/whats-new</td><td>Zeigt, was sich am Blueprint seit dem Onboarding geändert hat — und was ein /re-board lohnt</td><td>„Was ist neu?"</td></tr>
-    <tr><td>/skill-review</td><td>Skill-Nutzungsanalyse: jeder installierte Skill ist <code>used</code> (in den <code>skills_used</code>-Datensätzen) oder <code>unknown</code> (keine Daten) — nie „unbenutzt". Profile (<code>full</code>/<code>standard</code>/<code>minimal</code>/<code>custom</code>) nur als Dry-run-Vorschlag, umgesetzt nur nach ausdrücklicher Bestätigung und nur im integrate-Modus</td><td>„Welche Skills nutzen wir eigentlich?"</td></tr>
-    <tr><td>/perf-analysis</td><td>Performance-Analyse: Session-Dauer, Phasen-Breakdown, Token-Verbrauch, Bottlenecks und konkrete Verbesserungsvorschläge</td><td>„Warum ist das so langsam?", „Performance-Analyse"</td></tr>
-    <tr><td>/demo</td><td>Präsentiert eine Bug-Repro oder einen fertigen Testlauf sichtbar: Headed-Slow-Mo-Wiederholung + Demo-Karte, Selbst-ausprobieren-Modus, .webm-Aufzeichnung nur auf ausdrückliche Anfrage — niemals automatisch</td><td>„Präsentier den Bug", „Lass mich probieren"</td></tr>
-    <tr><td>/qa-help</td><td>Diese Übersicht, direkt in der Session — antwortet in der Sprache, in der man fragt</td><td>„Welche Befehle gibt es?"</td></tr>
+    <tr><th>Command</th><th>What it does</th><th>Typical phrasing</th></tr>
+    <tr><td>/qa-report</td><td>Aggregates all evidence runs: pass rate, P0/P1, BLOCKED reasons — per project and product</td><td>“How's testing going?”</td></tr>
+    <tr><td>/retro-learn</td><td>Captures learnings, condenses them and promotes what has proven itself into rules and project files</td><td>“Wrap up the session”</td></tr>
+    <tr><td>/whats-new</td><td>Shows what changed in the blueprint since onboarding — and which changes make a /re-board worthwhile</td><td>“What's new?”</td></tr>
+    <tr><td>/skill-review</td><td>Skill usage analysis: every installed skill is <code>used</code> (in the <code>skills_used</code> records) or <code>unknown</code> (no data) — never “unused”. Profiles (<code>full</code>/<code>standard</code>/<code>minimal</code>/<code>custom</code>) only as a dry-run proposal, applied only after explicit confirmation and only in integrate mode</td><td>“Which skills do we actually use?”</td></tr>
+    <tr><td>/perf-analysis</td><td>Performance analysis: session duration, phase breakdown, token usage, bottlenecks and concrete improvement suggestions</td><td>“Why is this so slow?”, “Performance analysis”</td></tr>
+    <tr><td>/demo</td><td>Presents a bug repro or a finished test run in the open: headed slow-motion replay + demo card, try-it-yourself mode, .webm recording only on explicit request — never automatically</td><td>“Present the bug”, “Let me try”</td></tr>
+    <tr><td>/qa-help</td><td>This overview, right in the session — answers in the language you ask in</td><td>“What commands are there?”</td></tr>
   </table>
 
   <div class="callout">
-    Drei Dinge zum Einordnen: <strong>Shadow-Modus ist standardmäßig an</strong> — JIRA-Kommentare
-    werden komponiert, aber erst nach Freigabe gepostet. Die <strong>zehn Spezialisten-Skills</strong>
-    (API, Accessibility, Security, Visual …) zieht qa-manager selbständig, wenn die Feature-Matrix
-    des Produkts es vorgibt — kein Direktaufruf nötig. Und <strong>Evidence ist Pflicht</strong>:
-    Jeder Lauf endet mit einem Verdikt und Artefakten unter <code>evidence/</code>.
+    Three things for orientation: <strong>shadow mode is on by default</strong> — JIRA comments
+    are composed, but only posted after you approve them. The <strong>ten specialist skills</strong>
+    (API, accessibility, security, visual …) are pulled in by qa-manager on its own when the product's
+    feature matrix calls for it — no direct invocation needed. And <strong>evidence is mandatory</strong>:
+    every run ends with a verdict and artifacts under <code>evidence/</code>.
   </div>
 </section>
 
 <section>
   <h2>The Five Layers</h2>
-  <p class="sub">Was die Tokenkosten niedrig hält: nur Ebene 1 ist immer im Kontext, alles andere lädt bei Bedarf — oder nie.</p>
+  <p class="sub">What keeps the token budget low: only layer 1 is always in context, everything else loads on demand — or never.</p>
 
   <div class="card">
-    <h4><span class="num">1</span>Globaler Kern — nur die Normen</h4>
-    <p>Router plus fünf Regeldateien: alles, was binden muss, bevor irgendein Skill geladen ist.
-    Das Detail dahinter liegt in <code>docs/rules/</code> und wird gelesen, wenn sein Thema kommt —
-    jede Datei nennt ihren Auslöser oben.</p>
-    <span class="path">CLAUDE.md + .claude/rules/core/ · gemessen 7.040 Token, Budget 8.400</span>
+    <h4><span class="num">1</span>Global core — just the norms</h4>
+    <p>Router plus five rule files: everything that must bind before any skill is loaded.
+    The detail behind it lives in <code>docs/rules/</code> and is read when its topic comes up —
+    each file names its trigger at the top.</p>
+    <span class="path">CLAUDE.md + .claude/rules/core/ · measured 7,040 tokens, budget 8,400</span>
   </div>
   <div class="card">
     <h4><span class="num">2</span>Skills &amp; Subagents</h4>
-    <p>Erst bei Bedarf geladen. Subagents haben eigene Kontextfenster, damit ein
-    30-Schritte-Browser-Transkript nicht im Hauptkontext landet — zurück kommt nur ein Verdikt.</p>
+    <p>Loaded only on demand. Subagents have their own context windows, so a
+    30-step browser transcript never lands in the main context — only a verdict comes back.</p>
     <span class="path">.claude/skills/ · .claude/agents/</span>
   </div>
   <div class="card">
-    <h4><span class="num">3</span>Projekt- und Produktkontext</h4>
-    <p>Nur das aktive Projekt wird gelesen. Deckt ein JIRA-Projekt mehrere Produkte ab, kommt
-    genau eine kurze Produktdatei dazu — die nur Abweichungen nennt.</p>
+    <h4><span class="num">3</span>Project and product context</h4>
+    <p>Only the active project is read. If a JIRA project covers several products, exactly one
+    short product file is added — one that lists only the deltas.</p>
     <span class="path">projects/&lt;KEY&gt;/ → products/&lt;PRODUCT&gt;/</span>
   </div>
   <div class="card">
-    <h4><span class="num">4</span>Lernsystem</h4>
-    <p>Inbox als Auffangbank, Themendateien als verdichtete Mitte, Beförderung in Regeln und
-    Projekt-/Produktdateien als Ziel. Wissen zählt erst, wenn es dort ankommt.</p>
+    <h4><span class="num">4</span>Learning system</h4>
+    <p>Inbox as the catch-all, topic files as the condensed middle, promotion into rules and
+    project/product files as the destination. Knowledge only counts once it arrives there.</p>
     <span class="path">memory/INDEX.md · memory/learnings/</span>
   </div>
   <div class="card">
     <h4><span class="num">5</span>Evidence</h4>
-    <p>Screenshots, Logs, Traces und ein maschinenlesbares Summary pro Lauf. Nie im
-    Modellkontext — und nicht write-only: <code>/qa-report</code> liest sie zurück.</p>
+    <p>Screenshots, logs, traces and a machine-readable summary per run. Never in the
+    model context — and not write-only: <code>/qa-report</code> reads them back.</p>
     <span class="path">evidence/&lt;KEY&gt;/&lt;TICKET&gt;/&lt;YYYYMMDD-HHMMSS&gt;/</span>
   </div>
 </section>
 
 <section>
-  <h2>Was der Agent kann</h2>
+  <h2>What the agent can do</h2>
   <p class="sub">
-    Skill oder Subagent — der Unterschied ist nicht kosmetisch. Ein Skill ist eine Anleitung,
-    die erst beim Aufruf in den Kontext geladen wird; idle kostet er nur seinen Namen und seine
-    Beschreibung. Ein Subagent hat zusätzlich ein eigenes Kontextfenster und eine eingeschränkte
-    Werkzeugliste — er läuft abgeschottet und gibt nur ein Ergebnis zurück. Deshalb sind alle
-    Ausführungsrollen Subagents: ein 30-Schritte-Browser-Transkript darf den Hauptkontext nicht fluten.
+    Skill or subagent — the difference is not cosmetic. A skill is an instruction set
+    that only loads into context when invoked; idle it costs just its name and its
+    description. A subagent additionally has its own context window and a restricted
+    tool list — it runs sandboxed and returns only a result. That is why all
+    execution roles are subagents: a 30-step browser transcript must not flood the main context.
   </p>
 
-  <h3>Die 21 eigenen Skills — der Ticket-Ablauf</h3>
+  <h3>The 21 first-party skills — the ticket flow</h3>
   <table>
-    <tr><th>Skill</th><th>Was er tut</th><th>Wann er greift</th></tr>
+    <tr><th>Skill</th><th>What it does</th><th>When it kicks in</th></tr>
     <tr>
       <td>/test-ticket</td>
-      <td>Der Haupteinstieg: liest das Ticket, routet zu Projekt und Produkt, prüft die Stage,
-      wählt die Teststrategie, erzeugt Evidence, berichtet zurück. Delegiert die Orchestrierung an qa-manager.</td>
-      <td>„Teste SHOP-1234"</td>
+      <td>The main entry point: reads the ticket, routes to project and product, checks the stage,
+      chooses the test strategy, produces evidence, reports back. Delegates orchestration to qa-manager.</td>
+      <td>“Test SHOP-1234”</td>
     </tr>
     <tr>
       <td>/retest-bug</td>
-      <td>Schmalere Variante: spielt exakt die ursprünglichen Repro-Schritte nach und macht danach
-      einen engen Regressions-Sweep um die Fundstelle — aus der <code>flow-map.md</code> des
-      Produkts abgeleitet (Nachbar-Flows), risikobasiert, wenn keine existiert. Ist der Report
-      dünn, wird erst eine verifizierte Repro erzeugt.</td>
-      <td>Ein Fix ist auf Stage gelandet</td>
+      <td>The narrower variant: replays exactly the original repro steps, then runs
+      a tight regression sweep around the finding — derived from the product's <code>flow-map.md</code>
+      (neighboring flows), risk-based when none exists. If the report is
+      thin, a verified repro is produced first.</td>
+      <td>A fix has landed on stage</td>
     </tr>
     <tr>
       <td>/exploratory-testing</td>
-      <td>Chartered Session nach SBTM: ein Auftrag, eine Zeitbox, Playwright MCP im isolierten
-      Browser. Für unklares Verhalten, neue Features, erste Blicke.</td>
-      <td>Kein wiederholbarer Spec vorhanden</td>
+      <td>Chartered SBTM session: one mission, one timebox, Playwright MCP in an isolated
+      browser. For unclear behavior, new features, first looks.</td>
+      <td>No repeatable spec exists</td>
     </tr>
     <tr>
       <td>/test-automation</td>
-      <td>Schreibt oder fährt deterministische Specs über den CLI-Runner — im Framework der
-      Suite (Playwright oder WebdriverIO). TC-ID im Titel, Retries nur in CI (und dort, um
-      den Trace des Flakes einzufangen).</td>
-      <td>Ein Ablauf ist verstanden und wiederholungswürdig</td>
+      <td>Writes or runs deterministic specs via the CLI runner — in the
+      suite's framework (Playwright or WebdriverIO). TC-ID in the title, retries only in CI (and there to
+      capture the flake's trace).</td>
+      <td>A flow is understood and worth repeating</td>
     </tr>
     <tr>
       <td>/recon</td>
-      <td>Pipeline-Phase 2 als eigener Skill: fährt die Probe (Playwright oder WDIO, gleiches
-      <code>recon.json</code>-Format) und liefert die echten Bedienelemente, Formularfelder und
-      Konsolenfehler — für einen Bruchteil der MCP-Kosten. Nur die Merge-Zusammenfassung kommt
-      in den Kontext.</td>
-      <td>Bevor eine Spec geschrieben wird (hybrid/cli-first), oder direkt: „Erkunde die Seite"</td>
+      <td>Pipeline phase 2 as its own skill: runs the probe (Playwright or WDIO, same
+      <code>recon.json</code> format) and delivers the real controls, form fields and
+      console errors — for a fraction of the MCP cost. Only the merge summary enters
+      the context.</td>
+      <td>Before a spec is written (hybrid/cli-first), or directly: “Explore the page”</td>
     </tr>
     <tr>
       <td>webdriverio-testing</td>
-      <td>Die WDIO-Entsprechung der Playwright-Konventionen: deterministische Specs in
-      WebdriverIO 9, Selenium Grid als Remote-Backend und Appium-Mobile als Betriebsmodus
-      (Referenzen, kein eigenes Framework). Wird von test-automator geladen, nie direkt.</td>
-      <td>„Test assets" des Produkts sagen <code>Framework: webdriverio</code></td>
+      <td>The WDIO counterpart to the Playwright conventions: deterministic specs in
+      WebdriverIO 9, Selenium Grid as the remote backend and Appium mobile as an operating mode
+      (references, not a framework of its own). Loaded by test-automator, never directly.</td>
+      <td>The product's “Test assets” say <code>Framework: webdriverio</code></td>
     </tr>
     <tr>
       <td>/failure-analysis</td>
-      <td>Triagiert jeden FAIL, bevor ein Bug aufgemacht wird: echtes Produkt-Defizit, oder ist
-      der Testfall selbst veraltet, weil sich das Produkt absichtlich geändert hat? Vergleicht
-      Assertion, JIRA-Änderungshistorie und Versionsfenster — <strong>schlägt vor, wendet nie an</strong>.</td>
-      <td>Automatisch bei jedem FAIL</td>
+      <td>Triages every FAIL before a bug is filed: real product defect, or is
+      the test case itself outdated because the product changed on purpose? Compares
+      the assertion, JIRA change history and version window — <strong>proposes, never applies</strong>.</td>
+      <td>Automatically on every FAIL</td>
     </tr>
     <tr>
       <td>/bug-report</td>
-      <td>Gießt eine Fundstelle in die Vorlage des Projekts oder des Produkts — nie eine eigene
-      Struktur, nie eine übersprungene Sektion. Prüft auf Duplikate.</td>
-      <td>Ein FAIL-Verdikt liegt vor, Klasse <code>product-defect</code></td>
+      <td>Pours a finding into the project's or product's template — never a structure of its
+      own, never a skipped section. Checks for duplicates.</td>
+      <td>A FAIL verdict is in, class <code>product-defect</code></td>
     </tr>
     <tr>
       <td>/report-to-jira</td>
-      <td>Kommentar, Anhänge und die exakte Workflow-Transition. Kennt den Shadow-Modus: dann
-      wird komponiert und abgelegt statt gepostet. <code>NO_TEST</code> postet grundsätzlich nichts.</td>
-      <td>Ein Lauf ist fertig — PASS, FAIL, BLOCKED oder NEEDS_REVIEW</td>
+      <td>Comment, attachments and the exact workflow transition. Knows shadow mode: then
+      it composes and files instead of posting. <code>NO_TEST</code> never posts anything at all.</td>
+      <td>A run is done — PASS, FAIL, BLOCKED or NEEDS_REVIEW</td>
     </tr>
     <tr>
       <td>/deploy-to-stage</td>
-      <td>Fährt das Deploy-Runbook des Projekts mit Sicherheitschecks. Prüft vorab, ob überhaupt
-      ein Ausführungsweg existiert, und meldet sonst BLOCKED statt zu improvisieren.</td>
-      <td>Der Fix ist noch nicht auf Stage</td>
+      <td>Runs the project's deploy runbook with safety checks. Checks up front whether an
+      execution path exists at all, and reports BLOCKED rather than improvising.</td>
+      <td>The fix isn't on stage yet</td>
     </tr>
     <tr>
       <td>/onboard-project</td>
-      <td>Das lange Interview (~30–60 min), das PROJECT.md füllt: Umgebungen, Testuser als
-      Vault-Referenzen, Runbook, Gates, Reporting. Holt Transitions und Prioritäten aus JIRA
-      statt zu fragen.</td>
-      <td>Ein Ticket-Präfix hat noch kein Projekt</td>
+      <td>The long interview (~30–60 min) that fills PROJECT.md: environments, test users as
+      vault references, runbook, gates, reporting. Fetches transitions and priorities from JIRA
+      instead of asking.</td>
+      <td>A ticket prefix has no project yet</td>
     </tr>
     <tr>
       <td>/onboard-product</td>
-      <td>Die kurze Variante (5–15 min): nur was vom Projekt abweicht, plus die
-      Feature-/Testmethoden-Matrix. Holt die echten JIRA-Komponenten fürs Routing.</td>
-      <td>Ein Projekt deckt mehrere Produkte ab</td>
+      <td>The short version (5–15 min): only what differs from the project, plus the
+      feature/test-method matrix. Fetches the real JIRA components for routing.</td>
+      <td>One project covers several products</td>
     </tr>
     <tr>
       <td>/scaffold-suite</td>
-      <td>Erzeugt das Playwright-Projekt, das die Blaupause voraussetzt: package.json, eine
-      Config, deren Capture-Einstellungen die Evidence-Matrix sind, und eine erste laufende Smoke-Spec.</td>
-      <td>„Test assets: none yet"</td>
+      <td>Creates the Playwright project the blueprint assumes: package.json, a
+      config whose capture settings are the evidence matrix, and a first running smoke spec.</td>
+      <td>“Test assets: none yet”</td>
     </tr>
     <tr>
       <td>/re-board</td>
-      <td>Delta-Onboarding: vergleicht ein Bestandsprojekt mit dem aktuellen Template und bietet
-      nur die Lücke an — neue Felder (Secrets-Quelle, Versionsstempel), fehlende Dateien
-      (Flow-Map-Seed aus bisheriger Evidence), offene TODOs. Jede Änderung einzeln bestätigt,
-      danach Bridge-Refresh und neuer Stempel. Der Upgrade-Pfad für jedes Schema-Wachstum.</td>
-      <td>Nach einem Blueprint-Update; „Projekt aktualisieren"</td>
+      <td>Delta onboarding: compares an existing project with the current template and offers
+      only the gap — new fields (secrets source, version stamp), missing files
+      (flow-map seed from past evidence), open TODOs. Each change confirmed individually,
+      then a bridge refresh and a new stamp. The upgrade path for every schema growth.</td>
+      <td>After a blueprint update; “update project”</td>
     </tr>
     <tr>
       <td>/whats-new</td>
-      <td>Liest den Versionsstempel im PROJECT.md gegen die installierte Plugin-Version und rendert
-      die CHANGELOG-Abschnitte dazwischen — in der Sprache der Frage, mit dem Hinweis, welche
-      Änderung ein /re-board lohnt. Reine Orientierung, startet keine Arbeit.</td>
-      <td>„Was hat sich geändert?", nach einem Update</td>
+      <td>Reads the version stamp in PROJECT.md against the installed plugin version and renders
+      the CHANGELOG sections in between — in the language of the question, with a note on which
+      change makes a /re-board worthwhile. Orientation only, starts no work.</td>
+      <td>“What has changed?”, after an update</td>
     </tr>
     <tr>
       <td>/skill-review</td>
-      <td>Liest die <code>skills_used</code>-Nutzungsdaten und klassifiziert jeden installierten Skill
-      als used oder unknown — nie „unused": fehlende Daten sind unknown, kein Freigabegrund. Ohne
-      Daten ist alles unknown und die Coverage 0%. Read-only; ein Profil-Vorschlag
-      (full/standard/minimal/custom) bleibt ein Dry-run mit exakter Exclude-Liste, bis der Nutzer die
-      konkrete Liste ausdrücklich bestätigt — und greift nur in einer integrate-Installation.</td>
-      <td>„Welche Skills brauchen wir wirklich?"</td>
+      <td>Reads the <code>skills_used</code> usage data and classifies every installed skill
+      as used or unknown — never “unused”: missing data is unknown, not grounds for removal. With no
+      data at all everything is unknown and coverage 0%. Read-only; a profile proposal
+      (full/standard/minimal/custom) stays a dry run with an exact exclude list until the user explicitly
+      confirms the concrete list — and only applies in an integrate installation.</td>
+      <td>“Which skills do we really need?”</td>
     </tr>
     <tr>
       <td>/qa-report</td>
-      <td>Liest alle <code>execution_summary.json</code> zurück: Pass-Rate pro Produkt, P0/P1,
-      BLOCKED- und NO_TEST-Gründe, Routing-Qualität, Learning-Durchsatz. Nennt ausdrücklich,
-      was das Schema nicht hergibt.</td>
-      <td>„Wie läuft's?", Wochen- oder Sprintbericht</td>
+      <td>Reads every <code>execution_summary.json</code> back: pass rate per product, P0/P1,
+      BLOCKED and NO_TEST reasons, routing quality, learning throughput. Explicitly names
+      what the schema cannot tell.</td>
+      <td>“How's it going?”, weekly or sprint report</td>
     </tr>
     <tr>
       <td>/perf-analysis</td>
-      <td>Liest <code>execution_summary.json</code> (Timing-Felder), <code>run.json</code>,
-      <code>session-perf.log</code> und <code>evals/results/history.log</code>: Session-Dauer,
-      Phasen-Breakdown, Token-Verbrauch, Bottlenecks, Verbesserungsvorschläge. Read-only,
-      ehrliche „nicht berechenbar"-Meldungen.</td>
-      <td>„Warum ist das so langsam?", „Performance verbessern"</td>
+      <td>Reads <code>execution_summary.json</code> (timing fields), <code>run.json</code>,
+      <code>session-perf.log</code> and <code>evals/results/history.log</code>: session duration,
+      phase breakdown, token usage, bottlenecks, improvement suggestions. Read-only,
+      honest “cannot be computed” reports.</td>
+      <td>“Why is this so slow?”, “Improve performance”</td>
     </tr>
     <tr>
       <td>/retro-learn</td>
-      <td>Capture → Groom → Promote. Klassifiziert eine Überraschung nach Reichweite (Projekt,
-      Produkt, projektübergreifend) und befördert sie beim zweiten Auftreten in eine Regel oder
-      Projektdatei.</td>
-      <td>Session-Ende, oder wöchentlich zum Verdichten</td>
+      <td>Capture → Groom → Promote. Classifies a surprise by reach (project,
+      product, cross-project) and promotes it on its second occurrence into a rule or
+      project file.</td>
+      <td>End of session, or weekly to condense</td>
     </tr>
   </table>
 
-  <h3>Die 10 Spezialisten — vendored &amp; blueprint-adapted</h3>
+  <h3>The 10 specialists — vendored &amp; blueprint-adapted</h3>
   <p class="sub">
-    Aus <code>petrkindlmann/qa-skills</code> übernommen und überall dort angepasst, wo Upstream-Verhalten den Blueprint-Regeln widerspricht (Secrets-Fluss, Shadow-Disziplin, Stage-only, Report-Routing — die Änderungsliste steht in THIRD_PARTY_NOTICES.md). Sie gelten für
-    jedes onboardete Produkt; ihren Kontext bekommen sie über eine vorgemergte Bridge-Datei pro
-    Projekt und Produkt. qa-manager zieht einen davon, wenn die Feature-Matrix des Produkts es
-    vorgibt — nicht nach Gefühl.
+    Taken from <code>petrkindlmann/qa-skills</code> and adapted everywhere upstream behavior
+    conflicts with the blueprint's rules (secrets flow, shadow discipline, stage-only,
+    report routing — the change list is in THIRD_PARTY_NOTICES.md). They apply to
+    every onboarded product; they get their context via a pre-merged bridge file per
+    project and product. qa-manager pulls one of them in when the product's feature matrix calls for
+    it — not by gut feeling.
   </p>
   <table>
-    <tr><th>Skill</th><th>Wofür</th><th>Auslöser im Ticket</th></tr>
-    <tr><td>api-testing</td><td>REST und GraphQL: Schema-Validierung, Auth-Flows, CRUD-Lebenszyklus, Fehler- und Header-Prüfung, Pagination</td><td>Backend-Änderung ohne UI, öffentliche API</td></tr>
-    <tr><td>accessibility-testing</td><td>WCAG 2.2 AA mit axe-core, Tastatur-Audits, Screenreader, ARIA-Muster — plus die rechtliche Zuordnung (ADA, EAA)</td><td>UI mit externen Nutzern, Layout/Kontrast/ARIA</td></tr>
-    <tr><td>security-testing</td><td>OWASP Top 10 automatisiert: ZAP, Dependency-Scan, Semgrep, Auth-/Session-Tests, XSS/CSRF/SQLi-Muster</td><td>Auth, Eingabefelder, Upload, alles Security-geflaggte</td></tr>
-    <tr><td>visual-testing</td><td>Screenshot-Regression: Baselines verwalten, Diff-Schwellen justieren, dynamische Inhalte maskieren, Viewports</td><td>Layout- oder branding-kritische Änderung</td></tr>
-    <tr><td>risk-based-testing</td><td>Risikomatrix aus Auswirkung × Wahrscheinlichkeit, Failure-Mode-Analyse, Abdeckung auf Risikozonen abbilden</td><td>Release oder Epic — „wo überhaupt anfangen?"</td></tr>
-    <tr><td>bug-reproduction</td><td>Aus einem dünnen Report eine verifizierte, minimale, deterministische Repro machen — inklusive <code>git bisect</code> und Rot-vor-Grün-Regressionstest</td><td>Bug-Report ohne belastbare Schritte</td></tr>
-    <tr><td>test-reliability</td><td>Flaky-Tests zur Laufzeit heilen und klassifizieren: Selektor-Heilung, Quarantäne, konfidenzbewertete Reparatur</td><td>Ein Test war nur beim Retry grün</td></tr>
-    <tr><td>qa-metrics</td><td>Kennzahlen definieren und interpretieren: Coverage, Flakiness, Defect-Escape-Rate, MTTR, Quality Gates, realistische Zielwerte</td><td>Formeln und Zielwerte für /qa-report</td></tr>
-    <tr><td>test-case-management</td><td>Manuelle Testfälle in TestRail, Xray, Zephyr, Qase: Anatomie, Bulk-Import aus User Stories, Traceability, wann ein Fall automatisiert gehört</td><td>Manuelle Suite pflegen oder importieren</td></tr>
-    <tr><td>release-readiness</td><td>Go/No-Go anhand von Belegen: Checklisten, Smoke-Suite-Design, Rollback-Kriterien, Nachverifikation</td><td>Release statt Einzelticket</td></tr>
+    <tr><th>Skill</th><th>What for</th><th>Trigger in the ticket</th></tr>
+    <tr><td>api-testing</td><td>REST and GraphQL: schema validation, auth flows, CRUD lifecycle, error and header checks, pagination</td><td>Backend change without UI, public API</td></tr>
+    <tr><td>accessibility-testing</td><td>WCAG 2.2 AA with axe-core, keyboard audits, screen readers, ARIA patterns — plus the legal mapping (ADA, EAA)</td><td>UI with external users, layout/contrast/ARIA</td></tr>
+    <tr><td>security-testing</td><td>OWASP Top 10 automated: ZAP, dependency scan, Semgrep, auth/session tests, XSS/CSRF/SQLi patterns</td><td>Auth, input fields, upload, anything flagged security</td></tr>
+    <tr><td>visual-testing</td><td>Screenshot regression: manage baselines, tune diff thresholds, mask dynamic content, viewports</td><td>Layout- or branding-critical change</td></tr>
+    <tr><td>risk-based-testing</td><td>Risk matrix from impact × probability, failure mode analysis, map coverage onto risk zones</td><td>Release or epic — “where do we even start?”</td></tr>
+    <tr><td>bug-reproduction</td><td>Turn a thin report into a verified, minimal, deterministic repro — including <code>git bisect</code> and a red-before-green regression test</td><td>Bug report without reliable steps</td></tr>
+    <tr><td>test-reliability</td><td>Heal and classify flaky tests at runtime: selector healing, quarantine, confidence-scored repair</td><td>A test was only green on retry</td></tr>
+    <tr><td>qa-metrics</td><td>Define and interpret metrics: coverage, flakiness, defect escape rate, MTTR, quality gates, realistic targets</td><td>Formulas and targets for /qa-report</td></tr>
+    <tr><td>test-case-management</td><td>Manual test cases in TestRail, Xray, Zephyr, Qase: anatomy, bulk import from user stories, traceability, when a case should be automated</td><td>Maintain or import a manual suite</td></tr>
+    <tr><td>release-readiness</td><td>Go/no-go from evidence: checklists, smoke suite design, rollback criteria, post-deployment verification</td><td>A release instead of a single ticket</td></tr>
   </table>
   <div class="callout">
-    Sie sind fremder Code und nicht eingegrenzt. Zwei Beispiele aus dem Audit:
-    <code>release-readiness</code> operiert auf Produktions-Canary mit Auto-Rollback — beides in
-    dieser Blaupause hart verboten. <code>risk-based-testing</code> will in die Bridge-Datei
-    schreiben, die als read-only gilt. Und ihre Beschreibungen verweisen auf rund 24 Skills, die
-    es hier nicht gibt. Die Eingrenzung steht als offener Punkt auf der Liste; bis dahin ist
-    qa-manager die Instanz, die entscheidet, was von einem Spezialisten tatsächlich ausgeführt wird.
+    They are third-party code and not yet confined. Two examples from the audit:
+    <code>release-readiness</code> operates on production canaries with auto-rollback — both
+    strictly forbidden in this blueprint. <code>risk-based-testing</code> wants to write into the bridge file
+    that is considered read-only. And their descriptions reference about 24 skills that
+    do not exist here. Confinement is on the list as an open item; until then
+    qa-manager is the instance that decides what a specialist actually executes.
   </div>
 
-  <h3>Die 9 Subagents</h3>
+  <h3>The 9 subagents</h3>
   <table>
-    <tr><th>Subagent</th><th>Rolle</th><th>Werkzeuge</th></tr>
+    <tr><th>Subagent</th><th>Role</th><th>Tools</th></tr>
     <tr>
       <td>qa-manager</td>
-      <td>Der Dirigent: liest das Ticket, routet zu Projekt und Produkt, entscheidet die Strategie
-      anhand der Feature-Matrix, delegiert an die anderen — und prüft am Ende, ob Evidence und
-      Deklaration wirklich da sind. Fährt selbst keinen Browser und schreibt keine Specs.</td>
+      <td>The conductor: reads the ticket, routes to project and product, decides the strategy
+      from the feature matrix, delegates to the others — and at the end checks that evidence and
+      declaration are really there. Drives no browser itself and writes no specs.</td>
       <td>Read, Write, Edit, Grep, Glob, Bash, Task, atlassian</td>
     </tr>
     <tr>
       <td>test-executor[-cheap|-deep]</td>
-      <td>Drei Lanes für exploratives Testen und Reproduktion über Playwright MCP:
-      cheap für Fast Path, standard für komplexe Arbeit, deep für high/eskaliert.
-      Isolierte Browser-Session, Accessibility-Snapshot zur Navigation und Screenshots nur als Beweis.</td>
+      <td>Three lanes for exploratory testing and reproduction via Playwright MCP:
+      cheap for the fast path, standard for complex work, deep for high/escalated.
+      Isolated browser session, accessibility snapshot for navigation, screenshots only as proof.</td>
       <td>playwright (MCP), Read, Write, Bash</td>
     </tr>
     <tr>
       <td>test-automator[-cheap|-deep]</td>
-      <td>Drei Lanes für Specs über den CLI-Runner — rund 4× günstiger als derselbe Ablauf
-      turn-by-turn über MCP. Arbeitet im Framework der Suite (Playwright oder WebdriverIO,
-      inkl. Selenium Grid und Appium-Mobile über WDIO).</td>
+      <td>Three lanes for specs via the CLI runner — about 4× cheaper than the same flow
+      turn-by-turn over MCP. Works in the suite's framework (Playwright or WebdriverIO,
+      incl. Selenium Grid and Appium mobile via WDIO).</td>
       <td>Bash, Read, Write, Edit, Grep, Glob</td>
     </tr>
     <tr>
       <td>failure-analyst</td>
-      <td>Triagiert jeden FAIL vor dem Bug-Report: Produkt falsch, oder Test veraltet? Kommt
-      <strong>absichtlich ohne Write und Edit</strong> — ein Agent, der einen roten Test grün
-      schreiben kann, ist genau der Fehlermodus, den diese Rolle verhindert.</td>
+      <td>Triages every FAIL before the bug report: product wrong, or test outdated? Comes
+      <strong>deliberately without Write and Edit</strong> — an agent that can write a red test
+      green is exactly the failure mode this role prevents.</td>
       <td>Read, Grep, Glob, Bash, atlassian</td>
     </tr>
     <tr>
       <td>bug-reporter</td>
-      <td>Verwandelt eine Fundstelle in einen Report nach der exakten Projekt- oder
-      Produktvorlage, mit Severity→Priorität-Mapping und Evidence-Referenzen statt
-      eingebetteter Bilder.</td>
+      <td>Turns a finding into a report following the exact project or
+      product template, with a severity→priority mapping and evidence references instead of
+      embedded images.</td>
       <td>Read, Write, Grep, Glob, atlassian</td>
     </tr>
   </table>
   <p class="note">
-    Die Werkzeuglisten sind Absicht: test-executor hat keinen Zugriff auf JIRA, bug-reporter
-    keinen auf einen Browser, failure-analyst kann nichts editieren. Wer nicht schreiben können
-    muss, kann es nicht.
+    The tool lists are deliberate: test-executor has no access to JIRA, bug-reporter
+    none to a browser, failure-analyst cannot edit anything. What must not write
+    cannot write.
   </p>
 </section>
 
 <section>
-  <h2>Wissensarchitektur</h2>
-  <pre><code><span class="c"># Projektweites Wissen oben, Abweichungen unten</span>
+  <h2>Knowledge architecture</h2>
+  <pre><code><span class="c"># Project-wide knowledge at the top, deltas at the bottom</span>
 projects/SHOP/
-├── PROJECT.md              <span class="c">← gilt für ALLE Produkte, enthält die Routing-Registry</span>
+├── PROJECT.md              <span class="c">← applies to ALL products, holds the routing registry</span>
 ├── learnings.md
-├── flow-map.md             <span class="c">← kuratiert durch /retro-learn: Flows, Anker, Nachbarn</span>
+├── flow-map.md             <span class="c">← curated by /retro-learn: flows, anchors, neighbors</span>
 ├── templates/bug-report.md
-└── products/               <span class="c">← fehlt bei Ein-Produkt-Projekten komplett</span>
-    ├── STOREFRONT/           <span class="c">← nennt NUR, was abweicht (~60 Zeilen)</span>
+└── products/               <span class="c">← completely absent in single-product projects</span>
+    ├── STOREFRONT/           <span class="c">← lists ONLY what differs (~60 lines)</span>
     └── ADMIN/</code></pre>
   <p class="note">
-    Der Kniff, der ~30 Dateiänderungen erspart hat: wo eine Regel <code>PROJECT.md</code> sagt,
-    ist die <em>effektive</em> Projektdatei gemeint — Projektdatei, gemergt mit der gerouteten
-    Produktdatei. Kein geroutetes Produkt heißt: nichts gemergt, Verhalten exakt wie vorher.
+    The trick that saved ~30 file changes: wherever a rule says <code>PROJECT.md</code>,
+    it means the <em>effective</em> project file — the project file merged with the routed
+    product file. No routed product means: nothing merged, behavior exactly as before.
   </p>
 
-  <h3>Routing-Leiter</h3>
+  <h3>Routing ladder</h3>
   <table>
-    <tr><th>Stufe</th><th>Signal</th></tr>
-    <tr><td>1</td><td>Produkt explizit genannt (<code>--product=ADMIN</code> oder „teste das im Admin")</td></tr>
-    <tr><td>2</td><td>Genau ein Treffer über die JIRA-Komponente</td></tr>
-    <tr><td>3</td><td>Genau ein Treffer über ein Label (exakt, kein Beinahe-Treffer)</td></tr>
-    <tr><td>4</td><td>Treffer auf einen <code>project-wide</code>-Eintrag → Infra-Ticket, nur Projektdatei</td></tr>
-    <tr><td>5</td><td>Sekundärsignale: Epic/Parent, Fix Version, geänderte MR-Pfade</td></tr>
-    <tr><td>6</td><td>Kein Treffer, aber ein Default deklariert → Default mit niedriger Konfidenz</td></tr>
-    <tr><td>7</td><td>Mehrdeutig oder unbekannt → nachfragen; headless: BLOCKED</td></tr>
+    <tr><th>Step</th><th>Signal</th></tr>
+    <tr><td>1</td><td>Product named explicitly (<code>--product=ADMIN</code> or “test that in the admin”)</td></tr>
+    <tr><td>2</td><td>Exactly one match via the JIRA component</td></tr>
+    <tr><td>3</td><td>Exactly one match via a label (exact, no near match)</td></tr>
+    <tr><td>4</td><td>Match on a <code>project-wide</code> entry → infra ticket, project file only</td></tr>
+    <tr><td>5</td><td>Secondary signals: epic/parent, fix version, changed MR paths</td></tr>
+    <tr><td>6</td><td>No match, but a default declared → default with low confidence</td></tr>
+    <tr><td>7</td><td>Ambiguous or unknown → ask; headless: BLOCKED</td></tr>
   </table>
   <p class="note">
-    Ein Default löst <strong>Stille</strong> auf, niemals einen <strong>Konflikt</strong> — sonst
-    testet der Agent überzeugend grün am falschen Produkt vorbei. Und das Routing lernt: eine vom
-    Menschen formulierte Regel landet sofort in der Registry, ein Einzelfall nach der zweiten
-    gleichartigen Auflösung, eine Ausnahme nie.
+    A default resolves <strong>silence</strong>, never a <strong>conflict</strong> — otherwise
+    the agent confidently tests green on the wrong product. And the routing learns: a rule
+    phrased by a human lands in the registry immediately, a one-off after its second
+    identical resolution, an exception never.
   </p>
 
-  <h3>Was ein Produkt überschreiben darf</h3>
+  <h3>What a product may override</h3>
   <table>
-    <tr><th>Bereich</th><th>Override</th></tr>
-    <tr><td>Umgebungen, Testuser, Test-Assets, Feature-Matrix, Gotchas, Bug-Template, Deploy-Schritte</td><td><span class="pill ok">ja</span></td></tr>
-    <tr><td>Quality Gates (Pass-Rate, P0/P1, Coverage)</td><td><span class="pill warn">nur strenger</span></td></tr>
-    <tr><td>„Agent darf deployen", „Agent darf MRs kommentieren"</td><td><span class="pill warn">nur einschränkend</span></td></tr>
-    <tr><td>JIRA-Transitions, Report-Format, Evidence-Pflicht, alle Sicherheitsregeln</td><td><span class="pill never">nie</span></td></tr>
+    <tr><th>Area</th><th>Override</th></tr>
+    <tr><td>Environments, test users, test assets, feature matrix, gotchas, bug template, deploy steps</td><td><span class="pill ok">yes</span></td></tr>
+    <tr><td>Quality gates (pass rate, P0/P1, coverage)</td><td><span class="pill warn">stricter only</span></td></tr>
+    <tr><td>“Agent may deploy”, “Agent may comment on MRs”</td><td><span class="pill warn">restricting only</span></td></tr>
+    <tr><td>JIRA transitions, report format, mandatory evidence, all safety rules</td><td><span class="pill never">never</span></td></tr>
   </table>
   <p class="note">
-    Die zwei gefährlichsten sind strukturell gelöst statt überwacht: deploy-to-stage und
-    report-to-jira lesen Deploy-Berechtigung und Transitions ausschließlich aus der Projektdatei.
-    Keine Produktdatei kann sie erteilen — egal, was ein Merge produziert.
+    The two most dangerous are solved structurally rather than monitored: deploy-to-stage and
+    report-to-jira read deploy permission and transitions exclusively from the project file.
+    No product file can grant them — no matter what a merge produces.
   </p>
 </section>
 
 <section>
-  <h2>Was mechanisch erzwungen wird</h2>
-  <p class="sub">Der wichtigste Teil, weil Regeln beratend sind und Hooks nicht.</p>
+  <h2>What is mechanically enforced</h2>
+  <p class="sub">The most important part, because rules are advisory and hooks are not.</p>
   <table>
-    <tr><th>Mechanik</th><th>Erzwingt</th><th>Fixtures</th></tr>
-    <tr><td>pre-tool-guard</td><td>Keine Schreibzugriffe auf <code>.env*</code> oder secret-benannte Pfade, kein <code>rm -rf</code>, kein Force-Push; Secret-Lesungen sind ein menschlicher Opt-in (<code>secrets_read</code> in <code>.qa-guard.json</code>), Agenten-Edits daran sind verweigert; <code>qa-secrets.mjs</code> injiziert Zugangsdaten wertefrei in Runner und MCP-Server</td><td>107</td></tr>
-    <tr><td>stop-evidence-check</td><td>Kein Verdikt ohne <code>execution_summary.json</code> — und ohne deklarierte <code>learnings</code>. Block-Meldungen tragen maschinenlesbare Marker (<code>QA_EVIDENCE_MISSING:</code> / <code>QA_LEARNINGS_MISSING:</code>), damit eine Pipeline eine Policy-Verletzung von einem Crash unterscheiden kann</td><td>20</td></tr>
-    <tr><td>session-start</td><td>Orientierung: Projekte samt Produkten, ungegroomte Learnings, Secrets-Status — Env-Datei fehlt, oder Keychain-Statuszeile (<code>n/m keys present</code>, Fehlende namentlich), plus JIRA-PAT aus der Keychain in die Session exportiert. MCP-Config-Scan (Dedupe, unmaskierte Secrets, Erstlauf-Hinweis). Im Plugin-Modus injiziert er die <code>CLAUDE.md</code> des Plugins <strong>wortwörtlich</strong> — ein Router-Text, keine Drift zwischen Installationsarten</td><td>62</td></tr>
-    <tr><td>post-jira-audit</td><td>Jeder JIRA-Schreibzugriff landet im Audit-Log, auch headless</td><td>—</td></tr>
-    <tr><td>install.sh</td><td>Kein Hook, gleicher Anspruch: Namespacing, Pfad-Rewriting, Idempotenz, Uninstall, Plugin-Verdrahtung, Self-Setup, MCP-Adoption — je Harness eine eigene Batterie</td><td>119</td></tr>
-    <tr><td>context-budget</td><td>Die immer geladene Ebene bleibt im Budget — gemessen statt behauptet</td><td>Check</td></tr>
+    <tr><th>Mechanism</th><th>Enforces</th><th>Fixtures</th></tr>
+    <tr><td>pre-tool-guard</td><td>No writes to <code>.env*</code> or secret-named paths, no <code>rm -rf</code>, no force-push; secret reads are a human opt-in (<code>secrets_read</code> in <code>.qa-guard.json</code>), agent edits to it are refused; <code>qa-secrets.mjs</code> injects credentials value-free into runners and MCP servers</td><td>107</td></tr>
+    <tr><td>stop-evidence-check</td><td>No verdict without <code>execution_summary.json</code> — and without declared <code>learnings</code>. Block messages carry machine-readable markers (<code>QA_EVIDENCE_MISSING:</code> / <code>QA_LEARNINGS_MISSING:</code>) so a pipeline can tell a policy violation from a crash</td><td>20</td></tr>
+    <tr><td>session-start</td><td>Orientation: projects with their products, ungroomed learnings, secrets status — missing env file, or keychain status line (<code>n/m keys present</code>, missing ones by name), plus the JIRA PAT exported from the keychain into the session. MCP config scan (dedupe, unmasked secrets, first-run hint). In plugin mode it injects the plugin's <code>CLAUDE.md</code> <strong>verbatim</strong> — one router text, no drift between install modes</td><td>62</td></tr>
+    <tr><td>post-jira-audit</td><td>Every JIRA write lands in the audit log, headless too</td><td>—</td></tr>
+    <tr><td>install.sh</td><td>Not a hook, same standard: namespacing, path rewriting, idempotency, uninstall, plugin wiring, self-setup, MCP adoption — its own battery per harness</td><td>119</td></tr>
+    <tr><td>context-budget</td><td>The always-loaded layer stays within budget — measured, not asserted</td><td>Check</td></tr>
   </table>
   <div class="callout">
-    <strong>Warum es diese Fixtures gibt.</strong> Der Guard-Hook hat über die gesamte Lebenszeit
-    des Repos nichts blockiert: die Python-Ausdrücke waren falsch gequotet, der Parser scheiterte
-    still, jede Prüfung wurde übersprungen — und in der Review sah alles korrekt aus. Seitdem
-    gilt: ein Hook ist erst dann Durchsetzung, wenn ein Test beweist, dass er blockt. Dieselbe
-    Regel hat später weitere echte Fehler gefunden, darunter einen, der jeden Skill beim zweiten
-    Installationslauf als Kollision meldete.
+    <strong>Why these fixtures exist.</strong> For the repo's entire lifetime the guard hook
+    blocked nothing: the Python expressions were misquoted, the parser failed
+    silently, every check was skipped — and in review everything looked correct. Since then
+    the rule is: a hook is only enforcement once a test proves it blocks. The same
+    rule later found more real bugs, including one that reported every skill as a collision
+    on the second install run.
   </div>
 </section>
 
 <section>
-  <h2>Die fünf Verdikte</h2>
+  <h2>The five verdicts</h2>
   <table>
-    <tr><th>Verdikt</th><th>Bedeutung</th><th>Folgen</th></tr>
-    <tr><td>PASS</td><td>Getestet, keine Befunde</td><td>Kommentar + PASS-Transition, Screenshot als Beleg</td></tr>
-    <tr><td>FAIL</td><td>Mindestens ein Befund; failure-analysis hat die Klasse geliefert</td><td>Bug-Report bei <code>product-defect</code>; Transition je nach Klasse</td></tr>
-    <tr><td>BLOCKED</td><td>Der Test lief nie: Umgebung weg, Fix nicht deployed, Routing unauflösbar</td><td>Kommentar mit Grund und Entblocker; nicht in der Pass-Rate</td></tr>
-    <tr><td>NEEDS_REVIEW</td><td>Der Test ist vermutlich selbst veraltet (<code>test-outdated</code>/<code>test-brittle</code>)</td><td>Vorschlag an einen Menschen, keine Transition, zählt wie FAIL in der Pass-Rate; headless unerreichbar</td></tr>
-    <tr><td>NO_TEST</td><td>Testwerkzeuge liefen, aber kein Test wurde abgeschlossen — Untersuchung, Flaky-Debugging, früher Abbruch</td><td>Ein-Satz-<code>no_test_reason</code>, kein JIRA-Post, aus der Pass-Rate ausgenommen — der explizite Ausweg aus dem Stop-Hook statt stillem Session-Ende</td></tr>
+    <tr><th>Verdict</th><th>Meaning</th><th>Consequences</th></tr>
+    <tr><td>PASS</td><td>Tested, no findings</td><td>Comment + PASS transition, screenshot as evidence</td></tr>
+    <tr><td>FAIL</td><td>At least one finding; failure-analysis has supplied the class</td><td>Bug report on <code>product-defect</code>; transition per class</td></tr>
+    <tr><td>BLOCKED</td><td>The test never ran: environment gone, fix not deployed, routing unresolvable</td><td>Comment with reason and unblocker; not counted in the pass rate</td></tr>
+    <tr><td>NEEDS_REVIEW</td><td>The test itself is probably outdated (<code>test-outdated</code>/<code>test-brittle</code>)</td><td>A proposal to a human, no transition, counts like FAIL in the pass rate; unreachable headless</td></tr>
+    <tr><td>NO_TEST</td><td>Test tooling ran, but no test completed — investigation, flaky debugging, early abort</td><td>One-sentence <code>no_test_reason</code>, no JIRA post, excluded from the pass rate — the explicit way out of the stop hook instead of a quiet session end</td></tr>
   </table>
 </section>
 
 <section>
-  <h2>Shadow-Modus — standardmäßig an</h2>
+  <h2>Shadow mode — on by default</h2>
   <p class="sub">
-    Shadow-Modus ist <strong>Default</strong>: der Agent testet vollständig, erzeugt Evidence,
-    komponiert Kommentar und Transition — und legt sie als Vorschlag ab, statt sie zu posten.
-    Schreibzugriff wird explizit erteilt: <code>QA_AGENT_SHADOW=0</code> oder
-    <code>Shadow mode: off</code> im Projektfile. Prüfbar am bestehenden Audit-Log: ein
-    Shadow-Lauf mit einem Eintrag darin ist ein Bug, keine Ermessensfrage.
+    Shadow mode is the <strong>default</strong>: the agent tests fully, produces evidence,
+    composes comment and transition — and files them as a proposal instead of posting.
+    Write access is granted explicitly: <code>QA_AGENT_SHADOW=0</code> or
+    <code>Shadow mode: off</code> in the project file. Verifiable against the existing audit log: a
+    shadow run with an entry in it is a bug, not a matter of discretion.
   </p>
   <div class="callout">
-    Das größte Adoptionsrisiko ist nicht Technik, sondern Vertrauen. Ein Agent, der ab Tag eins
-    in echte Tickets schreibt, wird beim ersten falschen Reopen abgeschaltet — und dann ist die
-    Blaupause politisch tot, egal wie gut sie ist. Zwei Wochen Shadow-Betrieb sind der Nachweis,
-    den ein Team braucht, um Schreibrechte zu vergeben.
+    The biggest adoption risk is not technology but trust. An agent that writes into real tickets
+    from day one gets switched off at the first wrong reopen — and then the
+    blueprint is politically dead, no matter how good it is. Two weeks of shadow operation are the proof
+    a team needs before handing out write access.
   </div>
 </section>
 
 <section>
-  <h2>Secrets: einmal in die Keychain, nie wieder im Chat</h2>
+  <h2>Secrets: into the keychain once, never in the chat again</h2>
   <p class="sub">
-    Schluss mit Passwort-Chaos: der Agent sieht, welche Logins er <em>hat</em> — statt zu fragen
-    („du hast die Daten doch") oder sich welche auszudenken. Deklariert ein Projekt
-    <code>Secrets source: keychain</code>, kommen alle Werte aus der macOS Schlüsselbundverwaltung:
-    nie im Chat, nie in Dateien im Repo, nie auf GitHub.
+    No more password chaos: the agent sees which logins it <em>has</em> — instead of asking
+    (“you have the credentials, don't you?”) or making them up. When a project declares
+    <code>Secrets source: keychain</code>, all values come from the macOS keychain:
+    never in the chat, never in files in the repo, never on GitHub.
   </p>
   <div class="card">
-    <h4>🔑 Testuser-Logins</h4>
-    <p>Der Resolver (<code>resolve-secrets.sh</code>) schreibt <code>.env.playwright-secrets</code>
-    aus der Keychain — beim Onboarding, bei <code>/re-board</code> und wann immer die Datei fehlt.
-    Der Session-Start zeigt eine Statuszeile (<code>6/6 Logins vorhanden</code>, Fehlende namentlich).
-    Das Einrichten macht der Agent selbst: <strong>Import</strong> räumt früher handgetippte Werte
-    aus der Env-Datei in die Keychain um, <strong>Capture</strong> fragt jedes fehlende Passwort über
-    einen nativen macOS-Dialog ab — Eingabe verdeckt, ins Fenster getippt, nie in den Chat. Der Agent
-    sieht zu keinem Zeitpunkt einen Wert, er meldet nur: „3 gespeichert, 1 fehlt noch."</p>
+    <h4>🔑 Test user logins</h4>
+    <p>The resolver (<code>resolve-secrets.sh</code>) writes <code>.env.playwright-secrets</code>
+    from the keychain — at onboarding, at <code>/re-board</code> and whenever the file is missing.
+    Session start shows a status line (<code>6/6 logins present</code>, missing ones by name).
+    The agent sets this up itself: <strong>Import</strong> moves previously hand-typed values
+    out of the env file into the keychain, <strong>Capture</strong> prompts for each missing password via
+    a native macOS dialog — input hidden, typed into the window, never into the chat. The agent
+    never sees a value at any point, it only reports: “3 saved, 1 still missing.”</p>
   </div>
   <div class="card">
-    <h4>☁️ JIRA-PAT (Data Center)</h4>
-    <p>Dieselbe Mechanik eine Ebene höher: Service <code>JIRA_PAT_&lt;jira-host&gt;</code>, Account
-    <code>jira</code>. Der Session-Start-Hook exportiert den Token pro Projekt in die Session
-    (<code>$CLAUDE_ENV_FILE</code>) — er liegt in <strong>keiner</strong> Datei und braucht keinen
-    globalen Export in der <code>~/.zshrc</code>. CI/Nicht-macOS: <code>JIRA_PERSONAL_TOKEN</code>
-    wie gehabt, der gewinnt immer.</p>
+    <h4>☁️ JIRA PAT (Data Center)</h4>
+    <p>The same mechanism one level up: service <code>JIRA_PAT_&lt;jira-host&gt;</code>, account
+    <code>jira</code>. The session-start hook exports the token per project into the session
+    (<code>$CLAUDE_ENV_FILE</code>) — it lives in <strong>no</strong> file and needs no
+    global export in <code>~/.zshrc</code>. CI/non-macOS: <code>JIRA_PERSONAL_TOKEN</code>
+    as always, which always wins.</p>
   </div>
-  <pre><code><span class="c"># einmalig pro Passwort — der Service-Name ist der KOMPLETTE</span>
-<span class="c"># Secret-Key aus PROJECT.md → „Test users" → Spalte „Env/secret key",</span>
-<span class="c"># nicht nur das Projekt-Kürzel:</span>
+  <pre><code><span class="c"># once per password — the service name is the COMPLETE</span>
+<span class="c"># secret key from PROJECT.md → “Test users” → column “Env/secret key”,</span>
+<span class="c"># not just the project prefix:</span>
 security add-generic-password -s <span class="a">SHOP_QA_STANDARD_PASSWORD</span> -a qa -w</code></pre>
   <p class="note">
-    Rotation oder neuer Testuser? Der Agent meldet den fehlenden Key namentlich und fragt per
-    Dialog nach. <code>Secrets source: env-file</code> (Handpflege) bleibt der Default — Keychain
-    ist eine Projektentscheidung, gefragt beim Onboarding, in zwei Minuten nachgerüstet via
+    Rotation or a new test user? The agent reports the missing key by name and prompts via
+    dialog. <code>Secrets source: env-file</code> (manual care) remains the default — keychain
+    is a per-project decision, asked at onboarding, retrofitted in two minutes via
     <code>/re-board</code>.
   </p>
 </section>
 
 <section>
-  <h2>Der Lernkreislauf</h2>
+  <h2>The learning loop</h2>
   <div class="card">
-    <h4><span class="num">→</span>Capture wird erzwungen</h4>
-    <p>Jeder Lauf deklariert im Summary, was gelernt wurde — oder in einem Satz, warum nichts
-    anfiel. Fehlt die Deklaration, blockt der Stop-Hook.</p>
+    <h4><span class="num">→</span>Capture is enforced</h4>
+    <p>Every run declares in its summary what was learned — or in one sentence why nothing
+    came up. If the declaration is missing, the stop hook blocks.</p>
   </div>
   <div class="card">
-    <h4><span class="num">→</span>Grooming wird sichtbar</h4>
-    <p>Der Session-Start meldet die Zahl ungegroomter Einträge, damit kein Rückstau still anwächst.</p>
+    <h4><span class="num">→</span>Grooming is visible</h4>
+    <p>Session start reports the number of ungroomed entries so no backlog grows silently.</p>
   </div>
   <div class="card">
-    <h4><span class="num">→</span>Promotion ist das Ziel</h4>
-    <p>Zweimal gesehen heißt: rein in eine Regel, eine Projekt- oder Produktdatei — dort wird es
-    automatisch geladen und nie wieder erklärt. Die Feature-Matrix wird nachgezogen: eine
-    veraltete Matrix ist schlechter als keine, weil sie belegt aussieht. Flow-Wissen — welche
-    Bereiche der App wie zusammenhängen — wandert in die <strong>Flow-Map</strong>
-    (<code>flow-map.md</code>): <code>/retest-bug</code> zielt seine Regressions-Sweeps aus den
-    dort kuratierten Nachbar-Flows, statt zu raten.</p>
+    <h4><span class="num">→</span>Promotion is the goal</h4>
+    <p>Seen twice means: into a rule, a project or product file — there it is
+    loaded automatically and never explained again. The feature matrix is refreshed too: an
+    outdated matrix is worse than none, because it looks proven. Flow knowledge — which
+    areas of the app connect how — moves into the <strong>flow map</strong>
+    (<code>flow-map.md</code>): <code>/retest-bug</code> aims its regression sweeps at the
+    neighboring flows curated there, instead of guessing.</p>
   </div>
 </section>
 
 <section>
-  <h2>Getestet, geschrieben, oder nichts von beidem</h2>
-  <p class="sub">Die für einen Piloten wichtigste Tabelle: was hier steht, ist nicht überall gleich gut abgesichert.</p>
+  <h2>Tested, written, or neither</h2>
+  <p class="sub">The table that matters most for a pilot: what is listed here is not equally well secured everywhere.</p>
   <table>
-    <tr><th>Bereich</th><th>Absicherung</th></tr>
-    <tr><td>Hooks (Guard, Stop, SessionStart)</td><td>16 Suites mit &gt;1.000 Assertions — jede Regel mit eigenem Fall</td></tr>
-    <tr><td>Installer (Integrate, Plugin, Self-Setup, Uninstall, MCP-Adoption)</td><td>323 Fixtures — end-to-end gegen ein Wegwerf-Repo, beide Harnesses</td></tr>
-    <tr><td>Kontextkosten</td><td>gemessen — Budget-Check, 7.040 von 8.400 Token belegt</td></tr>
-    <tr><td>Semantik (Routing, Merge, versiegelte Felder, Failure-Klassen, Execution-Modes)</td><td>46 Eval-Cases — ein eigenes Skript fährt sie über <code>claude -p</code> oder OpenRouter</td></tr>
-    <tr><td>Ein echtes Projekt, ein echtes Ticket</td><td><strong>nie</strong> — genau das ist der Pilot</td></tr>
+    <tr><th>Area</th><th>Safeguard</th></tr>
+    <tr><td>Hooks (guard, stop, sessionStart)</td><td>16 suites with &gt;1,000 assertions — every rule with its own case</td></tr>
+    <tr><td>Installer (integrate, plugin, self-setup, uninstall, MCP adoption)</td><td>323 fixtures — end-to-end against a throwaway repo, both harnesses</td></tr>
+    <tr><td>Context cost</td><td>measured — budget check, 7,040 of 8,400 tokens used</td></tr>
+    <tr><td>Semantics (routing, merge, sealed fields, failure classes, execution modes)</td><td>46 eval cases — a dedicated script runs them via <code>claude -p</code> or OpenRouter</td></tr>
+    <tr><td>One real project, one real ticket</td><td><strong>never</strong> — that is exactly what the pilot is for</td></tr>
   </table>
   <p class="note">
-    Der erste gelaufene Eval-Case war lehrreich: die Antwort war präziser als der Grader — sie
-    las zusätzlich <code>memory/INDEX.md</code>, was die Lookup-Policy vorschreibt. Ein Grader,
-    der eine richtige Antwort durchfallen lässt, ist kaputt und wurde nachgeschärft. Genau dafür
-    ist ein erster Lauf da.
+    The first eval case that ran was instructive: the answer was more precise than the grader — it
+    additionally read <code>memory/INDEX.md</code>, which the lookup policy prescribes. A grader that
+    fails a correct answer is broken and was sharpened afterwards. That is exactly what
+    a first run is for.
   </p>
 </section>
 
 <section>
-  <h2>MCP-Server</h2>
+  <h2>MCP servers</h2>
   <p class="sub">
-    Kein festes Limit, sondern ein deklariertes Register: <code>.mcp.json</code> ist die
-    Verdrahtung, die Tabelle in der Regel die Begründung. Steht ein Server nur in einem von
-    beiden, ist das ein Befund. Der Agent fügt nie selbst einen hinzu — er schlägt vor, der
-    Mensch entscheidet.
+    Not a fixed limit but a declared register: <code>.mcp.json</code> is the
+    wiring, the table in the rule the rationale. If a server appears in only one of
+    the two, that is a finding. The agent never adds one itself — it proposes, the
+    human decides.
   </p>
   <table>
-    <tr><th>Server</th><th>Warum im Budget</th></tr>
-    <tr><td>playwright</td><td>Ohne Browser kein UI-Test. Läuft <code>--isolated --headless --secrets</code>.</td></tr>
-    <tr><td>atlassian</td><td>Tickets rein, Ergebnisse raus — die ganze Prämisse ist ticketgetrieben.</td></tr>
+    <tr><th>Server</th><th>Why it's in the budget</th></tr>
+    <tr><td>playwright</td><td>No UI testing without a browser. Runs <code>--isolated --headless --secrets</code>.</td></tr>
+    <tr><td>atlassian</td><td>Tickets in, results out — the whole premise is ticket-driven.</td></tr>
   </table>
   <p class="note">
-    <strong>Ein CLI ist kein Server.</strong> Eine Pipeline zu triggern (<code>gh</code>,
-    <code>glab</code>, <code>curl</code>) ist ein Bash-Kommando, das im Projektfile steht — kein
-    Grund für einen dritten MCP-Server. /deploy-to-stage prüft dieses Feld vorab und meldet
-    BLOCKED, wenn es fehlt, statt sich ein plausibel aussehendes Kommando auszudenken.
+    <strong>A CLI is not a server.</strong> Triggering a pipeline (<code>gh</code>,
+    <code>glab</code>, <code>curl</code>) is a bash command that lives in the project file — no
+    reason for a third MCP server. /deploy-to-stage checks this field up front and reports
+    BLOCKED when it is missing, instead of inventing a plausible-looking command.
   </p>
   <p class="note">
-    <strong>Credential-Server sind erlaubt, aber mit Auflage.</strong> Ein Vault-MCP darf eine
-    Referenz für das Tool auflösen, das sie braucht — und nie einen Wert ins Transkript, in eine
-    Datei, ein Ticket oder ein Artefakt bringen. Auf macOS ist dafür meist gar kein Server nötig:
-    die Keychain-Integration (siehe oben) liefert Testuser-Logins und den JIRA-PAT, und
-    Browser-Logins laufen weiterhin über die <code>--secrets</code>-Maskierung.
+    <strong>Credential servers are allowed, but with conditions.</strong> A vault MCP may
+    resolve a reference for the tool that needs it — and must never bring a value into the transcript, a
+    file, a ticket or an artifact. On macOS no server is usually needed at all:
+    the keychain integration (see above) supplies test user logins and the JIRA PAT, and
+    browser logins continue to run through the <code>--secrets</code> masking.
   </p>
 </section>
 
 <section>
-  <h2>Was kostet der Betrieb?</h2>
+  <h2>What does running it cost?</h2>
   <p class="sub">
-    Das Plugin ist kostenlos. Das Git-Repo wird genau zweimal kontaktiert: bei der
-    Installation und beim expliziten Update. Alles andere läuft lokal; die einzigen
-    Netzwerk-Ziele im Betrieb sind <strong>dein JIRA</strong> und <strong>deine Stage</strong>.
-    Keine Telemetrie, keine Lizenz-Checks.
+    The plugin is free. The git repo is contacted exactly twice: at
+    installation and at an explicit update. Everything else runs locally; the only
+    network targets in operation are <strong>your JIRA</strong> and <strong>your stage</strong>.
+    No telemetry, no license checks.
   </p>
   <p class="sub">
-    Die echten Kosten sind <strong>Modell-Tokens</strong>. Die immer geladene Ebene ist
-    gemessen (~7.040 Tokens) und gedeckelt; Skills und Detailregeln laden bei Bedarf.
-    Learnings werden ticketbezogen durchsucht, rohe Evidence nicht eingelesen, und
-    einfache Tickets überspringen die Manager-Ebene. Eine versiegelte Run-Capsule
-    ersetzt bei jedem weiteren Agenten-Spawn das erneute Lesen und Mergen des
-    Projektkontexts. Die Modell-Lane wählt pro Branch: Fast/low → cheap, komplex
-    low/medium → standard, high/eskaliert → deep. Claude bildet das auf
-    haiku/sonnet/opus ab; opencode erbt ohne Overrides oder nutzt die unter
-    <code>/model-setup</code> konfigurierten Modelle und Varianten.
+    The real cost is <strong>model tokens</strong>. The always-loaded layer is
+    measured (~7,040 tokens) and capped; skills and detail rules load on demand.
+    Learnings are searched per ticket, raw evidence is never read in, and
+    simple tickets skip the manager layer. A sealed run capsule
+    replaces re-reading and re-merging the project context at every further agent spawn. The model
+    lane is chosen per branch: fast/low → cheap, complex
+    low/medium → standard, high/escalated → deep. Claude maps this onto
+    haiku/sonnet/opus; opencode inherits without overrides or uses the models and variants configured under
+    <code>/model-setup</code>.
   </p>
   <table>
-    <tr><th>Kostentreiber</th><th>Gegenmaßnahme</th></tr>
-    <tr><td>Browser-Snapshot-Verlauf</td><td>isolierter Execution-Subagent; Modell-Lane nach Risiko (haiku/sonnet/opus bzw. Consumer-Override)</td></tr>
-    <tr><td>wiederholtes Intake/Routing</td><td>Fast Path bzw. Manager-Handoff mit fertigen Artefakten</td></tr>
-    <tr><td>Tests auf altem/fehlendem Build</td><td>Readiness vor jeder Stage-Aktion</td></tr>
-    <tr><td>wachsende Lern- und Rohdaten</td><td>16-KB-Grooming, verdichtete Promotion, Raw-Read-Denys</td></tr>
-    <tr><td>wiederholte Flows</td><td>vorhandene Specs über den CLI-Runner</td></tr>
+    <tr><th>Cost driver</th><th>Countermeasure</th></tr>
+    <tr><td>Browser snapshot history</td><td>isolated execution subagent; model lane by risk (haiku/sonnet/opus or consumer override)</td></tr>
+    <tr><td>repeated intake/routing</td><td>fast path, or manager handoff with finished artifacts</td></tr>
+    <tr><td>tests on an old/missing build</td><td>readiness before every stage action</td></tr>
+    <tr><td>growing learning and raw data</td><td>16 KB grooming, condensed promotion, raw-read denies</td></tr>
+    <tr><td>repeated flows</td><td>existing specs via the CLI runner</td></tr>
   </table>
   <p class="note">
-    <strong>Ehrlichkeit:</strong> Die Modell-Lane verändert den Preis der Browser-Tokens, nicht
-    ihre Menge. Für 0.19.0 liegt kein neues Kostenbenchmark vor; ältere Euro- und
-    Ticket-Schätzungen sind deshalb keine Zusage. Miss mit <code>/usage</code> und den Session-Logs.
+    <strong>Honesty:</strong> the model lane changes the price of the browser tokens, not
+    their volume. For 0.19.0 there is no new cost benchmark; older euro and
+    per-ticket estimates are therefore not a promise. Measure with <code>/usage</code> and the session logs.
   </p>
 </section>
 
 <section>
-  <h2>Häufige Fragen</h2>
-  <p class="sub">Die Fragen, die im Gespräch immer kommen — beantwortet ohne Fachjargon.</p>
+  <h2>FAQ</h2>
+  <p class="sub">The questions that always come up in conversation — answered without jargon.</p>
 
   <div class="card">
-    <h4><span class="num">?</span>Wie funktioniert das Gedächtnis?</h4>
-    <p>Gar nicht im Kopf — alles liegt als normale Textdateien in deinem Projektordner,
-    einsehbar und per Git teilbar. Fünf Schubladen: das <strong>Handbuch</strong> (immer dabei,
-    nur die Regeln), die <strong>Fachbücher</strong> (33 Skills, laden nur bei Bedarf), die
-    <strong>Projektakte</strong> (Umgebungen, Testuser, Runbooks — einmal eingerichtet), das
-    <strong>Lerntagebuch</strong> (Überraschungen aus Läufen) und die <strong>Beweise</strong>
-    (Screenshots, Logs — als Datei, nie im Gedächtnis). Der Clou: Am Ende jeder Session
-    <em>muss</em> der Agent deklarieren, was er gelernt hat — ein Hook blockt das Session-Ende
-    sonst. Was zweimal vorkam, wandert ins Handbuch und muss nie wieder erklärt werden; was
-    verworfen wurde, landet im Rejected-Buffer und wird nicht erneut vorgeschlagen.</p>
+    <h4><span class="num">?</span>How does the memory work?</h4>
+    <p>Not in anyone's head — everything lives as plain text files in your project folder,
+    inspectable and shareable via git. Five drawers: the <strong>handbook</strong> (always with you,
+    just the rules), the <strong>reference skills</strong> (33 skills, load only on demand), the
+    <strong>project dossier</strong> (environments, test users, runbooks — set up once), the
+    <strong>learning journal</strong> (surprises from runs) and the <strong>evidence</strong>
+    (screenshots, logs — as files, never in memory). The trick: at the end of every session
+    the agent <em>must</em> declare what it learned — a hook blocks the session end
+    otherwise. Anything that came up twice moves into the handbook and never needs explaining again; what
+    was rejected lands in the rejected buffer and is not proposed again.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Verbrennt das ständige Lesen und Lernen nicht selbst Tokens?</h4>
-    <p>Ja — deshalb ist der Lernkreislauf begrenzt: Capture dedupliziert sofort, Grooming
-    arbeitet höchstens zehn älteste Einträge pro Durchlauf und startet spätestens bei
-    16 KB. Promotion ersetzt und verdichtet statt anzuhängen. Beim Ticket werden nur
-    stabile Projektdaten und passende Learning-Einträge gelesen, nicht ganze Archive.
-    Der Nutzen ist, bekannte Umgebungen, Fallstricke und Deploy-Wege nicht bei jedem
-    Lauf neu erkunden zu müssen; ein eigenes Benchmark für 0.19.0 steht noch aus.</p>
+    <h4><span class="num">?</span>Doesn't all that constant reading and learning burn tokens itself?</h4>
+    <p>Yes — which is why the learning loop is bounded: capture dedupes immediately, grooming
+    works on at most the ten oldest entries per pass and starts at 16 KB at the latest.
+    Promotion replaces and condenses instead of appending. For a ticket only
+    stable project data and matching learning entries are read, never whole archives.
+    The payoff is not having to rediscover known environments, pitfalls and deploy paths on every
+    run; a dedicated benchmark for 0.19.0 is still pending.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Wie effizient ist eine Session?</h4>
-    <p>Die immer geladene Ebene ist ~7.040 Tokens (gemessen, per Test gedeckelt). Browser-Arbeit
-    läuft in abgeschotteten Teil-Sessions; einfache Tickets gehen direkt an genau einen
-    Execution-Agenten, komplexe übergeben fertiges Intake und Readiness an den Manager.
-    Vorhandene Specs laufen über den CLI-Runner. Die Execution Modes bestimmen, wo sich
-    teure Live-Beobachtung lohnt; gemessen wird mit <code>/usage</code>, nicht mit alten Schätzwerten.</p>
+    <h4><span class="num">?</span>How efficient is a session?</h4>
+    <p>The always-loaded layer is ~7,040 tokens (measured, capped by test). Browser work
+    runs in sandboxed sub-sessions; simple tickets go straight to exactly one
+    execution agent, complex ones hand finished intake and readiness to the manager.
+    Existing specs run via the CLI runner. The execution modes determine where
+    expensive live observation pays off; measurement comes from <code>/usage</code>, not old estimates.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Brauche ich zwingend JIRA?</h4>
-    <p>Der Blueprint ist ticketgetrieben — der Ticket-Schlüssel ist der Eingang, über den der
-    Agent alles findet. Gelesen wird über den Atlassian-MCP-Server (Cloud oder Data Center);
-    nutzt ein Projekt JIRA nur per Weboberfläche, geht es notfalls auch über den Browser.
-    Ohne JIRA ergäbe das Routing keinen Sinn — aber die Skills (exploratives Testen,
-    Accessibility, Security, Autotests) funktionieren auch ticketlos.</p>
+    <h4><span class="num">?</span>Do I absolutely need JIRA?</h4>
+    <p>The blueprint is ticket-driven — the ticket key is the entry point through which the
+    agent finds everything. Reading happens via the Atlassian MCP server (Cloud or Data Center);
+    if a project uses JIRA only through the web UI, the browser works in a pinch.
+    Without JIRA the routing would make no sense — but the skills (exploratory testing,
+    accessibility, security, automated tests) also work without tickets.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Läuft das auch ohne Claude Code?</h4>
-    <p>Ja — derselbe Blueprint läuft unter <strong>opencode</strong> (modell-offen, das Modell
-    ist deine Wahl) und wird dort per Symlink-Install verdrahtet. Ein Router-Text für beide
-    Welten, keine Drift: der Session-Start-Hook injiziert ihn im Plugin-Modus wortwörtlich.
-    Hooks, Skills und Guardrails sind auf beiden Seiten dieselben, die Fixture-Batterie läuft
-    für beide.</p>
+    <h4><span class="num">?</span>Does it run without Claude Code too?</h4>
+    <p>Yes — the same blueprint runs under <strong>opencode</strong> (model-open, the model
+    is your choice) and is wired up there via a symlink install. One router text for both
+    worlds, no drift: the session-start hook injects it verbatim in plugin mode.
+    Hooks, skills and guardrails are the same on both sides, the fixture battery runs
+    for both.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Was passiert mit meinen Daten?</h4>
-    <p>Nach der Installation läuft alles lokal. Netzwerk geht nur zu <strong>deinem JIRA</strong>
-    und <strong>deiner Stage</strong> — keine Telemetrie, keine Lizenz-Checks, das Repo wird nur
-    bei Install und Update angefasst. Passwörter sieht der Agent nie: Testuser-Logins und der
-    JIRA-Token liegen im macOS-Schlüsselbund, er sieht nur „6/6 Logins vorhanden". Direkte
-    Secret-Lesungen sind ein Opt-in, das nur ein Mensch erteilen kann.</p>
+    <h4><span class="num">?</span>What happens to my data?</h4>
+    <p>After installation everything runs locally. Network traffic goes only to <strong>your JIRA</strong>
+    and <strong>your stage</strong> — no telemetry, no license checks, the repo is only
+    touched at install and update. The agent never sees passwords: test user logins and the
+    JIRA token live in the macOS keychain, it only sees “6/6 logins present”. Direct
+    secret reads are an opt-in that only a human can grant.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Was, wenn der Agent sich irrt?</h4>
-    <p>Dafür gibt es eingebaute Ehrlichkeit statt Nachsicht: Bei jedem FAIL klärt ein eigener
-    Prüfer (ohne Schreibrechte), ob das Produkt kaputt oder der Test veraltet ist. Unsicherheit
-    wird zu <strong>NEEDS_REVIEW</strong> — ein Vorschlag an einen Menschen, kein Bug-Ticket,
-    kein Statuswechsel. Und wenn ein Mensch den Agenten überstimmt, ist das die wertvollste
-    Learning im ganzen System: Sie wandert mit Ursachenanalyse ins Regelwerk, damit derselbe
-    Fehlgriff nicht zweimal passiert.</p>
+    <h4><span class="num">?</span>What if the agent is wrong?</h4>
+    <p>That is what built-in honesty is for instead of leniency: on every FAIL a dedicated
+    checker (without write access) determines whether the product is broken or the test is outdated. Uncertainty
+    becomes <strong>NEEDS_REVIEW</strong> — a proposal to a human, no bug ticket,
+    no status change. And when a human overrules the agent, that is the most valuable
+    learning in the whole system: it moves with a root-cause analysis into the rulebook so the same
+    misstep does not happen twice.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Kann er auch in Produktion testen?</h4>
-    <p>Nein — niemals, egal wer fragt oder wie es formuliert ist. Nur Stage. Verlangt ein Ticket
-    eine Prod-Verifizierung, meldet der Agent BLOCKED mit Grund, statt kreativ zu werden.
-    Deploys darf er nur auf Stage und nur, wenn das Projekt es ausdrücklich erlaubt; MRs
-    kommentieren oder mergen darf er nie.</p>
+    <h4><span class="num">?</span>Can it test in production too?</h4>
+    <p>No — never, no matter who asks or how it is phrased. Stage only. If a ticket
+    demands prod verification, the agent reports BLOCKED with a reason instead of getting creative.
+    It may only deploy to stage and only when the project explicitly allows it; commenting on or
+    merging MRs it may never do.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Muss ich programmieren können oder Befehle kennen?</h4>
-    <p>Nein. Du schreibst ganz normal: „Teste SHOP-1234", „Der Fix ist auf Stage, prüf das",
-    „Wie läuft's mit dem Testing?" — deutsch oder englisch. Auch das Lernen läuft von allein:
-    Jede Session <em>muss</em> deklarieren, was sie gelernt hat (ein Hook erzwingt es), und
-    wächst der Stapel ungeprüfter Learnings über eine Schwelle (5 Einträge, 14 Tage alt oder 16 KB),
-    räumt der Agent ihn am Session-Ende <strong>von selbst</strong> auf und berichtet in einem
-    Satz, was daraus wurde. Die Einrichtung ist ein geführtes Interview (~30–60 Minuten pro
-    Projekt). Einzige Menschen-Aufgaben: JIRA-Zugang einrichten, Testuser-Passwörter einmal
-    in den Schlüsselbund legen, und am Anfang die Shadow-Modus-Vorschläge prüfen, bis du ihm
-    Schreibrechte gibst.</p>
+    <h4><span class="num">?</span>Do I need to be able to program or know commands?</h4>
+    <p>No. You just write normally: “Test SHOP-1234”, “The fix is on stage, check it”,
+    “How's testing going?” — German or English. Learning runs on its own too:
+    every session <em>must</em> declare what it learned (a hook enforces it), and
+    once the stack of unchecked learnings grows past a threshold (5 entries, 14 days old or 16 KB),
+    the agent tidies it up <strong>on its own</strong> at session end and reports in one
+    sentence what came of it. Setup is a guided interview (~30–60 minutes per
+    project). The only human tasks: set up JIRA access, put the test user passwords into the keychain once,
+    and at first review the shadow-mode proposals until you grant it
+    write access.</p>
   </div>
 
   <div class="card">
-    <h4><span class="num">?</span>Wie fange ich an?</h4>
-    <p>Zwei Befehle (siehe Installation oben), Claude Code neu starten, JIRA einmal per OAuth
-    verbinden — dann <code>/onboard-project</code> und das Interview beantworten. Danach heißt
-    es nur noch: „Teste <em>TICKET</em>." Der Shadow-Modus ist ab Tag eins an — der Agent testet
-    vollständig, postet aber nichts, bis du es freigibst.</p>
+    <h4><span class="num">?</span>How do I get started?</h4>
+    <p>Two commands (see Installation above), restart Claude Code, connect JIRA once via OAuth
+    — then <code>/onboard-project</code> and answer the interview. After that it is
+    just: “Test <em>TICKET</em>.” Shadow mode is on from day one — the agent tests
+    fully but posts nothing until you approve it.</p>
   </div>
 </section>
 
 <footer>
   <p>
-    QA Agent Blueprint · Stand: 30. Oktober 2026 (0.19.0) —
-    aktualisiert auf Repo-Stand (33 Skills, 9 Subagents, Fixture-Batterie + 152 bun-Tests, 46 Eval-Cases,
-    5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
-    Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
-    Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,
-    Flow-Maps, /re-board und /whats-new als Upgrade-Pfad, /skill-review Skill-Nutzungsanalyse
-    (used/unknown, Profile nur nach Bestätigung), Shadow-Modus als Default).
-    Quelle der Wahrheit ist das Repo: <code>CLAUDE.md</code>, <code>memory/INDEX.md</code>, <code>README.md</code>.
+    QA Agent Blueprint · Status: 30 October 2026 (0.19.0) —
+    updated to repo state (33 skills, 9 subagents, fixture battery + 152 bun tests, 46 eval cases,
+    5 verdicts, two harnesses — Claude Code as a plugin, opencode via symlink install —,
+    execution modes mcp-only/hybrid/cli-first with /recon probe, red probe and observation run,
+    keychain secrets for test user logins and JIRA PAT, value-free credential injection via qa-secrets.mjs,
+    flow maps, /re-board and /whats-new as the upgrade path, /skill-review skill usage analysis
+    (used/unknown, profiles only after confirmation), shadow mode as the default).
+    The source of truth is the repo: <code>CLAUDE.md</code>, <code>memory/INDEX.md</code>, <code>README.md</code>.
   </p>
 </footer>
 
 </div>
 </body>
 </html>
+
