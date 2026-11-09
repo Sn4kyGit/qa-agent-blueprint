@@ -1,10 +1,28 @@
 # Contributing to QA Agent Blueprint
 
-Thanks for your interest in contributing! This project is a ticket-driven QA
-Manager + Tester for Claude Code and opencode. We welcome bug reports, feature
-requests, documentation improvements, and code contributions.
+Thanks for your interest in contributing! This project is in **alpha** —
+the most valuable contribution right now is real-world feedback.
 
-## Getting started
+## Alpha feedback (start here)
+
+If you've used the blueprint, we want to know:
+
+- **What worked** — what surprised you (in a good way)?
+- **What broke** — bugs, errors, unexpected behavior
+- **What confused you** — unclear docs, missing steps, wrong assumptions
+- **What's missing** — features you expected but didn't find
+
+Open a [GitHub issue](https://github.com/Sn4kyGit/qa-agent-blueprint/issues) with
+whatever you've got. Rough notes are fine — we'll ask follow-up questions.
+
+**Security vulnerabilities**: see [SECURITY.md](SECURITY.md) — don't open a public issue.
+
+## Contributing code
+
+We welcome bug reports, feature requests, documentation improvements, and code
+contributions. Here's how to get started with code:
+
+### Getting started
 
 1. **Fork** the repository
 2. **Clone** your fork: `git clone https://github.com/<your-username>/qa-agent-blueprint.git`

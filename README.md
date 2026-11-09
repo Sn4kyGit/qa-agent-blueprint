@@ -20,6 +20,16 @@ back in your project's format, and remembers what it learned.
 
 **⭐ Star this repo if you find it useful — it helps others discover it!**
 
+> **⚠️ Alpha status.** This project is under active development. APIs, file
+> formats, and behavior may change between releases. It is tested against
+> fixtures and a fictional reference project — no real-world deployment has
+> been validated yet. Use it, break it, and tell us what happens.
+
+**Found a bug or have feedback?** Open a [GitHub issue](https://github.com/Sn4kyGit/qa-agent-blueprint/issues) —
+we want to hear about problems, unexpected behavior, and what worked well.
+Bugs, feature requests, and "here's what happened when I tried it" are all
+welcome. For security vulnerabilities, see [SECURITY.md](SECURITY.md).
+
 ---
 
 ## Quick start
@@ -304,11 +314,17 @@ never values.
 
 ---
 
-## Contributing
+## Contributing & feedback
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) — fork, test, PR. Good first issues welcome.
+The best way to help right now is to **use it and tell us what happens**.
 
-**Key rules**: no project data in commits, no secrets, no dependency additions (stdlib only).
+- **Found a bug?** [Open an issue](https://github.com/Sn4kyGit/qa-agent-blueprint/issues) —
+  steps to reproduce + what you expected vs. what happened
+- **Something felt off?** Same — unexpected behavior is just as valuable as hard bugs
+- **It worked well?** We'd love to hear that too (and a ⭐ helps others find it)
+- **Want to contribute code?** See [CONTRIBUTING.md](CONTRIBUTING.md) — fork, test, PR
+
+**Key rules for PRs**: no project data in commits, no secrets, no dependency additions (stdlib only).
 
 ---
 
