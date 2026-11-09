@@ -67,15 +67,42 @@ That's it. The agent knows your project because it reads the files in your repo.
 
 ## How it works
 
+You type a ticket. The agent does the rest.
+
+```
+You:  /test-ticket SHOP-1234
+
+Agent:
+  1. 📖  Reads the ticket (JIRA MCP)
+  2. 🗂  Routes to project: SHOP → projects/SHOP/
+  3. 🏷  Routes to product: component → STOREFRONT
+  4. ✅  Checks readiness: status, merge, deployed build
+  5. 🧪  Tests it (exploratory + regression)
+  6. 📸  Produces evidence (screenshots, logs, summary)
+  7. 📝  Reports to JIRA (comment, attachments, transition)
+  8. 🧠  Captures learnings (enforced, not suggested)
+
+Result:
+  ✅ Verdict: PASS (3 of 4 tests)
+  📁 Evidence: evidence/SHOP/SHOP-1234/20261102-143022/
+  📋 Bug filed: SHOP-456 (if any failures)
+  🧠 Learning: 1 new capture
+```
+
+**The key insight**: the agent knows *your* project because it reads
+`PROJECT.md` (test users, environments, deploy runbook) and `PRODUCT.md`
+(what's different per product). None of that is in the prompt — it comes
+from files in your repo.
+
 ```mermaid
 flowchart LR
-  A["Read ticket<br/>Atlassian MCP"] --> B["Route to project<br/>SHOP-1234 → projects/SHOP/"]
-  B --> C["Route to product<br/>component → STOREFRONT"]
-  C --> D["Readiness<br/>status, merge, deployed build"]
-  D --> E["Test<br/>direct leaf or manager"]
-  E --> F["Evidence<br/>screenshots, logs, summary"]
-  F --> G["Report to JIRA<br/>comment, attachments, transition"]
-  G --> H["Capture learnings<br/>enforced, not suggested"]
+  A["📖<br/>Read<br/>ticket"] --> B["🗂<br/>Route<br/>to project"]
+  B --> C["🏷<br/>Route<br/>to product"]
+  C --> D["✅<br/>Check<br/>readiness"]
+  D --> E["🧪<br/>Test<br/>it"]
+  E --> F["📸<br/>Evidence<br/>artifacts"]
+  F --> G["📝<br/>Report<br/>to JIRA"]
+  G --> H["🧠<br/>Capture<br/>learnings"]
 ```
 
 **33 skills · 9 subagents · 4 hooks · 2 MCP servers** — all in plain Markdown
