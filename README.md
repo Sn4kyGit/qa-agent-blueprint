@@ -328,6 +328,15 @@ The best way to help right now is to **use it and tell us what happens**.
 
 ---
 
+## Contributors
+
+| | |
+|---|---|
+| **[Sn4kyGit](https://github.com/Sn4kyGit)** | Architecture, development, security audit, testing |
+| **[Anna Mazurek](https://github.com/annamazurek-qa)** | Requirements, conception, feedback, testing |
+
+---
+
 ## License
 
 [Apache 2.0](LICENSE). Methodology draws on Google testing standards, OWASP Top 10,

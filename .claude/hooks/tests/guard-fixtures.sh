@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2026 Sn4kyGit
+# Copyright (c) 2026 Sn4kyGit, Anna Mazurek
 
 #
 # guard-fixtures.sh — fixture test for pre-tool-guard.sh (PreToolUse).

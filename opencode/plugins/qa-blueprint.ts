@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2026 Sn4kyGit
+// Copyright (c) 2026 Sn4kyGit, Anna Mazurek
 
 // qa-blueprint.ts — the qa-agent-blueprint's opencode plugin: one thin module
 // carrying the four Claude-Code hook surfaces across (D2/D3 in
