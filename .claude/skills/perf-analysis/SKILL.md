@@ -1,6 +1,7 @@
 ---
 name: perf-analysis
 description: Analyze session performance — duration, phase breakdown, token usage, bottlenecks, efficiency trends, and concrete improvement suggestions. Use for "/perf-analysis", "performance analysis", "Performance-Analyse", "warum ist das so langsam", "wie lange dauert ein Testlauf", "Token-Verbrauch analysieren", "Performance verbessern", "Kosten optimieren". Not for test quality metrics (/qa-report) or skill usage (/skill-review).
+license: Apache-2.0
 ---
 
 # /perf-analysis — how long does it take, what does it cost, and what should change

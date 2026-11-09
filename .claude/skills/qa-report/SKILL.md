@@ -1,6 +1,7 @@
 ---
 name: qa-report
 description: Aggregate the evidence directory into QA metrics — pass rate, P0/P1 trend, BLOCKED reasons, routing quality, learning throughput, per project and product. Use for "/qa-report", weekly/sprint summary, "QA-Bericht", "Testreport", "wie läuft's mit dem Testing". Not for a single ticket's verdict — /report-to-jira.
+license: Apache-2.0
 ---
 
 # /qa-report — what the runs already know

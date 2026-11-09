@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 #
 # session-start-fixtures.sh — fixture test for session-start.sh's project/product
 # listing. Companion to guard-fixtures.sh, and for the same reason: this hook is

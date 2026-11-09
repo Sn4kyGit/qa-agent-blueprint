@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 """Per-test-case history across evidence runs.
 
 `failure-analysis` needs four facts before it can say anything about a failure:

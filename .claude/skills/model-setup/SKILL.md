@@ -1,6 +1,7 @@
 ---
 name: model-setup
 description: Configure consumer-owned opencode model overrides for the cheap, standard, and deep QA lanes without pinning blueprint source or global config. Use for "/model-setup", "Modelle für QA-Lanes einrichten", or "configure QA models". Under Claude Code, explain the haiku/sonnet/opus mapping only and write no files.
+license: Apache-2.0
 ---
 
 # /model-setup — consumer QA model lanes

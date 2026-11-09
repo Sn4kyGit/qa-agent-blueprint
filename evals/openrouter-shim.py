@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 """openrouter-shim.py — localhost Anthropic-API shim in front of OpenRouter.
 
 Why this exists: Claude Code calls /v1/messages/count_tokens (context

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 #
 # install-integrate-fixtures.sh — end-to-end fixtures for install.sh, run against
 # throwaway repos in $TMPDIR: integrate mode (the bulk) and plugin mode (the two

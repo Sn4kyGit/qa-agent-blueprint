@@ -8,7 +8,33 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
-## [0.19.8] — 2026-11-02
+## [0.20.0] — 2026-11-02
+
+Theme: **open-source launch preparation.** Apache 2.0 license, SPDX
+copyright headers, GitHub infrastructure (CI, CONTRIBUTING, SECURITY,
+CODE_OF_CONDUCT), README badges/CTA/TL;DR, English-first UI text.
+
+### Changed — licensing
+- **Apache 2.0** (was MIT): adds patent protection and explicit trademark
+  terms. MIT vendored skills remain compatible (MIT ⊂ Apache 2.0).
+- **SPDX headers** in all 35 source files (`SPDX-License-Identifier: Apache-2.0`).
+- **`license: Apache-2.0`** in all 33 SKILL.md frontmatter fields.
+
+### Added — GitHub infrastructure
+- `CONTRIBUTING.md` — stranger-friendly contribution guide.
+- `SECURITY.md` — vulnerability reporting policy, response timeline,
+  security architecture overview.
+- `CODE_OF_CONDUCT.md` — Contributor Covenant v2.1.
+- `.github/workflows/ci.yml` — runs fixture battery + bun tests + plugin
+  validate on every push/PR.
+- `.github/FUNDING.yml` — placeholder for GitHub Sponsors / Ko-fi.
+
+### Changed — README & UI
+- **Badges**: CI, License, Release status.
+- **Star CTA**: "If you find this useful, please star the repo."
+- **TL;DR box**: one-paragraph summary above the fold.
+- **English-first**: overview.html and spickzettel.html titles/hero text
+  in English (`<html lang="en">`), German content retained for detail sections.
 
 Theme: **key-name leak closed.** Field report: the executor listed key NAMES
 from `.env.playwright-secrets` during login (values not exposed). The guard's

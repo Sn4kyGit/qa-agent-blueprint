@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CAPSULE="${QA_CAPSULE_SCRIPT:-$HERE/../../scripts/context-capsule.py}"

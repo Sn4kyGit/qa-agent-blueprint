@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 #
 # resolve-secrets.sh — resolves the test-user secrets a project DECLARES (via
 # "Secrets source: keychain" in PROJECT.md / PRODUCT.md) into

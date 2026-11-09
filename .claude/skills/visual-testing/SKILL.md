@@ -12,6 +12,7 @@ metadata:
   author: kindlmann
   version: "2.0"
   category: automation
+license: Apache-2.0
 ---
 
 <objective>

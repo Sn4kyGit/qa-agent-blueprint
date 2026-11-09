@@ -12,6 +12,7 @@ metadata:
   author: kindlmann
   version: "1.0"
   category: ai-qa
+license: Apache-2.0
 ---
 
 <objective>

@@ -1,6 +1,7 @@
 ---
 name: bug-report
 description: Produce a bug report exactly per the active project's template. Use when a test finding becomes a bug ticket, "/bug-report" with a finding in hand, or "Bug melden", "mach ein Bug-Ticket draus". Not for triaging why a test failed — /failure-analysis first.
+license: Apache-2.0
 ---
 
 # /bug-report — project-conformant bug report

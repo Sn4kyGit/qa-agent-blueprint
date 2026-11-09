@@ -1,6 +1,7 @@
 ---
 name: failure-analysis
 description: Triage a failing test — real product defect, or outdated test case after a deliberate product change? Classifies the cause from the JIRA change record and version window, proposes (never applies) test changes. Runs automatically on every FAIL before a bug is filed. Use for "/failure-analysis", "warum ist der Test rot", "is this test outdated". Not for filing the bug — /bug-report after classification.
+license: Apache-2.0
 ---
 
 # /failure-analysis — why did this test fail?

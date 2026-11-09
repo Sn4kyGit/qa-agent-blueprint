@@ -1,6 +1,7 @@
 ---
 name: test-automation
 description: Write or run deterministic automated test specs (Playwright or WebdriverIO) via the CLI runner — for regression, repeatable checks, nightly-style suites. Use for "/test-automation", "automate this flow", "Autotest schreiben", "run the regression suite", or flows understood and worth repeating.
+license: Apache-2.0
 ---
 
 # /test-automation — CLI-driven specs

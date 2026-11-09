@@ -1,6 +1,7 @@
 ---
 name: demo
 description: Present a bug reproduction or finished test run to an audience — headed slow-motion replay, handover mode at page.pause(), screen recording only on explicit request. Use for "/demo <KEY-123>", "präsentier den Bug", "zeig die Repro", "lass mich probieren", "nimm das auf". Not for testing something new.
+license: Apache-2.0
 ---
 
 # /demo — presenter mode

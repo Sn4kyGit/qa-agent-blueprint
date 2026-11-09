@@ -1,6 +1,7 @@
 ---
 name: retro-learn
 description: Capture, groom, and promote learnings — the session-end step whenever something unexpected happened (selector broke, env oddity, user corrected the format), plus the periodic grooming pass that dedupes and promotes proven learnings into rules/skills/project files. Use at session end or "/retro-learn".
+license: Apache-2.0
 ---
 
 # /retro-learn — Capture → Groom → Promote

@@ -5,6 +5,7 @@ description: >-
   via Appium) through the WDIO CLI runner. Loaded by test-automation when the
   project's "Test assets" → Framework says webdriverio; route user requests to
   /test-automation. Not for Playwright suites.
+license: Apache-2.0
 ---
 
 # WebdriverIO — spec conventions for the test-automator

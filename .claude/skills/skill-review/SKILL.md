@@ -1,6 +1,7 @@
 ---
 name: skill-review
 description: Review which blueprint skills the evidence actually shows as used and propose a slimmer skill profile — read-only analysis of evidence/**/execution_summary.json (used/unknown with coverage, never "unused"), profile dry-runs (full/standard/minimal/custom) with dependency closure, apply only after explicit confirmation and only in integrate mode. Use for "/skill-review", "which skills do we need", "welche Skills werden genutzt", "skill profile", "skills reduzieren", "prune skills". Never reads transcripts and never deactivates a skill automatically.
+license: Apache-2.0
 ---
 
 # /skill-review — evidence-based skill usage review

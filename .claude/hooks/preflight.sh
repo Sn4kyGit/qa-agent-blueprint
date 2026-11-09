@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 #
 # preflight.sh — pre-requirements probe before any browser/JIRA action of a
 # test run. Exists because the classic false-positive factory is a forgotten

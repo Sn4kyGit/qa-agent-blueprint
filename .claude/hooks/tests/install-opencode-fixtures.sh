@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 #
 # install-opencode-fixtures.sh — end-to-end fixtures for `install.sh --mode
 # opencode`, run against throwaway dirs in $TMPDIR.

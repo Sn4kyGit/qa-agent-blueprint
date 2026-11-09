@@ -1,6 +1,7 @@
 ---
 name: retest-bug
 description: Focused re-test of a fixed bug plus a tight regression sweep — scoped from the product's flow-map.md Neighbors when available, risk-based otherwise. Use for "/retest-bug <KEY-123>", "re-test <KEY-123>", "teste <KEY-123> nochmal", "gegentesten", or when a fix has landed on stage ("der Fix ist auf Stage", "fix is deployed/verified on stage — retest it"). Not for first-time tests — test-ticket.
+license: Apache-2.0
 ---
 
 # /retest-bug — verify a fix + surrounding regression

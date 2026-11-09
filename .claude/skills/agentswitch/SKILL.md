@@ -1,6 +1,7 @@
 ---
 name: agentswitch
 description: Check read-only whether an existing Claude Code or opencode QA home can switch to the other harness, including shared-layout, migration-collision, duplicate-registration, MCP-contract, and data-preservation findings. Use for "/agentswitch <claude|opencode>", "Harness wechseln", "switch harness", or before using the other extension. Never migrates, installs, onboards, or runs preflight.
+license: Apache-2.0
 ---
 
 # /agentswitch — read-only harness switch check

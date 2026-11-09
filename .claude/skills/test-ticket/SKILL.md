@@ -1,6 +1,7 @@
 ---
 name: test-ticket
 description: Test a JIRA ticket end to end — read the ticket, route to the project, verify/deploy stage, execute the test strategy, produce evidence, report the verdict to JIRA. Use for "/test-ticket <KEY-123>", "teste <KEY-123>", "prüf das Ticket", or any verify-a-ticket request. Not for re-testing fixed bugs (retest-bug) or writing repeatable specs (test-automation).
+license: Apache-2.0
 ---
 
 # /test-ticket — dispatch the full ticket workflow

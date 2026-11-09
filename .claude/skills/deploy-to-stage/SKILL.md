@@ -1,6 +1,7 @@
 ---
 name: deploy-to-stage
 description: Execute the active project's stage-deploy runbook, with safety checks, when a ticket's fix isn't on stage yet. Use for "/deploy-to-stage", "bring den Fix auf Stage", "deploy auf Stage". Stage only, never production, and only when PROJECT.md allows agent-triggered deploys.
+license: Apache-2.0
 ---
 
 # /deploy-to-stage — project runbook, with safety checks

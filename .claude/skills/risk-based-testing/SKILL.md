@@ -11,6 +11,7 @@ metadata:
   author: kindlmann
   version: "2.0"
   category: strategy
+license: Apache-2.0
 ---
 
 <objective>

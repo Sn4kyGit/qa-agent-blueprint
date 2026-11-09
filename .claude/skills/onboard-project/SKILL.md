@@ -1,6 +1,7 @@
 ---
 name: onboard-project
 description: Onboard a new project into projects/<KEY>/ — fills PROJECT.md from the template, seeds learnings.md + bug-report template, adds it to memory/INDEX.md. Use for "/onboard-project", "Projekt einrichten", "neues Projekt onboarden", or when a ticket's prefix has no PROJECT.md. Not for adding a product — /onboard-product.
+license: Apache-2.0
 ---
 
 # /onboard-project — teach the agent a new project

@@ -12,6 +12,7 @@ metadata:
   author: kindlmann
   version: "2.0"
   category: metrics
+license: Apache-2.0
 ---
 
 <objective>

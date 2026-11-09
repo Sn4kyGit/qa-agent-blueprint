@@ -1,6 +1,7 @@
 ---
 name: report-to-jira
 description: Report a test verdict back to JIRA per the active project's PROJECT.md — comment, attachments, workflow transition; Cloud = ADF, Data Center = plain Markdown. Use after a test run completes (PASS, FAIL, BLOCKED, NEEDS_REVIEW), "/report-to-jira", "melde das Ergebnis zurück", "kommentier das Ticket". Not for composing the bug ticket itself — /bug-report.
+license: Apache-2.0
 ---
 
 # /report-to-jira — comment + attachments + transition

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 #
 # qa-secrets-fixtures.sh — fixture test for .claude/scripts/qa-secrets.mjs
 # (Level-1/Level-2 credential entry, tdd.md 0.11.0 §1/§3/§4).

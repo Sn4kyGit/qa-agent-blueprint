@@ -1,6 +1,7 @@
 ---
 name: exploratory-testing
 description: Run a chartered, SBTM-style exploratory testing session via Playwright MCP — for new features, unclear behavior, or bug reproduction without a repeatable spec. Use for "/exploratory-testing", "erkunde das neue Feature", "explorativ testen", "reproduzier den Bug". Not for understood, repeatable flows — use test-automation.
+license: Apache-2.0
 ---
 
 # /exploratory-testing — chartered session via Playwright MCP

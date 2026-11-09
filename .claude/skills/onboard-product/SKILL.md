@@ -1,6 +1,7 @@
 ---
 name: onboard-product
 description: Onboard a single product inside an existing project into products/<PRODUCT>/ — PRODUCT.md deltas, routing (JIRA component/label → product) in PROJECT.md, feature/test-method matrix. Use for "/onboard-product", "Produkt einrichten", or when a JIRA project covers several products. Not for a project's first onboarding — /onboard-project.
+license: Apache-2.0
 ---
 
 # /onboard-product — teach the agent one product of a project

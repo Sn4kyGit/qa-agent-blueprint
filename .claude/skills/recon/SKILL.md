@@ -1,6 +1,7 @@
 ---
 name: recon
 description: Run pipeline phase 2 (recon) for a ticket or area — probe script (Playwright or WebdriverIO) that observes pages and writes recon.json with the real selectors, console errors and screenshots into the run dir. Use for "/recon <KEY-123>", "erkunde die Seite vor dem Test", or whenever a spec would otherwise be written blind. Not for live exploratory testing — /exploratory-testing.
+license: Apache-2.0
 ---
 
 # /recon — observe before you assert

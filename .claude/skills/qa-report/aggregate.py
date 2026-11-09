@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Sn4kyGit
+
 """Aggregate execution_summary.json files into QA metrics.
 
 The blueprint writes a machine-readable verdict for every run and then never reads

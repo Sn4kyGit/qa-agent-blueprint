@@ -1,6 +1,7 @@
 ---
 name: re-board
 description: Bring an onboarded project up to the current blueprint schema without repeating onboarding — fills new template fields, seeds missing files, resolves open TODOs, refreshes bridge file + version stamp; every change individually confirmed. Use for "/re-board <KEY>", "re-onboard", "Projekt aktualisieren", after blueprint updates. Not for brand-new projects — /onboard-project.
+license: Apache-2.0
 ---
 
 # /re-board <KEY> — delta onboarding for an existing project

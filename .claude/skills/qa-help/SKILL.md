@@ -1,6 +1,7 @@
 ---
 name: qa-help
 description: Show the blueprint's command overview — every slash command, what it does, when to use it, plus natural-language alternatives. Use for "/qa-help", "help", "welche Befehle gibt es", "was kannst du", or when the user seems lost. Not for testing — route testing requests to /test-ticket.
+license: Apache-2.0
 ---
 
 # /qa-help — what this blueprint can do

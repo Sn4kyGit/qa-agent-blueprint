@@ -1,11 +1,21 @@
 # QA Agent Blueprint
 
+[![CI](https://github.com/Sn4kyGit/qa-agent-blueprint/actions/workflows/ci.yml/badge.svg)](https://github.com/Sn4kyGit/qa-agent-blueprint/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Sn4kyGit/qa-agent-blueprint)](https://github.com/Sn4kyGit/qa-agent-blueprint/releases)
+
+**⭐ If you find this useful, please star the repo — it helps others discover it!**
+
 **A Git blueprint that turns Claude Code or opencode into a learning QA
 Manager + Tester.** Hand it a JIRA ticket — it tests or re-tests the ticket
 autonomously, produces evidence, reports back in your project's format, and
 remembers what it learned. Harness-agnostic: Claude Code as a plugin,
 opencode via symlinks (model = your `/models` choice, the blueprint pins
 none).
+
+> **TL;DR**: JIRA ticket in → tested ticket out, with mandatory evidence,
+> project-conformant bug reports, and a learning loop that remembers what it
+> learned. 33 skills, 9 subagents, 4 hooks, security-audited, dual-harness.
 
 Exploratory testing runs through Playwright MCP, regression through the Playwright
 CLI runner, tickets through the Atlassian MCP server. Everything the agent knows
@@ -25,7 +35,7 @@ diffable, and shared with your team through Git.
 | **Target** | JIRA + Confluence — Atlassian Cloud (remote MCP, OAuth 2.1) or self-hosted Data Center (community MCP, PAT) |
 | **Contents** | 33 skills · 9 subagents · 5 always-loaded rules + 10 on demand · 4 hooks · fixture battery + 152 bun tests · 46 eval cases |
 | **Two harnesses** | Claude Code (plugin or integrate; CLI or VS Code extension) · opencode (symlinked, model-agnostic) |
-| **License** | MIT |
+| **License** | Apache 2.0 |
 
 ---
 
@@ -777,5 +787,5 @@ fixture; that is not negotiable, for the reason documented above. Touched
 
 ## License
 
-MIT. Methodology draws on Google testing standards (AAA pattern, quality gates),
+Apache 2.0. Methodology draws on Google testing standards (AAA pattern, quality gates),
 OWASP Top 10 smoke testing, and blameless SRE retrospective practice (5-Whys RCA).
