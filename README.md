@@ -70,46 +70,26 @@ That's it. The agent knows your project because it reads the files in your repo.
 You type a ticket. The agent does the rest.
 
 ```
-You:  /test-ticket SHOP-1234
+/test-ticket SHOP-1234
 
-Agent:
-  1. 📖  Reads the ticket (JIRA MCP)
-  2. 🗂  Routes to project: SHOP → projects/SHOP/
-  3. 🏷  Routes to product: component → STOREFRONT
-  4. ✅  Checks readiness: status, merge, deployed build
-  5. 🧪  Tests it (exploratory + regression)
-  6. 📸  Produces evidence (screenshots, logs, summary)
-  7. 📝  Reports to JIRA (comment, attachments, transition)
-  8. 🧠  Captures learnings (enforced, not suggested)
-
-Result:
-  ✅ Verdict: PASS (3 of 4 tests)
-  📁 Evidence: evidence/SHOP/SHOP-1234/20261102-143022/
-  📋 Bug filed: SHOP-456 (if any failures)
-  🧠 Learning: 1 new capture
+  → reads the ticket           (JIRA)
+  → routes to project & product (SHOP → STOREFRONT)
+  → checks readiness            (deployed build, merge status)
+  → tests it                    (exploratory + regression)
+  → produces evidence           (screenshots, logs, summary)
+  → reports back                (JIRA comment, attachments, transition)
+  → captures learnings          (enforced, not suggested)
 ```
 
-**The key insight**: the agent knows *your* project because it reads
-`PROJECT.md` (test users, environments, deploy runbook) and `PRODUCT.md`
-(what's different per product). None of that is in the prompt — it comes
-from files in your repo.
+The agent knows *your* project because it reads `PROJECT.md` (test users,
+environments, deploy runbook) and `PRODUCT.md` (what differs per product).
+None of that is in the prompt — it comes from files in your repo.
 
-```mermaid
-flowchart LR
-  A["📖<br/>Read<br/>ticket"] --> B["🗂<br/>Route<br/>to project"]
-  B --> C["🏷<br/>Route<br/>to product"]
-  C --> D["✅<br/>Check<br/>readiness"]
-  D --> E["🧪<br/>Test<br/>it"]
-  E --> F["📸<br/>Evidence<br/>artifacts"]
-  F --> G["📝<br/>Report<br/>to JIRA"]
-  G --> H["🧠<br/>Capture<br/>learnings"]
-```
-
-**33 skills · 9 subagents · 4 hooks · 2 MCP servers** — all in plain Markdown
-files in your repo. Reviewable, diffable, shared with your team through Git.
+**33 skills · 9 subagents · 4 hooks · 2 MCP servers** — all in plain Markdown,
+reviewable and diffable through Git.
 
 > 📖 **[Detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
-> the whole architecture on one page (English).
+> the whole architecture on one page.
 
 ---
 
