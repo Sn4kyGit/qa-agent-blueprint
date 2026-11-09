@@ -17,7 +17,6 @@ none).
 > project-conformant bug reports, and a learning loop that remembers what it
 > learned. 33 skills, 9 subagents, 4 hooks, security-audited, dual-harness.
 
-![QA Agent Blueprint Demo](docs/demo.gif)
 
 Exploratory testing runs through Playwright MCP, regression through the Playwright
 CLI runner, tickets through the Atlassian MCP server. Everything the agent knows
