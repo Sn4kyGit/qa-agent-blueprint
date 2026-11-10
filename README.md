@@ -4,6 +4,8 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Sn4kyGit/qa-agent-blueprint)](https://github.com/Sn4kyGit/qa-agent-blueprint/releases)
 
+![QA Agent Blueprint — Turn Claude Code into a learning QA Manager](docs/images/hero.png)
+
 **Turn Claude Code or opencode into a QA Manager that tests tickets autonomously.**
 
 Hand it a JIRA ticket — it tests or re-tests the ticket, produces evidence, reports
@@ -78,6 +80,8 @@ That's it. The agent knows your project because it reads the files in your repo.
 ## How it works
 
 You type a ticket. The agent does the rest.
+
+![QA Agent Blueprint workflow — from JIRA ticket to verified result](docs/images/workflow.png)
 
 ```
 /test-ticket SHOP-1234
