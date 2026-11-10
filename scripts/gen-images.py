@@ -2,7 +2,6 @@
 from PIL import Image, ImageDraw, ImageFont
 import os
 
-os.makedirs('docs/images', exist_ok=True)
 BG = (11, 13, 18)
 CARD = (25, 28, 40)
 BORDER = (40, 45, 60)
@@ -35,6 +34,9 @@ def gradient(draw, w, h):
         g = int(13 + (15-13) * y / h)
         b = int(18 + (30-18) * y / h)
         draw.line([(0, y), (w, y)], fill=(r, g, b))
+
+def right_arrow(draw, x, y, size=10, color=MUTED):
+    draw.polygon([(x - size, y - size), (x + size, y), (x - size, y + size)], fill=color)
 
 def make_hero():
     W, H = 1200, 680
@@ -76,9 +78,9 @@ def make_hero():
         draw.text((x + 14, pipe_y + 22), title, font=body_font, fill=INK)
         draw.text((x + 14, pipe_y + 52), sub, font=small_font, fill=MUTED)
         if i < len(steps) - 1:
-            ax = x + pipe_w + 5
+            ax = x + pipe_w + 8
             ay = pipe_y + pipe_h // 2
-            draw.polygon([(ax, ay), (ax + 14, ay - 7), (ax + 14, ay + 7)], fill=MUTED)
+            right_arrow(draw, ax, ay, size=10)
 
     stats_y = 400
     stats = [
@@ -116,7 +118,7 @@ def make_workflow():
 
     arrow_x = input_x + 210
     arrow_y = input_y + 30
-    draw.polygon([(arrow_x, arrow_y), (arrow_x + 25, arrow_y - 10), (arrow_x + 25, arrow_y + 10)], fill=MUTED)
+    right_arrow(draw, arrow_x, arrow_y, size=12)
 
     pipe_x = 280
     pipe_y = 140
@@ -145,7 +147,7 @@ def make_workflow():
 
     arrow_x = pipe_x + pipe_w + 10
     arrow_y = pipe_y + pipe_h // 2
-    draw.polygon([(arrow_x, arrow_y), (arrow_x + 25, arrow_y - 10), (arrow_x + 25, arrow_y + 10)], fill=MUTED)
+    right_arrow(draw, arrow_x, arrow_y, size=12)
 
     out_x = 830
     out_y = 140
@@ -226,7 +228,7 @@ def make_before_after():
 
     arrow_cx = left_x + panel_w + 10
     arrow_cy = panel_y + panel_h // 2
-    draw.polygon([(arrow_cx, arrow_cy), (arrow_cx + 35, arrow_cy - 12), (arrow_cx + 35, arrow_cy + 12)], fill=VIOLET)
+    right_arrow(draw, arrow_cx, arrow_cy, size=14)
     draw.text((arrow_cx - 2, arrow_cy + 25), "improves", font=tiny_font, fill=VIOLET)
 
     right_x = 640
