@@ -1,114 +1,111 @@
-# Execution Modes — wer sitzt am Steuer?
+# Execution Modes — who's at the wheel?
 
-Seit 0.12.0 entscheidet eine Zeile in der Projektdatei, **wie** der Agent ein
-Ticket testet: live per Maus und Auge (Playwright MCP), oder über ein vorher
-geschriebenes Test-Skript (Playwright/WDIO CLI). Diese Seite erklärt die drei
-Modi, was der Umbau bringt und wie du umstellst.
+Since 0.12.0, one line in the project file decides **how** the agent tests a
+ticket: live via mouse and eye (Playwright MCP), or through a pre-written test
+script (Playwright/WDIO CLI). This page explains the three modes, what the
+change delivers, and how to switch.
 
 ---
 
-## Das Problem vorher
+## The problem before
 
-Bisher lief jeder Ticket-Test live über MCP: Das Modell steuert den Browser
-Schritt für Schritt, sieht alles — und jeder Schritt kostet Kontext. Bei vielen
-oder langen Tickets sind die Nutzungslimits so spürbar schnell erreicht.
+Every ticket test ran live through MCP: the model drives the browser step by
+step, sees everything — and every step costs context. With many or long
+tickets, usage limits are reached quickly.
 
-Die Alternative — nur Skripte laufen lassen — ist zwar billig, aber blind: Eine
-Spec prüft nur, was jemand hineingeschrieben hat. Den abgeschnittenen Text, den
-doppelten Spinner oder den Konsolenfehler bemerkt sie nicht.
+The alternative — just running scripts — is cheap but blind: a spec checks only
+what someone wrote into it. It won't notice truncated text, a double spinner,
+or a console error.
 
-## Was der Umbau ermöglicht
+## What the change enables
 
-Der Agent kann jetzt **beides taktisch mischen**, projektweit voreingestellt
-und pro Ticket überschreibbar:
+The agent can now **mix both tactically**, with a project-wide default and
+per-ticket override:
 
-- **Recon-Probe** (`/recon`): Ein Wegwerf-Skript fährt die betroffenen Seiten
-  an und liefert die *echten* Bedienelemente, Formularfelder, Konsolenfehler
-  und Screenshots — für einen Bruchteil der MCP-Kosten. Specs werden daraus
-  gebaut statt geraten.
-- **Rotprobe**: Eine neue Spec muss einmal nachweislich rot gewesen sein
-  (Erwartung absichtlich verletzt), bevor ihr Grün als Nachweis zählt. Das
-  fängt die komplette Klasse „grün, prüft aber nichts" ab.
-- **Beobachtungslauf**: Nach einem grünen Skript-Lauf schaut das Modell einmal
-  kurz live über den Hauptflow — ausdrücklich mit dem Auftrag, auf alles zu
-  achten, was *nicht* in den Assertions steht.
-- **Modus im Report**: Jeder JIRA-Kommentar trägt die Zeile
-  `Mode: <mcp-only|hybrid|cli-first>` — wer das Ergebnis später bewertet, weiß,
-  ob live beobachtet oder nur assertiert wurde.
+- **Recon probe** (`/recon`): a throwaway script drives the relevant pages and
+  delivers the *real* controls, form fields, console errors, and screenshots —
+  at a fraction of the MCP cost. Specs are built from this instead of guessed.
+- **Red probe**: a new spec must provably fail once (expectation deliberately
+  violated) before its green counts as evidence. This catches the entire
+  "green but proves nothing" class.
+- **Observation pass**: after a green script run, the model does a short live
+  check of the main flow — explicitly tasked with noticing anything *not* in
+  the assertions.
+- **Mode in the report**: every JIRA comment carries the line
+  `Mode: <mcp-only|hybrid|cli-first>` — anyone reviewing the result knows
+  whether it was observed live or merely asserted.
 
-Nettoeffekt: deutlich weniger Token-Verbrauch pro Ticket bei nahezu gleicher
-Befundtiefe — die Limits werden später erreicht, und ab dem ersten Retest
-existiert eine wiederholbare Spec.
+Net effect: significantly lower token usage per ticket at nearly the same
+finding depth — limits are hit later, and from the first retest onward a
+repeatable spec exists.
 
-## Die drei Modi
+## The three modes
 
-| Modus | Wie getestet wird | Stärke | Kosten | Wann |
+| Mode | How it's tested | Strength | Cost | When |
 |---|---|---|---|---|
-| `mcp-only` | Modell steuert live, jeder Schritt | höchste Befundtiefe, findet Unerwartetes | hoch | neues Projekt ohne Suite, explorative Aufträge, visuelle Tickets, hohe Risiken |
-| `hybrid` (Standard) | Probe → Spec per CLI → kurzer Live-Check | nahe an MCP-Qualität | mittel | der Normalfall; rechnet sich ab dem ersten Retest |
-| `cli-first` | nur die bestehende Suite; MCP nur bei unklarem Fehlschlag | schnell, CI-tauglich | niedrig | gepflegte Suite, Regression, Pipeline, viele Tickets mit niedrigem Risiko |
+| `mcp-only` | Model drives live, every step | Deepest findings, catches the unexpected | High | New project without a suite, exploratory, visual tickets, high risk |
+| `hybrid` (default) | Probe → spec via CLI → short live check | Near-MCP quality | Medium | The everyday case; pays off from the first retest |
+| `cli-first` | Existing suite only; MCP only on unclear failures | Fast, CI-friendly | Low | Maintained suite, regression, pipeline, many low-risk tickets |
 
-**Eskalation gilt immer**, egal welcher Modus eingestellt ist: Bei hohem
-Ticket-Risiko, visuellen/gestalterischen Tickets, fehlender Recon für den
-Bereich, unklarem Fehlschlag oder nicht reproduzierbaren Bugs wird automatisch
-live beobachtet. Umgekehrt wird *nicht* eskaliert, nur weil ein Test rot ist —
-ein eindeutig eingeordneter Fehlschlag braucht keine Browser-Session.
+**Escalation always applies**, regardless of the configured mode: high ticket
+risk, visual/design tickets, missing recon for the area, unclear failures, or
+unreproducible bugs automatically escalate to live observation. Conversely, a
+test going red does *not* escalate — a clearly classified failure needs no
+browser session.
 
-## Davon getrennt: die Modell-Lane
+## Separate from that: the model lane
 
-Der Modus legt fest, **wie** getestet wird. Die Modell-Lane legt fest, **mit
-welcher Modelltiefe** ein Branch ausgeführt wird: Fast/low → cheap, komplex
-low/medium → standard, high/eskaliert → deep, unbekanntes Risiko → standard.
-Bei mehreren Branches wird pro Branch gewählt. Claude nutzt dafür
-haiku/sonnet/opus; opencode erbt ohne Konfiguration oder verwendet die unter
-`/model-setup` gewählten Provider-Modelle und optionalen Varianten.
+The mode decides **how** testing happens. The model lane decides **how deep**
+a branch runs: fast/low → cheap, complex low/medium → standard, high/escalated
+→ deep, unknown risk → standard. With multiple branches, the lane is chosen
+per branch. Claude uses haiku/sonnet/opus; opencode inherits without config or
+uses the provider models chosen under `/model-setup`.
 
-## Umstellen / benutzen
+## Switching / using
 
-### Pro Projekt (einmalig)
+### Per project (one-time)
 
-In `projects/<KEY>/PROJECT.md`, Abschnitt **Execution mode**:
+In `projects/<KEY>/PROJECT.md`, section **Execution mode**:
 
 ```markdown
 ## Execution mode
 
 - **Mode**: `hybrid`          ← mcp-only | hybrid | cli-first
-- **Verification pass**: `yes` ← kurzer Live-Check nach grünem CLI-Lauf
-- **Red check required**: `yes` ← neue Specs müssen einmal rot nachgewiesen sein
-- **Escalate at risk**: `high` ← ab diesem Risiko immer live
-- **Plan approval**: `yes`     ← Testplan wird vor Ausführung gezeigt und bestätigt
+- **Verification pass**: `yes` ← short live check after green CLI run
+- **Red check required**: `yes` ← new specs must prove failure once
+- **Escalate at risk**: `high` ← always live from this risk level
+- **Plan approval**: `yes`     ← test plan shown and confirmed before execution
 ```
 
-**Bestandsprojekte:** einfach `/re-board <KEY>` laufen lassen — der Dialog
-bietet die neue Sektion an, `hybrid` ist die empfohlene Voreinstellung.
+**Existing projects:** run `/re-board <KEY>` — the dialog offers the new
+section, `hybrid` is the recommended default.
 
-**Neue Projekte:** `/onboard-project` fragt den Modus direkt mit ab (eine
-Frage, Rest sind Defaults).
+**New projects:** `/onboard-project` asks for the mode up front (one question,
+rest are defaults).
 
-### Pro Ticket (jederzeit)
+### Per ticket (any time)
 
-Der Projekt-Modus ist nur der Default. Im Chat überschreiben:
+The project mode is just the default. Override in chat:
 
-- „teste SHOP-123 mal **komplett live**" → mcp-only für diesen Lauf
-- „dafür reicht die Suite" → cli-first für diesen Lauf
+- "test SHOP-123 **fully live**" → mcp-only for this run
+- "the suite is enough" → cli-first for this run
 
-### Einzeln nutzbar
+### Standalone
 
-`/recon SHOP-123` — nur die Aufklärung: schreibt `recon.json` (echte Selektoren,
-Konsolenfehler, Screenshots) ins Run-Verzeichnis. Ideal bevor du eine Spec
-schreiben lässt.
+`/recon SHOP-123` — just the recon: writes `recon.json` (real selectors,
+console errors, screenshots) into the run directory. Ideal before writing a spec.
 
-## Was sich NICHT ändert
+## What does NOT change
 
-- **Evidence bleibt Pflicht**: kein Ergebnis ohne
-  `evidence/<KEY>/<TICKET>/<ts>/` inkl. `execution_summary.json` — der
-  Stop-Hook prüft das weiter.
-- **Shadow Mode** bleibt an, bis du ihn im Projekt ausschaltest.
-- **Report-Format** (Cloud = ADF, Data Center = Wiki-Markup) unverändert.
-- **Playwright UND WebdriverIO** werden unterstützt — die Probe gibt es in
-  beiden Varianten mit demselben Ergebnisformat.
+- **Evidence remains mandatory**: no result without
+  `evidence/<KEY>/<TICKET>/<ts>/` including `execution_summary.json` — the
+  Stop hook continues to enforce this.
+- **Shadow mode** stays on until you turn it off in the project.
+- **Report format** (Cloud = ADF, Data Center = wiki markup) unchanged.
+- **Both Playwright and WebdriverIO** are supported — the probe exists in both
+  variants with the same result format.
 
-## Hintergrund für Neugierige
+## Background for the curious
 
-Die technische Beschreibung (Phasen, Datei-Verträge, Eskalationsregeln im
-Detail) liegt in `docs/pipeline/` — beginnend mit `00-overview.md`.
+The technical description (phases, file contracts, escalation rules in detail)
+lives in `docs/pipeline/` — starting with `00-overview.md`.
