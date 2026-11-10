@@ -54,6 +54,8 @@ That's it. The agent knows your project because it reads the files in your repo.
 
 ## What makes it different
 
+![Before vs. After — with and without QA Agent Blueprint](docs/images/before-after.png)
+
 | | Ordinary AI testing | QA Agent Blueprint |
 |---|---|---|
 | **Project knowledge** | Generic, forgets between sessions | Reads `PROJECT.md` + `PRODUCT.md` — test users, environments, deploy runbook, gotchas |
@@ -241,6 +243,8 @@ claude plugin update --scope project qa-agent-blueprint
 ---
 
 ## What's in the box
+
+![33 Skills — the complete toolbox](docs/images/features.png)
 
 | Component | Count | What it does |
 |---|---|---|
