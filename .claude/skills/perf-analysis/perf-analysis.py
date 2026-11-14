@@ -69,6 +69,20 @@ IMPROVEMENTS = [
         "detail": lambda s: f"Average run duration is {s['avg_duration_s']/60:.0f} minutes.",
         "suggestion": "Break tickets into smaller scopes; run recon in parallel with planning; consider the Fast Path for simple tickets.",
     },
+    {
+        "condition": lambda s: s.get("model_failovers", 0) > 0,
+        "severity": "low",
+        "title": "Model failovers mid-session",
+        "detail": lambda s: f"{s['model_failovers']} of {s.get('sessions_with_model', 0)} sessions switched model mid-run (measured).",
+        "suggestion": "Check lane configuration and provider quota; a mid-session model switch changes reasoning depth and may explain inconsistent runs.",
+    },
+    {
+        "condition": lambda s: "compression_savings_bytes" in s and s.get("compression_original_bytes", 0) > 0 and s["compression_savings_bytes"] / s["compression_original_bytes"] < 0.05,
+        "severity": "low",
+        "title": "Compression yields little",
+        "detail": lambda s: f"Excerpt compression saved {s['compression_savings_bytes']} of {s['compression_original_bytes']} bytes (measured).",
+        "suggestion": "Learnings excerpts may already be terse — no action needed; revisit the 200-char threshold only if capsule size becomes an issue.",
+    },
 ]
 
 
@@ -128,7 +142,11 @@ def load_run_json(evidence_dir: pathlib.Path, project: str | None, since_days: i
 
 
 def load_session_perf(evidence_dir: pathlib.Path, since_days: int | None):
-    """Read session-perf.log lines for token usage totals."""
+    """Read session-perf.log lines for token usage totals.
+
+    0.21.0: lines may carry measured model-affinity fields (model=,
+    model_switches=) appended by the Stop hook — optional, old lines stay valid.
+    """
     sessions = []
     log_path = evidence_dir / ".audit" / "session-perf.log"
     if not log_path.is_file():
@@ -144,15 +162,52 @@ def load_session_perf(evidence_dir: pathlib.Path, since_days: int | None):
         ts = parse_ts(m.group(1))
         if cutoff and ts and ts < cutoff:
             continue
-        sessions.append({
+        session = {
             "ts": m.group(1),
             "input": int(m.group(2)),
             "output": int(m.group(3)),
             "cache_create": int(m.group(4)),
             "cache_read": int(m.group(5)),
             "tools": int(m.group(6)),
-        })
+        }
+        mm = re.search(r"\| model=(\S+) \| model_switches=(\d+)", line)
+        if mm:
+            session["model"] = mm.group(1)
+            session["model_switches"] = int(mm.group(2))
+        sessions.append(session)
     return sessions
+
+
+def load_compression_log(evidence_dir: pathlib.Path, since_days: int | None):
+    """Read evidence/.audit/compression.log — measured excerpt compression.
+
+    One line per seal: `<ts> | run=<path> | mode=<mode> | original=<n> |
+    compressed=<n> | excerpts=<n>`. Written by context-capsule.py seal.
+    """
+    entries = []
+    log_path = evidence_dir / ".audit" / "compression.log"
+    if not log_path.is_file():
+        return entries
+    cutoff = datetime.now(timezone.utc) - timedelta(days=since_days) if since_days else None
+    for line in log_path.read_text().splitlines():
+        m = re.match(
+            r"(\S+) \| run=(\S+) \| mode=(\S+) \| original=(\d+) \| compressed=(\d+) \| excerpts=(\d+)",
+            line,
+        )
+        if not m:
+            continue
+        ts = parse_ts(m.group(1))
+        if cutoff and ts and ts < cutoff:
+            continue
+        entries.append({
+            "ts": m.group(1),
+            "run": m.group(2),
+            "mode": m.group(3),
+            "original": int(m.group(4)),
+            "compressed": int(m.group(5)),
+            "excerpts": int(m.group(6)),
+        })
+    return entries
 
 
 def load_eval_history(repo_root: pathlib.Path, since_days: int | None):
@@ -173,7 +228,9 @@ def load_eval_history(repo_root: pathlib.Path, since_days: int | None):
     return entries
 
 
-def analyze(runs: list, run_jsons: list, perf_sessions: list, eval_entries: list) -> dict:
+def analyze(runs: list, run_jsons: list, perf_sessions: list, eval_entries: list, compression_log: list | None = None) -> dict:
+    if compression_log is None:
+        compression_log = []
     """Compute performance metrics from the loaded data."""
     stats: dict = {}
     stats["runs"] = len(runs)
@@ -234,7 +291,7 @@ def analyze(runs: list, run_jsons: list, perf_sessions: list, eval_entries: list
         stats["flake_rate"] = flaky / total_cases * 100
         stats["flaky_cases"] = flaky
 
-    # Session/token analysis
+    # Session/token analysis + cost estimate (Sonnet-like pricing)
     if perf_sessions:
         total_in = sum(s["input"] for s in perf_sessions)
         total_out = sum(s["output"] for s in perf_sessions)
@@ -249,8 +306,32 @@ def analyze(runs: list, run_jsons: list, perf_sessions: list, eval_entries: list
         cache_total = total_cc + total_cr
         stats["cache_hit_rate"] = (total_cr / cache_total * 100) if cache_total > 0 else 0
         stats["avg_tokens_per_session"] = (total_in + total_out) / len(perf_sessions) if perf_sessions else 0
-        # Rough cost estimate (Sonnet-like pricing)
         stats["cost_est_usd"] = total_in * 3e-6 + total_out * 15e-6
+
+    # 0.21.0: model affinity and compression — MEASURED from evidence/.audit
+    # logs, never invented. Model fields come from the Stop hook transcript
+    # scan (session-perf.log), compression from context-capsule.py seal
+    # (compression.log). Sessions/runs without the fields count as "unset".
+    if perf_sessions:
+        with_model = [s for s in perf_sessions if "model" in s]
+        if with_model:
+            model_dist: dict = {}
+            for s in with_model:
+                model_dist[s["model"]] = model_dist.get(s["model"], 0) + 1
+            stats["models"] = model_dist
+            stats["model_failovers"] = sum(1 for s in with_model if s.get("model_switches", 0) > 0)
+            stats["sessions_with_model"] = len(perf_sessions)
+    if compression_log:
+        modes: dict = {}
+        orig = comp = 0
+        for e in compression_log:
+            modes[e["mode"]] = modes.get(e["mode"], 0) + 1
+            orig += e["original"]
+            comp += e["compressed"]
+        stats["compression_modes"] = modes
+        stats["compression_original_bytes"] = orig
+        stats["compression_compressed_bytes"] = comp
+        stats["compression_savings_bytes"] = orig - comp
 
     # Delegation analysis
     delegations = [r.get("session", {}).get("delegations", 0) for r in runs if r.get("session")]
@@ -313,6 +394,21 @@ def render(stats: dict, suggestions: list, broken: list, window: str) -> str:
         lines.append(f"| Cache hit rate | {stats['cache_hit_rate']:.0f}% | > 50% | {status} |")
     if "cost_est_usd" in stats:
         lines.append(f"| Est. token cost | ${stats['cost_est_usd']:.2f} | — | — |")
+    if stats.get("models"):
+        parts = ", ".join(f"{k}: {v}" for k, v in sorted(stats["models"].items(), key=lambda x: -x[1]))
+        lines.append(f"| Models (measured) | {parts} | — | — |")
+        n = stats.get("sessions_with_model", 0)
+        f = stats.get("model_failovers", 0)
+        status = "ok" if f == 0 else "warn"
+        lines.append(f"| Model failovers | {f} of {n} sessions | 0 | {status} |")
+    if stats.get("compression_modes"):
+        parts = ", ".join(f"{k}: {v}" for k, v in sorted(stats["compression_modes"].items()))
+        lines.append(f"| Compression (sealed runs) | {parts} | — | — |")
+    if "compression_savings_bytes" in stats:
+        saved = stats["compression_savings_bytes"]
+        orig = stats["compression_original_bytes"]
+        pct = round(saved / orig * 100, 1) if orig else 0.0
+        lines.append(f"| Compression savings (measured) | {saved:,} of {orig:,} bytes ({pct}%) | — | — |")
     lines.append("")
 
     # Phase breakdown
@@ -394,7 +490,7 @@ def main() -> int:
     perf_sessions = load_session_perf(evidence_dir, args.since)
     eval_entries = load_eval_history(repo_root, args.since)
 
-    stats = analyze(runs, run_jsons, perf_sessions, eval_entries)
+    stats = analyze(runs, run_jsons, perf_sessions, eval_entries, load_compression_log(evidence_dir, args.since))
     suggestions = build_suggestions(stats) if args.suggest else []
     window = f"last {args.since} days" if args.since else "all time"
 

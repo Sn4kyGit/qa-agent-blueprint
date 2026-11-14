@@ -43,8 +43,8 @@ python3 .claude/skills/perf-analysis/perf-analysis.py --since 30 --suggest
   project files. Improvement suggestions are proposals, not automatic fixes.
 - **Never duplicates `/qa-report` numbers** — pass rate, flake rate, and
   findings belong to qa-report. This skill focuses on *time and cost*.
-- **Never reads transcripts** — token usage comes from `session-perf.log`,
-  which carries only usage metadata (numbers), never content.
+- **Never reads transcripts** — token usage and model affinity come from
+  `session-perf.log` (Stop-hook-extracted metadata), never content.
 
 ## Data sources
 
@@ -52,7 +52,8 @@ python3 .claude/skills/perf-analysis/perf-analysis.py --since 30 --suggest
 |---|---|
 | `execution_summary.json` | verdict, duration_s, phases, session, test_cases |
 | `run.json` | duration_s, result counts |
-| `evidence/.audit/session-perf.log` | token usage per session |
+| `evidence/.audit/session-perf.log` | token usage per session + measured model affinity (`model=`, `model_switches=`) |
+| `evidence/.audit/compression.log` | measured compression bytes per seal (run, mode, original/compressed) |
 | `evals/results/history.log` | pass-rate trend |
 
 Fields not yet in older summaries are simply absent — the analysis reports

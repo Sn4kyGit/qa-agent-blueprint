@@ -83,7 +83,7 @@ That's it. The agent knows your project because it reads the files in your repo.
 
 You type a ticket. The agent does the rest.
 
-![QA Agent Blueprint workflow — from JIRA ticket to verified result](docs/images/workflow.png)
+![Example Run — what you get when you hand it a JIRA ticket](docs/images/example-run.png)
 
 ```
 /test-ticket SHOP-1234

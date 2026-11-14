@@ -61,7 +61,12 @@ paste the complete capsule into the prompt or substitute another revision's path
   feature-matrix rows. `secret_key` and `vault_path` are references, never values.
 - `knowledge` contains only run-relevant Learning excerpts with sources, confirmed
   Areas and the vendored-skill bridge path/hash. Unconfirmed candidates are never
-  serialized.
+  serialized. Oversized excerpts (`> 200` chars) are compressed losslessly before
+  sealing (`compress-tool-output.py`, deterministic whitespace/dedupe/JSON
+  compaction, fail-open); raw learnings and evidence stay untouched — only the
+  model-facing excerpt copy shrinks. Each seal appends its measured byte delta to
+  `evidence/.audit/compression.log`, which `perf-analysis` reports as measured
+  savings (never estimates).
 - `field_sources` makes project/product inheritance visible. Sealed fields (JIRA
   transitions, readiness statuses, merge requirement, report format, deploy
   permissions, evidence/security/MCP policy) may name only the project's

@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import os
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 import re
 import sys
@@ -629,6 +630,46 @@ def validate_predecessor(capsule, capsule_path, run_dir=None):
 
 
 def seal_capsule(capsule, capsule_path, qa_home=None, run_dir=None, draft_path=None):
+    # 0.21.0: compress learnings excerpts before sealing (lossless-first).
+    # Raw evidence stays immutable; only model-facing excerpts are compressed.
+    # Measured savings are appended to evidence/.audit/compression.log —
+    # perf-analysis reports real byte deltas, never estimates.
+    compress_script = Path(__file__).resolve().parent / "compress-tool-output.py"
+    comp_original = comp_compressed = comp_excerpts = 0
+    if compress_script.exists():
+        for learning in capsule.get("knowledge", {}).get("learnings", []):
+            excerpt = learning.get("excerpt")
+            if isinstance(excerpt, str) and len(excerpt) > 200:
+                try:
+                    import subprocess
+                    result = subprocess.run(
+                        [sys.executable, str(compress_script), "--text", excerpt, "--mode", "lossless"],
+                        capture_output=True, text=True, timeout=5,
+                    )
+                    if result.returncode == 0:
+                        compressed = result.stdout.strip()
+                        if compressed and len(compressed) < len(excerpt):
+                            comp_original += len(excerpt)
+                            comp_compressed += len(compressed)
+                            comp_excerpts += 1
+                            learning["excerpt"] = compressed
+                except Exception:
+                    pass  # fail-open: keep original if compression fails
+    if qa_home and run_dir:
+        try:
+            _audit = Path(qa_home) / "evidence" / ".audit"
+            _run_rel = Path(run_dir).resolve().relative_to((Path(qa_home) / "evidence").resolve())
+            if _run_rel.parts and _run_rel.parts[0] != "..":
+                _audit.mkdir(parents=True, exist_ok=True)
+                with (_audit / "compression.log").open("a", encoding="utf-8") as handle:
+                    handle.write(
+                        f"{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')} "
+                        f"| run={_run_rel.as_posix()} | mode=lossless "
+                        f"| original={comp_original} | compressed={comp_compressed} "
+                        f"| excerpts={comp_excerpts}\n"
+                    )
+        except Exception:
+            pass  # audit logging must never break sealing
     integrity = capsule.get("integrity")
     if isinstance(integrity, dict) and ("payload_sha256" not in integrity or integrity["payload_sha256"] == ""):
         integrity["payload_sha256"] = "0" * 64

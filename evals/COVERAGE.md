@@ -75,6 +75,7 @@ only enforcement once a fixture proves it".
 | NO_TEST: tools ran, nothing completed; reason stated; nothing posted; out of pass rate | case: `no-test-verdict` (+ `aggregate.py` excludes it — tested via qa-report, not a fixture) |
 | Learnings: exactly one of `captured` / `none_because` | case: `learnings-declaration` |
 | Product fields conditional (never null) | case: `routing-absent` |
+| Model affinity and compression are MEASURED, never self-reported: session-perf.log carries `model=`/`model_switches=` (Stop-hook transcript scan, sidechains excluded), compression.log carries the seal's measured byte deltas; perf-analysis reports only these (0.20.1) | fixtures: `stop-evidence-fixtures.sh` (dominant model + sidechain exclusion) + `context-capsule-fixtures.sh` (excerpt compression + compression.log) + `opencode/tests/evidence-gate.test.ts` (opencode mirror parity) |
 | PII/secrets never in evidence artifacts | **uncovered** — needs an artifact-inspection mechanism; hook-side candidate (PostToolUse on evidence writes) rather than eval |
 | A bug-failure screenshot shows the culprit element visually marked (highlight before capture; the marked shot leads the bug ticket's attachments) | **uncovered** — behavioral norm in `docs/rules/testing/playwright-mcp.md` + `bug-reporter` + capture matrix; grading needs image/artifact inspection (does the failure screenshot carry a highlight), not answer text. Candidate for an artifact-aware runner (0.10.0) |
 

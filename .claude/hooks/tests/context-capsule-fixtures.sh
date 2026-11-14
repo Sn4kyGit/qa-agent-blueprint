@@ -203,6 +203,24 @@ with tempfile.TemporaryDirectory() as temporary:
     check("secret_key and vault_path references allowed", sealed["effective_config"]["test_users"][0]["secret_key"] == "SHOP_QA_PASSWORD" and sealed["effective_config"]["test_users"][0]["vault_path"] == "shop/qa-standard")
     check("sealed capsule remains readable JSON", "\n  \"intake\": {" in capsule_path(run).read_text(encoding="utf-8"))
 
+    qa6, run6, draft6 = environment(root)
+    long_excerpt = "\n".join(["Selector .btn-primary timed out"] * 40 + ["Fix: wait for network idle."])
+    draft6["knowledge"]["learnings"].append({"excerpt": long_excerpt, "source": "projects/SHOP/learnings.md"})
+    path6 = capsule_path(run6)
+    write_json(path6, draft6)
+    expect("compressing capsule seals with qa-home", invoke("seal", "--capsule", path6, "--qa-home", qa6, "--run-dir", run6), 0, "payload_sha256=")
+    sealed6 = json.loads(path6.read_text(encoding="utf-8"))
+    compressed_excerpt = sealed6["knowledge"]["learnings"][1]["excerpt"]
+    check("oversized excerpt compressed losslessly", len(compressed_excerpt) < len(long_excerpt) and compressed_excerpt.startswith("[... "), repr(compressed_excerpt[:80]))
+    log6 = qa6 / "evidence" / ".audit" / "compression.log"
+    log_text = log6.read_text(encoding="utf-8") if log6.is_file() else ""
+    check(
+        "compression.log records measured bytes",
+        "run=SHOP/SHOP-123/20261028-101500 | mode=lossless | original=" in log_text and "excerpts=1" in log_text,
+        log_text,
+    )
+    expect("compressed capsule validates centrally", invoke("validate", "--capsule", path6, "--qa-home", qa6, "--run-dir", run6), 0, "valid")
+
     qa2, run2, draft2 = environment(root, product=False)
     expect("project-only capsule seals without product", seal(qa2, run2, draft2), 0)
     sealed2 = json.loads(capsule_path(run2).read_text(encoding="utf-8"))

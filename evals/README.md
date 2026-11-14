@@ -49,12 +49,16 @@ judge/eval model; flash is for the dev loop.
 the `claude -p` calls go through a localhost shim (`openrouter-shim.py`) to
 OpenRouter's Anthropic-compatible endpoint, so a full gate costs a few cents
 of OpenRouter credit instead of subscription quota. The key lives in
-`evals/.env.openrouter` (gitignored via `.env.*`, never committed). Two rules
-stay absolute: the model MUST be an `anthropic/claude-*` id (the gate measures
-the production model class — a GPT/Gemini gate is meaningless), and model
-aliases like `sonnet` don't resolve through a gateway — the wrapper passes
-full ids (`anthropic/claude-sonnet-4.5`) for `--model` and `--judge-model`
-unless you override with `OR_MODEL`/`OR_JUDGE_MODEL`. Why the shim exists:
+`evals/.env.openrouter` (gitignored via `.env.*`, never committed). Model
+policy (owner decision, 2026-11-14): the gate runs on
+`deepseek/deepseek-v4.1-flash-1017` — the same model class the QA lanes
+actually run on (the blueprint is model-agnostic on the opencode side), which
+supersedes the earlier `anthropic/*`-only rule. Cost is negligible for the
+flash class, but the gate still measures THAT class, not another one: keep
+answer and judge model in the same family you ship. Model aliases like
+`sonnet` don't resolve through a gateway — the wrapper passes full ids for
+`--model` and `--judge-model` unless you override with
+`OR_MODEL`/`OR_JUDGE_MODEL`. Why the shim exists:
 Claude Code appends `/v1/messages` to `ANTHROPIC_BASE_URL` itself and calls
 `/v1/messages/count_tokens` + `GET /v1/models/<id>`, which OpenRouter 404s —
 the shim answers those locally and proxies everything else.

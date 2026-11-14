@@ -59,8 +59,11 @@ log_session_perf() {
   local _perf_data
   _perf_data="$(python3 - "$TRANSCRIPT" <<'PYEOF' 2>/dev/null
 import json, sys
+from collections import Counter
+from datetime import datetime, timezone
 path = sys.argv[1]
 total_in = total_out = cache_create = cache_read = tool_calls = 0
+models = Counter()
 try:
     with open(path) as f:
         for line in f:
@@ -80,19 +83,26 @@ try:
             for c in content:
                 if isinstance(c, dict) and c.get("type") == "tool_use":
                     tool_calls += 1
+            # 0.21.0: model affinity — main-chain assistant model(s). Sidechain
+            # entries (subagents) are excluded: they carry their own lane.
+            if not obj.get("isSidechain") and msg.get("model"):
+                models[str(msg["model"])] += 1
 except Exception:
     pass
-print(f"{total_in} {total_out} {cache_create} {cache_read} {tool_calls}")
+model_fields = ""
+if models:
+    dominant, _count = models.most_common(1)[0]
+    model_fields = f" | model={dominant} | model_switches={len(models) - 1}"
+ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+print(f"{ts} | input={total_in} | output={total_out} | cache_create={cache_create} | cache_read={cache_read} | tools={tool_calls}{model_fields}")
 PYEOF
 )"
   [ -n "$_perf_data" ] || return 0
-  local _ts _logdir _logfile
-  _ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local _logdir _logfile
   _logdir="$CWD/evidence/.audit"
   mkdir -p "$_logdir" 2>/dev/null || return 0
   _logfile="$_logdir/session-perf.log"
-  printf '%s | input=%s | output=%s | cache_create=%s | cache_read=%s | tools=%s\n' \
-    "$_ts" $(echo "$_perf_data") >> "$_logfile" 2>/dev/null
+  printf '%s\n' "$_perf_data" >> "$_logfile" 2>/dev/null
 }
 
 log_session_perf

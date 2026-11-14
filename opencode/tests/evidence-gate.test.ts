@@ -20,7 +20,7 @@
 // (NEEDS_REVIEW passes on declaration alone).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { qaBlueprint } from "../plugins/qa-blueprint.ts"
@@ -139,6 +139,36 @@ describe("evidence gate (opencode) — activity classification", () => {
     await markActivity(r.hooks, "heredoc")
     await idle(r)
     expect(r.prompts).toHaveLength(0)
+  })
+})
+
+describe("evidence gate (opencode) — session-perf model affinity (0.21.0)", () => {
+  test("dominant model + switch count recorded, subagent sessions not conflated", async () => {
+    const { ctx } = fakeCtx(dir)
+    ;(ctx as { client: Record<string, unknown> }).client.session.messages = async () => ({
+      data: [
+        { info: { role: "assistant", modelID: "claude-sonnet-4-5" } },
+        { info: { role: "assistant", modelID: "claude-sonnet-4-5" } },
+        { info: { role: "assistant", modelID: "claude-opus-4" } },
+      ],
+    })
+    const hooks = await qaBlueprint(ctx as never)
+    const call = toolAfter("bash", { command: "npm run test:e2e" })
+    await hooks["tool.execute.after"](call.input as never, call.output as never)
+    await mkdir(join(dir, "evidence"), { recursive: true })
+    await hooks.event({ event: { type: "session.idle", properties: { sessionID: SESSION_ID } } } as never)
+    const log = await readFile(join(dir, "evidence", ".audit", "session-perf.log"), "utf8")
+    expect(log).toContain("model=claude-sonnet-4-5 | model_switches=1")
+    expect(log).not.toContain("opus") // dominant wins, minority model not in model=
+  })
+
+  test("missing messages endpoint degrades to the legacy line shape", async () => {
+    const r = await rig() // fakeCtx has no client.session.messages
+    await markActivity(r.hooks, "npmScript")
+    await mkdir(join(dir, "evidence"), { recursive: true })
+    await idle(r)
+    const log = await readFile(join(dir, "evidence", ".audit", "session-perf.log"), "utf8")
+    expect(log).toMatch(/input=\d+ \| output=\d+ \| cache_create=\d+ \| cache_read=\d+ \| tools=\d+\n$/)
   })
 })
 

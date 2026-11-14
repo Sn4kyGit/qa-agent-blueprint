@@ -210,6 +210,32 @@ printf '%s\n' '{"ticket":"SHOP-1","project":"SHOP","verdict":"NO_TEST","no_test_
   > "$C13/evidence/SHOP/SHOP-1/20260906-100000/execution_summary.json"
 check "NO_TEST with reason and learnings declaration" 0 "$(run_hook "$C13" "$C13/t.jsonl")"
 
+# --- case 14: model affinity measured into session-perf.log (0.21.0) ----------
+# Main-chain assistant models are counted (dominant + distinct count); sidechain
+# entries (subagents) are excluded — they carry their own lane.
+C14="$WORK/c14"; mkdir -p "$C14/evidence"
+printf '%s\n' \
+  '{"type":"assistant","isSidechain":true,"message":{"model":"claude-haiku-side","content":[{"type":"text","text":"subagent"}]}}' \
+  '{"type":"assistant","message":{"model":"claude-sonnet-4-5","content":[{"type":"text","text":"working"}]}}' \
+  '{"type":"assistant","message":{"model":"claude-sonnet-4-5","content":[{"type":"text","text":"still working"}]}}' \
+  '{"type":"assistant","message":{"model":"claude-opus-4","content":[{"type":"text","text":"after a switch"}]}}' \
+  > "$C14/t.jsonl"
+check "model-affinity case: session may end" 0 "$(run_hook "$C14" "$C14/t.jsonl")"
+PERF="$C14/evidence/.audit/session-perf.log"
+if [ -f "$PERF" ] && grep -qF '| model=claude-sonnet-4-5 | model_switches=1' "$PERF"; then
+  printf 'ok    %-52s\n' "session-perf.log: dominant model + switches"
+else
+  printf 'FAIL  %-52s\n' "session-perf.log: dominant model + switches"
+  [ -f "$PERF" ] && sed 's/^/        /' "$PERF"
+  fails=$((fails + 1))
+fi
+if [ -f "$PERF" ] && ! grep -qF 'claude-haiku-side' "$PERF"; then
+  printf 'ok    %-52s\n' "session-perf.log: sidechain model excluded"
+else
+  printf 'FAIL  %-52s\n' "session-perf.log: sidechain model excluded"
+  fails=$((fails + 1))
+fi
+
 echo
 if [ "$fails" -eq 0 ]; then
   echo "all fixtures passed"

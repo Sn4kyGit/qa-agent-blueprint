@@ -53,9 +53,15 @@ semantics in `claude -p`.
   "finished_at": "2026-09-04T14:47:23Z",
   "duration_s": 2843,
   "phases": { "intake": 120, "readiness": 60, "recon": 300, "planning": 180, "execution": 1800, "verification": 240, "reporting": 143 },
-  "session": { "model": "sonnet", "delegations": 4, "tool_calls": 47 }
+  "session": { "model": "sonnet", "requested_model": "sonnet", "delegations": 4, "tool_calls": 47 }
 }
 ```
+
+`session.requested_model` records the lane the orchestrator chose. The
+harness-measured facts (dominant model, failover switches, compression byte
+savings) live in `evidence/.audit/session-perf.log` and
+`evidence/.audit/compression.log` and are read from there by `/qa-report` and
+`perf-analysis` — they never depend on the agent's self-report.
 
 ## `NO_TEST` — the explicit way out
 

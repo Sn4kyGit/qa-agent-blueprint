@@ -1259,7 +1259,23 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
             const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z")
             const logDir = join(home, "evidence", ".audit")
             await mkdir(logDir, { recursive: true })
-            const line = `${ts} | input=${acc.input} | output=${acc.output} | cache_create=${acc.cacheCreate} | cache_read=${acc.cacheRead} | tools=${acc.tools}\n`
+            // 0.21.0: model affinity — main-chain assistant model(s) of this
+            // session (subagents run in their own session, so no exclusion needed).
+            let modelFields = ""
+            try {
+              const res = await ctx.client?.session?.messages?.({ path: { id: sessionID } } as never)
+              const models = new Map<string, number>()
+              for (const m of (res?.data ?? []) as Array<{ info?: { role?: string; modelID?: string } }>) {
+                if (m?.info?.role === "assistant" && m.info.modelID) {
+                  models.set(m.info.modelID, (models.get(m.info.modelID) ?? 0) + 1)
+                }
+              }
+              if (models.size > 0) {
+                const dominant = [...models.entries()].sort((a, b) => b[1] - a[1])[0][0]
+                modelFields = ` | model=${dominant} | model_switches=${models.size - 1}`
+              }
+            } catch { /* model fields are best-effort */ }
+            const line = `${ts} | input=${acc.input} | output=${acc.output} | cache_create=${acc.cacheCreate} | cache_read=${acc.cacheRead} | tools=${acc.tools}${modelFields}\n`
             await appendFile(join(logDir, "session-perf.log"), line)
           } catch { /* logging must never break a session */ }
           perfBySession.delete(sessionID)

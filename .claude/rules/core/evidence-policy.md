@@ -142,10 +142,28 @@ valid; the schema tolerates extras. Declared by whoever writes the summary:
 - `duration_s` — total seconds (alternative to computing from timestamps)
 - `phases{intake,readiness,recon,planning,execution,verification,reporting}` — seconds per phase
 - `session{model,delegations,tool_calls}` — what the run cost in agent terms
+- `session.requested_model` — the lane the orchestrator chose (agent-written;
+  the orchestrator knows its own lane choice, not the executing model)
+
+The harness-measured facts are NOT summary fields — the Stop hook and the seal
+step record them mechanically in `evidence/.audit/`, and `perf-analysis` reads
+them from there (no reliance on the agent's self-report):
+
+- `session-perf.log` line fields `model=` (dominant main-chain assistant model,
+  sidechains excluded) and `model_switches=` (additional distinct models seen —
+  a failover or mid-session lane switch)
+- `compression.log` — one line per seal with the run path, mode and the
+  MEASURED original/compressed byte counts of compressed learnings excerpts
 
 `evidence/.audit/session-perf.log` — append-only, one line per session with
-token usage totals (input/output/cache_create/cache_read/tools), written by
-the Stop hook from transcript usage metadata. Never content, never secrets.
+token usage totals (input/output/cache_create/cache_read/tools) plus the
+optional model fields above, written by the Stop hook from transcript usage
+metadata. Never content, never secrets.
+
+`evidence/.audit/compression.log` — append-only, one line per seal
+(`<ts> | run=<path> | mode=<mode> | original=<n> | compressed=<n> |
+excerpts=<n>`), written by `context-capsule.py seal`. Raw evidence stays
+immutable — only model-facing excerpt copies are compressed.
 
 ## PII & secrets in evidence
 

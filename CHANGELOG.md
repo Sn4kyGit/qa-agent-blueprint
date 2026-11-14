@@ -8,6 +8,40 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.21.0] — 2026-11-14
+
+Theme: **deterministic tool-output compression.** Lossless-first compressor for
+model-facing context, plus honest model-affinity fields in the run summary.
+
+### Added
+- `.claude/scripts/compress-tool-output.py` — deterministic compressor with two
+  modes: `lossless` (whitespace collapse, dedupe of runs of 3+ identical lines
+  with a visible `[... Nx identical ...]` marker, homogeneous-JSON compaction)
+  and `standard` (additionally drops repeated error/warning lines beyond the
+  first two). Fail-open: any error or a growing output falls back to the
+  original text. Literal `\n` sequences are never rewritten.
+- `context-capsule.py seal` compresses oversized learnings excerpts
+  (`> 200 chars`) before sealing — raw evidence stays immutable, only the
+  model-facing excerpt is compressed. Script path is resolved relative to the
+  script itself, so it works from any cwd (plugin installs included). Each
+  seal appends its MEASURED byte delta to `evidence/.audit/compression.log`.
+- Model affinity, measured — not self-reported. The Stop hook
+  (`stop-evidence-check.sh`) and the opencode plugin extract the dominant
+  main-chain assistant model (sidechains/subagents excluded) and the number of
+  distinct models seen per session into `evidence/.audit/session-perf.log`
+  (`model=`, `model_switches=`). The orchestrator alone records
+  `session.requested_model` in the summary — the lane choice it actually made.
+- `perf-analysis.py` reports models, failover sessions and compression savings
+  from the audit logs. No invented estimates — savings are the measured byte
+  delta from `compression.log`.
+- Run summary schema (`evidence-policy.md`) declares `session.requested_model`;
+  harness-measured facts stay in the audit logs by design.
+
+### Fixed
+- `compress-fixtures.sh` — new fixture suite for the compressor (dedupe
+  threshold, filter-before-dedupe ordering in `standard` mode, lossless
+  preservation of literal `\n`, fail-open on marker-induced growth).
+
 ## [0.20.0] — 2026-11-02
 
 Theme: **open-source launch preparation.** Apache 2.0 license, SPDX

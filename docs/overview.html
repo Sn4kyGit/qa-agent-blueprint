@@ -549,9 +549,11 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <tr>
       <td>/perf-analysis</td>
       <td>Reads <code>execution_summary.json</code> (timing fields), <code>run.json</code>,
-      <code>session-perf.log</code> and <code>evals/results/history.log</code>: session duration,
+      <code>session-perf.log</code> (token usage + measured model affinity),
+      <code>compression.log</code> (measured byte savings) and
+      <code>evals/results/history.log</code>: session duration,
       phase breakdown, token usage, bottlenecks, improvement suggestions. Read-only,
-      honest “cannot be computed” reports.</td>
+      honest “cannot be computed” reports, no invented estimates.</td>
       <td>“Why is this so slow?”, “Improve performance”</td>
     </tr>
     <tr>

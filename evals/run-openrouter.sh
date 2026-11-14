@@ -27,7 +27,7 @@
 # Usage (alle Args werden an run.sh durchgereicht):
 #   bash evals/run-openrouter.sh routing-absent            # ein Case, 1 Run
 #   bash evals/run-openrouter.sh --runs 3                  # volles Gate
-#   OR_MODEL=anthropic/claude-opus-4.5 bash evals/run-openrouter.sh ...
+#   OR_MODEL=deepseek/deepseek-v4.1-flash-1017 bash evals/run-openrouter.sh ...
 #
 set -euo pipefail
 
@@ -56,11 +56,11 @@ export ANTHROPIC_BASE_URL="http://127.0.0.1:$PORT"  # OHNE /v1 — die CLI haeng
 export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
 # Hintergrund-/Hilfsaufrufe der CLI (haiku-Klasse) muessen auch auf eine
 # OpenRouter-ID zeigen, sonst schlaegt der Alias-Lookup am Gateway fehl.
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="anthropic/claude-haiku-4.5"
-export ANTHROPIC_DEFAULT_SONNET_MODEL="anthropic/claude-sonnet-4.5"
-export ANTHROPIC_DEFAULT_OPUS_MODEL="anthropic/claude-opus-4.5"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek/deepseek-v4.1-flash-1017"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek/deepseek-v4.1-flash-1017"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek/deepseek-v4.1-flash-1017"
 
-OR_MODEL="${OR_MODEL:-anthropic/claude-sonnet-4.5}"
+OR_MODEL="${OR_MODEL:-deepseek/deepseek-v4.1-flash-1017}"
 OR_JUDGE_MODEL="${OR_JUDGE_MODEL:-$OR_MODEL}"
 
 # Durchreichen, aber Modell-Flags nicht doppeln: wer selbst --model uebergibt,
