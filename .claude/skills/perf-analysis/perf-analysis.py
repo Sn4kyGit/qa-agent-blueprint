@@ -291,7 +291,7 @@ def analyze(runs: list, run_jsons: list, perf_sessions: list, eval_entries: list
         stats["flake_rate"] = flaky / total_cases * 100
         stats["flaky_cases"] = flaky
 
-    # Session/token analysis + cost estimate (Sonnet-like pricing)
+    # Session/token analysis (measured token counts — no dollar estimates)
     if perf_sessions:
         total_in = sum(s["input"] for s in perf_sessions)
         total_out = sum(s["output"] for s in perf_sessions)
@@ -306,7 +306,6 @@ def analyze(runs: list, run_jsons: list, perf_sessions: list, eval_entries: list
         cache_total = total_cc + total_cr
         stats["cache_hit_rate"] = (total_cr / cache_total * 100) if cache_total > 0 else 0
         stats["avg_tokens_per_session"] = (total_in + total_out) / len(perf_sessions) if perf_sessions else 0
-        stats["cost_est_usd"] = total_in * 3e-6 + total_out * 15e-6
 
     # 0.21.0: model affinity and compression — MEASURED from evidence/.audit
     # logs, never invented. Model fields come from the Stop hook transcript
@@ -392,8 +391,6 @@ def render(stats: dict, suggestions: list, broken: list, window: str) -> str:
     if "cache_hit_rate" in stats:
         status = "ok" if stats["cache_hit_rate"] > 50 else "warn"
         lines.append(f"| Cache hit rate | {stats['cache_hit_rate']:.0f}% | > 50% | {status} |")
-    if "cost_est_usd" in stats:
-        lines.append(f"| Est. token cost | ${stats['cost_est_usd']:.2f} | — | — |")
     if stats.get("models"):
         parts = ", ".join(f"{k}: {v}" for k, v in sorted(stats["models"].items(), key=lambda x: -x[1]))
         lines.append(f"| Models (measured) | {parts} | — | — |")

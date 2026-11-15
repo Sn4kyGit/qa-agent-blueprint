@@ -125,10 +125,34 @@ gen_answer() {
   # permissions there is safe; repo-root runs keep the normal permission set.
   local skip_args=()
   [ "$cwd" != "$REPO" ] && skip_args=(--dangerously-skip-permissions)
-  answer="$(cd "$cwd" && "$CLAUDE" -p ${skip_args[@]+"${skip_args[@]}"} ${MCP_ARGS[@]+"${MCP_ARGS[@]}"} ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} "$prompt" 2>&1)"
-  local rc=$?
-  printf '%s\n' "$answer" > "$outfile"
+  local attempt=1
+  while true; do
+    answer="$(cd "$cwd" && "$CLAUDE" -p ${skip_args[@]+"${skip_args[@]}"} ${MCP_ARGS[@]+"${MCP_ARGS[@]}"} ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} "$prompt" 2>&1)"
+    rc=$?
+    printf '%s\n' "$answer" > "$outfile"
+    # Gateway runs sterben sporadisch (~10%): Session endet ohne eigenen Text —
+    # nur unrecognized_model-Banner + HARNESS-FACT-Footer bleiben. Das ist
+    # Infrastruktur-Rauschen, kein Verhaltensergebnis; ein Retry ist ehrlicher,
+    # als einen Hard-Case mit einem toten Run rot zu machen. Genau EIN Retry,
+    # nur bei leerem Body — nie bei inhaltlichem FAIL.
+    if [ -n "$(answer_body "$answer")" ] || [ "$attempt" -ge 2 ]; then break; fi
+    attempt=2; sleep 2
+  done
   return $rc
+}
+
+# Eigener Text eines Runs: unrecognized_model-Banner und der vom Runner
+# angehaengte HARNESS FACT-Footer (inkl. vorgestelltem ---) zaehlen nicht.
+answer_body() {
+  printf '%s\n' "$1" \
+    | grep -v '^\[claude-code:unrecognized_model\]' \
+    | sed '/^HARNESS FACT/,$d' \
+    | awk '{l[NR]=$0} END{
+        last=NR;
+        while (last>0 && l[last] ~ /^[[:space:]]*$/) last--;
+        while (last>0 && l[last] == "---") { last--; while (last>0 && l[last] ~ /^[[:space:]]*$/) last--; }
+        for (i=1;i<=last;i++) print l[i];
+      }'
 }
 
 # $1=criteria file  $2=verdict outfile  $3..=answer files

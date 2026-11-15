@@ -27,7 +27,7 @@
 # Usage (alle Args werden an run.sh durchgereicht):
 #   bash evals/run-openrouter.sh routing-absent            # ein Case, 1 Run
 #   bash evals/run-openrouter.sh --runs 3                  # volles Gate
-#   OR_MODEL=deepseek/deepseek-v4.1-flash-1017 bash evals/run-openrouter.sh ...
+#   OR_MODEL=deepseek/deepseek-v4-pro bash evals/run-openrouter.sh ...
 #
 set -euo pipefail
 
@@ -41,7 +41,10 @@ fi
 
 # Shim starten: beantwortet count_tokens + models lokal, proxied den Rest
 # zu OpenRouter (127.0.0.1 only). Laueft nur fuer die Dauer dieses Runs.
-PORT="${OR_SHIM_PORT:-8799}"
+# Jede Invocation bekommt einen FREIEN Port — ein fester Port (8799) liess
+# parallele Gate-Batches denselben Shim teilen, und der EXIT-trap des ersten
+# Batches killte ihn unter den anderen weg (ConnectionRefused-Serien).
+PORT="${OR_SHIM_PORT:-$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')}"
 python3 "$HERE/openrouter-shim.py" "$PORT" >/dev/null 2>&1 &
 SHIM_PID=$!
 trap 'kill "$SHIM_PID" 2>/dev/null || true' EXIT
@@ -56,11 +59,14 @@ export ANTHROPIC_BASE_URL="http://127.0.0.1:$PORT"  # OHNE /v1 — die CLI haeng
 export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
 # Hintergrund-/Hilfsaufrufe der CLI (haiku-Klasse) muessen auch auf eine
 # OpenRouter-ID zeigen, sonst schlaegt der Alias-Lookup am Gateway fehl.
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek/deepseek-v4.1-flash-1017"
-export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek/deepseek-v4.1-flash-1017"
-export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek/deepseek-v4.1-flash-1017"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek/deepseek-v4-pro"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek/deepseek-v4-pro"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek/deepseek-v4-pro"
+# Unbekannte Gateway-IDs duerfen nicht lokal auf ein angenommenes 200k-Fenster
+# begrenzt werden; das tatsaechliche Fenster erzwingt der Upstream-Provider.
+export CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1
 
-OR_MODEL="${OR_MODEL:-deepseek/deepseek-v4.1-flash-1017}"
+OR_MODEL="${OR_MODEL:-deepseek/deepseek-v4-pro}"
 OR_JUDGE_MODEL="${OR_JUDGE_MODEL:-$OR_MODEL}"
 
 # Durchreichen, aber Modell-Flags nicht doppeln: wer selbst --model uebergibt,

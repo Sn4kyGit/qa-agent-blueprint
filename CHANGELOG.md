@@ -41,6 +41,14 @@ model-facing context, plus honest model-affinity fields in the run summary.
 - `compress-fixtures.sh` — new fixture suite for the compressor (dedupe
   threshold, filter-before-dedupe ordering in `standard` mode, lossless
   preservation of literal `\n`, fail-open on marker-induced growth).
+- `perf-analysis` no longer invents a dollar cost from token totals and
+  assumed Sonnet-like pricing. Token counts remain measured; per-token cost is
+  explicitly reported as not computable without a configured pricing model.
+- OpenRouter eval harness hardening: an empty answer (model-catalog banner plus
+  harness footer only) gets one infrastructure retry, never a retry for an
+  actual FAIL. Each runner invocation binds its own free shim port, preventing
+  parallel gate batches from killing each other's shared shim; the model policy
+  is documented as DeepSeek `v4-pro`.
 
 ## [0.20.0] — 2026-11-02
 

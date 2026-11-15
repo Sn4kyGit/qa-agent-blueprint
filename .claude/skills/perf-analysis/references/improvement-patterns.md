@@ -89,11 +89,14 @@ session-perf.log.
 - **Fast Path** — simple tickets skip the full pipeline.
 - **Pre-computed context** — use the capsule to avoid re-reading project files.
 
-## Token cost growing over time
+## Token usage growing over time
 
-**Signal**: `cost_est_usd` trending up in the session-perf.log.
+**Signal**: `avg_tokens_per_session` (or the token totals in session-perf.log)
+trending up across sessions. Dollar cost is never estimated — no pricing model
+is configured; report token counts, not money.
 
-**Why it matters**: token spend is real money.
+**Why it matters**: rising token usage means rising latency and (on paid
+lanes) rising spend.
 
 **Fixes**:
 - **Skill profiles** — deactivate unused skills to reduce description overhead.
