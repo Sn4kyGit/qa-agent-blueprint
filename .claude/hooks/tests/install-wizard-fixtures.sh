@@ -136,7 +136,7 @@ else:
 
 target = os.path.join(work, "cancel")
 os.makedirs(target)
-code, output = run(["--mode", "plugin", "--target", target], inputs=["1", "1", "1", "n"])
+code, output = run(["--wizard", "--mode", "plugin", "--target", target], inputs=["1", "1", "1", "n"])
 if code == 0 and has(output, "Wizard cancelled") and not os.listdir(target):
     ok("cancelling before confirmation writes nothing")
 else:
