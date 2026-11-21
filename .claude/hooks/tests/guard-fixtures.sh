@@ -51,6 +51,8 @@ check "Write /repo/.env.example"      0 '{"tool_name":"Write","tool_input":{"fil
 check "Bash redirect > .env.example"  0 '{"tool_name":"Bash","tool_input":{"command":"cat > .env.example"}}'
 check "Bash read .env.example"        0 '{"tool_name":"Bash","tool_input":{"command":"cat .env.example"}}'
 check "Bash grep .env.example"        0 '{"tool_name":"Bash","tool_input":{"command":"grep KEY .env.example"}}'
+check "Read PROJECT.md stays readable" 0 '{"tool_name":"Read","tool_input":{"file_path":"projects/ACME/PROJECT.md"}}'
+check "Read PRODUCT.md stays readable" 0 '{"tool_name":"Read","tool_input":{"file_path":"projects/ACME/products/STORE/PRODUCT.md"}}'
 
 echo
 echo "== blocked: secrets files (.claude/rules/core/security.md) =="
@@ -121,6 +123,18 @@ else
   printf 'FAIL  %-46s want=%s got=%s\n' "shadow off via QA_AGENT_SHADOW=0" 0 2
   fails=$((fails + 1))
 fi
+
+mkdir -p "$SHADOW_TMP/evidence/SHOP/SHOP-123/20261115-100000"
+printf '%s' '{"schema_version":2,"ticket":"SHOP-123","project":"SHOP","timestamp":"2026-11-15T10:00:00Z","verdict":"NO_TEST","evidence_dir":"evidence/SHOP/SHOP-123/20261115-100000","no_test_reason":"aborted","steps_executed":[],"test_cases":[],"findings":[],"artifacts":[],"coverage":{"required":[],"executed":[]},"learnings":{"captured":[],"none_because":"none"}}' > "$SHADOW_TMP/evidence/SHOP/SHOP-123/20261115-100000/execution_summary.json"
+check "NO_TEST denies JIRA comment" 2 '{"tool_name":"mcp__atlassian__addCommentToJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"'"$SHADOW_TMP"'"}'
+check "NO_TEST denies bug creation" 2 '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"project_key":"SHOP"},"cwd":"'"$SHADOW_TMP"'"}'
+printf 'proof\n' > "$SHADOW_TMP/evidence/SHOP/SHOP-123/20261115-100000/proof.txt"
+DIGEST="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$SHADOW_TMP/evidence/SHOP/SHOP-123/20261115-100000/proof.txt")"
+printf '%s' '{"schema_version":2,"ticket":"SHOP-123","project":"SHOP","timestamp":"2026-11-15T10:01:00Z","verdict":"NEEDS_REVIEW","interactive":true,"test_type":"exploratory","mode":"mcp-only","environment":{"name":"stage","version_or_build":"build-1","commit":"abc123"},"deploy":{"from_version":"build-0","to_version":"build-1","pipeline_run":"pipeline-1","at":"2026-11-15T09:59:00Z"},"skills_used":["test-ticket"],"evidence_dir":"evidence/SHOP/SHOP-123/20261115-100000","steps_executed":["review"],"test_cases":[],"findings":[],"artifacts":[{"path":"proof.txt","sha256":"'"$DIGEST"'"}],"coverage":{"required":[],"executed":[]},"reported_to_jira":false,"shadow":false,"learnings":{"captured":["review"],"none_because":null}}' > "$SHADOW_TMP/evidence/SHOP/SHOP-123/20261115-100000/execution_summary.json"
+check "NEEDS_REVIEW denies transition" 2 '{"tool_name":"mcp__atlassian__transitionJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"'"$SHADOW_TMP"'"}'
+check "NEEDS_REVIEW denies wrapped transition" 2 '{"tool_name":"mcp__atlassian__executeWrite","tool_input":{"tool":"transitionJiraIssue","arguments":{"issueKey":"SHOP-123"}},"cwd":"'"$SHADOW_TMP"'"}'
+check "NEEDS_REVIEW allows proposal comment" 0 '{"tool_name":"mcp__atlassian__addCommentToJiraIssue","tool_input":{"issueKey":"SHOP-123"},"cwd":"'"$SHADOW_TMP"'"}'
+check "NEEDS_REVIEW denies bug creation" 2 '{"tool_name":"mcp__atlassian__createJiraIssue","tool_input":{"project_key":"SHOP"},"cwd":"'"$SHADOW_TMP"'"}'
 rm -r "$SHADOW_TMP" 2>/dev/null
 
 echo

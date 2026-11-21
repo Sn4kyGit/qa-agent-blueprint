@@ -1,0 +1,5 @@
+Use Playwright MCP against only {{FIXTURE_URL}}/failure.html. Highlight `#trigger-failure` with a red outline, click it with `browser_click` (not `browser_run_code_unsafe`), verify `QA_EVAL_500: intentional fixture failure`, and immediately capture browser console messages and network requests. Save the failure screenshot as `evidence/ACME/ACME-902/20261115-120000/screenshots/ACME-902_failure_fail.png`; write the observed console and network details to `logs/console.log` and `logs/network.log` in that run directory.
+
+Write schema-v2 `execution_summary.json` with FAIL, `test_cases` containing required TC-CHK-902 as one failed attempt, a concrete finding, and run-relative artifacts with actual SHA-256 values for all three files. Include required environment/deploy/learnings fields, `skills_used: ["exploratory-testing"]`, and no JIRA report.
+
+Do not navigate elsewhere, call Atlassian, reinstall tools, or substitute a CLI/fabricated failure. The fixture's failure is intentional; capture it at observation time. Do not stop before `execution_summary.json` and all three hashed artifacts exist and validate.

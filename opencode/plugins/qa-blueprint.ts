@@ -17,20 +17,22 @@
 //   $CLAUDE_ENV_FILE PAT export  →  shell.env (keychain → env, never a file)
 //
 // Policy is ported, not reinvented: same blocklists, same regexes, same
-// markers (QA_EVIDENCE_MISSING:/QA_LEARNINGS_MISSING:), same log format as the
+// markers (QA_EVIDENCE_MISSING:/QA_EVIDENCE_INVALID:), same log format as the
 // bash hooks in .claude/hooks/ — the fixture suites in opencode/tests/ mirror
 // .claude/hooks/tests/ case for case.
 
 import { appendFile, cp, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises"
 import { existsSync, realpathSync } from "node:fs"
 import { basename, dirname, join, resolve, sep } from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { spawnSync } from "node:child_process"
 
 // Resolve the blueprint root through the symlink the installer creates
 // (.opencode/plugins/qa-blueprint.ts → <blueprint>/opencode/plugins/…) so
 // scaffold sources are found regardless of install mode.
 const BLUEPRINT_ROOT = join(dirname(realpathSync(fileURLToPath(import.meta.url))), "..", "..")
+const EVIDENCE_VALIDATOR = join(BLUEPRINT_ROOT, ".claude", "scripts", "validate-evidence.py")
+const TEST_CODE_SCANNER = join(BLUEPRINT_ROOT, ".claude", "scripts", "qa-test-code-scan.mjs")
 
 // --------------------------------------------------------------------------
 // 1. Pre-tool guard (port of pre-tool-guard.sh)
@@ -427,6 +429,15 @@ function issueKeyOf(args: Record<string, unknown> | undefined): string {
   return m ? m[0] : "unknown"
 }
 
+function effectiveJiraTool(tool: string, args: Record<string, unknown> | undefined): string {
+  if (!/executeWrite|executeDestructive/.test(tool)) return tool
+  for (const key of ["tool", "toolName", "tool_name", "name"]) {
+    const value = args?.[key]
+    if (typeof value === "string" && value) return `${tool}(${value})`
+  }
+  return tool
+}
+
 async function auditJiraWrite(directory: string, tool: string, args: Record<string, unknown> | undefined, ok: boolean) {
   const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z") // same shape as `date -u +%Y-%m-%dT%H:%M:%SZ`
   const user = process.env.CLAUDE_USER_EMAIL || process.env.USER || "unknown" // parity with the bash hook ($USER)
@@ -457,6 +468,9 @@ async function auditJiraWrite(directory: string, tool: string, args: Record<stri
 // off" in projects/<KEY>/PROJECT.md) or QA_AGENT_SHADOW=0 is set. Fails safe:
 // an unresolvable ticket key or unreadable project file keeps the gate closed.
 const SHADOW_MSG = "refusing a JIRA write while Shadow Mode is on (default). Compose the report as evidence/<KEY>/<TICKET>/<ts>/proposed-report.md instead. Unlock: 'Shadow mode: off' in projects/<KEY>/PROJECT.md, or QA_AGENT_SHADOW=0."
+const JIRA_VALIDATION_UNAVAILABLE_MSG = "QA_EVIDENCE_INVALID: cannot validate fresh evidence before the JIRA write (python3/validator unavailable)."
+const JIRA_VERDICT_INVALID_MSG = "QA_EVIDENCE_INVALID: the freshest evidence for $EVIDENCE_ISSUE_KEY is invalid, or its verdict forbids this JIRA write (NO_TEST forbids all writes; NEEDS_REVIEW forbids transitions and bug creation)."
+const JIRA_CREATION_INVALID_MSG = "QA_EVIDENCE_INVALID: bug creation is forbidden while fresh NEEDS_REVIEW/invalid evidence exists; obtain a human ruling first."
 const HUMAN_ONLY_MSG = "refusing to write to a human-only file ($FILE_PATH) — the guard's config, hook scripts, rules, skills, agents, scripts, project config, and .git/ internals are human tasks. An agent that can edit these can disable its own guard, override safety rules, or plant persistent backdoors. Modify these files yourself or use the installer."
 const SCRIPT_CONTENT_MSG = "refusing to write a script that references secret paths or protected config ($FILE_PATH) — Write-then-Bash is the same as a direct read/write. Inline the content in a Bash command instead so the guard can evaluate it."
 const GIT_CONFIG_MSG = "refusing to modify git config ($FILE_PATH) — git config (core.sshCommand, core.hooksPath, remote.*, etc.) is a human task. An agent that can change git config can plant persistent backdoors or redirect pushes."
@@ -548,7 +562,7 @@ function isTestActivity(tool: string, args: Record<string, unknown> | undefined)
 }
 
 interface GateResult {
-  status: "ok" | "no_dir" | "evidence_missing" | "learnings_missing"
+  status: "ok" | "no_dir" | "evidence_missing" | "evidence_invalid"
   files: string[]
   /** Ticket keys that lack fresh evidence (F2) — empty on the global fallback. */
   missingKeys: string[]
@@ -617,6 +631,57 @@ function ticketKeysOf(args: Record<string, unknown> | undefined): string[] {
   return [...found]
 }
 
+interface EvidenceValidation {
+  valid: boolean
+  verdict?: "PASS" | "FAIL" | "BLOCKED" | "NEEDS_REVIEW" | "NO_TEST" | null
+  errors?: string[]
+}
+
+function validateEvidence(path: string, directory: string, jiraWrite?: string): EvidenceValidation {
+  const args = [EVIDENCE_VALIDATOR, path, "--qa-home", directory, "--json"]
+  if (jiraWrite) args.push("--jira-write", jiraWrite)
+  const result = spawnSync("python3", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
+  if (result.error) return { valid: false, errors: [JIRA_VALIDATION_UNAVAILABLE_MSG] }
+  try {
+    const parsed = JSON.parse(result.stdout || "") as EvidenceValidation
+    if (typeof parsed.valid !== "boolean") return { valid: false, errors: ["validator returned no validity decision"] }
+    return { ...parsed, valid: result.status === 0 && parsed.valid }
+  } catch {
+    return { valid: false, errors: ["validator returned malformed output"] }
+  }
+}
+
+function validateLatestJiraEvidence(directory: string, tool: string, args: Record<string, unknown>): EvidenceValidation {
+  const key = issueKeyOf(args)
+  if (key === "unknown" || /-0$/.test(key)) return { valid: true }
+  const validatorArgs = [EVIDENCE_VALIDATOR, "--jira-ticket", key, "--jira-write", effectiveJiraTool(tool, args), "--qa-home", directory, "--json"]
+  const result = spawnSync("python3", validatorArgs, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
+  if (result.error) return { valid: false, errors: [JIRA_VALIDATION_UNAVAILABLE_MSG] }
+  try {
+    const parsed = JSON.parse(result.stdout || "") as EvidenceValidation
+    if (typeof parsed.valid !== "boolean") return { valid: false, errors: ["validator returned no validity decision"] }
+    return { ...parsed, valid: result.status === 0 && parsed.valid }
+  } catch {
+    return { valid: false, errors: ["validator returned malformed output"] }
+  }
+}
+
+async function validateJiraCreationEvidence(directory: string, tool: string, activity: ReadonlySet<string> | undefined): Promise<EvidenceValidation> {
+  const keys = [...(activity ?? [])].filter((key) => !/-0$/.test(key))
+  if (keys.length) {
+    for (const key of keys) {
+      const validation = validateLatestJiraEvidence(directory, tool, { issueKey: key })
+      if (!validation.valid) return validation
+    }
+    return { valid: true }
+  }
+  for (const path of await findFreshSummaries(join(directory, "evidence"))) {
+    const validation = validateEvidence(path, directory, tool)
+    if (!validation.valid) return validation
+  }
+  return { valid: true }
+}
+
 async function evaluateGate(directory: string, keys: ReadonlySet<string>): Promise<GateResult> {
   const evidenceDir = join(directory, "evidence")
   if (!existsSync(evidenceDir)) return { status: "no_dir", files: [], missingKeys: [] } // nothing scaffolded → nothing to enforce (bash: exit 0)
@@ -637,26 +702,8 @@ async function evaluateGate(directory: string, keys: ReadonlySet<string>): Promi
   }
 
   const fresh = await findFreshSummaries(evidenceDir)
-  const missing: string[] = []
-  for (const f of fresh) {
-    let d: unknown
-    try {
-      d = JSON.parse(await readFile(f, "utf8"))
-    } catch {
-      continue // unparseable summary is a separate problem; don't ALSO claim it lacks learnings
-    }
-    const l = (d as Record<string, unknown>)?.learnings
-    if (typeof l !== "object" || l === null || Array.isArray(l)) {
-      missing.push(f)
-      continue
-    }
-    const captured = (l as Record<string, unknown>).captured
-    const noneBecause = (l as Record<string, unknown>).none_because
-    const hasCaptured = Array.isArray(captured) && captured.length > 0
-    const hasNoneBecause = typeof noneBecause === "string" && noneBecause.trim().length > 0
-    if (!hasCaptured && !hasNoneBecause) missing.push(f)
-  }
-  return missing.length ? { status: "learnings_missing", files: missing, missingKeys: [] } : { status: "ok", files: [], missingKeys: [] }
+  const invalid = fresh.filter((f) => !validateEvidence(f, directory).valid)
+  return invalid.length ? { status: "evidence_invalid", files: invalid, missingKeys: [] } : { status: "ok", files: [], missingKeys: [] }
 }
 
 const EVIDENCE_MISSING_MSG = `QA_EVIDENCE_MISSING: this session actually invoked a Playwright MCP tool, an
@@ -687,26 +734,13 @@ Before reporting to JIRA or ending the session, per ticket:
     and the usual "learnings" declaration — the explicit alternative to
     stopping silently.`
 
-const learningsMissingMsg = (files: string[]) => `QA_LEARNINGS_MISSING: this run produced evidence, but the summary
-does not declare what was learned. Affected file(s):
+const evidenceInvalidMsg = (files: string[]) => `QA_EVIDENCE_INVALID: fresh evidence failed schema-v2 or semantic validation:
 ${files.map((f) => `  ${f}`).join("\n")}
 
-Add a "learnings" object to each one (.claude/rules/core/evidence-policy.md):
+New evidence requires schema_version=2, exactly one learning declaration,
+ticket/path binding, normalized case outcomes and coverage, and valid hashed
+artifacts. Historical unversioned summaries never satisfy a new evidence gate.`
 
-  "learnings": {
-    "captured": ["one line per entry written to memory/learnings/_inbox.md"],
-    "none_because": null
-  }
-
-or, for a genuinely uneventful run, the other way round:
-
-  "learnings": { "captured": [], "none_because": "clean run, no surprises" }
-
-Anything a human had to tell you during this run — which product a ticket belongs
-to, a selector that needed a workaround, a corrected report format — belongs in the
-inbox now, so nobody has to explain it a second time. A product-routing correction
-additionally follows .claude/rules/core/product-layer.md → "Routing learns from
-being corrected".`
 
 // --------------------------------------------------------------------------
 // 4. Bootstrap (port of bootstrap_dirs + seed_browser_config)
@@ -735,7 +769,7 @@ const BROWSER_CONFIG = `{
 // the nearest directory carrying the .qa-home marker or the legacy trio;
 // stop at $HOME or the filesystem root; nothing found → the cwd itself
 // (unchanged first-install behavior).
-export async function resolveQaHome(directory: string): Promise<string> {
+async function resolveQaHome(directory: string): Promise<string> {
   const home = process.env.HOME ?? ""
   let d = directory
   for (;;) {
@@ -888,7 +922,7 @@ async function readOpencodeMcp(directory: string): Promise<Record<string, Record
   return servers
 }
 
-export interface McpScan {
+interface McpScan {
   hasPw: boolean
   pwUnmasked: boolean // playwright without --secrets — passwords unmasked in tool responses
   pwNoOutdir: boolean // playwright without --output-dir into evidence/ — artifacts land elsewhere
@@ -897,9 +931,9 @@ export interface McpScan {
   dcHost: string // JIRA Data Center host from environment.JIRA_URL ("" when Cloud)
 }
 
-// Exported for the tests — the flags mirror the bash scan's HAS_PW/PW_UNMASKED/
-// PW_NO_OUTDIR/PW_NO_IMAGEOMIT/HAS_AT/AT_DC_HOST:<host> contract.
-export function scanMcpServers(servers: Record<string, Record<string, unknown> | Record<string, unknown>[]>, directory: string = process.cwd()): McpScan {
+// Exposed on the default export for tests — the flags mirror the bash scan's
+// HAS_PW/PW_UNMASKED/PW_NO_OUTDIR/PW_NO_IMAGEOMIT/HAS_AT/AT_DC_HOST:<host> contract.
+function scanMcpServers(servers: Record<string, Record<string, unknown> | Record<string, unknown>[]>, directory: string = process.cwd()): McpScan {
   const pwValue = servers.playwright
   const pw = (Array.isArray(pwValue) ? pwValue : [pwValue]).filter((c): c is Record<string, unknown> => Boolean(c))
   const localPw = pw.filter((c) => c.type !== "remote" && !(c.url && !c.command))
@@ -1012,7 +1046,7 @@ async function browserConsoleHint(directory: string): Promise<string> {
 
 // home = the QA home (data: projects/, memory/, evidence/); sessionDir = the
 // harness's cwd (MCP config, browser preferences). Same dir in the common case.
-export async function orientation(home: string, sessionDir: string = home): Promise<string> {
+async function orientation(home: string, sessionDir: string = home): Promise<string> {
   const projects = await listProjects(home)
   const lines = [
     "QA Agent Blueprint — session start",
@@ -1131,7 +1165,7 @@ interface PluginCtx {
   }
 }
 
-export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
+async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   const directory = ctx.directory
   // 0.9.1: data paths (projects/, memory/, evidence/) resolve to the QA home
   // (walk-up), harness-scoped files stay with the session's directory.
@@ -1165,7 +1199,7 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
     if (gate.status === "evidence_missing") {
       return gate.missingKeys.length > 0 ? evidenceMissingMsg(gate.missingKeys) : EVIDENCE_MISSING_MSG
     }
-    if (gate.status === "learnings_missing") return learningsMissingMsg(gate.files)
+    if (gate.status === "evidence_invalid") return evidenceInvalidMsg(gate.files)
     return null
   }
 
@@ -1176,6 +1210,43 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
     ) => {
       const args = output?.args ?? {}
       guardCheck(input?.tool ?? "", args, await secretsReadMode(home))
+
+      const toolName = (input?.tool ?? "").toLowerCase()
+      if (["write", "edit", "multiedit", "notebookedit"].includes(toolName)) {
+        const supplied = String(args.filePath ?? args.file_path ?? args.notebookPath ?? args.notebook_path ?? "")
+        if (supplied && /\.(?:[cm]?[jt]sx?|ipynb)$/i.test(supplied)) {
+          const { loadQualityConfig, scanTestCode } = await import(pathToFileURL(TEST_CODE_SCANNER).href)
+          const filePath = resolve(directory, supplied)
+          const config = loadQualityConfig(filePath)
+          if (config.writeGate === true) {
+            let content: unknown
+            if (toolName === "write") content = args.content
+            else if (toolName === "edit") content = args.newString ?? args.new_string ?? ""
+            else if (toolName === "multiedit") {
+              content = Array.isArray(args.edits)
+                ? args.edits.map((edit) => {
+                    const value = edit as Record<string, unknown>
+                    return value.newString ?? value.new_string ?? ""
+                  }).join("\n")
+                : undefined
+            } else content = args.newSource ?? args.new_source ?? args.content ?? ""
+            if (typeof content !== "string") {
+              throw new Error("BLOCKED by pre-test-code-scan: malformed gated write payload")
+            }
+            const report = scanTestCode(content, { filePath, fragment: toolName !== "write", config })
+            const issues = [
+              ...report.findings.filter((item) => item.severity === "error" || config.strict),
+              ...report.diagnostics.filter((item) => item.severity === "error"),
+            ]
+            if (issues.length) {
+              throw new Error(
+                `BLOCKED by pre-test-code-scan: ${issues.length} quality issue(s)\n` +
+                issues.map((item) => `${item.severity} ${item.ruleId} ${item.file}:${item.line}:${item.column} ${item.message}`).join("\n"),
+              )
+            }
+          }
+        }
+      }
 
       // Foreign MCP gate: never another project's servers or data.
       const foreign = await foreignMcpServer(directory, input?.tool ?? "")
@@ -1189,6 +1260,16 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
 
       // Evidence gate: the verdict must not reach JIRA without evidence.
       if (input?.tool && JIRA_WRITE.test(input.tool)) {
+        const effectiveTool = effectiveJiraTool(input.tool, args)
+        const issueKey = issueKeyOf(args)
+        const validation = /create[_A-Za-z]*(issue|bug)/i.test(effectiveTool) && (issueKey === "unknown" || /-0$/.test(issueKey))
+          ? await validateJiraCreationEvidence(home, effectiveTool, testActivity.get(input.sessionID))
+          : validateLatestJiraEvidence(home, input.tool, args)
+        if (!validation.valid) {
+          const creating = /create[_A-Za-z]*(issue|bug)/i.test(effectiveTool) && (issueKey === "unknown" || /-0$/.test(issueKey))
+          const unavailable = validation.errors?.includes(JIRA_VALIDATION_UNAVAILABLE_MSG)
+          throw new Error(unavailable ? JIRA_VALIDATION_UNAVAILABLE_MSG : creating ? JIRA_CREATION_INVALID_MSG : JIRA_VERDICT_INVALID_MSG.replace("$EVIDENCE_ISSUE_KEY", issueKey))
+        }
         const msg = await gateMessageFor(input.sessionID)
         if (msg) throw new Error(msg)
       }
@@ -1303,4 +1384,4 @@ export async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   }
 }
 
-export default qaBlueprint
+export default Object.assign(qaBlueprint, { orientation, resolveQaHome, scanMcpServers })

@@ -179,6 +179,18 @@ unchanged fallback.
    - A release/epic rather than a single ticket → `release-readiness` for the
      go/no-go checklist instead of ad-hoc judgment calls.
 
+## Seed and exploration-to-spec sequencing
+
+For MCP recon/exploration intended to become a spec, put the reproducible **seed**
+(start URL, named state and project-owned fixtures) in the executor's charter;
+seed means start state, not RNG. The executor establishes it and records the
+semantic journal. After it returns, validate/finalize the journal, select only a
+ready case, and emit `automation-handoff.json` with `action-journal.py handoff`
+before delegating the spec. Give the automator that file and the selected case,
+never raw journal/MCP output. No ready handoff → no exploration-to-spec; use recon
+or observe again instead of guessing. A handoff preserves the original verdict and
+never proves the future spec green (`docs/pipeline/action-journal.md`).
+
 ## Delegation is visible
 
 While a Task call runs, the user sees **nothing** — counter that mechanically:
@@ -202,7 +214,11 @@ While a Task call runs, the user sees **nothing** — counter that mechanically:
    `verdict.json` into the run dir — you are its producer
    (`docs/pipeline/05-verification.md`): the red check result per new spec, the
    observation pass result, the failure classification once step 7 resolved it
-   (empty on PASS), and `overall`. It feeds `execution_summary.json`.
+       (empty on PASS), and `overall`. It feeds `execution_summary.json`.
+    Require schema-v2 `run.json` and summary with matching run/path binding,
+    timestamps, exact coverage, normalized attempts/outcomes and hashed artifacts.
+    Run `validate-evidence.py` on both before any report; malformed or inconsistent
+    new evidence is invalid, not a verdict. Historical evidence is never rewritten.
 7. **On FAIL — analyse before you accuse.** Delegate to subagent `failure-analyst`
    (skill `failure-analysis`) *first*, with the failing TC-IDs, their assertion and
    error text, the evidence dir and the deployed version. It answers one question
@@ -220,7 +236,17 @@ While a Task call runs, the user sees **nothing** — counter that mechanically:
    - `test-outdated` / `test-brittle` → **do not file a product bug and do not touch
      the test.** Verdict `NEEDS_REVIEW`, comment the proposal, and let a human rule.
      Interactive only: headless this stays a FAIL with the analysis attached
-     (`.claude/rules/core/evidence-policy.md`).
+     (`.claude/rules/core/evidence-policy.md`). Candidate verification never changes
+     that original verdict.
+   - Optional healing is yours to sequence **only after** the analyst returns
+     `test-brittle`, `failure_kind: locator_resolution` and `eligible: true`. Follow
+     `docs/pipeline/healing.md`: create at most three locator-only candidates without
+     editing the origin spec; confidence only ranks and never auto-selects/applies.
+     Only an explicit human selection calls `select`. Verify the disposable candidate
+     with one green and one failing negative control at the same original assertion,
+     then obtain a fresh **read-only** analyst review using the original JIRA/change
+     evidence — no repeated JQL. At most one candidate becomes `ready_for_human`;
+     only the human applies it and a later normal run earns a new verdict.
    Then report via the `report-to-jira` skill, which picks the transition from the
    class — including "no transition at all" for a stale test.
 8. **On PASS** — report via `report-to-jira` (comment + final screenshot +

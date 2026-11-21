@@ -21,8 +21,10 @@ false-green class.
 
 Controlled by PROJECT.md → "Execution mode" → `Red check required`. The result
 is recorded in `verdict.json`. A spec without a passed red check must not back
-a `PASS` verdict for its AC. Applies to **new** specs; established suite specs
-with a failure history have already proven themselves.
+a `PASS` verdict for its AC. In an action journal, the red check references the
+exact positive assertion event; a complete replayable automation handoff is
+impossible without it (`action-journal.md`). Applies to **new** specs;
+established suite specs with a failure history have already proven themselves.
 
 ## Observation pass
 
@@ -92,4 +94,7 @@ red check result, the observation pass result and the failure classification.
 ```
 
 `verdict.json` feeds `execution_summary.json` (`verdict`, `failure_analysis`,
-`findings`) — the summary remains the enforced artifact.
+`findings`) — the summary remains the enforced artifact. Neither action-journal
+observations nor a healing candidate's green verification can create or replace
+this summary. Candidate-only healing leaves the original verdict unchanged;
+only human-applied changes receive a new normal runner verdict (`healing.md`).

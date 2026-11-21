@@ -6,12 +6,11 @@ description: >-
   or sprint planning. Use when: risk assessment, risk matrix, risk
   heatmap, what could break, critical paths, failure modes, where to focus
   testing. Not for sprint test plans or hands-on session-based bug hunting.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "2.0"
   category: strategy
-license: Apache-2.0
 ---
 
 <objective>

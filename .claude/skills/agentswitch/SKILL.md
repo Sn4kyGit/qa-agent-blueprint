@@ -28,9 +28,19 @@ resolves the QA home separately by walking up to `.qa-home` or the legacy
 `projects/` + `memory/` + `evidence/` trio. It never creates the marker or any
 missing directory.
 
-Render `SOURCE`, `TARGET`, `QA home`, `STATUS`, the findings, and the human steps
-compactly in the user's language. Preserve the exact status:
-`READY`, `READY_WITH_HUMAN_STEPS`, or `BLOCKED`.
+Start every response with this exact four-line header before any heading or
+prose, replacing only the angle-bracket values:
+
+```text
+SOURCE=<source harness>
+TARGET=<target harness>
+QA home=<resolved QA home>
+STATUS=<checker status>
+```
+
+Never substitute a `Verdict` heading for `STATUS=`. Preserve the exact status:
+`READY`, `READY_WITH_HUMAN_STEPS`, or `BLOCKED`. After the header, render the
+findings and only the checker-emitted human steps.
 
 ## What the result means
 
@@ -39,9 +49,16 @@ compactly in the user's language. Preserve the exact status:
 - **READY_WITH_HUMAN_STEPS:** report the old layout and the proposed human
   dry-run verbatim when present: `install.sh --mode shared --dry-run`. Never run
   it from this skill.
-- **BLOCKED:** leave every file and symlink untouched. Name the collision,
-  dangling/foreign link, duplicate registration, malformed config, or unsafe
-  evidence path. A human resolves it; do not repair it here.
+- **BLOCKED:** leave every file and symlink untouched and preserve all bridge
+  data. Name the collision, dangling/foreign link, duplicate registration,
+  malformed config, or unsafe evidence path. Do not invent remediation or
+  token-cleanup steps. Never tell the user to rename, move, delete, remove,
+  repair, relink, or edit anything, even as a manual next step: report the
+  finding, not a repair procedure. When emitted by the checker, the only action
+  you may suggest is `install.sh --mode shared --dry-run` (including its emitted
+  `--target`), explicitly for human execution; never execute it. Include the
+  applicable OAuth/keychain, sequential-stage-use, and next-test-preflight notes
+  below even when blocked.
 - **NO_OP finding:** source and target are already the same local harness; do
   not invent a switch or migration.
 

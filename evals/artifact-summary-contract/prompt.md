@@ -1,0 +1,3 @@
+Read the schema-v2 evidence policy. For ACME-803, turn `input/run-context.json` into `evidence/ACME/ACME-803/20261115-120000/execution_summary.json`. The required TC-SMOKE-001 passed cleanly once and its log already exists at `evidence/ACME/ACME-803/20261115-120000/logs/playwright.log`.
+
+Write a complete schema-v2 summary with every required field, matching path binding, case/coverage semantics, and an `artifacts` entry whose run-relative path and SHA-256 match the exact log bytes. Keep learnings and skills declarations valid. Do not modify the log, add fake findings, contact JIRA, or omit deploy/environment data supplied in the context.

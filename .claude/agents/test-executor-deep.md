@@ -65,8 +65,23 @@ Write curated artifacts into `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` per
 that invoked you is relying on you to have produced it, including
 `execution_summary.json`.
 
-**Write `run.json`** into the run dir as the run record — TC-IDs, outcomes,
-timing and the execution mode (`docs/pipeline/04-execution.md`).
+**Write schema-v2 `run.json` and `execution_summary.json`** into the run dir per
+`docs/pipeline/04-execution.md` and `.claude/rules/core/evidence-policy.md`.
+Bind `run_id`/`evidence_dir` to this directory, use RFC3339 timestamps, exact
+required/executed coverage, normalized outcomes/attempts, and run-relative
+artifacts with SHA-256 (plus `covers` when known). Preserve `attempt_results`
+when the source has them. Validate both with `validate-evidence.py`; malformed,
+unversioned or inconsistent new evidence is invalid, never a reportable verdict.
+Exploratory runs without runner cases use `steps_executed`; do not invent TCs.
+
+**Journal MCP recon/exploration semantically.** Use `action-journal.py` to append
+`stream_start`, case boundaries, actions, AC-bound assertions, red checks and
+outcomes, then validate/finalize the stream (`docs/pipeline/action-journal.md`).
+The `seed` is the reproducible start state and its project-owned fixtures, not an
+RNG seed. Record semantic locators and secret environment names as `input_ref`
+only — never raw MCP refs, snapshots/logs, credentials or secret values. The
+manager owns selection and `automation-handoff.json` sequencing; journal
+readiness never changes the original verdict.
 
 **Recon session?** When the charter is a recon run (pipeline phase 2, e.g. the
 `/recon` MCP path), also write `recon.json` into the run dir before returning —

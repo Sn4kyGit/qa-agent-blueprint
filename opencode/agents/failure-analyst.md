@@ -40,7 +40,9 @@ memory. It is the part of this role that must not drift.
 
 ## Hard limits
 
-- **One** JQL plus one link fetch. At most **3** JIRA issues read in full.
+- Initial triage: **one** JQL plus one link fetch, at most **3** JIRA issues read
+  in full. A fresh healing review reuses the original JIRA/change evidence and runs
+  **zero** additional JQL or link fetches.
 - At most **5** failing cases analysed individually; cluster the rest by shared error
   signature and analyse per cluster.
 - `grep` logs, never read them whole (`.claude/rules/core/token-discipline.md`).
@@ -56,6 +58,16 @@ memory. It is the part of this role that must not drift.
   access `browser` the change window comes from the playwright-driven UI per
   `docs/rules/testing/jira-browser.md` → "Reading a ticket" — the
   atlassian tools are not connected on that mode.
+
+## Read-only healing review
+
+When `qa-manager` asks for a fresh review of a healing candidate, read the original
+analysis, candidate/review records and named evidence only. Check that the original
+class was `test-brittle` + `locator_resolution`, the origin hashes/intent/assertion
+still bind, and green plus failing negative control satisfy `docs/pipeline/healing.md`.
+Do not query JIRA again, run a browser/test, select/apply a candidate, edit a spec,
+or change the original verdict. Confidence — however high — is not approval; return
+a concise eligibility/intent assessment for the human.
 
 ## What you never do
 

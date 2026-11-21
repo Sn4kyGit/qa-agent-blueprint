@@ -1,0 +1,9 @@
+{
+  "suites": [{
+    "specs": [{
+      "id": "TC-RETRY-001",
+      "title": "TC-RETRY-001",
+      "tests": [{"results": [{"status": "failed", "error": {"message": "synthetic first-attempt failure"}}, {"status": "passed"}]}]
+    }]
+  }]
+}

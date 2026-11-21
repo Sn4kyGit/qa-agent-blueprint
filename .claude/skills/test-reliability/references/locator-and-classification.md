@@ -31,7 +31,7 @@ When a locator fails, the element may still exist with changed attributes. Use s
 2. **Preceding label:** Find sibling text (label), then locate the adjacent input/button.
 3. **Nearby text context:** Find visible text near the target, then locate the element type in the same parent.
 
-These are repair candidates scored by the confidence system below — not runtime fallbacks.
+These are repair candidates ranked by the confidence system below — not runtime fallbacks. Record semantic original/replacement locators and origin hashes with `healing-candidate.py`; no candidate is applied automatically or in quarantine, regardless of score. A human applies only after green and a failing negative control at the same original assertion.
 
 ### Selector Stability Scoring
 

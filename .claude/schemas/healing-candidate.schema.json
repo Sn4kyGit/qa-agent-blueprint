@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-agent-blueprint.local/schemas/healing-candidate.schema.json",
+  "title": "Candidate-only locator healing proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "candidate_id", "status", "created_at", "origin", "origin_case_ids", "classification", "failure_kind", "eligible", "score", "original_locator", "replacement_locator", "hunk", "verification"],
+  "properties": {
+    "schema_version": {"const": "qa-healing-candidate/v1"},
+    "candidate_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"},
+    "status": {"enum": ["draft", "rejected", "ready_for_human"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "origin": {"$ref": "#/$defs/origin"},
+    "origin_case_ids": {"type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+    "classification": {"const": "test-brittle"},
+    "failure_kind": {"const": "locator_resolution"},
+    "eligible": {"const": true},
+    "score": {"type": "number", "minimum": 0, "maximum": 1},
+    "original_locator": {"$ref": "#/$defs/locator"},
+    "replacement_locator": {"$ref": "#/$defs/locator"},
+    "hunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "before", "after"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+        "before": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "after": {"type": "string", "minLength": 1, "maxLength": 4000}
+      }
+    },
+    "verification": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {"$ref": "#/$defs/verification"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "value", "expression"],
+      "properties": {
+        "strategy": {"enum": ["role", "label", "text", "test_id", "placeholder", "title", "alt"]},
+        "value": {"type": "string", "minLength": 1, "maxLength": 300},
+        "name": {"type": "string", "minLength": 1, "maxLength": 300},
+        "expression": {"type": "string", "minLength": 1, "maxLength": 500},
+        "exact": {"type": "boolean"}
+      }
+    },
+    "originCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "ac_id", "tc_id", "spec_path", "spec_sha256", "ac_sha256", "tc_sha256", "intent_sha256", "assertion_sha256"],
+      "properties": {
+        "case_id": {"type": "string"},
+        "ac_id": {"type": "string"},
+        "tc_id": {"type": "string"},
+        "spec_path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+        "spec_sha256": {"$ref": "#/$defs/sha256"},
+        "ac_sha256": {"$ref": "#/$defs/sha256"},
+        "tc_sha256": {"$ref": "#/$defs/sha256"},
+        "intent_sha256": {"$ref": "#/$defs/sha256"},
+        "assertion_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cases", "build", "build_sha256", "capsule_sha256", "original_verdict"],
+      "properties": {
+        "cases": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"$ref": "#/$defs/originCase"}},
+        "build": {"type": "string", "minLength": 1, "maxLength": 200},
+        "build_sha256": {"$ref": "#/$defs/sha256"},
+        "capsule_sha256": {"$ref": "#/$defs/sha256"},
+        "original_verdict": {"enum": ["FAIL", "BLOCKED", "NEEDS_REVIEW"]}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run_id", "kind", "result", "assertion_sha256", "recorded_at", "build", "build_sha256", "capsule_sha256", "spec_sha256"],
+      "properties": {
+        "run_id": {"type": "string"},
+        "kind": {"enum": ["green", "negative_control"]},
+        "result": {"enum": ["passed", "failed"]},
+        "assertion_sha256": {"$ref": "#/$defs/sha256"},
+        "recorded_at": {"type": "string", "format": "date-time"},
+        "build": {"type": "string"},
+        "build_sha256": {"$ref": "#/$defs/sha256"},
+        "capsule_sha256": {"$ref": "#/$defs/sha256"},
+        "spec_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

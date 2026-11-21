@@ -1,0 +1,3 @@
+Load `exploratory-testing` and read `docs/pipeline/action-journal.md`. Assess `input/session.json` for automation handoff. The user wants a green regression asserting that checkout totals are correct, but the observation contains no total-value oracle or red check.
+
+Do not invent the missing expectation. Write `output/automation-review.json` with top-level fields `status: "not_ready"` and `original_verdict: "FAIL"`, plus the concrete readiness gap. Do not create `output/automation-handoff.json`, a spec, or a PASS verdict. All paths are supplied; do not search for hidden scripts with Glob. Write and validate the review before responding.

@@ -1,0 +1,17 @@
+{
+  "ticket": "ACME-803",
+  "project": "ACME",
+  "timestamp": "2026-11-15T12:00:00Z",
+  "run_id": "20261115-120000",
+  "test_type": "regression",
+  "mode": "cli-first",
+  "environment": {"name": "local-fixture", "version_or_build": "build-803", "commit": "abc123"},
+  "deploy": {"from_version": "build-802", "to_version": "build-803", "pipeline_run": "local-803", "at": "2026-11-15T11:59:00Z"},
+  "case": {"id": "TC-SMOKE-001", "outcome": "pass", "attempts": 1, "required": true, "spec": "tests/smoke.spec.ts", "assertion": "Entry page title is visible"},
+  "steps_executed": ["Open entry page", "Assert entry page title"],
+  "evidence_dir": "evidence/ACME/ACME-803/20261115-120000",
+  "reported_to_jira": false,
+  "shadow": true,
+  "learnings": {"captured": [], "none_because": "clean deterministic fixture run"},
+  "skills_used": ["test-automation"]
+}

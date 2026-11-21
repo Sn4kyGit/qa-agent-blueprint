@@ -44,7 +44,7 @@ def normalize(text: str) -> str:
     return core[:120]  # first 120 chars for matching
 
 
-def load_sightings(evidence_dir: pathlib.Path, since_days: int | None) -> dict:
+def load_sightings(evidence_dir: pathlib.Path, since_days: int | None, project: str | None = None) -> dict:
     """Scan execution_summary.json files and count distinct runs per learning."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=since_days) if since_days else None
     # {normalized_key: {"text": original, "runs": set_of_run_ids, "count": N}}
@@ -56,13 +56,21 @@ def load_sightings(evidence_dir: pathlib.Path, since_days: int | None) -> dict:
         except Exception:
             continue
 
+        if not isinstance(data, dict):
+            continue
+        if project and data.get("project") != project:
+            continue
         ts = parse_ts(data.get("timestamp", ""))
         if cutoff and ts and ts < cutoff:
             continue
 
-        run_id = str(path.parent.name)  # YYYYMMDD-HHMMSS directory name
+        run_id = str(path.parent.relative_to(evidence_dir))
         learnings = data.get("learnings") or {}
+        if not isinstance(learnings, dict):
+            continue
         captured = learnings.get("captured") or []
+        if not isinstance(captured, list):
+            continue
 
         for entry in captured:
             if not isinstance(entry, str) or not entry.strip():
@@ -116,7 +124,7 @@ def main() -> int:
         return 1
 
     # Load sightings from evidence
-    sightings = load_sightings(evidence_dir, args.since)
+    sightings = load_sightings(evidence_dir, args.since, args.project)
 
     # Load self-attested counts from inbox
     inbox = evidence_dir.parent / "memory" / "learnings" / "_inbox.md"

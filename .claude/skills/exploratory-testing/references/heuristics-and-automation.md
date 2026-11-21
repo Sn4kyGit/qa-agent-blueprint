@@ -110,10 +110,12 @@ Future exploratory sessions focus on NEW areas (not re-checking old bugs)
 
 **When converting findings to automated tests:**
 
-1. Extract the exact reproduction steps from the session log
-2. Determine the appropriate test level (unit if logic bug, integration if boundary bug, E2E if UI flow bug)
-3. Write the test with a clear reference to the original bug ID
-4. Verify the test fails on the buggy version and passes on the fix
+1. Extract the exact reproduction steps from the semantic action journal and session log; MCP element references are not replayable inputs
+2. Reproduce the named seed test/start state through the same project-owned fixtures
+3. Require a ready `automation-handoff.json`: complete replayable case, AC/TC/intent/assertion hashes, positive oracle, and successful red check
+4. Determine the appropriate test level (unit if logic bug, integration if boundary bug, E2E if UI flow bug)
+5. Write the test with a clear reference to the original bug ID
+6. Verify the test fails on the buggy version and passes on the fix through the normal runner; the journal supplies no verdict
 
 ```typescript
 // Example: Converting exploratory finding to Playwright test

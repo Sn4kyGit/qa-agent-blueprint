@@ -83,6 +83,9 @@ loaded in every future session. Promotions into `PROJECT.md`, `PRODUCT.md`,
 3. Keep volatile ticket history, reproduction narratives, transient states,
    and run logs in `learnings.md` and `evidence/`, not in permanent project
    context. The promoted line states only what remains true next session.
+4. After changing `PROJECT.md` or `PRODUCT.md`, regenerate the affected
+   `.agents/qa-project-context/<KEY>[/<PRODUCT>].md` bridge and its `source_sha`
+   through the normal generator; never edit the generated projection by hand.
 
 `PROJECT.md` and `PRODUCT.md` carry only stable configuration and frequently
 needed gotchas. Rare, keyword-searchable knowledge stays in the scoped

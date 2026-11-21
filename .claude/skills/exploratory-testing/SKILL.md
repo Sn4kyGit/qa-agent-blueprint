@@ -1,7 +1,7 @@
 ---
 name: exploratory-testing
 description: Run a chartered, SBTM-style exploratory testing session via Playwright MCP — for new features, unclear behavior, or bug reproduction without a repeatable spec. Use for "/exploratory-testing", "erkunde das neue Feature", "explorativ testen", "reproduzier den Bug". Not for understood, repeatable flows — use test-automation.
-license: Apache-2.0
+license: MIT AND Apache-2.0
 ---
 
 # /exploratory-testing — chartered session via Playwright MCP
@@ -112,9 +112,20 @@ the standalone fallback below reads the effective project context as before.
    "partial" beats a false "100% covered."
 6. **Exploration-to-automation pipeline**: every reproducible bug found here should
    graduate into an automated regression test, so the *next* session explores new
-   ground instead of re-checking this one. If the flow itself (not just the bug)
-   is worth repeating going forward, hand it to `test-automation` — see the
-   worked example in `references/heuristics-and-automation.md`.
+   ground instead of re-checking this one. During the session the executor appends
+   a bounded action journal: reproducible seed test/start state, semantic
+   role/label/test-ID locators (never MCP refs), actions, AC/TC/intent/assertion
+   hashes, positive oracles, red checks, and original outcomes. Use
+   `.claude/scripts/action-journal.py`; incomplete or unreplayable cases stay
+   ineligible. If the flow itself (not just the bug) is worth repeating, generate
+    an `automation-handoff.json` only for a complete replayable case with an
+    AC-bound positive oracle and successful red check. Before delegation, read
+    back the artifact and verify top-level `status: "ready"`, literal case IDs
+    and exact `case.intent`, and `original_verdict` against the source. Never
+    treat an intent hash or `ready: true` flag as a substitute. Then hand it to
+    `test-automation`. The journal and handoff never create a run summary or
+    override the runner. See `docs/pipeline/action-journal.md` and the worked
+    example in `references/heuristics-and-automation.md`.
 7. On a FAIL, the orchestrator running this skill invokes `failure-analyst` with
    the failure packet and, when available, the capsule path before any bug handoff; `test-executor` never delegates to the analyst. A confirmed
    `product-defect`/`undetermined` finding of severity P0–P2 then goes to

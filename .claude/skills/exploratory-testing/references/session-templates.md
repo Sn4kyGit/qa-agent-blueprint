@@ -119,7 +119,11 @@ Follow-up Actions:
 
 ## Note-Taking Template
 
-Use this during the session. Capture observations in real time.
+Use this during the session. Capture observations in real time. In parallel,
+append semantic actions and oracles to the action journal with the reproducible
+seed state and contract hashes; do not paste MCP snapshot references into either
+record. The human-readable log captures debrief context, while the journal
+supports replay. Neither changes the runner outcome.
 
 ### Session Log Format
 

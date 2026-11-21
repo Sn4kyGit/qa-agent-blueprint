@@ -30,7 +30,9 @@ Layer 5 – Evidence (never in context, only referenced)
   evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/ — gitignored
 ```
 
-Tooling underneath: Playwright MCP + Playwright CLI, Atlassian MCP, hooks.
+Tooling underneath: Playwright MCP + Playwright/WDIO CLI, Atlassian MCP, hooks,
+plus local v2 normalizer/validator, semantic journal, static test-code scanner and
+candidate-only healing scripts. The scripts add no MCP server, agent or hook type.
 
 ## Execution modes — who sits at the wheel
 
@@ -42,6 +44,12 @@ project file's "Execution mode" picks the driver:
 - `hybrid` (default) — probe recon (real selectors), spec via CLI, red check +
   short live verification pass; near-MCP quality at medium cost
 - `cli-first` — suite only, MCP on unclear failure; CI-cheap
+
+MCP recon/exploration emits a semantic journal; `qa-manager` sequences its
+reproducible start-state seed and ready `automation-handoff.json` before an
+exploration-derived spec. Seed is not RNG, raw refs/secrets never enter the journal,
+and handoff readiness is not a verdict. Suites use `test:quality` for the local
+scanner; the strict quality pack remains an explicit scaffold opt-in.
 
 Escalation rules (visual ticket, high risk, missing recon, unclear failure,
 non-assertable AC) raise any mode to live observation. The mode travels into
@@ -141,12 +149,18 @@ User: "Test SHOP-1234"
     Complex path:
        → qa-manager consumes the capsule, never remerges project context
        → selected test-executor/test-automator lane (deep only for high/escalated)
-  → evidence: evidence/SHOP/SHOP-1234/<ts>/ (+ Stop hook enforcement)
+  → evidence: schema-v2 run.json + execution_summary.json under
+    evidence/SHOP/SHOP-1234/<ts>/; validate path/coverage/outcomes/artifact hashes
+    (+ Stop hook enforcement; historical evidence is never rewritten)
   → PASS → report-to-jira: comment + final screenshot + transition "Verify"
   → FAIL → owning orchestrator (main or qa-manager) → failure-analyst
        (never test-executor/test-automator → failure-analyst)
        ↳ product-defect / undetermined → bug-reporter: project template, "Reopen"
        ↳ test-outdated / test-brittle  → NEEDS_REVIEW: propose, no bug, no transition
+         (headless stays FAIL; candidate checks never change the original verdict)
+       ↳ only test-brittle + locator_resolution → optional qa-manager healing:
+         locator-only candidates, human selection, green + failing negative control,
+         fresh read-only analyst review without repeated JQL; human applies, never score
        ↳ environment → BLOCKED  ·  flake → test-reliability, no product bug
   → shadow mode and reporting unchanged; unexpected findings → retro-learn/_inbox.md
 ```

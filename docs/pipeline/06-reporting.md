@@ -7,9 +7,13 @@ contract only.
 
 ## Order
 
-First the overview for the human, then the ticket comment as a draft. Tickets
+First validate this run's schema-v2 `run.json` and `execution_summary.json` with
+`validate-evidence.py`, then the overview for the human, then the ticket comment
+as a draft. Malformed/unversioned/unbound/hash-mismatched or verdict-inconsistent
+new evidence permits no JIRA write; historical evidence is not rewritten. Tickets
 are never created or commented without confirmation — shadow mode and the
-project file's rules apply unchanged.
+project file's rules apply unchanged. Before each Atlassian write, the skill also
+validates with `--jira-write <actual-tool>`; browser writes follow the same gates.
 
 ## Structure of the ticket comment
 
@@ -30,6 +34,11 @@ Attachments:          <evidence filenames — the files are attached to this tic
 ```
 
 The status line always comes first. Someone skimming must know after one line.
+NO_TEST has no comment, attachment, transition or bug. NEEDS_REVIEW requires
+`interactive: true` and is only the two-branch proposal comment — no attachments,
+transition, bug creation or candidate application; headless brittle/outdated tests
+remain FAIL. Every other verdict still follows the validated evidence and project
+transition rules.
 
 **The mode field is mandatory**: anyone evaluating the result later must know
 whether it was observed live or only asserted. `report-to-jira` composes this
@@ -77,8 +86,10 @@ files to the same run dir:
 
 ```
 <intake.json>  <readiness.json>  <recon.json>  <testplan.md>  <run.json>  <verdict.json>
-execution_summary.json   ← the enforced artifact; verdict.json feeds it
+execution_summary.json   ← schema v2, the enforced artifact; verdict.json feeds it
 screenshots/ logs/ traces/ progress.md
+action-journal/ automation-handoff.json   ← when MCP exploration graduates to a spec
+healing/                           ← optional candidate/review records, never a verdict
 ```
 
 | Result | Mandatory evidence |
@@ -86,6 +97,13 @@ screenshots/ logs/ traces/ progress.md
 | PASS | one proof per acceptance criterion |
 | FAIL | screenshot of the failure state (culprit marked), console, relevant response, trace |
 | BLOCKED | proof of the blocker |
+
+The v2 run and summary share `run_id`/`evidence_dir`, RFC3339 timestamps, exact
+required/executed coverage, normalized outcomes/attempts (plus `attempt_results`
+when available), and run-relative artifact path/SHA-256 with optional `covers`.
+PASS is clean only; retry-pass is flaky, and required skip/fixme/not_run prevents
+PASS. The summary also carries environment/deploy, steps, findings, skills and
+learnings. Full producer contract: `04-execution.md`.
 
 Before attaching to a ticket: no credentials, no tokens, no real personal data
 visible.

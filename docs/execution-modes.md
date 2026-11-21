@@ -34,6 +34,11 @@ per-ticket override:
 - **Mode in the report**: every JIRA comment carries the line
   `Mode: <mcp-only|hybrid|cli-first>` — anyone reviewing the result knows
   whether it was observed live or merely asserted.
+- **Semantic exploration handoff**: MCP recon/exploration journals actions,
+  reproducible start-state seed and AC oracles without raw refs/secrets. The manager
+  emits a ready handoff before automation; seed is not RNG and readiness is not PASS.
+- **Local quality scan**: scaffolded suites expose `test:quality`; the strict
+  quality pack is added only by explicit `/scaffold-suite --quality-pack`.
 
 Net effect: significantly lower token usage per ticket at nearly the same
 finding depth — limits are hit later, and from the first retest onward a
@@ -98,8 +103,12 @@ console errors, screenshots) into the run directory. Ideal before writing a spec
 ## What does NOT change
 
 - **Evidence remains mandatory**: no result without
-  `evidence/<KEY>/<TICKET>/<ts>/` including `execution_summary.json` — the
-  Stop hook continues to enforce this.
+  `evidence/<KEY>/<TICKET>/<ts>/` including schema-v2 `run.json` and
+  `execution_summary.json`, validated for path/coverage/outcome/artifact integrity —
+  the evidence gate continues to enforce this. Historical files are not rewritten.
+- **Healing stays candidate-only**: only analyst-classified brittle locator
+  resolution is eligible. Scores never apply changes or alter the original verdict;
+  a fresh read-only analyst review repeats no JQL, and only a human applies.
 - **Shadow mode** stays on until you turn it off in the project.
 - **Report format** (Cloud = ADF, Data Center = wiki markup) unchanged.
 - **Both Playwright and WebdriverIO** are supported — the probe exists in both

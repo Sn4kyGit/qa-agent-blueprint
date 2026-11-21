@@ -33,12 +33,14 @@ remote hub or mobile capabilities.
 - Isolate test data per run/worker (`wdio` parallelizes by spec file); never
   assert against global/shared lists.
 
-## TC-IDs
+## AC and TC-IDs
 
-Format `TC-<CAT>-<NNN>`, categories from the project's/product's "TC categories".
-IDs go in the `it` title (`it('TC-CHK-014: coupon applies discount', ...)`) so a
-failure maps directly to a reportable identifier — a wrong or invented ID silently
-joins two cases' histories (see `test-automator`'s `test_cases[]` rule).
+Title format `AC<ID> / TC-<CAT>-<NNN>: behavior`, with the real AC and categories
+from the project's/product's "TC categories". Example:
+`it('AC2 / TC-CHK-014: coupon rejected below minimum order value', ...)`.
+The AC and persistent TC-ID travel into the report and failure history — a wrong
+or invented ID silently joins two cases' histories (see `test-automator`'s
+`test_cases[]` rule).
 
 ## Retries & flakes
 
@@ -49,24 +51,31 @@ joins two cases' histories (see `test-automator`'s `test_cases[]` rule).
 - A spec that passes only on retry is a flake, not a pass — log it in
   `memory/learnings/flaky-tests.md` and report it as a suite-health signal.
 
-## Runner, reporters, `test_cases[]`
+## Runner, quality scan, reporters, `test_cases[]`
 
 - Run via the suite's own scripts or `npx wdio run wdio.conf.ts --spec <file>`;
   never invent a second config.
-- `test_cases[]` in `execution_summary.json` is produced from the suite's machine
-  reporter — enable `wdio-json-reporter` (or read the junit XML) for the run; the
-  fields needed are exactly the five `test-automator` must persist: `id` (the
-  TC-ID), `outcome`, `attempts`, `spec` (file), and on failure the `assertion`
-  text. If no machine reporter exists in the suite, say so in the evidence
-  instead of parsing console prose.
+- Scan before execution with the suite's `npm run test:quality` wrapper when
+  present, otherwise `node .claude/scripts/qa-test-code-scan.mjs tests wdio.conf.ts
+  --framework webdriverio` (add `--strict` only when the project opts in).
+- Emit JUnit XML for `normalize-test-results.py` (WDIO JSON may be retained as an
+  artifact but is not a v2 normalizer input). `test_cases[]` uses the persistent
+  TC-ID, normalized `outcome`, `attempts` including the first execution,
+  `attempt_results` when available, `spec`, and on failure `assertion`. Retry-pass
+  is flaky; skip/fixme/not_run have zero attempts. If no machine reporter exists,
+  say so instead of parsing console prose or inventing results.
 
 ## Evidence
 
 Same policy as everywhere: copy run artifacts (reports, failure screenshots from
 `outputDir`, Grid video/logs where available — see the Grid reference) into
 `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` per
-`.claude/rules/core/evidence-policy.md`, including `execution_summary.json` with
-`test_cases[]`, and keep `progress.md` live while running.
+`.claude/rules/core/evidence-policy.md`. Write schema-v2 `run.json` and
+`execution_summary.json` with matching run/path binding, RFC3339 timestamps,
+required/executed coverage and run-relative artifact path/SHA-256 (`covers` when
+known); validate both with `validate-evidence.py`. PASS is clean only, malformed
+new evidence is invalid, and historical files stay untouched. Keep `progress.md`
+live while running.
 
 ## Before writing a new spec
 
@@ -75,7 +84,10 @@ duplicate. Check `memory/learnings/selector-failures.md` and `flaky-tests.md`
 before choosing selectors or wait strategies. Never write a spec blind: run
 `/recon` first — WDIO suites use the probe variant `recon.wdio.spec.js` (same
 `recon.json` contract as the Playwright probe; console/network capture needs a
-devtools session and stays empty otherwise). Scaffolding a brand-new WDIO suite
+devtools session and stays empty otherwise). Exploration-to-spec uses only a
+ready WDIO `automation-handoff.json` and its selected semantic events; replay its
+seed as the project-owned start state (not RNG), preserve the AC oracle and red
+check, and never treat handoff readiness as PASS. Scaffolding a brand-new WDIO suite
 from nothing is **not** covered here (`scaffold-suite` is Playwright-only) —
 flag it to the user instead of improvising a project layout.
 

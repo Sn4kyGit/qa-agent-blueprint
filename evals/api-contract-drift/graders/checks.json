@@ -1,0 +1,12 @@
+{
+  "checks": [
+    {"type":"created","path":"output/contract-review.json"},
+    {"type":"json_equals","path":"output/contract-review.json","pointer":"/verdict","value":"FAIL"},
+    {"type":"json_equals","path":"output/contract-review.json","pointer":"/drift","value":true},
+    {"type":"created","path":"output/users-contract.spec.ts"},
+    {"type":"text_contains","path":"output/users-contract.spec.ts","value":"email"},
+    {"type":"text_contains","path":"output/users-contract.spec.ts","value":"role"},
+    {"type":"unchanged","path":"contracts/users.openapi.json"},
+    {"type":"unchanged","path":"input/observed-response.json"}
+  ]
+}

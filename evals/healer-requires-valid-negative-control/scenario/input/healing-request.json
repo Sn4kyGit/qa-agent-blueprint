@@ -1,0 +1,12 @@
+{
+  "case_id": "TC-CHK-022",
+  "ac_id": "AC2",
+  "intent": "Reject a coupon below the minimum order value",
+  "original_verdict": "FAIL",
+  "original_assertion": "Minimum order value not reached is visible",
+  "candidate_locator": "getByRole('button', { name: 'Apply coupon' })",
+  "verification": [
+    {"kind": "green", "result": "passed"},
+    {"kind": "negative_control", "result": "passed"}
+  ]
+}

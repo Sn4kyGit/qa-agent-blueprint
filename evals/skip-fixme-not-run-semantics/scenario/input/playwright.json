@@ -1,0 +1,9 @@
+{
+  "suites": [{
+    "specs": [
+      {"id": "TC-PASS-001", "title": "TC-PASS-001", "tests": [{"results": [{"status": "passed"}]}]},
+      {"id": "TC-SKIP-002", "title": "TC-SKIP-002", "tests": [{"results": [{"status": "skipped"}]}]},
+      {"id": "TC-FIXME-003", "title": "TC-FIXME-003", "tests": [{"annotations": [{"type": "fixme"}], "results": []}]}
+    ]
+  }]
+}

@@ -16,7 +16,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { qaBlueprint } from "../plugins/qa-blueprint.ts"
+import qaBlueprint from "../plugins/qa-blueprint.ts"
 import { fakeCtx, toolAfter } from "./fixtures/payloads.ts"
 
 let dir: string

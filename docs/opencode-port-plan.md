@@ -417,6 +417,7 @@ are a documented model floor + a sharpened norm, not a special case.
 | D8 | settings.json raw-artifact denies → `permission` globs | **confirmed (S4)** — patterns must match absolute paths: use `**/evidence/**/*.png` and peers, not blanket evidence denies |
 | D9 | Shared eval cases, harness-specific runner, cross-model judging | accepted |
 | D10 | Path references in skill/rule/agent bodies (~70) stay **literal**; `install.sh --mode opencode` creates read-only compat symlinks in the consumer (`.claude`, `docs`, `.agents` → blueprint root; `.opencode/{ROUTER.md,agents,commands,plugins}` → blueprint `opencode/`). Consumer-owned paths (`projects/`, `memory/`, `evidence/`) resolve in the cwd identically on both harnesses. Consequence: a consumer picks ONE harness — installing the Claude plugin alongside the `.claude` symlink would double-register skills | accepted (P4 audit) |
+| D11 | Test-code quality uses one shared zero-dependency `.mjs` scanner: Claude invokes its CLI, opencode imports the same module after the security guard, staged/CI scans use the same rules. Evidence v2 uses one shared Python validator in both gates. Browser evals alone load the opencode plugin and pinned Playwright MCP; standard evals stay MCP-free | accepted (0.22.0) |
 
 ## 8. Human steps (cannot be automated)
 

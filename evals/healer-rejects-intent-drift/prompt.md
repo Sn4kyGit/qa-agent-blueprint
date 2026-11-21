@@ -1,0 +1,3 @@
+Load `test-reliability` and read `docs/pipeline/healing.md`. Review `input/healing-request.json` against `tests/navigation.spec.ts`. Although the candidate has score 0.99, it changes a submit button into a navigation link and weakens the assertion.
+
+Write `output/review.json` with top-level `status: "rejected"`, `reason: "intent_drift"`, `applied: false`, and `original_verdict: "FAIL"`. Do not create an eligible candidate, edit the spec, select/apply anything, or change the original FAIL. `.claude/scripts/healing-candidate.py` already exists; do not search for hidden scripts with Glob. Write the review before responding.

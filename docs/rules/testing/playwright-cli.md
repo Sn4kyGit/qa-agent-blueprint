@@ -16,12 +16,12 @@ choice).
   `expect.poll()`) — never `waitForTimeout()` as a first resort (see flaky-tests
   learnings on fixed sleeps).
 
-## TC-IDs
+## AC and TC-IDs
 
-Format `TC-<CAT>-<NNN>` where `<CAT>` comes from `projects/<KEY>/PROJECT.md` → "TC
-categories" (e.g. `AUTH`, `CHK`, `CART`). IDs go in the test title
-(`test('TC-CHK-014: coupon applies discount', ...)`) so failures map directly to a
-reportable identifier.
+Title format `AC<ID> / TC-<CAT>-<NNN>: behavior`, with the real AC and `<CAT>`
+from `projects/<KEY>/PROJECT.md` → "TC categories" (e.g. `AUTH`, `CHK`, `CART`).
+Example: `test('AC2 / TC-CHK-014: coupon rejected below minimum order value', ...)`.
+The AC and persistent TC-ID make failures directly reportable and comparable.
 
 ## Runner output — keep it out of the context
 
@@ -44,6 +44,21 @@ reportable identifier.
   `memory/learnings/flaky-tests.md`) and report it as a suite-health signal, never
   silently accept it.
 
+## Static quality scan
+
+Scaffolded suites wrap `qa-test-code-scan.mjs` as `quality/scan.mjs`:
+
+```bash
+npm run test:quality           # suite scan; warnings by default
+npm run test:quality:staged    # staged blobs, strict
+node .claude/scripts/qa-test-code-scan.mjs tests playwright.config.ts --strict
+```
+
+`.qa-test-quality.json` owns rule severities/strict mode. Base scaffolding includes
+the warning-only wrapper; only explicit `/scaffold-suite --quality-pack` adds the
+strict fixtures/configuration layer. The scanner reads source/staged blobs and adds
+no MCP server, agent or hook type; its findings are not run evidence.
+
 ## Metrics to report
 
 - Pass rate, P0/P1 breakdown against the project's gate overrides.
@@ -58,8 +73,22 @@ for this flow — extend, don't duplicate. Check `memory/learnings/selector-fail
 and `flaky-tests.md` before choosing selectors or wait strategies.
 
 **Never write a spec blind** (pipeline norm, `docs/pipeline/04-execution.md`):
-selectors come from a `/recon` run's `recon.json`, assertions are positive and
-specific, every title carries the AC-ID next to the TC-ID. New specs pass the
-**red check** before their green counts (`docs/pipeline/05-verification.md`),
-and every run collects the **observation channel** (console errors, responses
-≥ 400, end-of-test screenshot) even when fully green.
+selectors come from a `/recon` run's `recon.json`; exploration-to-spec additionally
+requires a ready `automation-handoff.json` and its selected semantic journal events.
+Replay its seed as the project-owned start state (not RNG), preserve its AC positive
+oracle/hashes and original verdict, and never mistake readiness for PASS. Assertions
+are positive and specific, every title is `AC<ID> / TC-<CAT>-<NNN>: behavior`, and
+new specs pass the **red check** before their green counts
+(`docs/pipeline/05-verification.md`). Every run collects the **observation channel**
+(console errors, responses ≥ 400, end-of-test screenshot) even when fully green.
+
+## Schema-v2 evidence
+
+Normalize the exact Playwright JSON or JUnit result with
+`.claude/scripts/normalize-test-results.py`, then validate new `run.json` and
+`execution_summary.json` with `.claude/scripts/validate-evidence.py`. Both bind
+`run_id`/`evidence_dir`, RFC3339 timestamps, required/executed coverage and hashed
+run-relative artifacts (`covers` optional). Preserve normalized outcomes, attempts
+including the first, and `attempt_results` when available: retry-pass is flaky,
+required skip/fixme/not_run prevents PASS, and PASS is clean only. Malformed or
+inconsistent new evidence is invalid; never rewrite historical files to pass.

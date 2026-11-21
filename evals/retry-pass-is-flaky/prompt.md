@@ -1,0 +1,3 @@
+Read the schema-v2 evidence policy and normalize `input/playwright.json` for ACME-802. Write `evidence/ACME/ACME-802/20261115-120000/run.json` and `execution_summary.json`. TC-RETRY-001 failed once and passed on retry; it is required.
+
+Record a retry-pass as `flaky` with two attempts, never a clean pass. Since flaky prevents PASS and there is no definitive failed final attempt or product finding, use BLOCKED with an explicit flake reason. Preserve executed coverage and do not contact JIRA. Use `.claude/scripts/normalize-test-results.py` and `.claude/scripts/validate-evidence.py` directly where helpful; do not search for hidden scripts with Glob or stop after reading. Write and validate both required files before responding.

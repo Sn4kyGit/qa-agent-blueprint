@@ -10,7 +10,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdtemp, mkdir, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import { join } from "path"
-import { qaBlueprint } from "../plugins/qa-blueprint.ts"
+import qaBlueprint from "../plugins/qa-blueprint.ts"
 import { bashBefore, fakeCtx, fileBefore, unknownBefore, SESSION_ID, type BeforeCall } from "./fixtures/payloads.ts"
 
 async function hooks() {
@@ -107,6 +107,8 @@ const allowed: Array<[string, BeforeCall]> = [
   ["Bash redirect > .env.example", bashBefore("cat > .env.example")],
   ["Bash read .env.example", bashBefore("cat .env.example")],
   ["Bash grep .env.example", bashBefore("grep KEY .env.example")],
+  ["Read PROJECT.md stays readable", fileBefore("read", "projects/ACME/PROJECT.md")],
+  ["Read PRODUCT.md stays readable", fileBefore("read", "projects/ACME/products/STORE/PRODUCT.md")],
   // == prose mentioning a secrets filename is not a read of it ==
   ["pipeline + unrelated echo naming it", bashBefore('ls projects | head -3; echo "note: the dot-env file is a template"')],
   ["grep on ordinary files is not blocked", bashBefore("grep -c KEY README.md")],
@@ -212,6 +214,33 @@ describe("shadow gate (opencode)", () => {
       if (prev === undefined) delete process.env.QA_AGENT_SHADOW
       else process.env.QA_AGENT_SHADOW = prev
     }
+  })
+})
+
+describe("verdict-aware JIRA evidence gate (opencode)", () => {
+  test("NO_TEST denies writes even without tracked session activity", async () => {
+    const dir = await tempProject("# SHOP\nShadow mode: off\n")
+    await stampPreflight(dir)
+    const runDir = join(dir, "evidence", "SHOP", "SHOP-1", "20261115-100000")
+    await mkdir(runDir, { recursive: true })
+    await writeFile(join(runDir, "execution_summary.json"), JSON.stringify({
+      schema_version: 2,
+      ticket: "SHOP-1",
+      project: "SHOP",
+      timestamp: "2026-11-15T10:00:00Z",
+      verdict: "NO_TEST",
+      evidence_dir: "evidence/SHOP/SHOP-1/20261115-100000",
+      no_test_reason: "aborted",
+      steps_executed: [],
+      test_cases: [],
+      findings: [],
+      artifacts: [],
+      coverage: { required: [], executed: [] },
+      learnings: { captured: [], none_because: "none" },
+    }))
+    const h = await hooksIn(dir)
+    await expect(run(h, jiraWrite({ issueKey: "SHOP-1" }, "atlassian_addCommentToJiraIssue"))).rejects.toThrow(/QA_EVIDENCE_INVALID:[\s\S]*NO_TEST/)
+    await expect(run(h, jiraWrite({ project_key: "SHOP" }, "atlassian_createJiraIssue"))).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
   })
 })
 

@@ -95,6 +95,10 @@ def parse_ts(s: str) -> datetime | None:
         return None
 
 
+def object_list(value):
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
 def load_summaries(evidence_dir: pathlib.Path, project: str | None, ticket: str | None, since_days: int | None):
     """Read every execution_summary.json. Unreadable files are reported."""
     runs, broken = [], []
@@ -104,6 +108,9 @@ def load_summaries(evidence_dir: pathlib.Path, project: str | None, ticket: str 
             data = json.loads(path.read_text())
         except Exception as exc:
             broken.append((str(path), str(exc)))
+            continue
+        if not isinstance(data, dict):
+            broken.append((str(path), "summary is not a JSON object"))
             continue
         if project and data.get("project") != project:
             continue
@@ -125,6 +132,8 @@ def load_run_json(evidence_dir: pathlib.Path, project: str | None, since_days: i
         try:
             data = json.loads(path.read_text())
         except Exception:
+            continue
+        if not isinstance(data, dict):
             continue
         if project and project not in str(path):
             continue
@@ -274,16 +283,27 @@ def analyze(runs: list, run_jsons: list, perf_sessions: list, eval_entries: list
     verdicts: dict = {}
     flaky = 0
     total_cases = 0
+    case_outcomes: dict = {}
+    required_not_passed = 0
     blocked = 0
     for r in runs:
         v = r.get("verdict", "unknown")
         verdicts[v] = verdicts.get(v, 0) + 1
         if v == "BLOCKED":
             blocked += 1
-        for tc in r.get("test_cases") or []:
+        for tc in object_list(r.get("test_cases")):
             total_cases += 1
-            if isinstance(tc.get("attempts"), (int, float)) and tc["attempts"] > 1:
+            outcome = tc.get("outcome", "unknown")
+            case_outcomes[outcome] = case_outcomes.get(outcome, 0) + 1
+            attempts = tc.get("attempts")
+            if outcome == "flaky" or (outcome == "pass" and isinstance(attempts, (int, float)) and attempts > 1):
                 flaky += 1
+            clean_attempts = 1 if attempts is None else attempts
+            clean_pass = outcome == "pass" and isinstance(clean_attempts, (int, float)) and not isinstance(clean_attempts, bool) and clean_attempts == 1
+            if tc.get("required", True) is True and not clean_pass:
+                required_not_passed += 1
+    stats["case_outcomes"] = case_outcomes
+    stats["required_not_passed"] = required_not_passed
     stats["verdicts"] = verdicts
     if runs:
         stats["blocked_rate"] = blocked / len(runs) * 100

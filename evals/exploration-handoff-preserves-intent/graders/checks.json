@@ -1,0 +1,14 @@
+{
+  "checks": [
+    {"type":"created","path":"output/automation-handoff.json"},
+    {"type":"json_equals","path":"output/automation-handoff.json","pointer":"/status","value":"ready"},
+    {"type":"json_equals","path":"output/automation-handoff.json","pointer":"/original_verdict","value":"FAIL"},
+    {"type":"json_equals","path":"output/automation-handoff.json","pointer":"/case/ac_id","value":"AC1"},
+    {"type":"json_equals","path":"output/automation-handoff.json","pointer":"/case/tc_id","value":"TC-CHK-014"},
+    {"type":"json_equals","path":"output/automation-handoff.json","pointer":"/case/intent","value":"Checkout rejects an empty email with a visible validation message"},
+    {"type":"json_equals","path":"output/automation-handoff.json","pointer":"/seed/state","value":"empty-cart"},
+    {"type":"json_equals","path":"output/automation-handoff.json","pointer":"/positive_oracle/expected","value":"Email is required"},
+    {"type":"json_equals","path":"output/automation-handoff.json","pointer":"/red_check/outcome","value":"failed"},
+    {"type":"unchanged","path":"input/session.json"}
+  ]
+}

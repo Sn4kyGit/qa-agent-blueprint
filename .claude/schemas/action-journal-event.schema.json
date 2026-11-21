@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-agent-blueprint.local/schemas/action-journal-event.schema.json",
+  "title": "Semantic action journal event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "seq", "stream_id", "case_id", "type", "recorded_at", "payload"],
+  "properties": {
+    "schema_version": {"const": "qa-action-journal-event/v1"},
+    "event_id": {"type": "string", "pattern": "^evt-[0-9]{8}$"},
+    "seq": {"type": "integer", "minimum": 1},
+    "stream_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"},
+    "case_id": {
+      "anyOf": [
+        {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"},
+        {"type": "null"}
+      ]
+    },
+    "type": {"enum": ["stream_start", "case_start", "action", "assertion", "red_check", "case_end", "stream_end"]},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "payload": {"type": "object"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "value", "expression"],
+      "properties": {
+        "strategy": {"enum": ["role", "label", "text", "test_id", "placeholder", "title", "alt"]},
+        "value": {"type": "string", "minLength": 1, "maxLength": 300},
+        "name": {"type": "string", "minLength": 1, "maxLength": 300},
+        "expression": {"type": "string", "minLength": 1, "maxLength": 500},
+        "exact": {"type": "boolean"}
+      }
+    },
+    "seed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_url", "state", "fixtures"],
+      "properties": {
+        "start_url": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "state": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "fixtures": {"type": "array", "minItems": 1, "maxItems": 100, "items": {"type": "string", "minLength": 1, "maxLength": 200}}
+      }
+    },
+    "caseStart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "ac_id", "ac_sha256", "tc_id", "tc_sha256", "intent", "intent_sha256"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1, "maxLength": 300},
+        "ac_id": {"type": "string", "minLength": 1, "maxLength": 300},
+        "ac_sha256": {"$ref": "#/$defs/sha256"},
+        "tc_id": {"type": "string", "minLength": 1, "maxLength": 300},
+        "tc_sha256": {"$ref": "#/$defs/sha256"},
+        "intent": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "intent_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ac_id", "ac_sha256", "intent_sha256", "assertion_sha256", "oracle", "locator", "expected", "outcome"],
+      "properties": {
+        "ac_id": {"type": "string", "minLength": 1, "maxLength": 300},
+        "ac_sha256": {"$ref": "#/$defs/sha256"},
+        "intent_sha256": {"$ref": "#/$defs/sha256"},
+        "assertion_sha256": {"$ref": "#/$defs/sha256"},
+        "oracle": {"enum": ["positive", "negative_control", "observation"]},
+        "locator": {"$ref": "#/$defs/locator"},
+        "expected": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "outcome": {"enum": ["passed", "failed", "observed"]}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"type": {"const": "stream_start"}}},
+      "then": {
+        "properties": {
+          "case_id": {"type": "null"},
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["framework", "seed", "build", "capsule_sha256"],
+            "properties": {
+              "framework": {"enum": ["playwright", "webdriverio"]},
+              "seed": {"$ref": "#/$defs/seed"},
+              "build": {"type": "string", "minLength": 1, "maxLength": 200},
+              "capsule_sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "case_start"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/caseStart"}}}
+    },
+    {
+      "if": {"properties": {"type": {"const": "assertion"}}},
+      "then": {"properties": {"payload": {"$ref": "#/$defs/assertion"}}}
+    },
+    {
+      "if": {"properties": {"type": {"const": "red_check"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["assertion_event_id", "outcome", "method"],
+            "properties": {
+              "assertion_event_id": {"type": "string", "pattern": "^evt-[0-9]{8}$"},
+              "outcome": {"enum": ["failed", "passed"]},
+              "method": {"enum": ["data_state", "assertion_inversion"]}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"const": "case_end"}}},
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "replayable", "original_verdict"],
+            "properties": {
+              "status": {"enum": ["complete", "incomplete"]},
+              "replayable": {"type": "boolean"},
+              "original_verdict": {"enum": ["PASS", "FAIL", "BLOCKED", "NEEDS_REVIEW"]}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"type": {"enum": ["stream_start", "stream_end"]}}},
+      "then": {"properties": {"case_id": {"type": "null"}}},
+      "else": {"properties": {"case_id": {"type": "string"}}}
+    }
+  ]
+}

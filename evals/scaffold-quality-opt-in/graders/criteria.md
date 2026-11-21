@@ -1,0 +1,3 @@
+Pass only when the writable scenario contains a composed base suite and the explicit quality layer: runnable package/config/smoke spec, observation fixture and probes, strict `.qa-test-quality.json`, seed spec, and lazy auth/data/API fixture chain. The smoke title binds AC1 and a real TC ID; base URL and credentials are not hardcoded. PROJECT.md records the suite. Seed stays opt-in and no endpoint or credential is invented.
+
+Fail for prose without files, quality files without the explicit opt-in behavior, a default/minimal-only suite, missing observation or provenance fixtures, fabricated execution, external network use, or enabled/guessed seed behavior. Deterministic checks are authoritative over the answer.

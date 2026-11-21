@@ -42,6 +42,14 @@ tokens an MCP session costs. Full phase contract: `docs/pipeline/02-recon.md`.
 8. **Expiry check**: if a previous `recon.json` for this area exists and the
    new run shows different controls, say so — specs built from the old recon
    are outdated (re-run recon, don't patch specs onto a changed page).
+9. **Journal automatable interactions.** On the MCP path, record the
+   reproducible seed test/start state and each interaction through
+   `.claude/scripts/action-journal.py` (`docs/pipeline/action-journal.md`).
+   Use semantic role/label/test-ID locators and AC/TC/intent/assertion hashes,
+   never MCP snapshot or element references. Close incomplete or unreplayable
+   cases honestly. Only a complete replayable case with a passed AC-bound
+   positive oracle and successful red check may produce an automation handoff;
+   the journal never changes the runner outcome.
 
 This skill writes no summary of its own: when the calling flow writes the run's
 `execution_summary.json`, `recon` belongs in its `skills_used` if this skill

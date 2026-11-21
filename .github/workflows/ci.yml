@@ -14,19 +14,36 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pinned Claude Code
+        run: npm install --global @anthropic-ai/claude-code@2.1.263
 
       - name: Run bash fixture battery
         run: |
+          set -uo pipefail
           fails=0
           for t in .claude/hooks/tests/*.sh; do
-            echo "=== $(basename $t) ==="
-            if bash "$t" 2>&1 | tail -1; then :; else fails=$((fails+1)); fi
+            echo "=== $(basename "$t") ==="
+            if ! bash "$t"; then
+              fails=$((fails+1))
+            fi
           done
           [ "$fails" -eq 0 ]
 
       - name: Run bun tests
-        run: cd opencode && bun test
+        working-directory: opencode
+        run: bun test
+
+      - name: Run eval library unit tests
+        run: PYTHONPATH=evals/lib python3 -m unittest discover -s evals/lib/tests -v
+
+      - name: Check release conventions
+        run: python3 scripts/release-check.py
 
       - name: Validate plugin manifest
-        run: claude plugin validate . 2>&1 || true
+        run: claude plugin validate .

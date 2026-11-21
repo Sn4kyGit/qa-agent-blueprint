@@ -280,6 +280,8 @@ def main():
             "coverage_pct": round(100 * instrumented / len(in_window), 1) if in_window else None,
             "runs_timestamp_unknown": len(ts_unknown),
             "runs_out_of_window": len(out_of_window),
+            "schema_v2_runs": sum(1 for e in in_window if e["data"].get("schema_version") == 2),
+            "legacy_runs": sum(1 for e in in_window if e["data"].get("schema_version") != 2),
             "unreadable_summaries": len(unreadable),
         },
         "skills": skills,

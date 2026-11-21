@@ -114,5 +114,9 @@ verification, and conflict handling: `docs/rules/core/retro-learn.md` → "Promo
 ## Housekeeping
 
 - Keep `memory/INDEX.md` in sync: new learning file or project → one-line entry.
+- After a promotion changes `PROJECT.md` or `PRODUCT.md`, regenerate the
+  affected `.agents/qa-project-context/<KEY>[/<PRODUCT>].md` bridge and its
+  `source_sha`; report this as housekeeping rather than editing the generated
+  projection by hand.
 - If a listed `INDEX.md` entry is empty or stale, fix or remove it — entries are
   promises, not decoration.

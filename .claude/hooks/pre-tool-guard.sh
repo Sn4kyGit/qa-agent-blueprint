@@ -12,6 +12,9 @@
 set -uo pipefail
 
 INPUT="$(cat)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VALIDATOR="$SCRIPT_DIR/../scripts/validate-evidence.py"
+[ -f "$VALIDATOR" ] || VALIDATOR="$SCRIPT_DIR/../../scripts/validate-evidence.py"
 
 get_json() {
   # get_json <python-expr-suffix-on-d> — reads the hook payload as `d`.
@@ -157,7 +160,7 @@ normalize_path() {
 # An agent that can rewrite its own guard/rules/skills/agents has total
 # self-escalation. All checks use the normalized path.
 HUMAN_ONLY='(\.qa-guard\.json|project\.md|product\.md|settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin/|hooks/.*\.sh|rules/.*\.md|skills/.*/skill\.md|skills/.*/references/|skills/.*/templates/|agents/.*\.md|scripts/.*\.(py|sh|mjs)|\.git/(hooks|config|info)/|\.git/config|\.preflight/|\.audit/)'
-if [ -n "$FILE_PATH" ]; then
+if [ -n "$FILE_PATH" ] && [ "$TOOL_NAME" != "Read" ]; then
   NORM_FP="$(normalize_path "$FILE_PATH")"
   if printf '%s' "$NORM_FP" | grep -qE "$HUMAN_ONLY"; then
     block "refusing to write to a human-only file ($FILE_PATH) — the guard's config, hook scripts, rules, skills, agents, scripts, project config, and .git/ internals are human tasks. An agent that can edit these can disable its own guard, override safety rules, or plant persistent backdoors. Modify these files yourself or use the installer."
@@ -547,6 +550,54 @@ else:
     if [ "$SHADOW_OFF" != "1" ]; then
       block "refusing a JIRA write while Shadow Mode is on (default). Compose the report as evidence/<KEY>/<TICKET>/<ts>/proposed-report.md instead. Unlock: 'Shadow mode: off' in projects/<KEY>/PROJECT.md, or QA_AGENT_SHADOW=0."
     fi
+  fi
+fi
+
+if printf '%s' "$TOOL_NAME" | grep -qiE '^mcp__([a-zA-Z0-9-]+(_[a-zA-Z0-9-]+)*_+)?atlassian__' \
+  && ! printf '%s' "$TOOL_NAME" | grep -qiE '(get|search|list|download|executeRead|read)'; then
+  EVIDENCE_ISSUE_KEY="$(get_json '
+import re
+ti = d.get("tool_input") or {}
+containers = [ti]
+if isinstance(ti.get("arguments"), dict):
+    containers.append(ti["arguments"])
+for container in containers:
+    for field in ("issueKey", "issue_key", "key", "id"):
+        value = container.get(field)
+        if isinstance(value, str) and re.fullmatch(r"[A-Z][A-Z0-9]+-[0-9]+", value):
+            print(value)
+            break
+    else:
+        continue
+    break
+')"
+  EVIDENCE_TOOL_NAME="$(get_json '
+ti = d.get("tool_input") or {}
+name = d.get("tool_name") or ""
+if "executeWrite" in name or "executeDestructive" in name:
+    for field in ("tool", "toolName", "tool_name", "name"):
+        value = ti.get(field)
+        if isinstance(value, str) and value:
+            name = name + "(" + value + ")"
+            break
+print(name)
+')"
+  if [ -n "$EVIDENCE_ISSUE_KEY" ]; then
+    PROJ="${EVIDENCE_ISSUE_KEY%%-*}"
+    if ! command -v python3 >/dev/null 2>&1 || [ ! -f "$VALIDATOR" ]; then
+      find "$CWD/evidence/$PROJ/$EVIDENCE_ISSUE_KEY" -name execution_summary.json -mmin -120 2>/dev/null | grep -q . \
+        && block "QA_EVIDENCE_INVALID: cannot validate fresh evidence before the JIRA write (python3/validator unavailable)."
+    elif ! python3 "$VALIDATOR" --jira-ticket "$EVIDENCE_ISSUE_KEY" --jira-write "$EVIDENCE_TOOL_NAME" --qa-home "$CWD" --json >/dev/null 2>&1; then
+      block "QA_EVIDENCE_INVALID: the freshest evidence for $EVIDENCE_ISSUE_KEY is invalid, or its verdict forbids this JIRA write (NO_TEST forbids all writes; NEEDS_REVIEW forbids transitions and bug creation)."
+    fi
+  elif printf '%s' "$EVIDENCE_TOOL_NAME" | grep -qiE 'create[_A-Za-z]*(issue|bug)'; then
+    while IFS= read -r summary; do
+      [ -n "$summary" ] || continue
+      if ! command -v python3 >/dev/null 2>&1 || [ ! -f "$VALIDATOR" ] \
+        || ! python3 "$VALIDATOR" "$summary" --jira-write "$EVIDENCE_TOOL_NAME" --qa-home "$CWD" --json >/dev/null 2>&1; then
+        block "QA_EVIDENCE_INVALID: bug creation is forbidden while fresh NEEDS_REVIEW/invalid evidence exists; obtain a human ruling first."
+      fi
+    done < <(find "$CWD/evidence" -name execution_summary.json -mmin -120 2>/dev/null)
   fi
 fi
 

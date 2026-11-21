@@ -1,0 +1,16 @@
+{
+  "case_id": "TC-CHK-020",
+  "ac_id": "AC1",
+  "cause_class": "test-brittle",
+  "failure_type": "locator_resolution",
+  "eligible": true,
+  "intent": "Submit the checkout form",
+  "original_verdict": "FAIL",
+  "confidence": 0.97,
+  "original_locator": "#submit-old",
+  "candidate_locator": "getByRole('button', { name: 'Place order' })",
+  "verification": [
+    {"kind": "green", "result": "passed"},
+    {"kind": "negative_control", "result": "failed"}
+  ]
+}

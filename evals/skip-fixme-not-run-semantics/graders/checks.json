@@ -1,0 +1,15 @@
+{
+  "checks": [
+    {"type":"created","path":"evidence/ACME/ACME-801/20261115-120000/run.json"},
+    {"type":"created","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json"},
+    {"type":"summary_contract","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json","pointer":"/verdict","value":"BLOCKED"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json","pointer":"/test_cases/0/outcome","value":"pass"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json","pointer":"/test_cases/1/outcome","value":"skip"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json","pointer":"/test_cases/1/attempts","value":0},
+    {"type":"json_equals","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json","pointer":"/test_cases/2/outcome","value":"fixme"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json","pointer":"/test_cases/2/attempts","value":0},
+    {"type":"json_equals","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json","pointer":"/coverage/required","value":["TC-PASS-001","TC-SKIP-002","TC-FIXME-003"]},
+    {"type":"json_equals","path":"evidence/ACME/ACME-801/20261115-120000/execution_summary.json","pointer":"/coverage/executed","value":["TC-PASS-001"]}
+  ]
+}

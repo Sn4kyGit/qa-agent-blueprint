@@ -50,6 +50,16 @@ assert_file()    { [ -f "$2" ] && pass "$1" || fail "$1" "missing file: $2"; }
 assert_no_file() { [ ! -e "$2" ] && pass "$1" || fail "$1" "should not exist: $2"; }
 assert_grep()    { grep -qF -- "$3" "$2" 2>/dev/null && pass "$1" || fail "$1" "not found in $2: $3"; }
 assert_no_grep() { grep -qF -- "$3" "$2" 2>/dev/null && fail "$1" "should not appear in $2: $3" || pass "$1"; }
+assert_quality_hook() {
+  python3 - "$2" <<'PY' >/dev/null 2>&1
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+hooks = cfg.get("hooks", {})
+commands = [h.get("command", "") for entries in hooks.values() for e in entries for h in e.get("hooks", [])]
+sys.exit(0 if set(hooks) == {"SessionStart", "Stop", "PreToolUse", "PostToolUse"} and sum("pre-test-code-scan.sh" in command for command in commands) == 1 else 1)
+PY
+  if [ $? -eq 0 ]; then pass "$1"; else fail "$1" "quality hook count or hook event inventory differs"; fi
+}
 
 # --- a target repo that already has its own ecosystem -------------------------
 TARGET="$WORK/host"
@@ -76,6 +86,22 @@ assert_file    "skills copied"                   "$TARGET/.claude/skills/test-ti
 assert_file    "agents copied"                   "$TARGET/.claude/agents/qa-manager.md"
 assert_file    "deep lane agent copied"           "$TARGET/.claude/agents/test-executor-deep.md"
 assert_file    "context capsule script copied"   "$TARGET/.claude/scripts/context-capsule.py"
+assert_file    "action journal script copied"     "$TARGET/.claude/scripts/action-journal.py"
+assert_file    "healing script copied"            "$TARGET/.claude/scripts/healing-candidate.py"
+assert_file    "quality scanner copied"           "$TARGET/.claude/scripts/qa-test-code-scan.mjs"
+assert_file    "evidence validator copied"        "$TARGET/.claude/scripts/validate-evidence.py"
+assert_file    "quality hook copied"              "$TARGET/.claude/hooks/qa-blueprint/pre-test-code-scan.sh"
+for schema in action-journal-event action-journal-index automation-handoff execution-summary-v2 healing-candidate healing-review run-record-v2; do
+  assert_file "schema $schema copied" "$TARGET/.claude/schemas/$schema.schema.json"
+done
+assert_file    "quality scaffold config copied"   "$TARGET/.claude/skills/scaffold-suite/templates/quality/.qa-test-quality.json"
+assert_file    "quality scaffold fixture copied"  "$TARGET/.claude/skills/scaffold-suite/templates/quality/tests/fixtures/test.ts"
+assert_file    "journal Playwright fixture copied" "$TARGET/.claude/skills/scaffold-suite/templates/tests/fixtures/action-journal.ts"
+assert_file    "journal WDIO fixture copied"      "$TARGET/.claude/skills/scaffold-suite/templates/tests/fixtures/action-journal.wdio.cjs"
+assert_file    "action journal docs copied"       "$TARGET/docs/qa-blueprint/pipeline/action-journal.md"
+assert_file    "healing docs copied"              "$TARGET/docs/qa-blueprint/pipeline/healing.md"
+assert_file    "root notice copied"               "$TARGET/NOTICE"
+assert_file    "detailed notices copied"          "$TARGET/.claude/skills/THIRD_PARTY_NOTICES.md"
 assert_grep    "own script untouched"            "$TARGET/.claude/scripts/consumer-script.py" "consumer script"
 assert_grep    "own skill untouched"             "$TARGET/.claude/skills/my-own-skill/SKILL.md" "Mine."
 assert_file    "docs copied, namespaced"         "$TARGET/docs/qa-blueprint/architecture.md"
@@ -85,6 +111,7 @@ cmp -s "$BINFIX" "$TARGET/docs/qa-blueprint/.fixture-binary.bin" \
   || fail "binary file copied byte-identical" "cmp differs: $TARGET/docs/qa-blueprint/.fixture-binary.bin"
 assert_file    "secrets template created"        "$TARGET/.env.playwright-secrets"
 assert_no_file "no dotenv file is invented"      "$TARGET/.env"
+assert_quality_hook "quality hook registered once in four existing event types" "$TARGET/.claude/settings.json"
 
 echo
 echo "== internal path references were rewritten to the namespace =="
@@ -128,6 +155,7 @@ else
 fi
 BLOCKS="$(grep -c "qa-agent-blueprint (managed, do not edit)" "$TARGET/CLAUDE.md")"
 [ "$BLOCKS" = "1" ] && pass "managed block not duplicated" || fail "managed block not duplicated" "found $BLOCKS"
+assert_quality_hook "integrate re-run does not duplicate quality hook" "$TARGET/.claude/settings.json"
 
 echo
 echo "== uninstall removes what it added, keeps what is yours =="
@@ -138,6 +166,9 @@ assert_no_file "namespaced rules removed"        "$TARGET/.claude/rules/qa-bluep
 assert_no_file "namespaced hooks removed"        "$TARGET/.claude/hooks/qa-blueprint/stop-evidence-check.sh"
 assert_no_file "blueprint skill removed"         "$TARGET/.claude/skills/test-ticket/SKILL.md"
 assert_no_file "context capsule script removed"  "$TARGET/.claude/scripts/context-capsule.py"
+assert_no_file "schemas removed"                  "$TARGET/.claude/schemas/action-journal-event.schema.json"
+assert_no_file "root notice removed"              "$TARGET/NOTICE"
+assert_no_file "detailed notices removed"         "$TARGET/.claude/skills/THIRD_PARTY_NOTICES.md"
 assert_grep    "own script survives uninstall"   "$TARGET/.claude/scripts/consumer-script.py" "consumer script"
 assert_no_file "namespaced docs removed"         "$TARGET/docs/qa-blueprint/architecture.md"
 assert_grep    "own skill still there"           "$TARGET/.claude/skills/my-own-skill/SKILL.md" "Mine."
@@ -155,6 +186,10 @@ assert_grep    "plugin enabled"               "$SET" "qa-agent-blueprint@qa-agen
 assert_grep    "existing permissions kept"    "$SET" "Bash(ls:*)"
 assert_no_file "nothing copied in plugin mode" "$PTARGET/.claude/rules"
 assert_no_file "no skills copied either"       "$PTARGET/.claude/skills"
+for path in NOTICE .claude/skills/THIRD_PARTY_NOTICES.md .claude/schemas/execution-summary-v2.schema.json .claude/schemas/action-journal-event.schema.json .claude/scripts/action-journal.py .claude/scripts/healing-candidate.py .claude/scripts/qa-test-code-scan.mjs .claude/scripts/validate-evidence.py .claude/hooks/pre-test-code-scan.sh .claude/skills/scaffold-suite/templates/quality/tests/fixtures/test.ts docs/pipeline/action-journal.md docs/pipeline/healing.md; do
+  assert_file "plugin distribution includes $path" "$REPO/$path"
+done
+assert_quality_hook "plugin quality hook registered once in four existing event types" "$REPO/hooks/hooks.json"
 if python3 -c "import json,sys; json.load(open('$SET'))" 2>/dev/null; then
   pass "settings.json still valid JSON"
 else
@@ -174,7 +209,11 @@ echo "== integrate upgrade: a NEW matcher for an already-installed hook is appen
 # now dedups by (matcher, command). Simulate a pre-0.6.6 install: the two old
 # PreToolUse entries, namespaced exactly as the installer writes them.
 UTARGET="$WORK/upgrade-host"
-mkdir -p "$UTARGET/.claude"
+mkdir -p "$UTARGET/.claude/schemas"
+printf 'consumer notice\n' > "$UTARGET/NOTICE"
+printf 'consumer schema\n' > "$UTARGET/.claude/schemas/action-journal-event.schema.json"
+cp "$UTARGET/NOTICE" "$WORK/upgrade-notice-before"
+cp "$UTARGET/.claude/schemas/action-journal-event.schema.json" "$WORK/upgrade-schema-before"
 cat > "$UTARGET/.claude/settings.json" <<'EOF'
 {
   "hooks": {
@@ -193,6 +232,11 @@ cat > "$UTARGET/.claude/settings.json" <<'EOF'
 EOF
 "$INSTALL" --mode integrate --target "$UTARGET" --yes >/dev/null 2>&1
 USET="$UTARGET/.claude/settings.json"
+assert_quality_hook "upgrade adds quality hook once without new event types" "$USET"
+assert_file "upgrade adds schemas beside consumer files" "$UTARGET/.claude/schemas/healing-review.schema.json"
+assert_file "NOTICE collision gets blueprint fallback" "$UTARGET/NOTICE.qa-agent-blueprint"
+cmp -s "$UTARGET/NOTICE" "$WORK/upgrade-notice-before" && pass "consumer NOTICE survives upgrade" || fail "consumer NOTICE survives upgrade"
+cmp -s "$UTARGET/.claude/schemas/action-journal-event.schema.json" "$WORK/upgrade-schema-before" && pass "consumer schema survives upgrade" || fail "consumer schema survives upgrade"
 assert_grep "preflight matcher appended" "$USET" 'mcp__.*(playwright|atlassian)__.*'
 # … exactly once, and a re-run does not duplicate it
 COUNT="$(grep -cF 'mcp__.*(playwright|atlassian)__.*' "$USET")"
@@ -202,6 +246,9 @@ COUNT="$(grep -cF 'mcp__.*(playwright|atlassian)__.*' "$USET")"
 COUNT="$(grep -cF 'mcp__.*(playwright|atlassian)__.*' "$USET")"
 [ "$COUNT" = "1" ] && pass "upgrade re-run does not duplicate the matcher" \
   || fail "upgrade re-run does not duplicate the matcher" "grep count=$COUNT after re-run"
+assert_quality_hook "upgrade re-run does not duplicate quality hook" "$USET"
+cmp -s "$UTARGET/NOTICE" "$WORK/upgrade-notice-before" && pass "upgrade re-run keeps consumer NOTICE" || fail "upgrade re-run keeps consumer NOTICE"
+cmp -s "$UTARGET/.claude/schemas/action-journal-event.schema.json" "$WORK/upgrade-schema-before" && pass "upgrade re-run keeps consumer schema" || fail "upgrade re-run keeps consumer schema"
 
 echo
 echo "== MCP merge: playwright contract flags are adopted, preferences are not forced =="

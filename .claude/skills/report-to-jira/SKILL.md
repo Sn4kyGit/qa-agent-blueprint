@@ -6,6 +6,23 @@ license: Apache-2.0
 
 # /report-to-jira — comment + attachments + transition
 
+## Before any write: validate this run's schema-v2 evidence
+
+Validate the exact `execution_summary.json` and its `run.json`, not a legacy or
+unrelated latest run:
+
+```bash
+python3 .claude/scripts/validate-evidence.py <run-dir>/execution_summary.json --qa-home <qa-home> --json
+python3 .claude/scripts/validate-evidence.py <run-dir>/run.json --kind run-record --qa-home <qa-home> --json
+```
+
+Malformed, unversioned, unbound, hash-mismatched or verdict-inconsistent evidence
+stops every JIRA write; fix the producer instead of rewriting historical evidence.
+Before each Atlassian write, also run the summary validator with
+`--jira-write <actual-tool-name>` so verdict-specific write rules are checked.
+Apply the same verdict gates on the browser channel. After updating
+`reported_to_jira`/`shadow`, revalidate the final summary.
+
 ## Before anything: is this a shadow run?
 
 Shadow mode is **on by default**. Only when `QA_AGENT_SHADOW=0` is set or
@@ -23,8 +40,8 @@ JIRA error and never a reason to retry or route around it.
 ## NO_TEST posts nothing
 
 A `NO_TEST` summary means no test completed — there is no verdict to report. Do
-not comment, do not transition, do not attach. The summary itself is the record
-(`.claude/rules/core/evidence-policy.md`).
+not comment, transition, attach, or create a bug through any channel. The summary
+itself is the record (`.claude/rules/core/evidence-policy.md`).
 
 ## Before the mechanics: which channel?
 
@@ -66,25 +83,27 @@ wrong channel for this project.
    - **BLOCKED**: explain exactly why (env down, missing test data, no deploy
      permission) and what's needed to unblock — this is often the most useful
      comment for a human to act on quickly.
-   - **NEEDS_REVIEW**: the test failed but `failure-analysis` classified the test
-     itself as stale or brittle, not the product. Post the proposal from
+   - **NEEDS_REVIEW**: interactive only (`interactive: true`); headless brittle or
+     outdated tests remain FAIL. Post **only the proposal comment** from
      `evidence/<KEY>/<TICKET>/<ts>/failure-analysis.md` — including its "do not
      apply" line and its "if you rule the other way" branch — and say plainly that
-     a person has to decide. Never post a proposal without both branches.
-3. If `jira-cloud`: build the comment as ADF on a **Cloud** deployment, or as
-   simple Markdown on a **Data Center** deployment (the community server converts
-   to wiki markup) — deployment comes from `PROJECT.md` → "JIRA deployment";
-   headings/lists, no pipe tables —
-   `docs/rules/testing/jira-confluence.md` — via the Atlassian MCP server.
-    Attach evidence files (screenshots, not full logs unless the project asks for
-    them) via the attachment call. On Cloud v2 the comment/transition tools are
-    Primary (direct); attachment upload is a DEFERRED tool — `discover` once,
-    then `executeWrite` with `uploadAttachmentToJiraIssue`
-    (`docs/rules/testing/jira-confluence.md` → "Cloud v2").
-   On a project with **JIRA access: `browser`**, skip ADF/Markup entirely and post
-   through the playwright-driven UI instead — comment, attachments and transition
-   per `docs/rules/testing/jira-browser.md` → "Writing".
-4. Apply the transition from step 1 — exact name, never guessed. If the named
+     a person has to decide. Never post a proposal without both branches. No
+     attachments, transition, bug creation, or candidate application.
+3. Format and post the comment. If `jira-cloud`: build ADF on a **Cloud**
+   deployment, or simple Markdown on a **Data Center** deployment (the community
+   server converts to wiki markup) — deployment comes from `PROJECT.md` → "JIRA
+   deployment"; headings/lists, no pipe tables —
+   `docs/rules/testing/jira-confluence.md` — via the Atlassian MCP server. On JIRA
+   access `browser`, skip ADF/Markup and post through the playwright UI instead.
+   NEEDS_REVIEW posts only this proposal comment: skip attachments and the
+   transition, then complete the summary update in step 5. For every other
+   reportable verdict, attach evidence files (screenshots, not full logs unless
+   the project asks) via the configured channel. On Cloud v2 the comment/transition
+   tools are Primary (direct); attachment upload is DEFERRED — `discover` once,
+   then `executeWrite` with `uploadAttachmentToJiraIssue`
+   (`docs/rules/testing/jira-confluence.md` → "Cloud v2").
+4. Except for NO_TEST and NEEDS_REVIEW (which never transition), apply the
+   transition from step 1 — exact name, never guessed. If the named
    transition doesn't exist in the ticket's current workflow state, stop and
    report that mismatch rather than trying nearby transition names.
 

@@ -7,12 +7,11 @@ description: >-
   test, OWASP, vulnerability, ZAP, XSS, SSRF, dependency scan, auth testing. Not
   for compliance-regulation mapping, manual penetration testing, or testing the
   product's own LLM features.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "2.1"
   category: specialized
-license: Apache-2.0
 ---
 
 <objective>

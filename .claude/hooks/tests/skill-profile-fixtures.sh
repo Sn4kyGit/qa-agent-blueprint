@@ -81,6 +81,10 @@ done
 assert_dir "minimal keeps test-ticket" "$MT/.claude/skills/test-ticket"
 assert_dir "minimal keeps failure-analysis" "$MT/.claude/skills/failure-analysis"
 assert_file "minimal still ships THIRD_PARTY_NOTICES.md" "$MT/.claude/skills/THIRD_PARTY_NOTICES.md"
+assert_file "minimal still ships root NOTICE" "$MT/NOTICE"
+assert_file "minimal still ships schemas" "$MT/.claude/schemas/execution-summary-v2.schema.json"
+assert_file "minimal still ships action journal" "$MT/.claude/scripts/action-journal.py"
+assert_file "minimal still ships scanner" "$MT/.claude/scripts/qa-test-code-scan.mjs"
 assert_grep "minimal recorded in profile file" "$MT/.qa-skill-profile.json" '"profile": "minimal"'
 
 echo

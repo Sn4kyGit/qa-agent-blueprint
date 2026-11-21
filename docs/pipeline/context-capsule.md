@@ -45,6 +45,9 @@ is `env:QA_AGENT_SHADOW` for `effective_config.jira.shadow`.
 A Task prompt passes the **selected revision's capsule path**, ticket/run
 identifiers and the assignment-specific charter, plan or failure packet. It does not
 paste the complete capsule into the prompt or substitute another revision's path.
+The charter/plan must explicitly instruct the recipient to consume the capsule's
+exact intake/readiness and effective config, without PROJECT/PRODUCT full reads,
+re-routing, repeated readiness, or another mode/suite/framework/Learnings merge.
 
 ## Content contract
 

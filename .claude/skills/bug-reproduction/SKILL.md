@@ -7,12 +7,11 @@ description: >-
   before the fix. Use when: reproduce this bug, minimal reproduction, repro steps,
   git bisect, regression test for a defect, can't reproduce this bug. Not for
   failure triage without reproducing, or spec-based test generation.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "1.0"
   category: ai-qa
-license: Apache-2.0
 ---
 
 <objective>

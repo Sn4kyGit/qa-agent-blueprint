@@ -110,6 +110,12 @@ cd ~/work/my-project
 /path/to/qa-agent-blueprint/install.sh --dry-run  # show the plan only
 ```
 
+The copy includes `.claude/schemas/`, all scripts and hooks, and the complete
+skill scaffold templates. The root `NOTICE` and
+`.claude/skills/THIRD_PARTY_NOTICES.md` travel with the integration. If the
+consumer already has a different `NOTICE`, it remains byte-for-byte untouched
+and the blueprint notice is added as `NOTICE.qa-agent-blueprint` instead.
+
 ### `plugin` — consume as a Claude Code plugin
 
 Copies nothing. Prints instructions for registering this repo's
@@ -164,7 +170,7 @@ plugin, and only your project-specific data lives in your repo.
 
 | Content | Location | Why |
 |---|---|---|
-| Rules, skills, agents, hook scripts, MCP config, `projects/_template`, `projects/EXAMPLE`, memory seed files | **Plugin** (`${CLAUDE_PLUGIN_ROOT}`) | Generic, versioned, shared across repos. Never write into it — the cache is replaced on update. |
+| Rules, skills, agents, hook scripts, schemas, MCP config, root `NOTICE`, `.claude/skills/THIRD_PARTY_NOTICES.md`, `projects/_template`, `projects/EXAMPLE`, memory seed files | **Plugin** (`${CLAUDE_PLUGIN_ROOT}`) | Generic, versioned, shared across repos. Never write into it — the cache is replaced on update. |
 | `projects/<KEY>/` (onboarded projects), `memory/` (your learning system), `evidence/` (test artifacts) | **Your repo** (`${CLAUDE_PROJECT_DIR}`) | Project-specific state; survives plugin updates. Created on demand by the SessionStart hook (seed files copied from the plugin, existing content never overwritten). `projects/_template` is NOT copied — `/onboard-project` reads it from the plugin. |
 
 ### The router problem: plugins do not load CLAUDE.md
@@ -259,11 +265,12 @@ linked skills, hooks and MCP servers.
 
 The shared layout contains:
 
-- a real `.claude/` with selective links for `rules`, `skills`, `agents`, `hooks`
-  and `scripts`, plus merged consumer `settings.json` and `.mcp.json`;
+- a real `.claude/` with selective links for `rules`, `skills`, `agents`, `hooks`,
+  `scripts` and `schemas`, plus merged consumer `settings.json` and `.mcp.json`;
 - `.opencode/{ROUTER.md,agents,commands,plugins}` and merged `opencode.json`;
 - the full blueprint router in `CLAUDE.md` and support links for `docs`,
-  `projects/_template`, `projects/EXAMPLE`, `.claude-plugin` and `CHANGELOG.md`;
+  `projects/_template`, `projects/EXAMPLE`, `.claude-plugin`, `CHANGELOG.md` and
+  `NOTICE` (or `NOTICE.qa-agent-blueprint` when a consumer NOTICE exists);
 - consumer-owned `projects/`, `memory/`, `evidence/` and `.agents/` — onboarding
   data and bridges never move into the blueprint checkout;
 - the existing secrets/browser files and `.qa-home` marker.
@@ -304,6 +311,8 @@ Blueprint content is **namespaced** so it can never clobber your files:
 |---|---|---|
 | `.claude/rules/**` | `.claude/rules/qa-blueprint/**` | differing file → kept yours + WARN |
 | `.claude/hooks/*.sh` | `.claude/hooks/qa-blueprint/*.sh` | differing file → kept yours + WARN |
+| `.claude/scripts/**`, `.claude/schemas/**` | same path | differing file → kept yours + WARN |
+| `NOTICE` | `NOTICE`, or `NOTICE.qa-agent-blueprint` on collision | consumer file is never overwritten |
 | `.claude/skills/<name>/` | `.claude/skills/<name>/` | name exists with different content → **SKIPPED + WARN** |
 | `.claude/agents/<name>.md` | `.claude/agents/<name>.md` | name exists with different content → **SKIPPED + WARN** |
 | hooks in `settings.json` | appended, command points at the `qa-blueprint/` namespace | same command string already present → SKIPPED |
@@ -380,8 +389,9 @@ declares its deployment in `PROJECT.md` → "JIRA deployment".
 
 **"I already have my own hooks / settings.json."**
 Hooks are additive: your `Stop` hook keeps running, ours is appended to the
-same event array. Duplicates are detected by command string, so re-runs never
-double-register.
+same event array. Duplicates are detected by matcher and command string, so
+install and upgrade re-runs never double-register the quality scan hook. The
+inventory remains `SessionStart`, `Stop`, `PreToolUse` and `PostToolUse`.
 
 **"Monorepo?"**
 Integrate at the repo root (recommended): `--target /path/to/monorepo`. Project

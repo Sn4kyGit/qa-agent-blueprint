@@ -1,88 +1,55 @@
 #!/usr/bin/env bash
-#
-# run-openrouter.sh — evals/run.sh, aber abgerechnet ueber OpenRouter
-# (pro Token) statt ueber die Claude-Subscription-Quota.
-#
-# Warum das geht: run.sh ruft `claude -p` auf und erbt die Umgebung. Claude
-# Code akzeptiert ein Anthropic-kompatibles Gateway per ANTHROPIC_BASE_URL +
-# ANTHROPIC_AUTH_TOKEN; OpenRouter stellt genau so einen /v1/messages-
-# Endpunkt bereit. Kein Patch an run.sh noetig.
-#
-# Harte Regeln (siehe evals/README.md — das Gate misst die Production-
-# Modellklasse):
-#   - IMMER ein anthropic/* Modell. GPT/Gemini/Llama ueber OpenRouter macht
-#     das Gate wertlos (misst dann ein anderes Produkt).
-#   - Modell-Aliase ("sonnet") funktionieren NICHT ueber ein Gateway — volle
-#     OpenRouter-IDs, fuer --model UND --judge-model.
-#
-# Der Key liegt in evals/.env.openrouter (gitignored via .env.*) — nie in
-# dieses Skript, nie in einen Commit. openrouter-shim.py sieht den Key auch
-# nicht: die CLI schickt ihn als Bearer-Header, der Shim reicht ihn durch.
-#
-# Warum der Shim: OpenRouter 404t /v1/messages/count_tokens und
-# /v1/models/<id> — Claude Code bricht dann mit "issue with the selected
-# model" ab (live verifiziert 2026-09-11). Der Shim beantwortet beide lokal,
-# der Rest geht unveraendert durch.
-#
-# Usage (alle Args werden an run.sh durchgereicht):
-#   bash evals/run-openrouter.sh routing-absent            # ein Case, 1 Run
-#   bash evals/run-openrouter.sh --runs 3                  # volles Gate
-#   OR_MODEL=deepseek/deepseek-v4-pro bash evals/run-openrouter.sh ...
-#
 set -euo pipefail
-
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 if [ -f "$HERE/.env.openrouter" ]; then
-  # shellcheck disable=SC1091
   . "$HERE/.env.openrouter"
 fi
-: "${OPENROUTER_API_KEY:?evals/.env.openrouter fehlt oder OPENROUTER_API_KEY ist nicht gesetzt}"
-
-# Shim starten: beantwortet count_tokens + models lokal, proxied den Rest
-# zu OpenRouter (127.0.0.1 only). Laueft nur fuer die Dauer dieses Runs.
-# Jede Invocation bekommt einen FREIEN Port — ein fester Port (8799) liess
-# parallele Gate-Batches denselben Shim teilen, und der EXIT-trap des ersten
-# Batches killte ihn unter den anderen weg (ConnectionRefused-Serien).
+: "${OPENROUTER_API_KEY:?evals/.env.openrouter is missing or OPENROUTER_API_KEY is unset}"
 PORT="${OR_SHIM_PORT:-$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')}"
 python3 "$HERE/openrouter-shim.py" "$PORT" >/dev/null 2>&1 &
 SHIM_PID=$!
-trap 'kill "$SHIM_PID" 2>/dev/null || true' EXIT
+cleanup() {
+  kill "$SHIM_PID" 2>/dev/null || true
+  wait "$SHIM_PID" 2>/dev/null || true
+}
+trap cleanup EXIT
 ready=0
 for _ in $(seq 1 50); do
-  curl -sf "http://127.0.0.1:$PORT/v1/models/probe" >/dev/null 2>&1 && { ready=1; break; }
+  if curl -sf "http://127.0.0.1:$PORT/v1/models/probe" >/dev/null 2>&1; then
+    ready=1
+    break
+  fi
   sleep 0.1
 done
-[ "$ready" -eq 1 ] || { echo "shim did not come up on port $PORT" >&2; exit 1; }
-
-export ANTHROPIC_BASE_URL="http://127.0.0.1:$PORT"  # OHNE /v1 — die CLI haengt /v1/messages selbst an
+if [ "$ready" -ne 1 ]; then
+  echo "INFRA_ERROR: OpenRouter shim did not start" >&2
+  exit 2
+fi
+export ANTHROPIC_BASE_URL="http://127.0.0.1:$PORT"
 export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
-# Hintergrund-/Hilfsaufrufe der CLI (haiku-Klasse) muessen auch auf eine
-# OpenRouter-ID zeigen, sonst schlaegt der Alias-Lookup am Gateway fehl.
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="deepseek/deepseek-v4-pro"
-export ANTHROPIC_DEFAULT_SONNET_MODEL="deepseek/deepseek-v4-pro"
-export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek/deepseek-v4-pro"
-# Unbekannte Gateway-IDs duerfen nicht lokal auf ein angenommenes 200k-Fenster
-# begrenzt werden; das tatsaechliche Fenster erzwingt der Upstream-Provider.
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="${OR_MODEL:-deepseek/deepseek-v4-pro}"
+export ANTHROPIC_DEFAULT_SONNET_MODEL="$ANTHROPIC_DEFAULT_HAIKU_MODEL"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="$ANTHROPIC_DEFAULT_HAIKU_MODEL"
 export CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1
-
 OR_MODEL="${OR_MODEL:-deepseek/deepseek-v4-pro}"
 OR_JUDGE_MODEL="${OR_JUDGE_MODEL:-$OR_MODEL}"
-
-# Durchreichen, aber Modell-Flags nicht doppeln: wer selbst --model uebergibt,
-# hat Vorrang.
-has_model_flag=0
-for a in "$@"; do
-  case "$a" in --model|--judge-model) has_model_flag=1 ;; esac
+has_answer_model=0
+has_judge_model=0
+for arg in "$@"; do
+  case "$arg" in
+    --model) has_answer_model=1 ;;
+    --judge-model) has_judge_model=1 ;;
+  esac
 done
-if [ "$has_model_flag" -eq 0 ]; then
-  set -- --model "$OR_MODEL" --judge-model "$OR_JUDGE_MODEL" "$@"
+if [ "$has_answer_model" -eq 0 ]; then
+  set -- --model "$OR_MODEL" "$@"
 fi
-
-echo "OpenRouter gate: model=$OR_MODEL judge=$OR_JUDGE_MODEL (billing: per-token, nicht Subscription)"
-# M7 (0.18.5): `exec` replaces the process image — the EXIT trap never fires
-# and the shim is orphaned. Use a regular call + explicit cleanup instead.
+if [ "$has_judge_model" -eq 0 ]; then
+  set -- --judge-model "$OR_JUDGE_MODEL" "$@"
+fi
+echo "OpenRouter gate: model=$OR_MODEL judge=$OR_JUDGE_MODEL (per-token billing)"
+set +e
 bash "$HERE/run.sh" "$@"
 rc=$?
-kill "$SHIM_PID" 2>/dev/null || true
+set -e
 exit "$rc"

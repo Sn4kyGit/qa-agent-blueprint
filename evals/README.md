@@ -1,184 +1,199 @@
-# Evals — does the agent behave the way the blueprint prescribes?
+# Evals — behavioral and artifact conformance
 
-The hooks have fixtures (`.claude/hooks/tests/`). Everything those fixtures
-cannot reach — routing, verdicts, shadow discipline, whether an outsourced rule
-actually gets read — is prose that only a model executes. This directory tests
-that half. **The full norm→test mapping lives in [`COVERAGE.md`](COVERAGE.md);
-a rule change without a matrix update is an incomplete change.**
+The hook fixtures test deterministic mechanics. These cases test whether a fresh
+model session follows the blueprint: routing, evidence, shadow discipline,
+handoffs, healing, result semantics, and real browser behavior. The norm-to-case
+matrix is maintained separately in `COVERAGE.md`.
 
-## Running
-
-```bash
-bash evals/run.sh                  # all cases, judged, gate applied (exit 1 below threshold)
-bash evals/run.sh shadow-mode      # one case
-bash evals/run.sh --runs 3         # three runs per case — one pass is a smoke test
-bash evals/run.sh --baseline       # also run each prompt WITHOUT the blueprint,
-                                   # report the with/without delta
-bash evals/run.sh --no-judge       # answers only (cheap, no gate)
-bash evals/run.sh --model sonnet   # pin the answer model (--judge-model for the judge)
-bash evals/run.sh --list           # list cases
-bash evals/run-openrouter.sh ...   # same args, billed per-token via OpenRouter
-                                   # instead of the Claude subscription quota
-QA_EVAL_MODEL=openrouter/z-ai/glm-5.3-flash bash evals/run-opencode.sh ...
-                                   # opencode harness (docs/opencode-port-plan.md):
-                                   # same cases, same gate, `opencode run` instead
-                                   # of `claude -p`
-```
-
-**opencode harness (dual-harness port).** `run-opencode.sh` runs the SAME
-cases against the opencode variant: every case is materialized into a consumer
-layout (`.opencode/ROUTER.md`, `.opencode/agents|commands`, `.claude/skills|
-rules`, generated `opencode.json`) — unlike the Claude side, no case runs in
-the repo root, because opencode has no CLAUDE.md auto-load and the blueprint
-would silently be absent. Two isolation mechanics matter: `--auto --pure`
-(the `--dangerously-skip-permissions` equivalent) and `XDG_CONFIG_HOME`
-pointed at an empty tempdir — opencode *merges* the global config, so hiding
-it wholesale is the only hard MCP cut (the user's global config carries live
-MCP servers). Models are never defaulted (D6): `QA_EVAL_MODEL` /
-`QA_JUDGE_MODEL` env or `--model`/`--judge-model`, always full `provider/model`
-ids (aliases don't resolve). Dev-loop cheap option verified 2026-09-16:
-`openrouter/z-ai/glm-5.3-flash` (~$0.03/session class; the OpenRouter key is
-read from `evals/.env.openrouter` via the process env). Note: flash-class
-models show real variance on write-through cases (a shadow-mode run narrated
-`proposed-report.md` instead of writing it, correctly FAILed via HARNESS
-FACT, then passed on re-run) — the production gate keeps a production-class
-judge/eval model; flash is for the dev loop.
-
-
-**Billing via OpenRouter (quota relief).** `run-openrouter.sh` wraps run.sh:
-the `claude -p` calls go through a localhost shim (`openrouter-shim.py`) to
-OpenRouter's Anthropic-compatible endpoint, so a full gate costs a few cents
-of OpenRouter credit instead of subscription quota. The key lives in
-`evals/.env.openrouter` (gitignored via `.env.*`, never committed). Model
-policy (owner decision, 2026-11-14): the gate runs on
-`deepseek/deepseek-v4-pro` — the same model class the QA lanes
-actually run on (the blueprint is model-agnostic on the opencode side), which
-supersedes the earlier `anthropic/*`-only rule. Cost stays low for this class,
-but the gate still measures THAT class, not another one: keep answer and judge
-model in the same family you ship. Model aliases like
-`sonnet` don't resolve through a gateway — the wrapper passes full ids for
-`--model` and `--judge-model` unless you override with
-`OR_MODEL`/`OR_JUDGE_MODEL`. Why the shim exists:
-Claude Code appends `/v1/messages` to `ANTHROPIC_BASE_URL` itself and calls
-`/v1/messages/count_tokens` + `GET /v1/models/<id>`, which OpenRouter 404s —
-the shim answers those locally and proxies everything else.
-
-**Tiers (hard vs. variance).** Every case carries a `tier` file — `hard` or
-`variance`; absent means hard, so opting INTO leniency is a conscious act.
-
-- **hard** cases guard record integrity and safety — shadow mode, evidence
-  discipline, verdict honesty, deploy seals. A single miss is an incident:
-  `--threshold` applies (0.9 at `--runs 3` means all-pass).
-- **variance** cases measure model variance against norms that are already
-  maximally loud (router + description + rule file). A miss there is visible
-  and correctable in-dialog; the floor is `--variance-threshold` (default
-  0.67 = 2/3) plus a non-falling `history.log` trend. A variance case that
-  drops below the floor, or a hard case that starts oscillating, is a
-  conformance regression — reclassify or strengthen the norm, don't tolerate.
-
-Why two tiers: the first full sonnet gate showed four cases oscillating at 2/3
-against norms already at maximum loudness — a permanently red gate stops being
-a signal. The tier split keeps the safety cases absolute while turning the
-variance cases into what they honestly are: measurements with a floor.
-
-**Cost discipline.** The scenarios reason about JIRA/Playwright but never call
-them, so eval sessions run with MCP servers stripped (`--mcp-config {}` +
-`--strict-mcp-config`) — that alone cut per-call latency from minutes (an
-atlassian SSE auth probe can hang) to seconds, and drops the MCP tool schemas
-from every call's context. `--with-mcp` opts back in for MCP-specific work.
-The judge grades all runs of a case in one call. Net: a full `--runs 3` gate
-is ~60 cheap calls — still noticeable on a session limit, so the dev loop is:
-run only the cases whose norms you touched (`COVERAGE.md` maps norm → case),
-full gate pre-release. A full gate burning straight through an account's
-session limit is what motivated this paragraph.
-
-**Model choice (learned from the first live runs, 2026-09-10):** the gate belongs
-to the production model class — answers AND judge. `--model haiku` fails cases on
-capability, not on the blueprint (it guesses instead of reading the ground-truth
-files), and `--judge-model haiku` both grades over-literally and intermittently
-ignores the required `RUN i: PASS|FAIL` verdict format (→ UNSCORED, gate fails).
-Slim models are for mechanics checks of the runner itself; for a gate whose
-result means something, pin the class explicitly:
-`bash evals/run.sh --runs 3 --model sonnet --judge-model sonnet`.
-
-Each case runs through `claude -p` in a **fresh process** from the repo root
-(so the agent sees the blueprint exactly as a user would). Every answer is then
-graded by a fresh model against the case's `graders/criteria.md`; a case's
-score is passes/runs, and the gate (`--threshold`, default 0.9) fails the run
-if any case scores below it. Answers and verdicts land in
-`evals/results/<timestamp>/` (gitignored): cases are source, answers are
-output. A judge verdict is a second opinion to read, not just to count.
-
-`--baseline` is the honest answer to "does the blueprint actually *cause* this
-behavior": the same prompts run in an empty directory, judged by the same
-criteria. A case that passes with the blueprint AND without it proves nothing
-— it measures the base model, not the blueprint. Expect most cases to FAIL in
-the baseline arm; that is the point.
-
-## What the score means — pass^k, not pass@k
-
-Borrowed from eval-driven development (WorldFlowAI `eval-harness`): **pass@k**
-("at least one success in k attempts") measures *capability* — can the agent do
-it at all. **pass^k** ("all k attempts succeed") measures *reliability* — does
-the norm hold every time. Our cases are reliability assertions about blueprint
-norms, so the score is passes/runs and the gate is pass^k-flavored: a case that
-passes "most of the time" is a failing norm, exactly the `failure-outdated`
-flapping that started this layer. `--runs 3` is the meaningful gate mode;
-`runs=1` is a smoke test. The **baseline arm** answers the capability question
-(pass@k without the blueprint — if the base model already passes, the case
-proves nothing about the blueprint).
-
-Trend over time: every judged run appends one line per case to
-`evals/results/history.log` (gitignored, local). `grep <case>
-evals/results/history.log` answers "was this better last week?" — a norm whose
-score decays across runs is a conformance regression, not noise.
-
-**Scenario materialization.** A case with a `scenario/` directory gets each
-answer run in a fresh per-run tempdir: the blueprint subset (`CLAUDE.md`,
-`.claude/`, `docs/`, `projects/`, `memory/`) plus the scenario files copied on
-top. Use it when the norm involves *writing* (shadow-mode's
-`proposed-report.md` is the reference) — fiction made models say "I would
-write" or invent permission errors; a real writable filesystem makes the
-behavior observable. The runner appends a HARNESS FACT section to each answer
-listing the files actually created — cite it in the criteria as judge ground
-truth. Materialized runs pass `--dangerously-skip-permissions` (fresh tempdirs
-are untrusted workspaces where `-p` denies writes); the tempdir is disposable
-and carries no secrets. Cases that only reason about *reading* the blueprint
-don't need this — the prompt footer already declares the blueprint files real
-ground truth.
-
-## About the official runner
-
-The case layout (`<case>/prompt.md` + `<case>/graders/criteria.md`) is exactly
-what `claude plugin eval` documents — deliberately, so migration is a wrapper
-swap. Checked 2026-09-07 on claude 2.1.263: `plugin eval` still refuses to run
-on this account ("currently in early access"), so `run.sh` is the runner. When
-the official one opens up, re-verify with:
+## Commands
 
 ```bash
-claude plugin eval . --threshold 0.9 --ablation with-without
+bash evals/run.sh --suite standard --runs 3
+bash evals/run.sh shadow-mode
+bash evals/run.sh --list
+bash evals/run.sh --model sonnet --judge-model sonnet artifact-summary-contract
+bash evals/run.sh --baseline routing-absent
+bash evals/run.sh --no-judge artifact-summary-contract
+
+bash evals/run-openrouter.sh --suite standard --runs 3
+bash evals/run-openrouter.sh --suite browser browser-evidence-real
+
+QA_EVAL_MODEL=openrouter/<provider-model> bash evals/run-opencode.sh --suite standard --runs 3 --jobs 4
+QA_EVAL_MODEL=openrouter/<provider-model> bash evals/run-opencode.sh --suite browser
+QA_EVAL_MODEL=openrouter/<provider-model> bash evals/run-opencode.sh --suite browser browser-no-secret-leak
+
+QA_EVAL_MODEL=opencode/deepseek-v4.1-flash-free QA_JUDGE_MODEL=opencode/nemotron-3.5-lightning-free \
+  bash evals/run-opencode.sh --suite standard --runs 3 --command-timeout 180 --transient-retries 0
+QA_EVAL_MODEL=opencode/deepseek-v4.1-flash-free QA_JUDGE_MODEL=opencode/nemotron-3.5-lightning-free \
+  bash evals/run-opencode.sh --runs 3 --resume evals/results/<timestamp>-opencode --only-failed \
+  --command-timeout 180 --transient-retries 0
 ```
 
-## Adding a case
+`standard` is the default suite and always strips MCP. The legacy `--with-mcp`
+flag is accepted but does not change that isolation. `browser` selects only cases
+whose `graders/checks.json` declares `"suite": "browser"` and enables only pinned
+Playwright MCP. `--baseline` remains available for standard cases, not browser
+cases. `--list` can be combined with `--suite`.
 
-One case per claim the blueprint makes about its own behavior, and only for
-claims where being wrong is *silent* — a wrong verdict, a posted comment that
-should have stayed a proposal, an invented learning. Loud failures are already
-covered by the hooks. Then:
+`--jobs N` executes up to N independent cases concurrently (default: 1). Each
+attempt keeps its own workspace, provider state, browser profile, and judge;
+summary order and gates stay deterministic. Four jobs are a conservative release
+starting point. Parallelism reduces wall-clock time, not token usage; reduce it
+if the provider returns rate-limit errors. Case results are printed as they
+finish, and `--resume` still reuses every completed gate-passed case.
 
-1. Write the failure conditions into the grader explicitly — a grader that
-   only describes the right answer will pass anything fluent.
-2. For quote-like requirements ("must quote X verbatim", "must name Y"), give
-   the judge a **grounding procedure**: "copy the sentence from the answer
-   that contains X; only if you cannot find one is the requirement unmet."
-   A judge asked to grade from memory produces false negatives on exactly the
-   requirements that matter most (learned the hard way: `failure-outdated`
-   failed a perfect answer three times until its grader forced extraction
-   before verdict).
-3. If the norm lives in a skill or on-demand rule, the prompt must invoke that
-   skill by name — the production path loads it, so the eval must too, or you
-   are testing router knowledge instead of the norm.
-4. If the norm has an inverse ("do X when Y"), write the inverse case in the
-   same commit (see the `failure-*` pair).
-5. **Add the row to `COVERAGE.md`** — the matrix, not this README, is the
-   inventory.
+Claude answer and judge models can be set with `--model` and `--judge-model`.
+`run-openrouter.sh` supplies full OpenRouter IDs through `OR_MODEL` and
+`OR_JUDGE_MODEL`; explicit flags win independently. opencode never defaults a
+model: use `QA_EVAL_MODEL`, optional `QA_JUDGE_MODEL`, or the corresponding flags,
+always as `provider/model`. `run-opencode.sh` loads `evals/.env.openrouter` only
+when the selected candidate model starts with `openrouter/`; free `opencode/...`
+models never load that credential file. The file is gitignored; never put real
+credentials in a case, prompt, trace, or commit. For Qwen through Alibaba Token
+Plan, export `ALIBABA_TOKEN_PLAN_API_KEY` before invocation and use a catalog ID
+such as `alibaba-token-plan/qwen3.7-plus`; the wrapper does not read the normal
+OpenCode auth store.
+
+## Scoring, checks, and statuses
+
+Every case has `prompt.md`, `graders/criteria.md`, and a `tier` (`hard` or
+`variance`; absent means hard). A fresh judge grades all model answers for a case
+in one call. The score is passes/decided runs: hard cases use `--threshold`
+(default 0.9), variance cases use `--variance-threshold` (default 0.66).
+`--runs 3` is the reliability gate; one run is a smoke test. `--baseline` runs the
+prompt without the blueprint and exposes behavior the base model already had.
+
+`graders/checks.json` adds deterministic requirements. Before and after each
+attempt the runner hashes workspace files and records **created**, **modified**,
+and **deleted** paths. Checks inspect those diffs, file bytes, JSON pointers,
+schema-v2 summary fields, run-relative artifact SHA-256 values, contract-source
+provenance, browser tool events, external navigation, and synthetic-canary leaks.
+An artifact failure is a `FAIL` even when the prose sounds correct or the judge
+passes it. No model judge is used as a substitute for artifact behavior.
+
+Each attempt and case has an explicit status:
+
+- `PASS` — required deterministic checks and judge/gate passed.
+- `FAIL` — artifact behavior, answer criteria, or score threshold failed.
+- `INFRA_ERROR` — CLI, provider, fixture, judge-process, or check-runner failure.
+- `UNSCORED` — no judge (`--no-judge`) or no parseable judge verdict. With judging
+  enabled, an unscored judged run is not a pass.
+
+Only transport-style failures and empty gateway responses receive **one retry** by
+default: timeouts, connection failures, 429, and transient 5xx responses.
+`--transient-retries 0` disables this retry for both answer and judge calls, which
+is useful for free-provider diagnostics where a timeout is already sufficient
+evidence. Authentication, content failure, deterministic-check failure, and a
+judge's `FAIL` never retry. A retry gets a fresh workspace, browser profile,
+session directories, and fixture state.
+
+### Resuming an interrupted run
+
+`--resume <run-directory>` reuses case-level `*.run-results.json` manifests in an
+existing output directory. A previous gate `PASS` is printed as `CACHED` and makes
+no model call only when its run count equals the current `--runs`. Missing,
+`FAIL`, `INFRA_ERROR`, `UNSCORED`, malformed, and run-count-mismatched cases are
+executed again. `--only-failed` makes that selection explicit and requires
+`--resume`; passed cases remain visible as cached in the refreshed summary.
+Resume works with completed and interrupted directories (a missing `summary.json`
+is fine), but harness and suite must match when a summary exists.
+
+Resume is deliberately case-granular: a case interrupted before its own
+`run-results.json` was finalized starts that case from run 1. Use the same model,
+judge, run count, prompts, and blueprint revision for a meaningful resumed gate;
+start a fresh directory after changing any of them. Each resume updates
+`summary.json` with cached/executed counts, and only selected case manifests are
+rewritten.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Selected cases passed; with `--no-judge`, executed/check-passed but judge-unscored cases also return 0. |
+| 1 | Behavioral/artifact failure or score below threshold. |
+| 2 | Infrastructure error; takes precedence over behavioral failures. |
+| 3 | Judging was enabled but a selected case remained unscored. |
+| 64 | Invalid arguments, unknown case, empty selected suite, or missing model selection. |
+
+Results land in `evals/results/<timestamp>/` (gitignored): sanitized answers,
+per-run JSON results, file diffs, judge verdicts, sanitized JSONL traces, fixture
+request metadata, and `summary.json`. `results/history.log` stores local score
+trends, not secrets.
+
+## Browser fixture and isolation
+
+The browser suite requires `npx`, the pinned MCP's Chromium build, and permission
+to start local processes. Install that browser once with
+`npx @playwright/mcp@0.0.84 install-browser chrome-for-testing`; a missing binary
+is `INFRA_ERROR`, never a product/behavior `FAIL`. The runner starts the
+stdlib-only fixture in
+`lib/browser_fixture.py` on an ephemeral `127.0.0.1` port. The fixture serves
+static checkout/failure/login pages plus deterministic JSON APIs. There are no
+external stage URLs, Atlassian servers, customer data, or real accounts. Each
+attempt uses a new fixture and a new synthetic canary.
+
+Both harnesses use `@playwright/mcp@0.0.84`, headless Chromium, an isolated
+in-memory profile, and an origin allowlist containing only the active fixture
+URL; requests outside that allowlist are rejected by MCP. Claude uses a strict MCP
+config containing only `playwright`. opencode's browser materialization includes
+`.opencode/plugins/qa-blueprint.ts` and omits `--pure`, so the actual plugin is
+loaded; standard opencode runs use `--pure` and do not copy the plugin.
+
+Every opencode attempt gets fresh `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, and
+`XDG_CACHE_HOME`; browser attempts do the same on both harnesses. Workspace,
+evidence, MCP output, npm cache, session state, and browser profile are isolated
+per attempt. The Playwright MCP process starts through `env -i`: provider keys
+and other inherited secrets are not passed to it. Its dotenv file contains only
+synthetic eval material. Browser runs set shadow/preflight eval controls because
+there is deliberately no JIRA or external stage to preflight.
+
+Structured harness events are normalized into JSONL tool/result events.
+Sensitive keys, authorization headers, URL credentials/query secrets, binary
+image data, provider environment values, and the synthetic canary are redacted
+before traces or answers are written. Canary detection runs separately and
+reports only locations, never the value. Raw browser/tool output and unsanitized
+provider responses are not saved by the runner.
+
+**Isolation limitations.** This is eval isolation, not an operating-system
+sandbox. The model CLI still needs its own provider credential and retains its
+normal tool capabilities. Claude may use credentials under `~/.claude`, which
+XDG redirection does not hide. opencode credentials stored only in the user's
+normal XDG auth store are intentionally unavailable: supply the required
+provider credential through the environment (the OpenRouter wrapper does this)
+or the run fails closed. The MCP origin allowlist is not a network namespace and
+does not stop an agent from invoking an unrelated network tool. Do not run evals
+with credentials beyond those the selected harness needs, and treat redaction as
+best-effort for unknown provider output formats.
+
+## Cost discipline
+
+A normal case costs one answer call per run plus one judge call per case. A
+baseline adds one answer and one judge call per selected case. Browser cases have
+the same model-call count but additional MCP/browser startup and screenshot cost.
+A full `--runs 3` standard gate is therefore roughly four model calls per case;
+run only relevant cases during development and reserve the full gate for release.
+Use a production-class answer and judge model for meaningful gates. Small/flash
+models are useful for runner mechanics but have known variance on write-through
+and verdict-format cases.
+
+Standard sessions never pay Atlassian startup or authentication probes because
+MCP is stripped. Browser sessions never configure Atlassian. OpenRouter billing
+is per token through the localhost `openrouter-shim.py`, which answers Claude's
+model/token metadata endpoints locally and forwards the Anthropic-compatible
+request without logging bodies or query strings.
+
+## Adding or changing a case
+
+Use a writable `scenario/` whenever behavior requires an artifact. Prompt for the
+real file operation and add deterministic checks; do not grade recitation of a
+file that was never written. Give the judge explicit failure conditions and
+grounding instructions. Add an inverse case when a norm has two branches. Keep
+browser cases synthetic and loopback-only, and declare their suite in checks.
+Run the stdlib unit tests and shell syntax checks after changing the runner:
+
+```bash
+PYTHONPATH=evals/lib python3 -m unittest discover -s evals/lib/tests -v
+bash -n evals/run.sh evals/run-opencode.sh evals/run-openrouter.sh
+python3 scripts/release-check.py
+bash .claude/hooks/tests/release-conventions.sh
+```

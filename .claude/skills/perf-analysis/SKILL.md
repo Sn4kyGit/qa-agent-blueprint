@@ -32,7 +32,15 @@ python3 .claude/skills/perf-analysis/perf-analysis.py --since 30 --suggest
    skill or workflow change (see `references/improvement-patterns.md` for
    the full pattern library).
 
-5. Report the findings. For a team: use `report-to-jira` or the project's
+5. **Audit numeric provenance before reporting.** Every reported measurement
+   must map to supplied source values, a formula, and its coverage (`n/N`).
+   Field presence, log-entry counts, targets, thresholds, and example report
+   rows are not measurements. If source values or a required denominator are
+   absent, report `not computable`; never simulate script output or fill a
+   table with plausible values. Remove any numeric claim that cannot pass this
+   audit.
+
+6. Report the findings. For a team: use `report-to-jira` or the project's
    reporting format. For a quick look: just print the report.
 
 ## What this skill never does

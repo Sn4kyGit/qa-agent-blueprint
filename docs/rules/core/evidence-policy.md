@@ -16,14 +16,17 @@ it.
 
 The block message carries a machine-readable first-line marker so a headless
 pipeline can tell "the agent violated the evidence obligation" apart from a crash:
-`QA_EVIDENCE_MISSING:` (no summary at all) or `QA_LEARNINGS_MISSING:` (summary
-without a `learnings` declaration). See `docs/rules/core/cicd.md` for the exit
+`QA_EVIDENCE_MISSING:` (no summary at all) or `QA_EVIDENCE_INVALID:` (malformed,
+unversioned new evidence, schema/semantic mismatch, bad path/hash/coverage, or a
+JIRA write forbidden by the verdict). See `docs/rules/core/cicd.md` for the exit
 semantics in `claude -p`.
 
 ## `execution_summary.json` — full example
 
 ```json
 {
+  "schema_version": 2,
+  "run_id": "20260904-143000",
   "ticket": "SHOP-1234",
   "project": "SHOP",
   "product": "STOREFRONT",
@@ -37,10 +40,12 @@ semantics in `claude -p`.
   "deploy": { "from_version": "2.13.4", "to_version": "2.14.0-rc3", "pipeline_run": "…", "at": "…" },
   "steps_executed": ["login as qa-standard", "add item to cart", "checkout"],
   "test_cases": [
-    { "id": "TC-CHK-014", "outcome": "pass", "attempts": 2,
-      "spec": "specs/checkout/coupon.spec.ts:42", "assertion": "expected 80.10, got 90.00" }
+    { "id": "TC-CHK-014", "outcome": "pass", "attempts": 1, "required": true,
+      "spec": "specs/checkout/coupon.spec.ts:42", "assertion": "total is 80.10" }
   ],
   "findings": [],
+  "coverage": { "required": ["TC-CHK-014"], "executed": ["TC-CHK-014"] },
+  "artifacts": [{ "path": "screenshots/SHOP-1234_checkout_pass.png", "sha256": "<64-lowercase-hex-sha256-of-exact-file-bytes>" }],
   "evidence_dir": "evidence/SHOP/SHOP-1234/20260904-143000/",
   "reported_to_jira": true,
   "shadow": false,
@@ -56,6 +61,46 @@ semantics in `claude -p`.
   "session": { "model": "sonnet", "requested_model": "sonnet", "delegations": 4, "tool_calls": 47 }
 }
 ```
+
+## Schema v2 validation and normalized runner records
+
+Fresh `execution_summary.json` files require `schema_version: 2`; unversioned
+files are accepted only by historical readers such as `/qa-report`,
+`tc-history.py`, `skill-review.py` and `verify-sightings.py`. Except for minimal
+`NO_TEST` closeout records, v2 requires environment name/version/commit, deploy
+from/to/pipeline/time, and `skills_used`; when genuinely unavailable, record an
+explicit `unavailable`/`not-applicable` string and the reason, never invent one.
+The Stop/evidence
+gate invokes `.claude/scripts/validate-evidence.py`, which also checks that the
+summary location equals `evidence_dir` and `evidence/<project>/<ticket>/<run>`.
+Artifact entries contain a run-relative `path` and the SHA-256 of those exact
+file bytes. Absolute paths, traversal, missing files and hash drift are invalid.
+
+`run.json` follows `run-record-v2.schema.json`. Produce it deterministically from
+JUnit XML or Playwright JSON:
+
+```bash
+python3 .claude/scripts/normalize-test-results.py results.json \
+  --ticket SHOP-1234 --timestamp 2026-09-04T14:30:00Z \
+  --require TC-CHK-014 --output evidence/SHOP/SHOP-1234/20260904-143000/run.json \
+  --qa-home .
+```
+
+The normalized outcomes are `pass`, `fail`, `flaky`, `skip`, `fixme`, `not_run`.
+Attempts count actual executions. A retry that eventually passes is `flaky`
+(`attempts >= 2`), never a clean pass. `skip`, `fixme` and `not_run` have zero
+attempts and are absent from executed coverage. Coverage lists required and
+executed IDs and must mirror the cases. A required non-pass or
+missing execution blocks `PASS`. Any failure or finding means `FAIL`, not
+`BLOCKED`. `PASS` additionally needs at least one valid artifact and no findings,
+failed cases or flaky cases. With no definitive failure, incomplete required
+coverage is `BLOCKED`.
+
+| Verdict | JIRA effect |
+|---|---|
+| `PASS` / `FAIL` / `BLOCKED` | normal project reporting rules after valid evidence |
+| `NEEDS_REVIEW` | interactive-only (`interactive: true`); proposal comment allowed, transitions and bug creation denied |
+| `NO_TEST` | every JIRA write denied; the summary is session-closeout evidence only |
 
 `session.requested_model` records the lane the orchestrator chose. The
 harness-measured facts (dominant model, failover switches, compression byte
@@ -73,9 +118,12 @@ summary:
 
 ```json
 {
-  "ticket": "SHOP-1234", "project": "SHOP", "timestamp": "…",
-  "verdict": "NO_TEST",
+  "schema_version": 2,
+  "ticket": "SHOP-1234", "project": "SHOP", "timestamp": "2026-09-04T14:30:00Z",
+  "verdict": "NO_TEST", "evidence_dir": "evidence/SHOP/SHOP-1234/20260904-143000",
   "no_test_reason": "reproduced twice, root cause not isolated before session end",
+  "steps_executed": [], "test_cases": [], "findings": [], "artifacts": [],
+  "coverage": { "required": [], "executed": [] },
   "learnings": { "captured": [], "none_because": "no product knowledge gained" }
 }
 ```

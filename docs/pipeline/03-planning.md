@@ -7,11 +7,13 @@ it the strongest available model when the intake risk is `medium`/`high`. At
 
 ## Input
 
-`intake.json` and `recon.json` from the run dir. **No application code.** Test
-cases come from requirements, not from the implementation — otherwise the test
-checks the implementation against itself. The bounded exception stays exactly
-where it already is: `failure-analysis` may look at changed file *paths* over a
-named version window.
+`intake.json` and `recon.json` from the run dir. When exploration produced an
+`automation-handoff.json`, its reproducible seed, semantic actions, and bound
+positive oracle are additional inputs; journal readiness is not a new verdict.
+**No application code.** Test cases come from requirements, not from the
+implementation — otherwise the test checks the implementation against itself.
+The bounded exception stays exactly where it already is: `failure-analysis` may
+look at changed file *paths* over a named version window.
 
 ## Techniques
 

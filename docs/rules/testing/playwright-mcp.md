@@ -153,6 +153,21 @@ refs. Symptoms: a `ref_N` from ten actions ago no longer matches, or the agent
 - If confidence in the current page state drops, snapshot again rather than
   guessing from what was true a few steps back.
 
+## Semantic action journal for recon/exploration
+
+For every MCP recon/exploration flow, append curated events through
+`.claude/scripts/action-journal.py` (`docs/pipeline/action-journal.md`): start the
+stream with its reproducible seed, bound cases to AC/TC/intent hashes, record
+semantic actions and positive oracles, link each red check to its assertion, close
+cases with the original verdict, then validate/finalize. The manager selects a
+ready case and emits `automation-handoff.json` before any exploration-to-spec work.
+
+Seed means the start URL + named state + project fixtures that recreate that state,
+not random-number generation. Journal role/label/text/test-ID locators, never raw
+`snapshot`/`ref_N` values or logs. Credentials never enter an event; an action uses
+an uppercase `input_ref` naming the injected environment variable instead. Journal
+readiness and a later candidate green never rewrite the original run verdict.
+
 ## Reporting out of `test-executor`
 
 Return a verdict (steps taken, what was observed, PASS/FAIL/BLOCKED, evidence

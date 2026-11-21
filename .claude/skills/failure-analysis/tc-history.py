@@ -33,7 +33,7 @@ import sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "qa-report"))
 try:
-    from aggregate import load_summaries, parse_ts  # type: ignore
+    from aggregate import load_summaries, object_list, parse_ts  # type: ignore
 except ImportError as exc:  # pragma: no cover - a moved sibling is a real failure
     sys.exit(f"cannot import aggregate.py (expected next door in qa-report/): {exc}")
 
@@ -44,16 +44,19 @@ def case_rows(runs, tc_id, product):
     for run in runs:
         if product and run.get("product") != product:
             continue
-        for case in run.get("test_cases") or []:
+        for case in object_list(run.get("test_cases")):
             if case.get("id") != tc_id:
                 continue
+            attempts = case.get("attempts", 1)
+            if not isinstance(attempts, int) or isinstance(attempts, bool) or attempts < 0:
+                attempts = 1
             rows.append(
                 {
                     "timestamp": run.get("timestamp"),
                     "version": (run.get("environment") or {}).get("version_or_build"),
                     "commit": (run.get("environment") or {}).get("commit"),
                     "outcome": case.get("outcome"),
-                    "attempts": case.get("attempts", 1),
+                    "attempts": attempts,
                     "spec": case.get("spec"),
                     "evidence_dir": run.get("evidence_dir") or run.get("_path"),
                 }
@@ -64,11 +67,12 @@ def case_rows(runs, tc_id, product):
 
 def derive(rows):
     """The four facts the classification table actually branches on."""
-    passes = [r for r in rows if r["outcome"] == "pass"]
+    passes = [r for r in rows if r["outcome"] in ("pass", "flaky")]
     fails = [r for r in rows if r["outcome"] == "fail"]
     by_version = {}
     for r in rows:
-        by_version.setdefault(r["version"], set()).add(r["outcome"])
+        outcome = "pass" if r["outcome"] == "flaky" else r["outcome"]
+        by_version.setdefault(r["version"], set()).add(outcome)
     conflicting = sorted(v for v, o in by_version.items() if {"pass", "fail"} <= o)
     return {
         "runs_seen": len(rows),

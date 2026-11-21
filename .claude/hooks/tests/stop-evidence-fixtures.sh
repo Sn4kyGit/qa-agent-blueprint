@@ -64,20 +64,32 @@ write_transcript() {
 
 write_summary() {
   local dir="$1" learnings="$2" verdict="${3:-PASS}"
-  mkdir -p "$dir"
+  mkdir -p "$dir/screenshots"
+  printf 'proof\n' > "$dir/screenshots/proof.txt"
+  local digest run_id interactive
+  digest="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$dir/screenshots/proof.txt")"
+  run_id="$(basename "$dir")"
+  interactive=""
+  [ "$verdict" = "NEEDS_REVIEW" ] && interactive=',"interactive":true'
   if [ "$learnings" = "omit" ]; then
-    printf '{"ticket":"SHOP-1","project":"SHOP","verdict":"%s"}\n' "$verdict" > "$dir/execution_summary.json"
+    printf '{"schema_version":2,"run_id":"%s","ticket":"SHOP-1","project":"SHOP","timestamp":"2026-11-15T10:00:00Z","verdict":"%s","test_type":"exploratory","mode":"mcp-only",\"environment\":{\"name\":\"stage\",\"version_or_build\":\"build-1\",\"commit\":\"abc123\"},\"deploy\":{\"from_version\":\"build-0\",\"to_version\":\"build-1\",\"pipeline_run\":\"pipeline-1\",\"at\":\"2026-11-15T09:59:00Z\"},\"skills_used\":[\"test-ticket\"],\"steps_executed\":["checkout"],"test_cases":[],"findings":[],"artifacts":[{"path":"screenshots/proof.txt","sha256":"%s"}],"coverage":{"required":[],"executed":[]},"evidence_dir":"evidence/SHOP/SHOP-1/%s","reported_to_jira":false,"shadow":false%s}\n' \
+      "$run_id" "$verdict" "$digest" "$run_id" "$interactive" > "$dir/execution_summary.json"
   else
-    printf '{"ticket":"SHOP-1","project":"SHOP","verdict":"%s","learnings":%s}\n' "$verdict" "$learnings" > "$dir/execution_summary.json"
+    printf '{"schema_version":2,"run_id":"%s","ticket":"SHOP-1","project":"SHOP","timestamp":"2026-11-15T10:00:00Z","verdict":"%s","test_type":"exploratory","mode":"mcp-only",\"environment\":{\"name\":\"stage\",\"version_or_build\":\"build-1\",\"commit\":\"abc123\"},\"deploy\":{\"from_version\":\"build-0\",\"to_version\":\"build-1\",\"pipeline_run\":\"pipeline-1\",\"at\":\"2026-11-15T09:59:00Z\"},\"skills_used\":[\"test-ticket\"],\"steps_executed\":["checkout"],"test_cases":[],"findings":[],"artifacts":[{"path":"screenshots/proof.txt","sha256":"%s"}],"coverage":{"required":[],"executed":[]},"evidence_dir":"evidence/SHOP/SHOP-1/%s","reported_to_jira":false,"shadow":false%s,"learnings":%s}\n' \
+      "$run_id" "$verdict" "$digest" "$run_id" "$interactive" "$learnings" > "$dir/execution_summary.json"
   fi
 }
 
 # Parametrized twin for the per-ticket scoping cases (F2).
 write_summary_for() {
   local dir="$1" ticket="$2" project="$3"
-  mkdir -p "$dir"
-  printf '{"ticket":"%s","project":"%s","verdict":"PASS","learnings":{"captured":[],"none_because":"clean run"}}\n' "$ticket" "$project" \
-    > "$dir/execution_summary.json"
+  mkdir -p "$dir/screenshots"
+  printf 'proof\n' > "$dir/screenshots/proof.txt"
+  local digest run_id
+  digest="$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$dir/screenshots/proof.txt")"
+  run_id="$(basename "$dir")"
+  printf '{"schema_version":2,"run_id":"%s","ticket":"%s","project":"%s","timestamp":"2026-11-15T10:00:00Z","verdict":"PASS","test_type":"exploratory","mode":"mcp-only",\"environment\":{\"name\":\"stage\",\"version_or_build\":\"build-1\",\"commit\":\"abc123\"},\"deploy\":{\"from_version\":\"build-0\",\"to_version\":\"build-1\",\"pipeline_run\":\"pipeline-1\",\"at\":\"2026-11-15T09:59:00Z\"},\"skills_used\":[\"test-ticket\"],\"steps_executed\":["checkout"],"test_cases":[],"findings":[],"artifacts":[{"path":"screenshots/proof.txt","sha256":"%s"}],"coverage":{"required":[],"executed":[]},"evidence_dir":"evidence/%s/%s/%s","reported_to_jira":false,"shadow":false,"learnings":{"captured":[],"none_because":"clean run"}}\n' \
+    "$run_id" "$ticket" "$project" "$digest" "$project" "$ticket" "$run_id" > "$dir/execution_summary.json"
 }
 
 run_hook() {
@@ -129,7 +141,7 @@ check_marker "evidence block carries QA_EVIDENCE_MISSING" "QA_EVIDENCE_MISSING:"
 C3="$WORK/c3"; write_transcript "$C3/t.jsonl" test_ran
 write_summary "$C3/evidence/SHOP/SHOP-1/20260906-100000" omit
 check "evidence without a learnings declaration" 2 "$(run_hook_stderr "$C3" "$C3/t.jsonl" "$C3/err")"
-check_marker "learnings block carries QA_LEARNINGS_MISSING" "QA_LEARNINGS_MISSING:" "$C3/err"
+check_marker "invalid evidence block carries QA_EVIDENCE_INVALID" "QA_EVIDENCE_INVALID:" "$C3/err"
 
 # --- case 4: learnings present but empty on both sides → blocked --------------
 C4="$WORK/c4"; write_transcript "$C4/t.jsonl" test_ran
@@ -147,10 +159,8 @@ write_summary "$C6/evidence/SHOP/SHOP-1/20260906-100000" '{"captured":[],"none_b
 check "explicit none_because" 0 "$(run_hook "$C6" "$C6/t.jsonl")"
 
 # --- case 6b: NEEDS_REVIEW is a verdict like any other -------------------------
-# The hook must not know the verdict vocabulary. It checks that a declaration EXISTS,
-# not what it says -- so a fourth verdict is allowed to appear without touching the
-# hook. If this ever fails, someone taught the hook to enumerate verdicts, and the
-# next verdict added will silently block every session that uses it.
+# Schema v2 validates the verdict vocabulary and its outcome semantics; an
+# interactive NEEDS_REVIEW summary with valid evidence closes the Stop gate.
 C6B="$WORK/c6b"; write_transcript "$C6B/t.jsonl" test_ran
 write_summary "$C6B/evidence/SHOP/SHOP-1/20260906-100000" \
   '{"captured":["TC-CHK-014 asserts the pre-2.14.0 contract"],"none_because":null}' NEEDS_REVIEW
@@ -202,13 +212,28 @@ check "evidence for SHOP-2 covers a SHOP-2 run" 0 "$(run_hook "$C12C" "$C12C/t.j
 
 # --- case 13: NO_TEST — the explicit no-verdict verdict -----------------------
 # Tools ran but no test completed; the summary says so with a reason instead of
-# the session ending silently. The hook must not know the verdict vocabulary
-# (case 6b guards that), so this passes on the declaration alone.
+# the session ending silently. The shared validator permits this closeout evidence
+# while the pre-JIRA gate separately denies every write for NO_TEST.
 C13="$WORK/c13"; write_transcript "$C13/t.jsonl" test_ran
 mkdir -p "$C13/evidence/SHOP/SHOP-1/20260906-100000"
-printf '%s\n' '{"ticket":"SHOP-1","project":"SHOP","verdict":"NO_TEST","no_test_reason":"reproduced twice, root cause not isolated","learnings":{"captured":[],"none_because":"no product knowledge gained"}}' \
+printf '%s\n' '{"schema_version":2,"ticket":"SHOP-1","project":"SHOP","timestamp":"2026-11-15T10:00:00Z","verdict":"NO_TEST","evidence_dir":"evidence/SHOP/SHOP-1/20260906-100000","no_test_reason":"reproduced twice, root cause not isolated","steps_executed":[],"test_cases":[],"findings":[],"artifacts":[],"coverage":{"required":[],"executed":[]},"learnings":{"captured":[],"none_because":"no product knowledge gained"}}' \
   > "$C13/evidence/SHOP/SHOP-1/20260906-100000/execution_summary.json"
 check "NO_TEST with reason and learnings declaration" 0 "$(run_hook "$C13" "$C13/t.jsonl")"
+
+C13B="$WORK/c13b"; write_transcript "$C13B/t.jsonl" test_ran
+mkdir -p "$C13B/evidence/SHOP/SHOP-1/20260906-100000"
+printf '{broken' > "$C13B/evidence/SHOP/SHOP-1/20260906-100000/execution_summary.json"
+check "malformed fresh evidence fails closed" 2 "$(run_hook_stderr "$C13B" "$C13B/t.jsonl" "$C13B/err")"
+check_marker "malformed evidence marker" "QA_EVIDENCE_INVALID:" "$C13B/err"
+
+C13C="$WORK/c13c"; write_transcript "$C13C/t.jsonl" test_ran
+mkdir -p "$C13C/evidence/SHOP/SHOP-1/20260906-100000"
+printf '%s\n' '{"ticket":"SHOP-1","project":"SHOP","verdict":"PASS","learnings":{"captured":[],"none_because":"legacy"}}' > "$C13C/evidence/SHOP/SHOP-1/20260906-100000/execution_summary.json"
+check "unversioned new evidence rejected" 2 "$(run_hook "$C13C" "$C13C/t.jsonl")"
+
+C13D="$WORK/c13d"; write_transcript "$C13D/t.jsonl" test_ran
+write_summary "$C13D/evidence/SHOP/SHOP-1/20260906-100000" '{"captured":["x"],"none_because":"both"}'
+check "learnings both filled violates XOR" 2 "$(run_hook "$C13D" "$C13D/t.jsonl")"
 
 # --- case 14: model affinity measured into session-perf.log (0.21.0) ----------
 # Main-chain assistant models are counted (dominant + distinct count); sidechain

@@ -1,0 +1,8 @@
+{
+  "case_id": "TC-CHK-021",
+  "intent": "Place an order and require confirmation",
+  "original_verdict": "FAIL",
+  "confidence": 0.99,
+  "original": {"role": "button", "name": "Place order", "assertion": "Order confirmed is visible"},
+  "candidate": {"role": "link", "name": "Continue shopping", "assertion": "No error is visible"}
+}

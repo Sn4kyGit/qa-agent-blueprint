@@ -1,0 +1,13 @@
+{
+  "checks": [
+    {"type":"created","path":"output/candidate.json"},
+    {"type":"created","path":"output/review.json"},
+    {"type":"json_equals","path":"output/candidate.json","pointer":"/status","value":"draft"},
+    {"type":"json_equals","path":"output/candidate.json","pointer":"/selected","value":false},
+    {"type":"json_equals","path":"output/review.json","pointer":"/negative_control_valid","value":false},
+    {"type":"json_equals","path":"output/review.json","pointer":"/required_negative_control_result","value":"failed"},
+    {"type":"json_equals","path":"output/review.json","pointer":"/applied","value":false},
+    {"type":"unchanged","path":"tests/coupon.spec.ts"},
+    {"type":"not_created","path":"output/execution_summary.json"}
+  ]
+}

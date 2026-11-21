@@ -1,0 +1,7 @@
+{
+  "case": {"ac_id": "AC2", "tc_id": "TC-CHK-015", "intent": "Checkout displays the correct total"},
+  "seed": {"start_url": "/checkout", "state": "cart-with-one-item", "fixtures": ["one-item-cart"]},
+  "actions": [{"kind": "click", "locator": {"strategy": "role", "name": "Recalculate", "expression": "getByRole('button', { name: 'Recalculate' })"}}],
+  "observation": "The recalculation completed; no total value was recorded.",
+  "original_verdict": "FAIL"
+}

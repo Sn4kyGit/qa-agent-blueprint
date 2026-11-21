@@ -1,0 +1,14 @@
+{
+  "checks": [
+    {"type":"created","path":"evidence/ACME/ACME-802/20261115-120000/run.json"},
+    {"type":"created","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json"},
+    {"type":"summary_contract","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json","pointer":"/verdict","value":"BLOCKED"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json","pointer":"/test_cases/0/id","value":"TC-RETRY-001"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json","pointer":"/test_cases/0/outcome","value":"flaky"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json","pointer":"/test_cases/0/attempts","value":2},
+    {"type":"json_equals","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json","pointer":"/coverage/required","value":["TC-RETRY-001"]},
+    {"type":"json_equals","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json","pointer":"/coverage/executed","value":["TC-RETRY-001"]},
+    {"type":"json_equals","path":"evidence/ACME/ACME-802/20261115-120000/execution_summary.json","pointer":"/findings","value":[]}
+  ]
+}

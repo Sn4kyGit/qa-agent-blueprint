@@ -5,6 +5,8 @@
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
+    "test:quality": "node quality/scan.mjs tests playwright.config.ts",
+    "test:quality:staged": "node quality/scan.mjs --staged --strict",
     "report": "playwright show-report"
   },
   "devDependencies": {

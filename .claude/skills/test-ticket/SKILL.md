@@ -79,7 +79,9 @@ orchestration to `qa-manager`.
      dir, selected sealed revision path and any recon/plan already produced. It consumes the
      capsule and must **not read the ticket or PROJECT/PRODUCT files, route, repeat
      readiness, or redo mode/suite lookup and Learnings merging**.
-     It owns the remaining mode-conformant phases and execution delegations.
+     It owns the remaining mode-conformant phases and execution delegations,
+     including seed/journal/handoff sequencing and any optional candidate-only
+     healing. Those follow-ups are Complex-path work, not Fast Path self-repair.
    Announce and relay every delegation as `qa-manager`'s "Delegation is visible"
    section prescribes; browser-driving leaves remain sequential.
  8. **On FAIL, the orchestrator that owns the run starts `failure-analyst`** with all
@@ -89,9 +91,13 @@ orchestration to `qa-manager`.
    delegate to the analyst. The same orchestrator writes/merges the analysis and
    applies the class-specific next step (`bug-reporter`, BLOCKED, NEEDS_REVIEW or
    reliability handling) before reporting.
- 9. Verify `execution_summary.json` and the required evidence, then report through
-    `report-to-jira` on PASS/FAIL/BLOCKED/NEEDS_REVIEW exactly as before, including
-    the mode and shadow behavior. The summary's `skills_used` names every skill
+ 9. Validate schema-v2 `run.json` and `execution_summary.json` with
+    `validate-evidence.py` (run/path binding, timestamps, coverage, normalized
+    attempts/outcomes and artifact hashes) before reporting. Malformed new evidence
+    is invalid; historical files stay untouched. Report through `report-to-jira` on
+    PASS/FAIL/BLOCKED/NEEDS_REVIEW exactly as before, including mode and shadow.
+    NO_TEST posts nothing; NEEDS_REVIEW is interactive-only and proposal-comment
+    only, while headless brittle/outdated tests stay FAIL. The summary's `skills_used` names every skill
     this run actually invoked (this one, `recon`, the execution leaf's skill,
     `failure-analysis`, …) — never merely planned ones
     (`.claude/rules/core/evidence-policy.md`). Finish with `retro-learn` capture and the mandatory

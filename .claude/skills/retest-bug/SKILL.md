@@ -58,7 +58,10 @@ remaining orchestration to `qa-manager`.
     - **Complex path** — invoke `qa-manager` with the selected sealed revision path, run dir
       and any recon/plan. It consumes the capsule without reading the ticket or
       PROJECT/PRODUCT files, routing, repeating readiness, or redoing mode/suite
-      lookup and Learnings merging, and owns the remaining phases.
+      lookup       and Learnings merging, and owns the remaining phases, including any
+      seed/journal/handoff and optional candidate-only healing sequence. Those
+      follow-ups are Complex-path work, not Fast Path self-repair.
+
  6. Execute the exact original repro first, then **2–4 adjacent checks**, not the
     whole application. Prefer the fixed flow's **Neighbors** from confirmed Areas in
     the routed `flow-map.md` and record that provenance. `Unconfirmed candidates`,
@@ -74,9 +77,12 @@ remaining orchestration to `qa-manager`.
    flake, or an original repro made outdated by the deliberate fix. Only
    `product-defect` and `undetermined` justify reopening; class-specific evidence
    and reporting stay unchanged.
- 8. Produce `execution_summary.json` and all mandatory evidence, then use
-    `report-to-jira` on PASS and the classified FAIL/BLOCKED/NEEDS_REVIEW paths as
-    in `test-ticket`. The summary's `skills_used` names every skill this re-test
+ 8. Produce and validate schema-v2 `run.json` and `execution_summary.json` plus all
+    mandatory evidence with `validate-evidence.py`; malformed new evidence blocks
+    reporting and historical files are not rewritten. Then use `report-to-jira` on
+    PASS and the classified FAIL/BLOCKED/NEEDS_REVIEW paths as in `test-ticket`.
+    NO_TEST posts nothing; NEEDS_REVIEW is interactive-only and proposal-comment
+    only, while headless brittle/outdated tests stay FAIL. The summary's `skills_used` names every skill this re-test
     actually invoked (this one, `recon`, `failure-analysis`, …) — never merely
     planned ones (`.claude/rules/core/evidence-policy.md`). Use `bug-reporter` only after the required classification;
     shadow mode and transitions are unchanged. Close with the learnings declaration.

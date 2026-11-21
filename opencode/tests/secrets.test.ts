@@ -18,7 +18,7 @@
 // never touches the real keychain.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { qaBlueprint, scanMcpServers } from "../plugins/qa-blueprint.ts"
+import qaBlueprint from "../plugins/qa-blueprint.ts"
 import { fakeCtx } from "./fixtures/payloads.ts"
 import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -87,7 +87,7 @@ describe("secrets via shell.env (opencode)", () => {
 
 describe("scanMcpServers — DC host + contract flags from opencode config entries", () => {
   test("DC atlassian entry yields its JIRA_URL host", () => {
-    const scan = scanMcpServers({
+    const scan = qaBlueprint.scanMcpServers({
       atlassian: { type: "local", command: ["uvx", "mcp-atlassian"], environment: { JIRA_URL: "https://jira.example.com" } },
     })
     expect(scan.hasAt).toBe(true)
@@ -95,13 +95,13 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
   })
 
   test("Cloud remote atlassian has no DC host", () => {
-    const scan = scanMcpServers({ atlassian: { type: "remote", url: "https://mcp.atlassian.com/v1/sse" } })
+    const scan = qaBlueprint.scanMcpServers({ atlassian: { type: "remote", url: "https://mcp.atlassian.com/v1/sse" } })
     expect(scan.hasAt).toBe(true)
     expect(scan.dcHost).toBe("")
   })
 
   test("local playwright without the contract flags is flagged both ways", () => {
-    const scan = scanMcpServers({ playwright: { type: "local", command: ["npx", "@playwright/mcp@latest"] } })
+    const scan = qaBlueprint.scanMcpServers({ playwright: { type: "local", command: ["npx", "@playwright/mcp@latest"] } })
     expect(scan.hasPw).toBe(true)
     expect(scan.pwUnmasked).toBe(true)
     expect(scan.pwNoOutdir).toBe(true)
@@ -109,7 +109,7 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
   })
 
   test("blueprint playwright entry with the contract flags is clean", () => {
-    const scan = scanMcpServers({
+    const scan = qaBlueprint.scanMcpServers({
       playwright: {
         type: "local",
         command: ["npx", "@playwright/mcp@latest", "--config", ".playwright-mcp.config.json", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out", "--image-responses", "omit"],
@@ -121,7 +121,7 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
   })
 
   test("playwright via qa-secrets mcp wrapper satisfies the secrets contract", () => {
-    const scan = scanMcpServers({
+    const scan = qaBlueprint.scanMcpServers({
       playwright: {
         type: "local",
         command: ["node", ".claude/scripts/qa-secrets.mjs", "mcp", "STAGE_PASSWORD", "--", "npx", "@playwright/mcp@latest", "--output-dir", "evidence/.mcp-out", "--image-responses=omit"],
@@ -134,16 +134,16 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
 
   test("image-responses allow is flagged while equals omit is accepted", () => {
     const base = ["npx", "@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/.mcp-out"]
-    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--image-responses", "allow"] } }).pwNoImageomit).toBe(true)
-    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--image-responses=omit"] } }).pwNoImageomit).toBe(false)
+    expect(qaBlueprint.scanMcpServers({ playwright: { type: "local", command: [...base, "--image-responses", "allow"] } }).pwNoImageomit).toBe(true)
+    expect(qaBlueprint.scanMcpServers({ playwright: { type: "local", command: [...base, "--image-responses=omit"] } }).pwNoImageomit).toBe(false)
   })
 
   test("output-dir must point into evidence, including equals form", () => {
     const base = ["npx", "@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--image-responses", "omit"]
-    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "/tmp/pw-out"] } }).pwNoOutdir).toBe(true)
-    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir=evidence/custom"] } }).pwNoOutdir).toBe(false)
-    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "evidence/../outside"] } }).pwNoOutdir).toBe(true)
-    expect(scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "/tmp/evidence"] } }).pwNoOutdir).toBe(true)
+    expect(qaBlueprint.scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "/tmp/pw-out"] } }).pwNoOutdir).toBe(true)
+    expect(qaBlueprint.scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir=evidence/custom"] } }).pwNoOutdir).toBe(false)
+    expect(qaBlueprint.scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "evidence/../outside"] } }).pwNoOutdir).toBe(true)
+    expect(qaBlueprint.scanMcpServers({ playwright: { type: "local", command: [...base, "--output-dir", "/tmp/evidence"] } }).pwNoOutdir).toBe(true)
   })
 
   test("output-dir cannot escape evidence through a symlink", async () => {
@@ -152,14 +152,14 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
       await mkdir(join(root, "evidence"))
       await symlink(tmpdir(), join(root, "evidence", "escape"))
       const command = ["npx", "@playwright/mcp@latest", "--secrets", ".env.playwright-secrets", "--output-dir", "evidence/escape/out", "--image-responses", "omit"]
-      expect(scanMcpServers({ playwright: { type: "local", command } }, root).pwNoOutdir).toBe(true)
+      expect(qaBlueprint.scanMcpServers({ playwright: { type: "local", command } }, root).pwNoOutdir).toBe(true)
     } finally {
       await rm(root, { recursive: true, force: true })
     }
   })
 
   test("complementary playwright entries never share contract health", () => {
-    const scan = scanMcpServers({
+    const scan = qaBlueprint.scanMcpServers({
       playwright: [
         { type: "local", command: ["npx", "@playwright/mcp@latest", "--secrets", ".env.playwright-secrets"] },
         { type: "local", command: ["npx", "@playwright/mcp@latest", "--output-dir", "evidence/.mcp-out", "--image-responses", "omit"] },
@@ -171,7 +171,7 @@ describe("scanMcpServers — DC host + contract flags from opencode config entri
   })
 
   test("remote playwright is the consumer's own setup — never flagged", () => {
-    const scan = scanMcpServers({ playwright: { type: "remote", url: "http://grid.example:4444" } })
+    const scan = qaBlueprint.scanMcpServers({ playwright: { type: "remote", url: "http://grid.example:4444" } })
     expect(scan.hasPw).toBe(true)
     expect(scan.pwUnmasked).toBe(false)
     expect(scan.pwNoOutdir).toBe(false)

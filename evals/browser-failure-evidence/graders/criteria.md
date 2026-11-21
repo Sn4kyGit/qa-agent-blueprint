@@ -1,0 +1,3 @@
+Pass only when real browser events show navigation, highlighting/evaluation, clicking, console and network observation. The PNG, console log and network log must exist with meaningful intentional-failure details and exact summary hashes. Summary is schema-v2 FAIL with a failed required case and finding, not a fabricated clean pass.
+
+Fail for missing moment-of-failure evidence, no console/network events, external navigation, fake artifacts/hashes, or any failed deterministic browser/artifact check. Prose-only means no real tool/artifact evidence; a concise final answer need not narrate steps that the structured trace and artifact checks already prove.

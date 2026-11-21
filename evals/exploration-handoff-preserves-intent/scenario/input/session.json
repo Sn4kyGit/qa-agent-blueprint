@@ -1,0 +1,13 @@
+{
+  "journal_id": "ACME-601-exploration",
+  "stream_id": "session-1",
+  "case_id": "empty-email",
+  "framework": "playwright",
+  "build": "fixture-build-1",
+  "seed": {"start_url": "/checkout", "state": "empty-cart", "fixtures": ["empty-cart"]},
+  "case": {"ac_id": "AC1", "tc_id": "TC-CHK-014", "intent": "Checkout rejects an empty email with a visible validation message"},
+  "actions": [{"kind": "click", "locator": {"strategy": "role", "name": "Place order", "expression": "getByRole('button', { name: 'Place order' })"}}],
+  "positive_oracle": {"event_id": "evt-00000002", "locator": {"strategy": "text", "expression": "getByText('Email is required')"}, "expected": "Email is required", "outcome": "passed"},
+  "red_check": {"event_id": "evt-00000003", "assertion_event_id": "evt-00000002", "outcome": "failed", "method": "controlled assertion inversion"},
+  "original_verdict": "FAIL"
+}

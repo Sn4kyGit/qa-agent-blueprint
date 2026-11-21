@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Synthetic Login</title></head>
+<body>
+  <main>
+    <h1>Synthetic Login</h1>
+    <form id="login-form">
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="off">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="off">
+      <button type="submit">Sign in</button>
+    </form>
+    <p id="login-result" role="status" aria-live="polite"></p>
+    <script>
+      document.querySelector('#login-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {'content-type': 'application/json'},
+          body: JSON.stringify({
+            username: document.querySelector('#username').value,
+            password: document.querySelector('#password').value
+          })
+        });
+        const body = await response.json();
+        document.querySelector('#password').value = '';
+        document.querySelector('#login-result').textContent = response.ok
+          ? 'Signed in as qa-eval'
+          : 'Synthetic sign-in rejected';
+      });
+    </script>
+  </main>
+</body>
+</html>

@@ -1,0 +1,29 @@
+QA Agent Blueprint
+Copyright (c) 2026 Sn4kyGit and qa-agent-blueprint contributors
+
+This distribution includes adapted third-party material. The upstream copyright
+and permission notices are preserved in .claude/skills/THIRD_PARTY_NOTICES.md.
+
+petrkindlmann/qa-skills
+Upstream commit b3bb61bd268b147476252c6ed5a0440c87b97441
+Copyright (c) 2026 Petr Kindlmann
+MIT License; blueprint adaptations are also Apache-2.0.
+
+idavidov13/agentic-playwright
+Upstream commit 7d4ec4f3c410b8a733fdd0056ca268444354631a
+Copyright (c) 2026 Ivan Davidov and Agentic Playwright contributors
+MIT License; blueprint adaptations are also Apache-2.0.
+
+Adapted surfaces include the test-code scanner and write hook
+(.claude/scripts/qa-test-code-scan.mjs, .claude/hooks/pre-test-code-scan.sh),
+the scaffold quality pack and journal fixtures
+(.claude/skills/scaffold-suite/templates/quality/,
+.claude/skills/scaffold-suite/templates/tests/fixtures/action-journal.ts and
+action-journal.wdio.cjs), action-journal and candidate-only healing
+implementations and documentation (.claude/scripts/action-journal.py,
+.claude/scripts/healing-candidate.py, docs/pipeline/action-journal.md,
+docs/pipeline/healing.md), and deterministic eval grading patterns
+(evals/lib/, evals/*/graders/checks.json). These are blueprint-specific
+adaptations, not byte-identical upstream files. Original upstream source paths
+and the complete MIT copyright and permission notices are preserved in
+.claude/skills/THIRD_PARTY_NOTICES.md.

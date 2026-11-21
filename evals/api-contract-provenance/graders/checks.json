@@ -1,0 +1,12 @@
+{
+  "checks": [
+    {"type":"created","path":"output/contract-evidence.json"},
+    {"type":"source_provenance","path":"output/contract-evidence.json","source":"contracts/orders.openapi.json"},
+    {"type":"json_equals","path":"output/contract-evidence.json","pointer":"/source_document","value":"contracts/orders.openapi.json"},
+    {"type":"json_equals","path":"output/contract-evidence.json","pointer":"/revision","value":"contract-rev-7"},
+    {"type":"created","path":"output/orders-contract.spec.ts"},
+    {"type":"text_contains","path":"output/orders-contract.spec.ts","value":"application/json"},
+    {"type":"text_contains","path":"output/orders-contract.spec.ts","value":"total"},
+    {"type":"unchanged","path":"contracts/orders.openapi.json"}
+  ]
+}

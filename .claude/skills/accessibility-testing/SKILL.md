@@ -6,12 +6,11 @@ description: >-
   + manual. Use when: accessibility, a11y, WCAG, screen reader, axe, keyboard
   navigation, ARIA, ADA compliance. Not for cookie/GDPR compliance or pixel-diff
   visual regression.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "2.0"
   category: specialized
-license: Apache-2.0
 ---
 
 <objective>

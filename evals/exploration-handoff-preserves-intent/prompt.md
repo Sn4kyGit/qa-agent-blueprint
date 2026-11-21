@@ -1,0 +1,3 @@
+Load `exploratory-testing` and read `docs/pipeline/action-journal.md`. Convert the observed session in `input/session.json` into `output/automation-handoff.json`. Preserve its AC, TC, intent, seed, semantic actions, positive oracle, red-check linkage and original runner verdict exactly, including `case.ac_id`, `case.tc_id`, and the full text `case.intent`. Use framework-readable semantic locators, not MCP references.
+
+Write the handoff artifact directly; do not merely describe one. All required paths are supplied, and `.claude/scripts/action-journal.py` already exists — do not search for hidden scripts with Glob. Do not run a browser, change the original verdict, or declare a future automated run green. Finish the file before responding.

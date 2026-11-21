@@ -30,7 +30,7 @@ a capsule retain the effective-project fallback below.
    unknown risk means standard, and neither mode nor escalation is changed by the
    model-lane choice: write/extend the spec per the
    framework's conventions — Playwright: `docs/rules/testing/playwright-cli.md`
-   (TC-ID title, AAA structure, web-first assertions); WebdriverIO: the
+   (`AC<ID> / TC-<CAT>-<NNN>: behavior` title, AAA structure, web-first assertions); WebdriverIO: the
    `webdriverio-testing` skill — or run the existing suite/subset relevant to
    the ticket.
 3. Use relevant capsule Learning excerpts first. Without a capsule, or for a new
@@ -38,10 +38,14 @@ a capsule retain the effective-project fallback below.
    `selector-failures.md` narrowly — don't rediscover a known issue.
 3b. **Never write a spec blind.** When the flow was not observed yet, run
     `/recon` first and take selectors from its `recon.json` (roles + accessible
-    names), never from guesses. Assertions are positive and specific (what
-    should be visible — concrete text/value/state), negative ones only
-    supplementary. Every test title carries the AC-ID next to the TC-ID
-    (`'AC2 / TC-CHK-014: …'`). Full rules: `docs/pipeline/04-execution.md`.
+    names), never from guesses. Exploration-to-spec additionally requires the
+    manager's ready `automation-handoff.json`; consume its selected semantic
+    journal events, AC/TC/intent/assertion bindings and original verdict. `seed`
+    is the reproducible start state implemented by project fixtures, not RNG.
+    Assertions preserve the positive AC oracle (concrete text/value/state),
+    negative ones only supplementary. Every title is
+    `AC<ID> / TC-<CAT>-<NNN>: behavior`. Full rules:
+    `docs/pipeline/04-execution.md` and `docs/pipeline/action-journal.md`.
 3c. **Red check for new specs** (PROJECT.md → "Execution mode" → `Red check
     required`, default yes): before a new spec's green counts as evidence,
     prove it red once — violate the expectation via data/state, or briefly
@@ -51,11 +55,20 @@ a capsule retain the effective-project fallback below.
     times over threshold, end-of-test screenshot — collected independently of
     the assertions and reported as *Observations*, even on a fully green run.
     That is the part of the live eye a spec otherwise lacks.
-4. Produce evidence (report, trace-on-failure, `run.json` run record with
-   TC-IDs/outcomes/timing/mode per `docs/pipeline/04-execution.md`,
-   `execution_summary.json`) per
-   `.claude/rules/core/evidence-policy.md` — including `test_cases[]`, which the CLI
-   runner is the only source of and which every later failure analysis depends on.
+3e. Run the suite's `npm run test:quality` wrapper when present (staged strict:
+    `test:quality:staged`), or the framework's direct `qa-test-code-scan.mjs`
+    invocation. Base scaffolding includes the warning-only wrapper; only explicit
+    `/scaffold-suite --quality-pack` adds the strict quality layer. This is a local
+    scanner, not another MCP server, agent or hook type.
+4. Produce schema-v2 `run.json` and `execution_summary.json` per
+   `docs/pipeline/04-execution.md` and `.claude/rules/core/evidence-policy.md`.
+   Normalize Playwright JSON/JUnit with `normalize-test-results.py`; include matching
+   run/path binding, RFC3339 timestamps, exact coverage, normalized outcomes and
+   attempts (plus `attempt_results` when available), and hashed run-relative
+   artifacts. Retry-pass is flaky; required skip/fixme/not_run prevents PASS;
+   malformed evidence is invalid. Validate both with `validate-evidence.py` before
+   reporting and never rewrite historical evidence. Preserve `test_cases[]` from
+   the CLI runner; every later failure analysis depends on it.
    The summary's `skills_used` lists the skills this run actually invoked
    (`test-automation`, `recon` when one ran, `webdriverio-testing` when the WDIO
    path was used) — actually used, never planned.

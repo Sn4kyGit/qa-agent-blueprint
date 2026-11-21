@@ -294,7 +294,7 @@ copy_tree() { # <src-dir> <dest-dir> <label>
         report ADDED "$label" "$rel"
       fi
     fi
-  done < <(find "$src" -type f -print0)
+  done < <(find "$src" -type f ! -path '*/__pycache__/*' ! -name '*.pyc' -print0)
 }
 
 # Integrate mode namespaces rules and hooks (so they cannot collide with yours),
@@ -403,9 +403,9 @@ source_dir_matches_installed() { # <blueprint-source-dir> <installed-dir>
     rel="${f#"$src"/}"
     [ -f "$dst/$rel" ] || return 1
     source_matches_installed "$f" "$dst/$rel" || return 1
-  done < <(find "$src" -type f -print0)
+  done < <(find "$src" -type f ! -path '*/__pycache__/*' ! -name '*.pyc' -print0)
   # nothing added on the installed side
-  [ "$(find "$src" -type f | wc -l | tr -d ' ')" = "$(find "$dst" -type f | wc -l | tr -d ' ')" ]
+  [ "$(find "$src" -type f ! -path '*/__pycache__/*' ! -name '*.pyc' | wc -l | tr -d ' ')" = "$(find "$dst" -type f ! -path '*/__pycache__/*' ! -name '*.pyc' | wc -l | tr -d ' ')" ]
 }
 
 rewrite_namespaced_paths() {
@@ -891,6 +891,12 @@ integrate_dot_claude() {
     report SKIPPED "scripts" ".claude/scripts already integrated (identical)"
   else
     copy_tree "$REPO_ROOT/.claude/scripts" "$TARGET/.claude/scripts" "scripts"
+  fi
+
+  if [ -d "$TARGET/.claude/schemas" ] && source_dir_matches_installed "$REPO_ROOT/.claude/schemas" "$TARGET/.claude/schemas"; then
+    report SKIPPED "schemas" ".claude/schemas already integrated (identical)"
+  else
+    copy_tree "$REPO_ROOT/.claude/schemas" "$TARGET/.claude/schemas" "schemas"
   fi
 
   # Skills → per-skill collision check
@@ -1537,7 +1543,7 @@ uninstall_integrate() {
     fi
   done
   if [ -f "$REPO_ROOT/.claude/skills/THIRD_PARTY_NOTICES.md" ] && [ -f "$TARGET/.claude/skills/THIRD_PARTY_NOTICES.md" ]; then
-    if cmp -s "$REPO_ROOT/.claude/skills/THIRD_PARTY_NOTICES.md" "$TARGET/.claude/skills/THIRD_PARTY_NOTICES.md"; then
+    if source_matches_installed "$REPO_ROOT/.claude/skills/THIRD_PARTY_NOTICES.md" "$TARGET/.claude/skills/THIRD_PARTY_NOTICES.md"; then
       if [ "$DRY_RUN" -eq 1 ]; then report DRY-RUN "skills" "would remove .claude/skills/THIRD_PARTY_NOTICES.md";
       else rm "$TARGET/.claude/skills/THIRD_PARTY_NOTICES.md"; report MERGED "skills" "removed .claude/skills/THIRD_PARTY_NOTICES.md"; fi
     else
@@ -1571,6 +1577,27 @@ uninstall_integrate() {
       find "$TARGET/.claude/scripts" -type d -empty -delete 2>/dev/null || true
     fi
   fi
+  if [ -d "$TARGET/.claude/schemas" ]; then
+    local sf rel
+    while IFS= read -r -d '' sf; do
+      rel="${sf#"$REPO_ROOT/.claude/schemas"/}"
+      if [ -f "$TARGET/.claude/schemas/$rel" ] && cmp -s "$sf" "$TARGET/.claude/schemas/$rel"; then
+        if [ "$DRY_RUN" -eq 1 ]; then report DRY-RUN "schemas" "would remove .claude/schemas/$rel";
+        else rm "$TARGET/.claude/schemas/$rel"; report MERGED "schemas" "removed .claude/schemas/$rel"; fi
+      elif [ -f "$TARGET/.claude/schemas/$rel" ]; then
+        report WARN "schemas" "kept .claude/schemas/$rel — modified after install"
+      fi
+    done < <(find "$REPO_ROOT/.claude/schemas" -type f -print0)
+    if [ "$DRY_RUN" -eq 0 ]; then
+      find "$TARGET/.claude/schemas" -type d -empty -delete 2>/dev/null || true
+    fi
+  fi
+  for f in "$TARGET/NOTICE" "$TARGET/NOTICE.qa-agent-blueprint"; do
+    if [ -f "$f" ] && cmp -s "$REPO_ROOT/NOTICE" "$f"; then
+      if [ "$DRY_RUN" -eq 1 ]; then report DRY-RUN "NOTICE" "would remove ${f#"$TARGET"/}";
+      else rm "$f"; report MERGED "NOTICE" "removed ${f#"$TARGET"/}"; fi
+    fi
+  done
 
   # 5. settings.json — remove hook entries pointing at our namespace.
   #    Permission entries are removed only when they are blueprint entries AND
@@ -2035,6 +2062,31 @@ integrate_docs() {
   copy_tree "$REPO_ROOT/docs" "$TARGET/docs/qa-blueprint" "docs"
 }
 
+integrate_notice_at() {
+  local destination="$1"
+  if [ -e "$destination" ] || [ -L "$destination" ]; then
+    if cmp -s "$REPO_ROOT/NOTICE" "$destination"; then
+      report SKIPPED "NOTICE" "${destination#"$TARGET"/} already integrated (identical)"
+    else
+      report WARN "NOTICE" "collision: ${destination#"$TARGET"/} exists with different content — kept yours"
+    fi
+  elif [ "$DRY_RUN" -eq 1 ]; then
+    report DRY-RUN "NOTICE" "would add ${destination#"$TARGET"/}"
+  else
+    cp -p "$REPO_ROOT/NOTICE" "$destination"
+    report ADDED "NOTICE" "${destination#"$TARGET"/}"
+  fi
+}
+
+integrate_notices() {
+  if { [ -e "$TARGET/NOTICE" ] || [ -L "$TARGET/NOTICE" ]; } && ! cmp -s "$REPO_ROOT/NOTICE" "$TARGET/NOTICE"; then
+    report WARN "NOTICE" "consumer NOTICE kept; blueprint notice will use NOTICE.qa-agent-blueprint"
+    integrate_notice_at "$TARGET/NOTICE.qa-agent-blueprint"
+  else
+    integrate_notice_at "$TARGET/NOTICE"
+  fi
+}
+
 run_integrate() {
   if [ "$UNINSTALL" -eq 1 ]; then
     if [ "$SKILL_PROFILE_FLAG" -eq 1 ] || [ "$SKILLS_EXCLUDE_FLAG" -eq 1 ]; then
@@ -2065,6 +2117,7 @@ run_integrate() {
   integrate_gitignore
   integrate_dirs
   integrate_docs
+  integrate_notices
   rewrite_namespaced_paths   # must run AFTER every copy — it rewrites what was added
 
   # H18 (0.18.8): record the installed blueprint version so cross-version
@@ -2190,6 +2243,22 @@ opencode_link() {
   mkdir -p "$(dirname "$link")"
   ln -s "$src" "$link"
   report ADDED "$link" "-> $src"
+}
+
+opencode_notice_links() {
+  local primary="$TARGET/NOTICE" fallback="$TARGET/NOTICE.qa-agent-blueprint" source="$REPO_ROOT/NOTICE"
+  if [ ! -e "$primary" ] && [ ! -L "$primary" ]; then
+    opencode_link "$primary" "$source"
+    return 0
+  fi
+  opencode_link "$primary" "$source"
+  if cmp -s "$source" "$primary" 2>/dev/null; then
+    return 0
+  fi
+  if [ -L "$primary" ] && [ "$(readlink "$primary")" = "$source" ]; then
+    return 0
+  fi
+  opencode_link "$fallback" "$source"
 }
 
 opencode_seed_files() {
@@ -2457,7 +2526,8 @@ opencode_uninstall() {
   local l
   for l in ".opencode/ROUTER.md" ".opencode/agents" ".opencode/commands" ".opencode/plugins" \
            ".claude" "docs" ".agents" \
-           "projects/_template" "projects/EXAMPLE" ".claude-plugin" "CHANGELOG.md"; do
+           "projects/_template" "projects/EXAMPLE" ".claude-plugin" "CHANGELOG.md" \
+           "NOTICE" "NOTICE.qa-agent-blueprint"; do
     local link="$TARGET/$l"
     [ -L "$link" ] || continue
     case "$(readlink "$link")" in
@@ -2499,6 +2569,7 @@ run_opencode_mode() {
   opencode_link "$TARGET/projects/EXAMPLE" "$REPO_ROOT/projects/EXAMPLE"
   opencode_link "$TARGET/.claude-plugin" "$REPO_ROOT/.claude-plugin"
   opencode_link "$TARGET/CHANGELOG.md" "$REPO_ROOT/CHANGELOG.md"
+  opencode_notice_links
   opencode_seed_files
   opencode_merge_config
   next_step "Connect a provider in opencode (/connect — e.g. OpenRouter) and pick your model with /models — the blueprint pins none (D6)"
@@ -2584,7 +2655,7 @@ shared_preflight() {
     collisions+=(".claude")
   fi
   if [ -d "$TARGET/.claude" ] && [ ! -L "$TARGET/.claude" ] && [ "$whole_claude" -eq 0 ]; then
-    for item in rules skills agents hooks scripts; do
+    for item in rules skills agents hooks scripts schemas; do
       if [ -e "$TARGET/.claude/$item" ] || [ -L "$TARGET/.claude/$item" ]; then
         shared_link_is "$TARGET/.claude/$item" "$REPO_ROOT/.claude/$item" || collisions+=(".claude/$item")
       fi
@@ -2686,7 +2757,7 @@ shared_scaffold() {
 
 shared_surface_links() {
   local item
-  for item in rules skills agents hooks scripts; do
+  for item in rules skills agents hooks scripts schemas; do
     opencode_link "$TARGET/.claude/$item" "$REPO_ROOT/.claude/$item"
   done
   opencode_link "$TARGET/.opencode/ROUTER.md" "$REPO_ROOT/opencode/ROUTER.md"
@@ -2698,6 +2769,7 @@ shared_surface_links() {
   opencode_link "$TARGET/projects/EXAMPLE" "$REPO_ROOT/projects/EXAMPLE"
   opencode_link "$TARGET/.claude-plugin" "$REPO_ROOT/.claude-plugin"
   opencode_link "$TARGET/CHANGELOG.md" "$REPO_ROOT/CHANGELOG.md"
+  opencode_notice_links
 }
 
 shared_claude_md() {
@@ -3031,7 +3103,7 @@ PY
 shared_uninstall() {
   info "shared uninstall: removing only symlinks that point into $REPO_ROOT"
   local item link
-  for item in .claude/rules .claude/skills .claude/agents .claude/hooks .claude/scripts .opencode/ROUTER.md .opencode/agents .opencode/commands .opencode/plugins docs projects/_template projects/EXAMPLE .claude-plugin CHANGELOG.md; do
+  for item in .claude/rules .claude/skills .claude/agents .claude/hooks .claude/scripts .claude/schemas .opencode/ROUTER.md .opencode/agents .opencode/commands .opencode/plugins docs projects/_template projects/EXAMPLE .claude-plugin CHANGELOG.md NOTICE NOTICE.qa-agent-blueprint; do
     link="$TARGET/$item"
     [ -L "$link" ] || continue
     case "$(readlink "$link")" in

@@ -1,0 +1,18 @@
+{
+  "suite": "browser",
+  "checks": [
+    {"type":"trace_tool","name":"browser_navigate"},
+    {"type":"trace_tool","name":"browser_evaluate"},
+    {"type":"trace_tool","name":"browser_click"},
+    {"type":"trace_tool","name":"browser_console_messages"},
+    {"type":"trace_tool","name":"browser_network_requests"},
+    {"type":"no_external_navigation"},
+    {"type":"file_magic","path":"evidence/ACME/ACME-902/20261115-120000/screenshots/ACME-902_failure_fail.png","format":"png"},
+    {"type":"text_contains","path":"evidence/ACME/ACME-902/20261115-120000/logs/console.log","value":"QA_EVAL"},
+    {"type":"text_contains","path":"evidence/ACME/ACME-902/20261115-120000/logs/network.log","value":"500"},
+    {"type":"summary_contract","path":"evidence/ACME/ACME-902/20261115-120000/execution_summary.json"},
+    {"type":"artifact_hashes","path":"evidence/ACME/ACME-902/20261115-120000/execution_summary.json"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-902/20261115-120000/execution_summary.json","pointer":"/verdict","value":"FAIL"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-902/20261115-120000/execution_summary.json","pointer":"/test_cases/0/outcome","value":"fail"}
+  ]
+}

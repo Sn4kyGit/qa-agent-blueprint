@@ -185,9 +185,11 @@ START: Test fails intermittently
 
 ---
 
-## Step 4: Fix
+## Step 4: Propose a Fix
 
-Apply the fix pattern specific to the root cause category.
+Create a reviewable proposal for the root cause category. Locator repairs use
+`healing-candidate.py` and remain candidates; only a human applies a reviewed
+change. No score permits automatic application or application in quarantine.
 
 ### Fix: Timing Issues
 
@@ -407,7 +409,7 @@ CI=true npx playwright test path/to/fixed.spec.ts --repeat-each=50 --workers=4
 
 ## Confidence Scoring Methodology
 
-When automated repair is attempted, score the repair confidence to determine the approval path.
+When locator candidates are generated, score them to rank human review. Scores never determine application authority.
 
 ### Scoring Dimensions
 
@@ -422,14 +424,12 @@ When automated repair is attempted, score the repair confidence to determine the
 
 ### Score Interpretation
 
-Half-open bands — 0.9 belongs to the auto-apply tier only. These four bands are identical to the thresholds in `SKILL.md` (Observable Repair Workflow → Confidence Scoring); keep all three locations in sync if you edit them.
-
-| Score | Confidence | Action |
-|-------|-----------|--------|
-| >= 0.90 | Very high | Auto-apply, log for batch review |
-| 0.70 - 0.89 | High | Apply in quarantine, flag for individual review |
-| 0.50 - 0.69 | Low | Do not apply; open a PR with evidence for review |
-| < 0.50 | Very low | Discard candidate, manual investigation required |
+Scores sort candidates from highest to lowest. Every score, including 1.0,
+retains `draft` status until eligibility and verification succeed and a human
+selects the candidate. There are no apply thresholds. The fixed contract is at
+most three candidates, one selection, two CLI runs, two origin cases, and one
+locator-only hunk. Green plus a failing negative control at the original
+assertion can produce `ready_for_human`, never an applied repair or PASS.
 
 ### Examples
 
@@ -477,5 +477,5 @@ Use this checklist when writing new tests to prevent flakiness from the start.
 | Quarantine size | # of tests in quarantine | < 5% of suite | > 10% |
 | Quarantine age | Max days a test has been quarantined | < 14 days | > 21 days |
 | Selector stability | Average selector score across suite | > 3.5 | < 3.0 |
-| Auto-repair accuracy | % of auto-repairs that preserved intent | > 90% | < 80% |
+| Candidate intent precision | % of human-reviewed candidates that preserved intent | > 90% | < 80% |
 | Fix recurrence | % of fixed flaky tests that flake again within 30 days | < 10% | > 20% |

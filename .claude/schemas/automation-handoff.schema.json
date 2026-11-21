@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-agent-blueprint.local/schemas/automation-handoff.schema.json",
+  "title": "Ready exploration-to-automation handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "handoff_id", "created_at", "journal_id", "stream_id", "case_id", "framework", "build", "capsule_sha256", "seed", "case", "actions", "positive_oracle", "red_check", "original_verdict", "status"],
+  "properties": {
+    "schema_version": {"const": "qa-automation-handoff/v1"},
+    "handoff_id": {"type": "string", "pattern": "^handoff-[0-9a-f]{16}$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "journal_id": {"type": "string"},
+    "stream_id": {"type": "string"},
+    "case_id": {"type": "string"},
+    "framework": {"enum": ["playwright", "webdriverio"]},
+    "build": {"type": "string"},
+    "capsule_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "seed": {"type": "object"},
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "ac_id", "ac_sha256", "tc_id", "tc_sha256", "intent", "intent_sha256"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1, "maxLength": 300},
+        "ac_id": {"type": "string", "minLength": 1, "maxLength": 300},
+        "ac_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "tc_id": {"type": "string", "minLength": 1, "maxLength": 300},
+        "tc_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "intent": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "intent_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "actions": {"type": "array", "maxItems": 197, "items": {"type": "object"}},
+    "positive_oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "ac_id", "ac_sha256", "intent_sha256", "assertion_sha256", "locator", "expected", "outcome"],
+      "properties": {
+        "event_id": {"type": "string", "pattern": "^evt-[0-9]{8}$"},
+        "ac_id": {"type": "string"},
+        "ac_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "intent_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "assertion_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "locator": {"type": "object"},
+        "expected": {"type": "string"},
+        "outcome": {"const": "passed"}
+      }
+    },
+    "red_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "assertion_event_id", "outcome", "method"],
+      "properties": {
+        "event_id": {"type": "string", "pattern": "^evt-[0-9]{8}$"},
+        "assertion_event_id": {"type": "string", "pattern": "^evt-[0-9]{8}$"},
+        "outcome": {"const": "failed"},
+        "method": {"enum": ["data_state", "assertion_inversion"]}
+      }
+    },
+    "original_verdict": {"enum": ["PASS", "FAIL", "BLOCKED", "NEEDS_REVIEW"]},
+    "status": {"const": "ready"}
+  }
+}

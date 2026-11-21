@@ -65,11 +65,12 @@ unrecorded. Repeat runs or a wider window before drawing any conclusion.
 Offer profiles only when the user asks to slim down, prune, or choose a skill
 set. Otherwise stop after step 2.
 
-**Evidence gate.** When the tracking holds no records at all (zero instrumented
-runs in the window), name no deactivation candidates and propose no profile
-change: with no data, nothing can be named — say so, and at most point at the
-profiles below as a user preference decision that needs confirmation. "Which
-can I deactivate?" on zero evidence gets that honest answer, not a list.
+**Evidence gate.** Zero records terminate Step 3. Name no deactivation candidates
+and propose no profile change. Do not enumerate profile membership, per-profile
+drops, or an exclude list — even as a preference example. At most say: "Profiles
+are a separate user-preference mechanism; this evidence cannot recommend one."
+Enter the profile catalogue/dry-run flow only if the user explicitly requests a
+preference-based profile despite that warning.
 
 ### Profiles
 

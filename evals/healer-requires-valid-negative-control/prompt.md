@@ -1,0 +1,3 @@
+Load `test-reliability` and read `docs/pipeline/healing.md`. Process `input/healing-request.json`. The candidate locator is green, but its negative control also passed against the original assertion.
+
+Write `output/candidate.json` with `status: "draft"` and `selected: false`, and `output/review.json` with `negative_control_valid: false`, `required_negative_control_result: "failed"`, and `applied: false`, keeping the candidate in draft and recording that the negative control is invalid. Do not mark it ready, select/apply it, edit the spec, or create a verdict. State what valid negative-control result is required. `.claude/scripts/healing-candidate.py` already exists; do not search for hidden scripts with Glob. Write both files before responding.

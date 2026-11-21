@@ -73,9 +73,14 @@ any of them is not ready to send:
 
 Same skeleton, two differences: there is no "what changed, per JIRA" section to
 justify a new expected value (the contract did not change), and the proposed change
-touches **mechanics only** — a locator, a wait, a piece of test data. If a proposal
-labelled `test-brittle` changes an expected *value*, the class was wrong: go back and
-re-read `classification.md` §3.
+touches **mechanics only**. Automated locator healing is narrower still: use
+`healing-candidate.py` for exactly one locator-only hunk bound to the original
+spec/build/capsule/intent/assertion hashes. It creates `draft`, `rejected`, or
+`ready_for_human`, never an applied repair. Score ranks candidates only. Green
+and a failing negative control must exercise the same original assertion; neither
+produces a run summary or changes the original verdict. A human applies or
+rejects the candidate. If a proposal labelled `test-brittle` changes an expected
+*value*, the class was wrong: go back and re-read `classification.md` §3.
 
 ## Clusters
 

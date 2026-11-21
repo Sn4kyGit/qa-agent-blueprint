@@ -8,6 +8,73 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.22.0] — 2026-11-16
+
+Theme: **verifiable agentic test generation.** Deterministic quality gates,
+seed-based exploration handoffs, contract provenance, candidate-only healing,
+and artifact-aware real-browser evaluations on both harnesses.
+
+### Added
+- `/scaffold-suite --quality-pack` adds an opt-in Playwright/TypeScript layer
+  with composed lazy API/auth/data fixtures, a minimal POM, a reproducible
+  start-state seed spec, strict quality configuration, and scanner wrapper.
+  Default scaffolding remains minimal; existing suites are never overwritten.
+- `.claude/scripts/qa-test-code-scan.mjs` is the shared zero-dependency scanner
+  for Claude write hooks, opencode `tool.execute.before`, staged blobs and CI.
+  It checks high-confidence test-code rules without printing source excerpts;
+  reasoned suppressions stay visible and legacy suites remain unaffected.
+- `action-journal.py` records bounded semantic recon/exploration events and
+  produces AC/TC-bound automation handoffs only for complete replayable cases
+  with a positive oracle and red-check evidence. Seed means start-state test,
+  not random data. MCP refs, credentials and raw browser dumps are rejected.
+- `healing-candidate.py` creates and validates bounded locator-only repair
+  candidates. High scores never auto-apply: one selected candidate needs a
+  green run and a valid negative control at the original assertion, independent
+  review, and human application. The original run verdict remains immutable.
+- API contract records preserve the exact contract snapshot, source/revision
+  and SHA-256. Missing required contracts produce not_run/BLOCKED; drift is a
+  failure, never an automatic schema update from live behavior.
+- Evidence schema v2 adds normalized `pass/fail/flaky/skip/fixme/not_run`,
+  attempt histories, run/path binding, coverage, and hashed artifact linkage.
+  Retry-pass is flaky, required incomplete coverage prevents PASS, malformed
+  new evidence fails closed, and NO_TEST still posts nothing to JIRA.
+- Eval runners now support deterministic artifact and sanitized trace checks,
+  explicit `INFRA_ERROR`/`UNSCORED`, and a loopback-only real-browser suite.
+  Case-level `--resume`/`--only-failed` reuses prior gate passes without model
+  calls, while `--transient-retries 0` avoids duplicate free-provider timeouts.
+  Free opencode models no longer load `.env.openrouter`.
+  Sixteen cases were added: 60 standard plus 3 real-browser cases overall.
+- Root `NOTICE`, concrete Agentic Playwright attribution, distribution notices,
+  release-convention checks, and install/update coverage for schemas, scripts,
+  hooks and notices.
+
+### Changed
+- All execution agents and lanes emit and consume the v2 evidence contract;
+  historical v1 evidence remains readable without retroactive migration.
+  Fresh unversioned or semantically invalid summaries are rejected.
+- `test-reliability` confidence scores now rank candidates only. The former
+  auto-apply and apply-in-quarantine tiers were removed consistently.
+- CI no longer hides fixture failures through `tail` or manifest failures
+  through `|| true`; tool versions are pinned and eval unit tests are gated.
+- Vendored skill frontmatter now declares the applicable MIT + Apache-2.0
+  attribution with a single valid SPDX field per skill.
+
+### Fixed
+- `/agentswitch` always renders the mandatory SOURCE/TARGET/QA-home/STATUS
+  header and no longer invents manual repair procedures for blocked switches.
+- The opencode plugin exposes a single default export, restoring plugin loading
+  with opencode 1.19.4 while retaining test helpers on that export.
+
+### Migration
+- New runs must write `schema_version: 2`, normalized outcomes, coverage and
+  hashed artifacts as documented in `.claude/rules/core/evidence-policy.md`.
+  Historical summaries require no changes and remain available to reporting.
+- Enable the stricter write gate only through a suite-owned
+  `.qa-test-quality.json` or explicitly scaffold with `--quality-pack`.
+- Real-browser evals require the pinned MCP browser; install it with
+  `npx @playwright/mcp@0.0.84 install-browser chrome-for-testing` before
+  running `evals/run.sh --suite browser` or `evals/run-opencode.sh --suite browser`.
+
 ## [0.21.0] — 2026-11-14
 
 Theme: **deterministic tool-output compression.** Lossless-first compressor for

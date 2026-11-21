@@ -30,10 +30,13 @@ template; if they ever disagree, the rule is right and the config is a bug.
    - `<KEY>`, `<PRODUCT>` — for the header comments and the package name,
    - `<CAT>` — a TC category from the effective project file ("Test assets" → TC
      categories); the product's namespace when a product was routed.
-   Keep the layout: `smoke.spec.ts` and `tests/fixtures/observation.ts` land
-   under `tests/` (the fixture wires the observation channel —
+   Keep the layout: move the root template `templates/smoke.spec.ts` explicitly to
+   `tests/smoke.spec.ts` (never leave a second copy at the suite root), while
+   `tests/fixtures/observation.ts` stays under `tests/` (the fixture wires the observation channel —
    `docs/pipeline/04-execution.md` — into every spec that imports `test`/`expect`
-   from it instead of `@playwright/test`).
+   from it instead of `@playwright/test`). Copy `templates/quality/scan.mjs` to
+   `quality/scan.mjs` in both modes; the package's `test:quality` scripts are the
+   convenience entry point, and default mode still emits warnings only.
    Also copy `templates/probes/` — the recon probe is the producer for pipeline
    phase 2 (`docs/pipeline/02-recon.md`), and the hybrid/cli-first modes have no
    non-blind spec source without it. (Variant selection — Playwright probe vs.
@@ -52,11 +55,49 @@ template; if they ever disagree, the rule is right and the config is a bug.
 5. **Install and prove it runs**: `npm install && npx playwright install chromium`,
    then `npx playwright test`. A scaffold that has never executed is a promise, not
    a suite — the smoke spec exists precisely so the first run is a real run.
-6. **Record it** in `PROJECT.md` (or the `PRODUCT.md`, if the suite is product-
-   specific) → "Test assets": location, config file, TC categories. Otherwise the
-   next session scaffolds it a second time.
+6. **Prepare the Test assets update for the human.** `PROJECT.md` and `PRODUCT.md`
+   are human-owned config and the guard refuses agent edits. Write the exact proposed
+   "Test assets" block (location, config file, TC categories) to
+   `<suite>/PROJECT-assets-update.md` and show it to the user for manual application;
+   never modify the project file via another tool. Otherwise the next session
+   scaffolds a second time.
 7. Anything surprising during setup → `retro-learn`, and declare it in the run's
    `learnings` as usual.
+
+## Opt-in: `/scaffold-suite --quality-pack`
+
+Default scaffolding stays minimal. Only the explicit `--quality-pack` flag adds the
+strict layer; do not infer it from a request for a smoke suite or a scanner script.
+
+1. Copy the base suite as above, then replace `tests/smoke.spec.ts` with
+   `templates/quality/smoke.spec.ts`. Add `templates/quality/seed.spec.ts` as
+   `tests/seed.spec.ts`, and copy `templates/quality/tests/fixtures/`, `tests/pages/`
+   and `tests/support/` into the suite's `tests/` directory, preserving the base
+   `tests/fixtures/observation.ts`. The composed `test.ts` → `data.ts` → `auth.ts` →
+   `api.ts` chain keeps each fixture lazy: API context, stored-auth browser context,
+   and unique data are created only when a test requests them.
+2. Copy `templates/quality/.qa-test-quality.json` to the suite root. It makes all
+   high-confidence rules errors, makes warning-level findings fail strict scans,
+   and enables the separate write gate. Copy the blank `.env.example`; never add
+   values to it. The wrapper finds the blueprint scanner by walking up from the
+   suite, or accepts an explicit `QA_TEST_CODE_SCANNER` path.
+3. Replace the entire `AC<ID>` placeholder with the exact acceptance-criterion ID
+   from the ticket. `<ID>` is the AC ordinal, never the JIRA issue number: for
+   ACME-501 with criterion `AC1`, write `AC1 / TC-SMOKE-001: the entry page
+   loads`, not `AC501`. Never invent an AC-ID. If the ticket has no AC, report
+   that gap and use a reasoned inline suppression instead of fabricating
+   traceability:
+   `// qa-scan-disable-next-line missing-ac-title -- ticket has no acceptance criterion; gap reported`.
+   Suppressions require named rules (or `all`) and a reason after `--`;
+   `--no-suppressions` makes the scanner ignore them.
+4. The auth fixture consumes an existing `STAGE_STORAGE_STATE`; it does not invent a
+   login flow or credentials. Continue to use `STAGE_BASE_URL` and named
+   `qa-secrets.mjs run` injection exactly as in the base suite. The seed spec is
+   skipped unless `QA_SEED=1`; implement project-owned seed operations before
+   enabling it. Do not replace that extension point with guessed endpoints or data.
+5. Run `npm run test:quality` (or `npm run test:quality:staged` for staged blobs)
+   before the normal Playwright proof run. `QA_EVIDENCE_DIR`, observation capture,
+   retries and every other setting in `playwright.config.ts` remain unchanged.
 
 ## What the config deliberately does
 

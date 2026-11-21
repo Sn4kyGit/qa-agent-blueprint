@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "execution-summary-v2.schema.json",
+  "title": "QA execution summary v2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "ticket",
+    "project",
+    "timestamp",
+    "verdict",
+    "evidence_dir",
+    "steps_executed",
+    "test_cases",
+    "findings",
+    "artifacts",
+    "coverage",
+    "learnings"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "ticket": { "type": "string", "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$" },
+    "project": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "verdict": { "enum": ["PASS", "FAIL", "BLOCKED", "NEEDS_REVIEW", "NO_TEST"] },
+    "test_type": { "enum": ["exploratory", "regression", "mixed"] },
+    "mode": { "enum": ["mcp-only", "hybrid", "cli-first"] },
+    "channel": { "enum": ["browser", "api", "mixed"], "description": "Evidence channel; API proof may be logs/contracts/reports, never mandatory screenshots." },
+    "environment": {
+      "type": "object",
+      "required": ["name", "version_or_build", "commit"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version_or_build": { "type": "string", "minLength": 1 },
+        "commit": { "type": "string", "minLength": 1 }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "required": ["from_version", "to_version", "pipeline_run", "at"],
+      "properties": {
+        "from_version": { "type": "string", "minLength": 1 },
+        "to_version": { "type": "string", "minLength": 1 },
+        "pipeline_run": { "type": "string", "minLength": 1 },
+        "at": { "type": "string", "minLength": 1 }
+      }
+    },
+    "skills_used": { "type": "array", "items": { "type": "string" } },
+    "evidence_dir": { "type": "string", "minLength": 1 },
+    "steps_executed": { "type": "array", "items": { "type": "string" } },
+    "test_cases": { "type": "array", "items": { "$ref": "#/$defs/testCase" } },
+    "findings": { "type": "array", "items": { "type": "object" } },
+    "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+    "coverage": { "$ref": "#/$defs/coverage" },
+    "reported_to_jira": { "type": "boolean" },
+    "shadow": { "type": "boolean" },
+    "interactive": { "type": "boolean" },
+    "learnings": {
+      "type": "object",
+      "required": ["captured", "none_because"],
+      "properties": {
+        "captured": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "none_because": { "type": ["string", "null"] }
+      }
+    },
+    "blocked_reason": { "type": "string", "minLength": 1 },
+    "no_test_reason": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "verdict": { "const": "NO_TEST" } } },
+      "then": { "required": ["no_test_reason"] },
+      "else": {
+        "required": ["test_type", "mode", "environment", "deploy", "skills_used", "reported_to_jira", "shadow"]
+      }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "BLOCKED" } } },
+      "then": { "required": ["blocked_reason"] }
+    },
+    {
+      "if": { "properties": { "verdict": { "const": "NEEDS_REVIEW" } } },
+      "then": { "properties": { "interactive": { "const": true } }, "required": ["interactive"] }
+    }
+  ],
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "description": "Case/AC-bound or channel-declared evidence requires id, kind, size_bytes and covers. Run-level exploratory proof without case/AC coverage may use the legacy path+sha256 shape.",
+      "required": ["path", "sha256"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+        "kind": { "enum": ["screenshot", "log", "trace", "video", "report", "contract", "other"] },
+        "path": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "covers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "description": "Declared coverage IDs proved by this exact artifact; PASS covers every required case/AC."
+        }
+      }
+    },
+    "testCase": {
+      "type": "object",
+      "required": ["id", "outcome", "attempts"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "outcome": { "enum": ["pass", "fail", "flaky", "skip", "fixme", "not_run"] },
+        "attempts": { "type": "integer", "minimum": 0, "description": "Started attempts, including the first; skip/not_run are zero, fixme may be zero or started." },
+        "attempt_results": {
+          "type": "array",
+          "items": { "enum": ["pass", "fail"] },
+          "description": "One entry per started attempt; length equals attempts and must agree with outcome."
+        },
+        "required": { "type": "boolean", "default": true },
+        "spec": { "type": "string" },
+        "assertion": { "type": "string" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": ["required", "executed"],
+      "properties": {
+        "required": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "executed": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

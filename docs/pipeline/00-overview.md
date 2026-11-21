@@ -63,6 +63,22 @@ A real, explainable observation — six causes, in order of importance:
 With these four rules, hybrid quality sits close to MCP quality. Without them,
 measurably below.
 
+### Semantic handoff and candidate-only healing
+
+MCP recon/exploration records a semantic journal through `action-journal.py`; raw
+refs, snapshots/logs and secrets stay out. `qa-manager` owns the reproducible seed
+(start state, not RNG), journal validation/finalization, ready-case selection and
+`automation-handoff.json` before `test-automator` writes an exploration-derived
+spec. The AC oracle, red check and original verdict survive unchanged
+(`action-journal.md`).
+
+Optional healing starts only after `failure-analyst` classifies `test-brittle` +
+`locator_resolution`. It produces locator-only candidates, never auto-applies even
+a high-score candidate, and never changes the original verdict. Human selection,
+isolated green + failing negative control, a fresh read-only analyst review without
+another JQL, and final human application are separate steps (`healing.md`). Headless
+brittle/outdated tests remain FAIL; interactive ones are NEEDS_REVIEW.
+
 ## Orchestration and readiness
 
 `/test-ticket` and `/retest-bug` load in the main orchestrator. It runs preflight,
@@ -93,9 +109,9 @@ Phase 1 Intake       → intake.json + readiness.json   ticket, ACs, testability
 Dispatch handoff     → context-capsule.json           sealed effective context, created once
 Phase 2 Recon        → recon.json       probe script and/or MCP session — REAL selectors
 Phase 3 Planning     → testplan.md      cases from ACs, gaps named → approval (per config)
-Phase 4 Execution    → run.json + evidence   mode-dependent: MCP live or spec via CLI
+Phase 4 Execution    → run.json (v2) + evidence + optional action journal
 Phase 5 Verification → verdict.json     red check, observation pass, failure classification
-Phase 6 Reporting    → execution_summary.json, JIRA report, learnings
+Phase 6 Reporting    → execution_summary.json (v2), JIRA report, learnings
 ```
 
 Phases exchange data through **files in the run dir**
@@ -103,7 +119,9 @@ Phases exchange data through **files in the run dir**
 context: the flow survives agent, model and harness switches, and an aborted
 run resumes at its last phase. `execution_summary.json` stays the artifact the
 Stop hook enforces (`.claude/rules/core/evidence-policy.md`); the contract
-files feed it. The capsule is immutable: a build/readiness or effective-context
+files feed it. Both new JSON records validate as schema v2 with matching run/path
+binding, timestamps, exact coverage, normalized attempts/outcomes and hashed
+artifacts; malformed evidence fails closed (`04-execution.md`). The capsule is immutable: a build/readiness or effective-context
 change goes back to the main orchestrator for readiness re-verification and a new
 revision. Revision 1 is `context-capsule.json`; revision N>1 uses
 `context-capsule.vN.json` and preserves every predecessor. Recipients return

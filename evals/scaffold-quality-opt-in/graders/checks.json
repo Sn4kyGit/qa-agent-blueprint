@@ -1,0 +1,20 @@
+{
+  "checks": [
+    {"type":"created","path":"suite/package.json"},
+    {"type":"created","path":"suite/playwright.config.ts"},
+    {"type":"created","path":"suite/tests/smoke.spec.ts"},
+    {"type":"created","path":"suite/tests/fixtures/observation.ts"},
+    {"type":"created","path":"suite/probes/recon.spec.ts"},
+    {"type":"created","path":"suite/quality/scan.mjs"},
+    {"type":"created","path":"suite/.qa-test-quality.json"},
+    {"type":"created","path":"suite/tests/seed.spec.ts"},
+    {"type":"created","path":"suite/tests/fixtures/test.ts"},
+    {"type":"created","path":"suite/tests/fixtures/auth.ts"},
+    {"type":"created","path":"suite/tests/fixtures/data.ts"},
+    {"type":"created","path":"suite/tests/fixtures/api.ts"},
+    {"type":"text_contains","path":"suite/playwright.config.ts","value":"STAGE_BASE_URL"},
+    {"type":"text_contains","path":"suite/tests/smoke.spec.ts","value":"AC1"},
+    {"type":"created","path":"suite/PROJECT-assets-update.md"},
+    {"type":"unchanged","path":"projects/ACME/PROJECT.md"}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "checks": [
+    {"type":"created","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json"},
+    {"type":"summary_contract","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json"},
+    {"type":"artifact_hashes","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json","pointer":"/verdict","value":"PASS"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json","pointer":"/test_cases/0/outcome","value":"pass"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json","pointer":"/test_cases/0/attempts","value":1},
+    {"type":"json_equals","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json","pointer":"/coverage/required","value":["TC-SMOKE-001"]},
+    {"type":"json_equals","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json","pointer":"/coverage/executed","value":["TC-SMOKE-001"]},
+    {"type":"json_equals","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json","pointer":"/artifacts/0/path","value":"logs/playwright.log"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-803/20261115-120000/execution_summary.json","pointer":"/findings","value":[]},
+    {"type":"unchanged","path":"evidence/ACME/ACME-803/20261115-120000/logs/playwright.log"}
+  ]
+}

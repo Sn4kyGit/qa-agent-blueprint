@@ -31,6 +31,15 @@
         ]
       },
       {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude/hooks/pre-test-code-scan.sh"
+          }
+        ]
+      },
+      {
         "matcher": "mcp__.*atlassian__(jira_)?(create|edit|add|transition|update|delete|executeWrite|executeDestructive).*",
         "hooks": [
           {

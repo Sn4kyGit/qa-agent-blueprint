@@ -110,3 +110,55 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Agentic Playwright (MIT)
+
+Selected material originates from
+[idavidov13/agentic-playwright](https://github.com/idavidov13/agentic-playwright),
+vendored at upstream commit `7d4ec4f3c410b8a733fdd0056ca268444354631a` under
+the MIT license below — thank you, Ivan and contributors. The upstream notice
+is preserved here and in the root `NOTICE`.
+
+Adaptations are integrated into the blueprint rather than presented as an
+unchanged upstream distribution. The concrete adapted surfaces and their
+original upstream sources are:
+
+| Blueprint path(s) | Original upstream source | Adaptation |
+|---|---|---|
+| `.claude/scripts/qa-test-code-scan.mjs`, `.claude/hooks/pre-test-code-scan.sh` | `.claude/scripts/enforce_constitution.py`, `.claude/settings.json` | The Constitution enforcement and write-time scanning pattern was rewritten as a blueprint quality scanner and `PreToolUse` hook, with blueprint rule IDs, configuration and evidence behavior. |
+| `.claude/skills/scaffold-suite/templates/quality/` (including `.qa-test-quality.json`, `scan.mjs`, `tests/fixtures/{test,api,auth,data}.ts`, `tests/pages/EntryPage.ts`, `tests/support/env.ts`, and the seed/smoke specs) | upstream `fixtures/`, `pages/`, `config/`, `playwright.config.ts`, and `packages/create-agentic-playwright/` scaffold patterns | Fixture composition, page/environment separation and quality scanning were adapted into an opt-in blueprint quality pack; no upstream scaffold tree is copied wholesale. |
+| `.claude/scripts/action-journal.py`, `docs/pipeline/action-journal.md`, `.claude/schemas/action-journal-*.schema.json`, `.claude/schemas/automation-handoff.schema.json`, `.claude/skills/scaffold-suite/templates/tests/fixtures/action-journal.ts`, `action-journal.wdio.cjs` | upstream `.claude/skills/ai-native-workflow/`, `.claude/skills/playwright-cli/references/test-generation.md`, and fixture/workflow patterns | Blueprint-specific journal, schema and documentation implementations preserve seed, intent, positive oracles, red checks and original verdicts for exploration-to-automation handoff. These are adapted workflow implementations, not vendored upstream files. |
+| `.claude/scripts/healing-candidate.py`, `docs/pipeline/healing.md`, `.claude/schemas/healing-*.schema.json` | upstream `.claude/skills/debugging/`, `.claude/skills/selectors/references/feedback-selectors.md`, and `.claude/skills/ai-native-workflow/` | Candidate-only locator healing, intent-fidelity review and negative-control verification were implemented for the blueprint without automatic application. These are adapted workflow implementations, not vendored upstream files. |
+| `evals/lib/artifact_checks.py`, `evals/lib/runner_policy.py`, `evals/*/graders/checks.json` | upstream `.claude/skills/ai-native-workflow/evals/evals.json` and its deterministic eval structure | Declarative JSON-pointer checks, workspace before/after comparisons and explicit result grading were adapted for the blueprint's behavioral eval runner and fixtures. |
+
+Related API-contract provenance, immutable snapshot drift review, explicit
+unavailable-contract behavior, schema-v2 run/result normalization, not-run and
+retry-pass semantics, run-relative artifact hashes and evidence summaries also
+adapt upstream workflow ideas to the blueprint's contracts.
+
+All of these adaptations apply the blueprint's routing, stage-only execution,
+shadow reporting, evidence, secret-handling and dual-harness contracts.
+
+```
+MIT License
+
+Copyright (c) 2026 Ivan Davidov and Agentic Playwright contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

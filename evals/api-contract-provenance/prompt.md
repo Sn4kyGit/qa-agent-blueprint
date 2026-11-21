@@ -1,0 +1,3 @@
+Load `api-testing`. Author an API contract check for ACME-701 from the committed OpenAPI snapshot at `contracts/orders.openapi.json`; do not call a live API. Create `output/contract-evidence.json` with top-level fields `source_document: "contracts/orders.openapi.json"`, `revision: "contract-rev-7"`, `captured_at`, `byte_length`, and `sha256`; byte length and SHA-256 must be computed from the exact source bytes. Create `output/orders-contract.spec.ts` asserting the snapshot's required response shape and content type.
+
+The evidence must describe the committed bytes, not a response you invent. Do not regenerate the snapshot from live behavior or claim an executed PASS.

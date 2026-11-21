@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Intentional Fixture Failure</title></head>
+<body>
+  <main>
+    <h1>Intentional Fixture Failure</h1>
+    <p>The button deliberately produces a deterministic API and console failure.</p>
+    <button id="trigger-failure" type="button">Trigger failure</button>
+    <p id="failure-result" role="alert" aria-live="assertive"></p>
+    <script>
+      document.querySelector('#trigger-failure').addEventListener('click', async () => {
+        const response = await fetch('/api/fail');
+        const body = await response.json();
+        console.error('QA_EVAL_CONSOLE_ERROR', body.code);
+        document.querySelector('#failure-result').textContent = 'QA_EVAL_500: intentional fixture failure';
+      });
+    </script>
+  </main>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-agent-blueprint.local/schemas/healing-review.schema.json",
+  "title": "Healing candidate review budget and immutable origin",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "origin", "candidates", "selected_candidate_id", "cli_runs_used", "original_verdict"],
+  "properties": {
+    "schema_version": {"const": "qa-healing-review/v1"},
+    "origin": {"type": "object"},
+    "candidates": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "status"],
+        "properties": {
+          "candidate_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"},
+          "status": {"enum": ["draft", "rejected", "ready_for_human"]}
+        }
+      }
+    },
+    "selected_candidate_id": {
+      "anyOf": [{"type": "string"}, {"type": "null"}]
+    },
+    "cli_runs_used": {"type": "integer", "minimum": 0, "maximum": 2},
+    "original_verdict": {"enum": ["FAIL", "BLOCKED", "NEEDS_REVIEW"]}
+  }
+}

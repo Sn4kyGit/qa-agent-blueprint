@@ -9,12 +9,15 @@
 # MCP/CLI activity) but no execution_summary.json was written recently, block
 # the stop and ask for it instead of letting the session end silently short.
 #
-# Heuristic by design — this is a scaffold safety net, not a formal verifier.
-# Projects with stricter needs can tighten the signals below.
+# Activity detection is heuristic; every fresh summary is then checked by the
+# shared schema-v2 validator, which fails closed on malformed or invalid evidence.
 #
 set -uo pipefail
 
 INPUT="$(cat)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VALIDATOR="$SCRIPT_DIR/../scripts/validate-evidence.py"
+[ -f "$VALIDATOR" ] || VALIDATOR="$SCRIPT_DIR/../../scripts/validate-evidence.py"
 
 get_field() {
   local field="$1"
@@ -259,39 +262,14 @@ fresh_summaries() {
   find "$CWD/evidence" -name execution_summary.json -mmin -120 2>/dev/null
 }
 
-# Second obligation, same firmness as the first: every fresh summary must DECLARE
-# what was learned (.claude/rules/core/evidence-policy.md → "learnings"). The hook
-# checks only that the key exists and is filled on exactly one side — whether
-# something was genuinely surprising is not machine-decidable, but whether the
-# question was asked is. Prints the offending file(s), empty if all are fine.
-summaries_missing_learnings() {
-  command -v python3 >/dev/null 2>&1 || return 0
+invalid_summaries() {
   fresh_summaries | while IFS= read -r f; do
     [ -n "$f" ] || continue
-    python3 - "$f" <<'PY'
-import json, sys
-path = sys.argv[1]
-try:
-    with open(path) as fh:
-        d = json.load(fh)
-except Exception:
-    sys.exit(0)
-# M6 (0.19.5): verdict enum validation — a fabricated summary with verdict
-# "super-green" or empty should not pass the gate.
-VALID_VERDICTS = {"PASS", "FAIL", "BLOCKED", "NEEDS_REVIEW", "NO_TEST"}
-v = d.get("verdict", "")
-if v and v not in VALID_VERDICTS:
-    print(path)
-    sys.exit(0)
-l = d.get("learnings")
-if not isinstance(l, dict):
-    print(path)
-    sys.exit(0)
-captured = l.get("captured") or []
-none_because = (l.get("none_because") or "").strip() if isinstance(l.get("none_because"), str) else ""
-if not captured and not none_because:
-    print(path)
-PY
+    if ! command -v python3 >/dev/null 2>&1 || [ ! -f "$VALIDATOR" ]; then
+      printf '%s\n' "$f"
+    elif ! python3 "$VALIDATOR" "$f" --qa-home "$CWD" --json >/dev/null 2>&1; then
+      printf '%s\n' "$f"
+    fi
   done
 }
 
@@ -356,31 +334,20 @@ EOF
   exit 2
 fi
 
-# Evidence exists — now the learning obligation, enforced with the same firmness.
-MISSING="$(summaries_missing_learnings)"
-if [ -n "$MISSING" ]; then
+INVALID="$(invalid_summaries)"
+if [ -n "$INVALID" ]; then
   {
-    echo "QA_LEARNINGS_MISSING: this run produced evidence, but the summary"
-    echo "does not declare what was learned. Affected file(s):"
-    printf '%s\n' "$MISSING" | sed 's/^/  /'
-    cat <<'EOF'
+    echo "QA_EVIDENCE_INVALID: fresh evidence failed schema-v2 or semantic validation:"
+    printf '%s\n' "$INVALID" | sed 's/^/  /'
+    cat <<EOF
 
-Add a "learnings" object to each one (.claude/rules/core/evidence-policy.md):
+Validate and inspect every error with:
+  python3 "$VALIDATOR" <execution_summary.json> --qa-home "$CWD"
 
-  "learnings": {
-    "captured": ["one line per entry written to memory/learnings/_inbox.md"],
-    "none_because": null
-  }
-
-or, for a genuinely uneventful run, the other way round:
-
-  "learnings": { "captured": [], "none_because": "clean run, no surprises" }
-
-Anything a human had to tell you during this run — which product a ticket belongs
-to, a selector that needed a workaround, a corrected report format — belongs in the
-inbox now, so nobody has to explain it a second time. A product-routing correction
-additionally follows .claude/rules/core/product-layer.md → "Routing learns from
-being corrected".
+New evidence requires schema_version=2, exactly one learning declaration,
+ticket/path binding, normalized case outcomes and coverage, and valid hashed
+artifacts. Historical unversioned summaries remain readable by report tools,
+but they never satisfy a new evidence gate.
 EOF
     } >&2
     exit 2

@@ -56,6 +56,12 @@ paths are producers of the file; without the MCP path writing it, every
 MCP-reconnoitred area would trip the "no `recon.json` exists" escalation
 trigger (00-overview) forever.
 
+For an interaction intended for automation, the MCP path also appends semantic
+actions to the run's action journal (`action-journal.md`): stable seed state,
+role/label/test-ID locators, AC/TC/intent/assertion hashes, and original runner
+outcomes. Browser snapshot references are session-local and must never enter the
+journal. Probe-only recon asserts no behavior and therefore creates no handoff.
+
 ## Output: `recon.json` in the run dir
 
 **Producers:** `merge-recon.mjs` on the probe path, the `test-executor`

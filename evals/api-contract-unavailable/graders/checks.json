@@ -1,0 +1,12 @@
+{
+  "checks": [
+    {"type":"created","path":"evidence/ACME/ACME-702/20261115-120000/execution_summary.json"},
+    {"type":"summary_contract","path":"evidence/ACME/ACME-702/20261115-120000/execution_summary.json"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-702/20261115-120000/execution_summary.json","pointer":"/verdict","value":"BLOCKED"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-702/20261115-120000/execution_summary.json","pointer":"/test_cases/0/id","value":"TC-API-002"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-702/20261115-120000/execution_summary.json","pointer":"/test_cases/0/outcome","value":"not_run"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-702/20261115-120000/execution_summary.json","pointer":"/test_cases/0/attempts","value":0},
+    {"type":"json_equals","path":"evidence/ACME/ACME-702/20261115-120000/execution_summary.json","pointer":"/coverage/executed","value":[]},
+    {"type":"not_created","path":"output/orders-contract.spec.ts"}
+  ]
+}

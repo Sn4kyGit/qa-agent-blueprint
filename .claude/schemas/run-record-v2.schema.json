@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-record-v2.schema.json",
+  "title": "Normalized QA run record v2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "ticket",
+    "project",
+    "timestamp",
+    "evidence_dir",
+    "source",
+    "test_cases",
+    "coverage",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "ticket": { "type": "string", "pattern": "^[A-Z][A-Z0-9]+-[0-9]+$" },
+    "project": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "evidence_dir": { "type": "string", "minLength": 1 },
+    "channel": { "enum": ["browser", "api", "mixed"] },
+    "source": {
+      "type": "object",
+      "required": ["format", "path", "sha256"],
+      "properties": {
+        "format": { "enum": ["junit", "playwright"] },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "test_cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "outcome", "attempts"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "outcome": { "enum": ["pass", "fail", "flaky", "skip", "fixme", "not_run"] },
+          "attempts": { "type": "integer", "minimum": 0 },
+          "attempt_results": { "type": "array", "items": { "enum": ["pass", "fail"] } },
+          "required": { "type": "boolean", "default": true },
+          "spec": { "type": "string" },
+          "assertion": { "type": "string" }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": ["required", "executed"],
+      "properties": {
+        "required": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "executed": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+          "kind": { "enum": ["screenshot", "log", "trace", "video", "report", "contract", "other"] },
+          "path": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "size_bytes": { "type": "integer", "minimum": 0 },
+          "covers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } }
+        }
+      }
+    },
+    "duration_s": { "type": "number", "minimum": 0 }
+  }
+}

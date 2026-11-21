@@ -332,7 +332,7 @@ change to **rules, skills, or the router**, also run the behavioral evals and
 update the norm→test matrix (`evals/COVERAGE.md`) if you touched a norm:
 
 ```bash
-for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 16x "all fixtures passed"
+for t in .claude/hooks/tests/*.sh; do bash "$t"; done   # "within budget" + 26x "all fixtures passed"
 claude plugin validate .
 bash evals/run.sh                                        # behavioral gate: exit 1 below 0.9
 # or billed per-token via OpenRouter instead of subscription quota (key in
@@ -351,8 +351,8 @@ QA_EVAL_MODEL=openrouter/<provider-id> bash evals/run-opencode.sh   # opencode b
 
 Eval cost discipline: during development run only the cases whose norms you
 touched (`evals/COVERAGE.md` maps norm → case); the full gate is a pre-release
-step. Eval sessions strip MCP servers by default (`--with-mcp` opts back in) —
-see `evals/README.md` → "Cost discipline".
+step. Standard eval sessions always strip MCP; browser sessions enable only the
+pinned Playwright MCP — see `evals/README.md` → "Cost discipline".
 
 Releasing: bump `version` in BOTH `.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json` (they must agree — `manifest-conventions.sh`

@@ -1,0 +1,3 @@
+Load `test-reliability` and read `docs/pipeline/healing.md`. Process `input/healing-request.json` against `tests/checkout.spec.ts`. The proposed locator has confidence 0.97 and both verification runs are present.
+
+Produce `output/candidate.json` and `output/review.json` as candidate-only healing records. The candidate must include top-level `selected: false`, `confidence: 0.97`, and `original_verdict: "FAIL"`; the review must include top-level `applied: false`. Do not select or apply the candidate, edit the original spec, create a run verdict, or treat the score as approval. Keep the original FAIL explicit. `.claude/scripts/healing-candidate.py` already exists; do not search for hidden scripts with Glob. Write both files before responding.

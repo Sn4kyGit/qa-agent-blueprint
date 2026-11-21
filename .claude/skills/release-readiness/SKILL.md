@@ -6,12 +6,11 @@ description: >-
   verification. Use when: release ready, go/no-go, smoke test, release checklist,
   rollback plan, staged rollout, canary deploy. Not for rollout-time techniques
   (flags, dark launch), continuous synthetic probes, or prod-telemetry test design.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "2.0"
   category: process
-license: Apache-2.0
 ---
 
 <objective>

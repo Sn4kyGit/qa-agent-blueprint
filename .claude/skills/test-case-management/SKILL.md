@@ -7,12 +7,11 @@ description: >-
   graduation. Use when: write a test case, manual test case, TestRail/Xray/Zephyr/
   Qase case, import CSV, lint these steps, traceability report. Not for generating
   automated test code or sprint-level test selection.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "1.0"
   category: process
-license: Apache-2.0
 ---
 
 <objective>

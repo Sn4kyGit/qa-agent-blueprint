@@ -285,6 +285,9 @@ claude plugin update --scope project qa-agent-blueprint
 | Rule | How it's enforced |
 |---|---|
 | No verdict without evidence | Stop hook blocks session end |
+| Evidence v2 integrity | Shared validator checks outcomes, coverage, paths, hashes and artifacts before Stop/JIRA |
+| Generated test quality | One scanner backs Claude/opencode writes, staged scans and CI in opted-in suites |
+| Healing stays reviewable | Candidates need green + negative control; only humans apply them |
 | Every run declares learnings | Stop hook checks the declaration |
 | Secrets never enter context | PreToolUse guard blocks reads |
 | Shadow mode (no JIRA writes) | Guard blocks writes by default |
@@ -378,7 +381,7 @@ never values.
 | [docs/architecture.md](docs/architecture.md) | Five layers, token budgets |
 | [docs/pilot-briefing.md](docs/pilot-briefing.md) | Read before the first real onboarding |
 | [docs/rules/](docs/rules/) | Detailed rules, read on demand |
-| [evals/COVERAGE.md](evals/COVERAGE.md) | Norm → test matrix (46 cases) |
+| [evals/COVERAGE.md](evals/COVERAGE.md) | Norm → test matrix (60 standard + 3 real-browser cases) |
 
 ---
 
@@ -407,5 +410,7 @@ The best way to help right now is to **use it and tell us what happens**.
 
 ## License
 
-[Apache 2.0](LICENSE). Methodology draws on Google testing standards, OWASP Top 10,
-and blameless SRE retrospective practice.
+[Apache 2.0](LICENSE), with third-party copyright and permission notices in
+[NOTICE](NOTICE) and [.claude/skills/THIRD_PARTY_NOTICES.md](.claude/skills/THIRD_PARTY_NOTICES.md).
+Methodology draws on Google testing standards, OWASP Top 10, and blameless SRE
+retrospective practice.

@@ -15,7 +15,10 @@ The run's own artifacts (`execution_summary.json`, `logs/console.log`,
 linked MR's changed **paths**), the effective project/product file, the three
 `memory/learnings/*.md` files, `git log` on the declared **test** repo, and — only
 when `PROJECT.md` → Test assets declares one — a bounded `git log`/`git diff` on the
-app repo.
+app repo. For an instrumented run, the semantic action journal supplies bounded
+actions, seed state, locators, contract hashes, and original outcomes; MCP refs
+and snapshots are not journal evidence. A candidate verification artifact is
+also admissible, but its green result never changes the original runner verdict.
 
 ---
 
@@ -98,6 +101,13 @@ framework bump or component-library ticket.
 **Rules out:** the failed assertion is a value assertion; the element is genuinely
 absent from the page — a removed feature is `test-outdated` or `product-defect`
 depending on whether a ticket documents the removal.
+
+A locator-resolution class may produce a **candidate only** through
+`healing-candidate.py`. Eligibility, original spec/build/capsule/intent/assertion
+hashes, fixed budgets, and one locator-only hunk are mandatory. Confidence ranks
+candidates but never applies them. Ready requires isolated green plus a failing
+negative control at the same original assertion; the result remains
+`ready_for_human`, not PASS, and the original verdict stays unchanged.
 
 ## 5. `product-defect` — a current contract is violated
 

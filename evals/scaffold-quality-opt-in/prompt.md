@@ -1,0 +1,3 @@
+Load `scaffold-suite`. Scaffold ACME's new Playwright suite at `suite/` using the explicit `--quality-pack` option. The project file is the routing and TC-category source. ACME-501 has acceptance criterion AC1: the entry page loads.
+
+Create the actual base and strict quality-pack files, substitute real values, keep `STAGE_BASE_URL` external, and write the exact proposed Test assets block to `suite/PROJECT-assets-update.md` for manual application. Do not edit the human-owned `projects/ACME/PROJECT.md`. This is an offline authoring exercise: do not run npm, download browsers, contact a stage, or claim a proof run happened. Leave seed operations disabled and do not invent credentials or endpoints.

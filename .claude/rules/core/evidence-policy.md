@@ -49,15 +49,23 @@ evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/
 
 ## `execution_summary.json` — required fields
 
-Required: `ticket`, `project`, `timestamp`, `verdict`
+New evidence is **schema v2 only**: `"schema_version": 2`. Historical unversioned
+summaries remain readable by reporting/history tools but never satisfy a fresh
+evidence gate. Schemas/validator: `.claude/schemas/*-v2.schema.json` and
+`.claude/scripts/validate-evidence.py`.
+
+Required: `schema_version`, `ticket`, `project`, `timestamp`, `verdict`
 (`PASS|FAIL|BLOCKED|NEEDS_REVIEW|NO_TEST`), `test_type`
 (`exploratory|regression|mixed`), `mode` (`mcp-only|hybrid|cli-first`),
 `environment{name,version_or_build,commit}`,
 `deploy{from_version,to_version,pipeline_run,at}`, `steps_executed[]`,
-`test_cases[{id,outcome,attempts,spec,assertion}]`,
+`test_cases[{id,outcome,attempts,required,spec,assertion}]`,
 `findings[{severity,summary,ticket_filed,test_case,cause_class}]`,
+`artifacts[{path,sha256}]`, `coverage{required[],executed[]}`,
 `evidence_dir`, `reported_to_jira`, `shadow`,
 `learnings{captured[],none_because}`, `skills_used[]`.
+Except `NO_TEST`, v2 requires all environment/deploy/skills fields; unavailable
+values are explicit strings, never invented or null.
 
 Conditional: `product`, `scope`, `product_routed_by` — only with `## Products`;
 `blocked_reason` — BLOCKED only; `no_test_reason` — NO_TEST only.
@@ -65,6 +73,32 @@ Conditional: `product`, `scope`, `product_routed_by` — only with `## Products`
 `findings` is empty on a clean PASS. `verdict: BLOCKED` still requires a summary of
 why (env down, stage not deployed, no test data, routing
 unresolved) in place of findings.
+
+## Outcomes, attempts, artifacts and verdicts
+
+Case outcomes are exactly `pass | fail | flaky | skip | fixme | not_run`.
+`attempts` counts real executions; `skip`/`fixme`/`not_run` have zero attempts and
+are absent from executed coverage. A retry pass is `flaky` (`attempts >= 2`); a
+clean pass has one. `required` defaults to true; coverage exactly mirrors the
+case list. Normalize JUnit or
+Playwright output with `.claude/scripts/normalize-test-results.py` instead of
+inventing case results.
+
+Artifacts are existing run-relative files with SHA-256 of their exact bytes;
+`evidence_dir`, project, ticket and run_id bind to the actual path. Malformed,
+unversioned, unbound, hash-mismatched or inconsistent evidence fails closed with
+`QA_EVIDENCE_INVALID`. Details: `docs/rules/core/evidence-policy.md`.
+
+| Evidence | Verdict |
+|---|---|
+| Every required case executed with clean `pass`, no failed/flaky case or finding, required coverage complete, valid artifact present | `PASS` |
+| Definitive failed case or product finding | `FAIL` |
+| Required `skip`/`fixme`/`not_run`, missing required coverage, environment/readiness prevents a result, and no definitive failure | `BLOCKED` with `blocked_reason` |
+| Human must classify an outdated/brittle test; interactive run explicitly marked `interactive: true` | `NEEDS_REVIEW` |
+| Tools ran but no test completed; `no_test_reason` present and no executed cases | `NO_TEST` |
+
+`NO_TEST` forbids **all JIRA writes**. `NEEDS_REVIEW` is interactive-only and
+forbids transitions and bug creation; a comment carrying the proposal is allowed.
 
 **Product fields** (`.claude/rules/core/product-layer.md`): `product`, `scope` and
 `product_routed_by` appear only when the project has a `## Products` section.
@@ -90,7 +124,7 @@ transition (worst verdict wins: `FAIL > BLOCKED > NEEDS_REVIEW > PASS`).
 
 ## Failure fields — conditional, like the product fields
 
-`deploy`, `test_cases[]`, `blocked_reason`, `no_test_reason` and
+`test_cases[]`, `blocked_reason`, `no_test_reason` and
 `failure_analysis` are written only
 when they have a value — never as `null`. `test_cases[]` needs a runner reporting per
 case; an exploratory run keeps `steps_executed` alone. `failure_analysis` is written
@@ -119,8 +153,9 @@ The "explain once, never again" promise (`.claude/skills/retro-learn/SKILL.md`) 
   `"clean run, no surprises"`, `"everything hit was already in the product's
   learnings"`.
 
-Exactly one of the two is filled. The evidence gate checks that the **key exists**, not
-what it says.
+Exactly one of the two is filled (XOR): non-empty `captured` with null/empty
+`none_because`, or empty `captured` with a non-empty reason. Both empty and both
+filled are invalid evidence.
 
 An unrouted product, a selector workaround, an odd stage, a corrected report
 format — all captures; routing corrections feed the registry in

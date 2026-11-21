@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "writeGate": true,
+  "strict": true,
+  "framework": "playwright",
+  "rules": {
+    "no-dotenv": "error",
+    "fixed-sleep": "error",
+    "hardcoded-base-url": "error",
+    "xpath-selector": "error",
+    "brittle-selector": "error",
+    "observation-fixture-import": "error",
+    "missing-ac-title": "error",
+    "missing-tc-title": "error",
+    "disabled-test": "error",
+    "retry-override": "error"
+  }
+}

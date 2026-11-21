@@ -6,12 +6,11 @@ description: >-
   pagination, performance assertions. Use when: API test, endpoint test, REST test,
   GraphQL test, schema validation, Postman replacement. Not for Pact contract
   verification (Pact) or browser UI flows.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "2.0"
   category: automation
-license: Apache-2.0
 ---
 
 <objective>
@@ -31,7 +30,7 @@ Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — if
 ## Core Principles
 
 1. **Test contracts, not implementations.** Assert on response shape, status codes, and headers — not on internal logic or database state.
-2. **Schema validation catches drift before it breaks consumers.** A failing schema test means you caught a breaking change before your frontend did.
+2. **Schema validation catches drift before it breaks consumers.** A failing schema test means you caught a breaking change before your frontend did. Contract evidence names the exact committed snapshot bytes (byte length + SHA-256) and provenance (source document/URL, revision or commit, capture time). No contract evidence means no contract PASS: drift is FAIL; an unavailable required contract is BLOCKED with its cases `not_run`. Never regenerate or auto-update a contract from live behavior.
 3. **Auth flows are tests too — don't just hardcode tokens.** Test login, refresh, expiration, and permission boundaries.
 4. **Response time is a testable assertion.** Performance regressions caught in CI are cheaper than production incidents.
 
@@ -147,7 +146,7 @@ PUT and DELETE should be idempotent. Test that calling them twice produces the s
 - Auth flow tested as its own describe block: successful login, invalid credentials, expired token, and permission boundary (403).
 - Schema validation assertions on response shape using Zod 4 or AJV — not just `toHaveProperty` spot-checks.
 - Header assertions exist for at least `content-type` and any cache/rate-limit headers the API sets, asserted unconditionally.
-- Contract tests in place for any endpoint consumed by a different team or service (a shared schema file is the baseline; consumer-driven Pact verification is not vendored in this blueprint — propose it as tooling when a cross-team API needs it).
+- Contract tests in place for any endpoint consumed by a different team or service (a shared schema file is the baseline; consumer-driven Pact verification is not vendored in this blueprint — propose it as tooling when a cross-team API needs it). Every contract assertion records the exact snapshot byte length, SHA-256 and source provenance in `execution_summary.json`; missing required contract = BLOCKED/`not_run`, drift = FAIL, and snapshot update flags are never run against live output.
 - Genuine third-party calls (payment gateways, external SaaS) are mocked or virtualized; the API and its database run for real.
 - CI job for the suite exits 0 (green) against the test environment.
 

@@ -15,7 +15,7 @@ import { existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { spawnSync } from "node:child_process"
-import { orientation, qaBlueprint, resolveQaHome } from "../plugins/qa-blueprint.ts"
+import qaBlueprint from "../plugins/qa-blueprint.ts"
 import { fakeCtx } from "./fixtures/payloads.ts"
 
 let dir: string
@@ -46,6 +46,15 @@ async function init(target = dir) {
 }
 
 describe("bootstrap (opencode)", () => {
+  test("exposes only the default export to the opencode plugin loader", async () => {
+    const module = await import("../plugins/qa-blueprint.ts")
+    expect(Object.keys(module)).toEqual(["default"])
+    expect(typeof qaBlueprint).toBe("function")
+    expect(typeof qaBlueprint.orientation).toBe("function")
+    expect(typeof qaBlueprint.resolveQaHome).toBe("function")
+    expect(typeof qaBlueprint.scanMcpServers).toBe("function")
+  })
+
   test("scaffolds memory/, evidence/, projects/ into an empty consumer", async () => {
     await init()
     expect(existsSync(join(dir, "memory", "INDEX.md"))).toBe(true)
@@ -119,7 +128,7 @@ describe("bootstrap (opencode)", () => {
 describe("orientation (opencode)", () => {
   test("output shape: header, project list, router pointers, browser line", async () => {
     await init()
-    const text = await orientation(dir)
+    const text = await qaBlueprint.orientation(dir)
     expect(text).toContain("QA Agent Blueprint — session start")
     expect(text).toContain("(none yet — run /onboard-project)")
     expect(text).toContain("Read memory/INDEX.md before anything else")
@@ -131,7 +140,7 @@ describe("orientation (opencode)", () => {
   test("warns non-destructively when an existing browser config lacks console warning", async () => {
     await writeFile(join(dir, ".playwright-mcp.config.json"), '{"browser":{"launchOptions":{"headless":false}}}')
     const before = await readFile(join(dir, ".playwright-mcp.config.json"), "utf8")
-    const text = await orientation(dir)
+    const text = await qaBlueprint.orientation(dir)
     expect(text).toContain('Set `"console": { "level": "warning" }` manually')
     expect(await readFile(join(dir, ".playwright-mcp.config.json"), "utf8")).toBe(before)
   })
@@ -140,7 +149,7 @@ describe("orientation (opencode)", () => {
     await mkdir(join(dir, "projects", "SHOP", "products", "STOREFRONT"), { recursive: true })
     await mkdir(join(dir, "projects", "SHOP", "products", "ADMIN"), { recursive: true })
     await mkdir(join(dir, "projects", "_template"), { recursive: true })
-    const text = await orientation(dir)
+    const text = await qaBlueprint.orientation(dir)
     expect(text).toContain("- SHOP (products: STOREFRONT, ADMIN)")
     expect(text).not.toContain("_template")
     // a real project exists → no first-run MCP lecture
@@ -150,15 +159,15 @@ describe("orientation (opencode)", () => {
   test("counts real ungroomed learnings and ignores the legacy dated example", async () => {
     await init() // seeds memory/ from the blueprint
     await writeFile(join(dir, "memory", "learnings", "_inbox.md"), "# Inbox\n\n## 2026-09-05 — SHOP-1234\n")
-    expect(await orientation(dir)).not.toContain("ungroomed learnings")
+    expect(await qaBlueprint.orientation(dir)).not.toContain("ungroomed learnings")
     const recent = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10)
     await writeFile(join(dir, "memory", "learnings", "_inbox.md"), `# Inbox\n\n## ${recent} — one real entry\n`)
-    expect(await orientation(dir)).toContain("1 ungroomed learnings")
+    expect(await qaBlueprint.orientation(dir)).toContain("1 ungroomed learnings")
     await writeFile(
       join(dir, "memory", "learnings", "_inbox.md"),
       `# Inbox\n\n## ${recent} — one\n\n## ${recent} — two\n`,
     )
-    const hint = await orientation(dir)
+    const hint = await qaBlueprint.orientation(dir)
     expect(hint).toContain("2 ungroomed learnings in memory/learnings/_inbox.md")
     expect(hint).not.toContain("AUTO-GROOM")
   })
@@ -174,21 +183,21 @@ describe("orientation (opencode)", () => {
       inbox,
       `# Inbox\n\n${[1, 2, 3, 4, 5].map((i) => `## ${recent} — entry ${i}`).join("\n\n")}\n`,
     )
-    const byCount = await orientation(dir)
+    const byCount = await qaBlueprint.orientation(dir)
     expect(byCount).toContain("AUTO-GROOM: 5 ungroomed learnings")
     expect(byCount).toContain("at the end of this session")
 
     // age trigger: two entries, but the oldest is over 14 days old
     await writeFile(inbox, `# Inbox\n\n## ${stale} — stale\n\n## ${recent} — fresh\n`)
-    const byAge = await orientation(dir)
+    const byAge = await qaBlueprint.orientation(dir)
     expect(byAge).toContain("AUTO-GROOM: 2 ungroomed learnings")
     expect(byAge).toContain(`oldest: ${stale}`)
 
     await writeFile(inbox, `# Inbox\n\n## ${stale} — one stale entry\n`)
-    expect(await orientation(dir)).toContain("AUTO-GROOM: 1 ungroomed learnings")
+    expect(await qaBlueprint.orientation(dir)).toContain("AUTO-GROOM: 1 ungroomed learnings")
 
     await writeFile(inbox, `# Inbox\n\n## ${recent} — one\n\n${"x".repeat(17_000)}\n\n## ${recent} — two\n`)
-    const bySize = await orientation(dir)
+    const bySize = await qaBlueprint.orientation(dir)
     expect(bySize).toContain("AUTO-GROOM: 2 ungroomed learnings")
     expect(bySize).toContain("16 KB")
   })
@@ -198,7 +207,7 @@ describe("orientation (opencode)", () => {
       join(dir, "opencode.json"),
       '{ "mcp": { "playwright": { "type": "local", "command": ["npx", "@playwright/mcp@latest"] } } }',
     )
-    const text = await orientation(dir)
+    const text = await qaBlueprint.orientation(dir)
     expect(text).toContain("no --secrets flag")
     expect(text).toContain("no --output-dir flag")
   })
@@ -208,7 +217,7 @@ describe("orientation (opencode)", () => {
       join(dir, "opencode.json"),
       '{ "mcp": { "atlassian": { "type": "local", "command": ["uvx", "mcp-atlassian"], "environment": { "JIRA_URL": "https://jira.example.com" } } } }',
     )
-    const text = await orientation(dir)
+    const text = await qaBlueprint.orientation(dir)
     expect(text).toContain("JIRA Data Center (jira.example.com)")
     expect(text).toContain("JIRA_PAT_jira.example.com")
   })
@@ -246,18 +255,18 @@ describe("QA home resolution (walk-up)", () => {
 
   test("subfolder of a marker-carrying home resolves to the home", async () => {
     const { home, sub } = await mkHome(true)
-    expect(await resolveQaHome(sub)).toBe(home)
+    expect(await qaBlueprint.resolveQaHome(sub)).toBe(home)
   })
 
   test("legacy trio without a marker resolves too", async () => {
     const { home, sub } = await mkHome(false)
-    expect(await resolveQaHome(sub)).toBe(home)
+    expect(await qaBlueprint.resolveQaHome(sub)).toBe(home)
   })
 
   test("nothing found → the directory itself (first-install behavior)", async () => {
     const bare = join(dir, "fresh")
     await mkdir(bare, { recursive: true })
-    expect(await resolveQaHome(bare)).toBe(bare)
+    expect(await qaBlueprint.resolveQaHome(bare)).toBe(bare)
   })
 
   test("the walk-up never crosses $HOME", async () => {
@@ -267,7 +276,7 @@ describe("QA home resolution (walk-up)", () => {
     const savedHome = process.env.HOME
     process.env.HOME = boundary
     try {
-      expect(await resolveQaHome(deep)).toBe(deep)
+      expect(await qaBlueprint.resolveQaHome(deep)).toBe(deep)
     } finally {
       if (savedHome === undefined) delete process.env.HOME
       else process.env.HOME = savedHome
@@ -292,7 +301,7 @@ describe("QA home resolution (walk-up)", () => {
 
   test("orientation names the resolved home when cwd is a subfolder", async () => {
     const { home, sub } = await mkHome(true)
-    const text = await orientation(home, sub)
+    const text = await qaBlueprint.orientation(home, sub)
     expect(text).toContain(`QA home: ${home}`)
     expect(text).toContain("relative to the QA home, not to cwd")
   })

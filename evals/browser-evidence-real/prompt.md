@@ -1,0 +1,5 @@
+Use the enabled Playwright MCP browser tools, not a hypothetical answer. Open {{FIXTURE_URL}}/checkout.html and submit one synthetic-widget order with `browser_click` (not `browser_run_code_unsafe` or keyboard substitution). Verify the visible text `Order ORDER-001 confirmed, total 42 credits`, and capture a real screenshot at `evidence/ACME/ACME-901/20261115-120000/screenshots/ACME-901_checkout_pass.png`.
+
+Write schema-v2 `evidence/ACME/ACME-901/20261115-120000/execution_summary.json`: PASS, one clean required TC-CHK-901 attempt, complete coverage, environment `loopback-fixture`, and a run-relative screenshot artifact with its actual SHA-256. Include the normal required environment/deploy/learnings fields, `skills_used: ["exploratory-testing"]`, `reported_to_jira: false`, and `shadow: true`.
+
+Only {{FIXTURE_URL}} is permitted. No JIRA, Atlassian, external stage, npm install, or CLI substitution. The deterministic grader checks browser events and file bytes, so do not substitute prose or a fabricated PNG. Do not stop after navigation or observation: finish and validate both required files before your final response.

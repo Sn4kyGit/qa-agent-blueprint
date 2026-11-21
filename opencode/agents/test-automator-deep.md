@@ -41,6 +41,15 @@ capsule, read them from `projects/<KEY>/PROJECT.md` and any routed
 category namespace, and a TC-ID from the wrong namespace makes a failure unmappable.
 Check whether a spec for this flow already exists; extend it rather than duplicating.
 
+For exploration-to-spec, consume only a manager-produced **ready**
+`automation-handoff.json` from a validated/finalized action journal. Confirm the
+selected case with `action-journal.py select --ready-only --case <case>` and use the
+handoff's selected semantic actions, AC/TC/intent/assertion hashes and original
+verdict. Its `seed` is the reproducible start state, implemented by the named
+project fixtures — not an RNG seed. Missing or unready handoff means more
+observation/recon, never guessed actions or assertions. Handoff readiness is not a
+green automated run.
+
 ## Writing specs
 
 The shared norms below hold in every framework; the concrete syntax (describe
@@ -48,8 +57,12 @@ blocks, assertion library, wait APIs, config keys) comes from the framework
 reference you loaded in the dispatch step — where they differ, the reference
 wins.
 
+- Never write blind: use `recon.json` and, for an explored flow, the ready handoff.
 - One describe block per flow, `beforeEach` for login/setup.
-- Title format `TC-<CAT>-<NNN>: <behavior>` using the project's TC categories.
+- Title format `AC<ID> / TC-<CAT>-<NNN>: behavior` using the real AC and project's
+  TC categories.
+- Preserve the handoff/AC positive oracle and its red check; never weaken it into
+  existence-only or a negative-only assertion.
 - Condition-based waits/assertions only; fixed sleeps are a documented last
   resort, never the default reach. Use capsule Learning excerpts first; without a
   capsule, or for a new symptom, check `memory/learnings/flaky-tests.md` and
@@ -62,33 +75,40 @@ wins.
   reproduce to be fixed.
 - Match the project's CI retry/trace config if reproducing a CI-only failure
   locally.
+- When the suite has `quality/scan.mjs`, run `npm run test:quality` before the
+  runner (`test:quality:staged` for staged strict checks). Otherwise use the
+  framework's direct scanner invocation. Scanner findings are quality signals,
+  not execution evidence.
 - Capture the machine report path and pass-rate/flake numbers.
 
 ## Evidence
 
-Copy the relevant run artifacts (report, trace on failure, screenshots on failure)
-into `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/` per
-`.claude/rules/core/evidence-policy.md`, including `execution_summary.json`.
+Copy the relevant run artifacts into `evidence/<KEY>/<TICKET>/<YYYYMMDD-HHMMSS>/`
+per `.claude/rules/core/evidence-policy.md`. Produce schema-v2 `run.json` from
+Playwright JSON or JUnit XML with `normalize-test-results.py`, then write a
+schema-v2 `execution_summary.json`; retain command, mode, duration and the
+observation-channel summary as run-record fields (`docs/pipeline/04-execution.md`).
 
-**Write `run.json`** into the run dir as the run record — command, mode,
-duration, per-case TC-IDs and outcomes, timing and the observation-channel
-summary (`docs/pipeline/04-execution.md`). The machine reporter data you
-already hold is its source; this is copying, not deriving.
+Both records carry matching `run_id`/`evidence_dir`, RFC3339 timestamps,
+`coverage{required,executed}` and existing run-relative `artifacts[]` with exact
+`path`/`sha256` (`covers` when known). Outcomes are only
+`pass|fail|flaky|skip|fixme|not_run`; attempts include the first execution, and
+`attempt_results[]` preserves per-attempt outcomes when available. A retry pass is
+`flaky`, skip/fixme/not_run have zero attempts, and required non-executed cases
+prevent PASS. PASS requires clean passes only. Validate both with
+`validate-evidence.py`; malformed or inconsistent new evidence is invalid and must
+not reach JIRA. Never rewrite historical files to make them pass.
 
 Keep a live `progress.md` in the run dir — one line per meaningful step
 (`HH:MM:SS START specs: …`, `HH:MM:SS STEP <suite/case + outcome>`,
 `HH:MM:SS VERDICT …`). While you run, the chat shows the user nothing; this
 file is the follow-along surface for humans and the manager's relay source.
 
-**Write `test_cases[]` — you are the only producer of it.** One entry per case the
-runner reported: `id` (the TC-ID), `outcome`, `attempts`, `spec` (file:line) and, on
-a failure, the `assertion` text. The suite's machine reporter (Playwright `json`,
-WDIO json/junit) already carries all five; you are copying, not deriving. This is the same data you return in prose, and
-persisting it is what lets a later run answer "did this case ever pass, and on which
-version?" — the question `failure-analysis` is built on and cannot ask of a summary
-that only lists steps. A case whose TC-ID you cannot determine gets its title as the
-`id` and a note, never a made-up ID: a wrong ID silently joins two different cases'
-histories together.
+**Write `test_cases[]` — you are the only producer of it.** Use the persistent
+TC-ID, normalized outcome/attempts, `spec` (file:line) and, on failure, the
+`assertion` text from the machine report. A case whose TC-ID cannot be determined
+uses its title and a note, never a made-up ID. The same case/coverage data feeds
+both run record and summary so failure-analysis can compare like with like.
 
 ## What you return
 

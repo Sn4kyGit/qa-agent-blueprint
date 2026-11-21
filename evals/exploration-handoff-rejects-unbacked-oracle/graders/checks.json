@@ -1,0 +1,10 @@
+{
+  "checks": [
+    {"type":"created","path":"output/automation-review.json"},
+    {"type":"json_equals","path":"output/automation-review.json","pointer":"/status","value":"not_ready"},
+    {"type":"json_equals","path":"output/automation-review.json","pointer":"/original_verdict","value":"FAIL"},
+    {"type":"not_created","path":"output/automation-handoff.json"},
+    {"type":"not_created","path":"output/checkout.spec.ts"},
+    {"type":"unchanged","path":"input/session.json"}
+  ]
+}

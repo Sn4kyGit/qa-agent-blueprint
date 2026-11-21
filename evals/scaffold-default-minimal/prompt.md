@@ -1,0 +1,3 @@
+Load `scaffold-suite`. Scaffold ACME's new Playwright suite at `suite/` with the default minimal profile. Do not opt into `--quality-pack`. The project file supplies routing and the TC category; ACME-502 has AC1: the entry page loads.
+
+Create the actual base files, observation fixture, probes and warning-only quality scanner, keep `STAGE_BASE_URL` external, and write the proposed Test assets block to `suite/PROJECT-assets-update.md` without editing the human-owned project file. Do not run npm, download browsers, contact a stage, or claim a proof run happened in this offline authoring exercise.

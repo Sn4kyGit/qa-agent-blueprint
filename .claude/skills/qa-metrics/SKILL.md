@@ -7,12 +7,11 @@ description: >-
   QA metrics, test metrics, quality KPIs, test health, flakiness rate, defect
   escape rate. Not for dashboard UIs, coverage-gap/mutation analysis, or
   aggregating this blueprint's run evidence — that is /qa-report.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "2.0"
   category: metrics
-license: Apache-2.0
 ---
 
 <objective>

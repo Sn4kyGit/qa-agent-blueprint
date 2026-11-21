@@ -35,6 +35,10 @@ default and say so up front.
 - **Never start without the readiness click.** The visible replay begins only
   after the user answered the clickable "Bereit?" question with "Starten"
   (below). A demo nobody noticed starting is a demo that failed.
+- **Never call a demo ready before a fresh preflight passes.** "Ready to
+  present" is itself a readiness claim. A known-unreachable or reserved
+  non-routable stage URL already fails the reachability precondition: print the
+  card as BLOCKED and stop without a readiness question.
 - **Never record without an explicit request.** No `--record` and no "nimm
   das auf" in the request = no video, no screenshots beyond what the replay
   itself needs, no silent capture of any kind. Asking "soll ich aufnehmen?"
@@ -60,9 +64,12 @@ default and say so up front.
      `execution_summary.json` plus its screenshots (several runs → newest;
      if the user named one, use that).
    Extract the step list: numbered, one action per step, with the expected
-   observation per step. Preflight applies: the pre-tool guard expects a
-   fresh `preflight.sh <KEY>` pass before any browser call — a demo on an
-   unreachable stage is the same false-positive factory as a test.
+    observation per step. Run a fresh `preflight.sh <KEY>` **before asking for
+    readiness**; the pre-tool guard requires that pass before any browser call.
+    If preflight fails or the stage is otherwise known unreachable, still print
+    the demo card, mark `Status: BLOCKED — live replay not started`, and stop.
+    Do not ask "Start?" or say the replay is ready until a fresh preflight
+    passes.
 2. **Build the demo spec** into the run's demo dir
    (`evidence/<KEY>/<TICKET>/<ts>/demo/` — a fresh `<ts>` for the demo, not
    the original run's): a temporary Playwright CLI spec that replays the

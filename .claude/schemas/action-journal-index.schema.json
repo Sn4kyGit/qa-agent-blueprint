@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-agent-blueprint.local/schemas/action-journal-index.schema.json",
+  "title": "Action journal writer index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "journal_id", "created_at", "updated_at", "next_seq", "next_event", "status", "streams"],
+  "properties": {
+    "schema_version": {"const": "qa-action-journal-index/v1"},
+    "journal_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "next_seq": {"type": "integer", "minimum": 1},
+    "next_event": {"type": "integer", "minimum": 1},
+    "status": {"enum": ["open", "finalized"]},
+    "streams": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "cases"],
+        "properties": {
+          "status": {"enum": ["open", "finalized"]},
+          "cases": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "replayable", "original_verdict"],
+              "properties": {
+                "status": {"enum": ["complete", "incomplete"]},
+                "replayable": {"type": "boolean"},
+                "original_verdict": {"enum": ["PASS", "FAIL", "BLOCKED", "NEEDS_REVIEW"]}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

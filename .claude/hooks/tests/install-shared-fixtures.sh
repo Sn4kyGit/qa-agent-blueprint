@@ -79,6 +79,17 @@ PY
   if [ $? -eq 0 ]; then pass "$3"; else fail "$3" "blueprint hook pairs missing, duplicated, or namespaced"; fi
 }
 
+quality_hook_check() {
+  python3 - "$1" <<'PY' >/dev/null 2>&1
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+hooks = cfg.get("hooks", {})
+commands = [h.get("command", "") for entries in hooks.values() for e in entries for h in e.get("hooks", [])]
+sys.exit(0 if set(hooks) == {"SessionStart", "Stop", "PreToolUse", "PostToolUse"} and sum("pre-test-code-scan.sh" in command for command in commands) == 1 else 1)
+PY
+  if [ $? -eq 0 ]; then pass "$2"; else fail "$2" "quality hook duplicated or hook event inventory changed"; fi
+}
+
 router_block_check() {
   python3 - "$1" "$REPO/CLAUDE.md" <<'PY' >/dev/null 2>&1
 import sys
@@ -97,7 +108,7 @@ mkdir -p "$FRESH"
 OUT="$("$INSTALL" --mode shared --target "$FRESH" --yes 2>&1)"
 if [ $? -ne 0 ]; then fail "fresh install exits 0" "$(printf '%s' "$OUT" | tail -4)"; else pass "fresh install exits 0"; fi
 assert_real_dir "consumer .claude is real" "$FRESH/.claude"
-for item in rules skills agents hooks scripts; do
+for item in rules skills agents hooks scripts schemas; do
   assert_link_to ".claude/$item linked selectively" "$FRESH/.claude/$item" "$REPO/.claude/$item"
 done
 assert_link_to "opencode router linked" "$FRESH/.opencode/ROUTER.md" "$REPO/opencode/ROUTER.md"
@@ -110,6 +121,20 @@ assert_link_to "project template support link" "$FRESH/projects/_template" "$REP
 assert_link_to "project example support link" "$FRESH/projects/EXAMPLE" "$REPO/projects/EXAMPLE"
 assert_link_to "plugin manifest support link" "$FRESH/.claude-plugin" "$REPO/.claude-plugin"
 assert_link_to "changelog support link" "$FRESH/CHANGELOG.md" "$REPO/CHANGELOG.md"
+assert_link_to "root NOTICE support link" "$FRESH/NOTICE" "$REPO/NOTICE"
+assert_file "detailed notices resolve" "$FRESH/.claude/skills/THIRD_PARTY_NOTICES.md"
+for schema in action-journal-event action-journal-index automation-handoff execution-summary-v2 healing-candidate healing-review run-record-v2; do
+  assert_file "schema $schema resolves" "$FRESH/.claude/schemas/$schema.schema.json"
+done
+assert_file "action journal script resolves" "$FRESH/.claude/scripts/action-journal.py"
+assert_file "healing script resolves" "$FRESH/.claude/scripts/healing-candidate.py"
+assert_file "quality scanner resolves" "$FRESH/.claude/scripts/qa-test-code-scan.mjs"
+assert_file "evidence validator resolves" "$FRESH/.claude/scripts/validate-evidence.py"
+assert_file "quality hook resolves" "$FRESH/.claude/hooks/pre-test-code-scan.sh"
+assert_file "quality scaffold resolves" "$FRESH/.claude/skills/scaffold-suite/templates/quality/tests/fixtures/test.ts"
+assert_file "journal fixture resolves" "$FRESH/.claude/skills/scaffold-suite/templates/tests/fixtures/action-journal.ts"
+assert_file "action journal docs resolve" "$FRESH/docs/pipeline/action-journal.md"
+assert_file "healing docs resolve" "$FRESH/docs/pipeline/healing.md"
 assert_real_dir "projects is consumer-owned" "$FRESH/projects"
 assert_real_dir "memory is consumer-owned" "$FRESH/memory"
 assert_real_dir "evidence is consumer-owned" "$FRESH/evidence"
@@ -123,6 +148,7 @@ assert_file "opencode config" "$FRESH/opencode.json"
 cmp -s "$FRESH/CLAUDE.md" "$REPO/CLAUDE.md" && pass "fresh router is the full blueprint router" || fail "fresh router is the full blueprint router"
 json_check "project plugin explicitly disabled" "$FRESH/.claude/settings.json" "cfg['enabledPlugins']['qa-agent-blueprint@qa-agent-blueprint-marketplace'] is False"
 settings_hooks_check "$FRESH/.claude/settings.json" exact "all Claude hook events and matchers installed"
+quality_hook_check "$FRESH/.claude/settings.json" "quality hook registered once without new event types"
 json_check "Claude MCP contract names" "$FRESH/.mcp.json" "set(['playwright','atlassian']) <= set(cfg.get('mcpServers',{}))"
 cfg_check "opencode MCP contract names" "$FRESH/opencode.json" "set(['playwright','atlassian']) <= set(cfg.get('mcp',{}))"
 cfg_check "opencode router instructions and depth" "$FRESH/opencode.json" "any('ROUTER.md' in str(i) for i in cfg.get('instructions',[])) and cfg.get('subagent_depth') == 2"
@@ -228,8 +254,12 @@ echo "== existing router gets a current full managed block =="
 ROUTER="$WORK/router"
 mkdir -p "$ROUTER"
 printf '# Consumer\n\nKeep this router content.\n' > "$ROUTER/CLAUDE.md"
+printf 'consumer shared notice\n' > "$ROUTER/NOTICE"
 "$INSTALL" --mode shared --target "$ROUTER" --yes >/dev/null 2>&1
 assert_grep "foreign router content kept" "$ROUTER/CLAUDE.md" "Keep this router content."
+assert_grep "consumer NOTICE kept in shared mode" "$ROUTER/NOTICE" "consumer shared notice"
+assert_link_to "shared NOTICE collision uses fallback" "$ROUTER/NOTICE.qa-agent-blueprint" "$REPO/NOTICE"
+assert_file "shared fallback NOTICE resolves" "$ROUTER/NOTICE.qa-agent-blueprint"
 router_block_check "$ROUTER/CLAUDE.md" "managed block is the full shared router"
 assert_no_grep "managed router is not integrate namespace" "$ROUTER/CLAUDE.md" ".claude/rules/qa-blueprint/"
 cp "$ROUTER/CLAUDE.md" "$WORK/router-before-rerun.md"
@@ -264,10 +294,13 @@ cmp -s "$FRESH/.claude/settings.json" "$WORK/fresh-settings-before.json" && pass
 cmp -s "$FRESH/opencode.json" "$WORK/fresh-opencode-before.json" && pass "opencode config unchanged on re-run" || fail "opencode config unchanged on re-run"
 cmp -s "$FRESH/.mcp.json" "$WORK/fresh-mcp-before.json" && pass "MCP config unchanged on re-run" || fail "MCP config unchanged on re-run"
 settings_hooks_check "$FRESH/.claude/settings.json" exact "re-run does not duplicate hooks"
+quality_hook_check "$FRESH/.claude/settings.json" "re-run does not duplicate quality hook"
 assert_grep "consumer memory survives re-run" "$FRESH/memory/SHARED-FIXTURE.md" "consumer memory"
 "$INSTALL" --mode shared --target "$ROUTER" --yes >/dev/null 2>&1
 cmp -s "$ROUTER/CLAUDE.md" "$WORK/router-before-rerun.md" && pass "managed router block unchanged on re-run" || fail "managed router block unchanged on re-run"
 router_block_check "$ROUTER/CLAUDE.md" "managed router block not duplicated"
+assert_grep "consumer NOTICE survives shared re-run" "$ROUTER/NOTICE" "consumer shared notice"
+assert_link_to "shared NOTICE fallback stable on re-run" "$ROUTER/NOTICE.qa-agent-blueprint" "$REPO/NOTICE"
 
 echo
 echo "== integrate collisions block before writes =="
@@ -376,9 +409,10 @@ cp "$FRESH/.env.playwright-secrets" "$WORK/uninstall-secrets.env"
 cp "$FRESH/.playwright-mcp.config.json" "$WORK/uninstall-browser.json"
 OUT="$("$INSTALL" --mode shared --target "$FRESH" --uninstall --yes 2>&1)"
 if [ $? -ne 0 ]; then fail "shared uninstall exits 0" "$(printf '%s' "$OUT" | tail -4)"; else pass "shared uninstall exits 0"; fi
-for item in .claude/rules .claude/skills .claude/agents .claude/hooks .claude/scripts .opencode/ROUTER.md .opencode/agents .opencode/commands .opencode/plugins docs projects/_template projects/EXAMPLE .claude-plugin CHANGELOG.md; do
+for item in .claude/rules .claude/skills .claude/agents .claude/hooks .claude/scripts .claude/schemas .opencode/ROUTER.md .opencode/agents .opencode/commands .opencode/plugins docs projects/_template projects/EXAMPLE .claude-plugin CHANGELOG.md; do
   assert_no_file "uninstall removes $item link" "$FRESH/$item"
 done
+assert_no_file "uninstall removes NOTICE link" "$FRESH/NOTICE"
 assert_real_dir "uninstall leaves real .claude" "$FRESH/.claude"
 assert_real_dir "uninstall leaves real .agents" "$FRESH/.agents"
 assert_no_file "uninstall deletes exact fresh router copy" "$FRESH/CLAUDE.md"
@@ -402,6 +436,8 @@ if [ $? -ne 0 ]; then fail "managed router uninstall exits 0" "$(printf '%s' "$O
 assert_file "managed foreign router file remains" "$ROUTER/CLAUDE.md"
 assert_grep "managed foreign router content remains" "$ROUTER/CLAUDE.md" "Keep this router content."
 assert_no_grep "managed shared router block removed" "$ROUTER/CLAUDE.md" "qa-agent-blueprint (managed, do not edit)"
+assert_grep "consumer NOTICE remains after shared uninstall" "$ROUTER/NOTICE" "consumer shared notice"
+assert_no_file "shared NOTICE fallback removed" "$ROUTER/NOTICE.qa-agent-blueprint"
 OUT="$("$INSTALL" --mode shared --target "$PLUGIN" --uninstall --yes 2>&1)"
 if [ $? -ne 0 ]; then fail "plugin migration uninstall exits 0" "$(printf '%s' "$OUT" | tail -4)"; else pass "plugin migration uninstall exits 0"; fi
 json_check "preexisting identical permission survives uninstall" "$PLUGIN/.claude/settings.json" "'Bash(git status:*)' in cfg['permissions']['allow'] and 'Bash(ls:*)' in cfg['permissions']['allow']"

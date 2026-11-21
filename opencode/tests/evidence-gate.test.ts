@@ -5,7 +5,7 @@
 //       the session shows test activity but no fresh, learnings-declaring
 //       execution_summary.json — the verdict cannot reach JIRA without evidence;
 //   (b) an idle reminder: session.idle → client.session.prompt() with the same
-//       markers the Claude hook prints (QA_EVIDENCE_MISSING:/QA_LEARNINGS_MISSING:).
+//       markers the Claude hook prints (QA_EVIDENCE_MISSING:/QA_EVIDENCE_INVALID:).
 //
 // "Test activity" is tracked from tool.execute.after events (the plugin sees
 // every call — no transcript parsing needed): any playwright_* tool, any
@@ -14,16 +14,17 @@
 // mentioning "npx playwright test" must NOT count).
 //
 // Gate state is derived from the filesystem, policy-identical to
-// stop-evidence-check.sh: fresh = mtime < 2h; learnings = the key exists and
-// exactly one of captured[] / none_because is filled; unparseable summaries
-// are skipped, not flagged; the hook must NOT know the verdict vocabulary
-// (NEEDS_REVIEW passes on declaration alone).
+// stop-evidence-check.sh: fresh = mtime < 2h; every fresh summary is validated
+// by the shared schema-v2 validator. Malformed/unversioned evidence fails closed;
+// NO_TEST closes the idle gate but forbids JIRA writes, and NEEDS_REVIEW permits
+// proposal comments only.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { qaBlueprint } from "../plugins/qa-blueprint.ts"
+import { createHash } from "node:crypto"
+import qaBlueprint from "../plugins/qa-blueprint.ts"
 import { bashBefore, fakeCtx, toolAfter, SESSION_ID } from "./fixtures/payloads.ts"
 
 let dir: string
@@ -57,7 +58,43 @@ async function writeSummary(rel: string, body: unknown, opts: { ageHours?: numbe
   const d = join(dir, "evidence", rel)
   await mkdir(d, { recursive: true })
   const f = join(d, "execution_summary.json")
-  await writeFile(f, opts.raw ?? JSON.stringify(body))
+  let value = body
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    const [project, ticket, runId] = rel.split("/")
+    const source = body as Record<string, unknown>
+    const verdict = String(source.verdict ?? "PASS")
+    const noTest = verdict === "NO_TEST"
+    const artifact = Buffer.from("proof\n")
+    const digest = createHash("sha256").update(artifact).digest("hex")
+    if (!noTest) {
+      await mkdir(join(d, "screenshots"), { recursive: true })
+      await writeFile(join(d, "screenshots", "proof.txt"), artifact)
+    }
+    value = {
+      schema_version: 2,
+      run_id: runId,
+      timestamp: "2026-11-15T10:00:00Z",
+      test_type: "exploratory",
+      mode: "mcp-only",
+      channel: "browser",
+      environment: { name: "stage", version_or_build: "build-1", commit: "abc123" },
+      deploy: { from_version: "build-0", to_version: "build-1", pipeline_run: "pipeline-1", at: "2026-11-15T09:59:00Z" },
+      skills_used: ["test-ticket"],
+      steps_executed: noTest ? [] : ["checkout"],
+      test_cases: [],
+      findings: [],
+      artifacts: noTest ? [] : [{ id: "proof-checkout", kind: "screenshot", path: "screenshots/proof.txt", sha256: digest, size_bytes: artifact.length, covers: [] }],
+      coverage: { required: [], executed: [] },
+      reported_to_jira: false,
+      shadow: false,
+      ...(verdict === "NEEDS_REVIEW" ? { interactive: true } : {}),
+      ...source,
+      ticket,
+      project,
+      evidence_dir: `evidence/${rel}`,
+    }
+  }
+  await writeFile(f, opts.raw ?? JSON.stringify(value))
   if (opts.ageHours) {
     const t = new Date(Date.now() - opts.ageHours * 3600_000)
     await utimes(f, t, t)
@@ -191,14 +228,14 @@ describe("evidence gate (opencode) — gate evaluation", () => {
     const r = await rig()
     await writeSummary("SHOP/SHOP-1/run1", summary("omit"))
     await markActivity(r.hooks, "playwright")
-    await expect(jiraWrite(r)).rejects.toThrow(/QA_LEARNINGS_MISSING:/)
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
   })
 
   test("learnings empty on both sides → QA_LEARNINGS_MISSING", async () => {
     const r = await rig()
     await writeSummary("SHOP/SHOP-1/run1", summary({ captured: [], none_because: null }))
     await markActivity(r.hooks, "playwright")
-    await expect(jiraWrite(r)).rejects.toThrow(/QA_LEARNINGS_MISSING:/)
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
   })
 
   test("captured entries → gate green", async () => {
@@ -228,7 +265,44 @@ describe("evidence gate (opencode) — gate evaluation", () => {
     const r = await rig()
     await writeSummary("SHOP/SHOP-1/run1", summary("omit", "NEEDS_REVIEW"))
     await markActivity(r.hooks, "playwright")
-    await expect(jiraWrite(r)).rejects.toThrow(/QA_LEARNINGS_MISSING:/)
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
+  })
+
+  test("NEEDS_REVIEW denies transitions", async () => {
+    const r = await rig()
+    await writeSummary("SHOP/SHOP-1/run1", summary({ captured: ["x"], none_because: null }, "NEEDS_REVIEW"))
+    const input = { tool: "atlassian_transitionJiraIssue", sessionID: SESSION_ID, callID: "tool_gate" }
+    const output = { args: { issueKey: "SHOP-1", transition: { id: "1" } } }
+    await expect(r.hooks["tool.execute.before"](input as never, output as never)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
+    const wrappedInput = { tool: "atlassian_executeWrite", sessionID: SESSION_ID, callID: "tool_gate" }
+    const wrappedOutput = { args: { tool: "transitionJiraIssue", arguments: { issueKey: "SHOP-1" } } }
+    await expect(r.hooks["tool.execute.before"](wrappedInput as never, wrappedOutput as never)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
+  })
+
+  test("unversioned fresh summary is invalid", async () => {
+    const r = await rig()
+    await writeSummary("SHOP/SHOP-1/run1", { ...summary({ captured: [], none_because: "legacy" }), schema_version: undefined })
+    await markActivity(r.hooks, "playwright")
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
+  })
+
+  test("learnings with both sides filled violates XOR", async () => {
+    const r = await rig()
+    await writeSummary("SHOP/SHOP-1/run1", summary({ captured: ["x"], none_because: "both" }))
+    await markActivity(r.hooks, "playwright")
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
+  })
+
+  test("retry pass normalized as flaky prevents PASS", async () => {
+    const r = await rig()
+    await writeSummary("SHOP/SHOP-1/run1", {
+      ...summary({ captured: [], none_because: "retry observed" }),
+      test_type: "regression",
+      test_cases: [{ id: "TC-CHK-001", outcome: "flaky", attempts: 2, required: true }],
+      coverage: { required: ["TC-CHK-001"], executed: ["TC-CHK-001"] },
+    })
+    await markActivity(r.hooks, "playwright")
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
   })
 
   test("multi-product fan-out: one undeclared summary blocks", async () => {
@@ -236,7 +310,7 @@ describe("evidence gate (opencode) — gate evaluation", () => {
     await writeSummary("SHOP/SHOP-1/run1__STOREFRONT", summary({ captured: [], none_because: "clean run" }))
     await writeSummary("SHOP/SHOP-1/run1__ADMIN", summary("omit"))
     await markActivity(r.hooks, "playwright")
-    await expect(jiraWrite(r)).rejects.toThrow(/QA_LEARNINGS_MISSING:/)
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
   })
 
   test("stale summary (older than 2h) counts as no evidence", async () => {
@@ -246,14 +320,14 @@ describe("evidence gate (opencode) — gate evaluation", () => {
     await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_MISSING:/)
   })
 
-  test("unparseable summary is not flagged for learnings (separate problem)", async () => {
+  test("unparseable summary fails closed as invalid evidence", async () => {
     const r = await rig()
     await writeSummary("SHOP/SHOP-1/run1", null, { raw: "{not json" })
     await markActivity(r.hooks, "playwright")
-    await expect(jiraWrite(r)).resolves.toBeUndefined()
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:/)
   })
 
-  test("NO_TEST with reason and learnings declaration → green", async () => {
+  test("NO_TEST closes the idle gate but denies every JIRA write", async () => {
     const r = await rig()
     await writeSummary("SHOP/SHOP-1/run1", {
       ticket: "SHOP-1",
@@ -263,7 +337,9 @@ describe("evidence gate (opencode) — gate evaluation", () => {
       learnings: { captured: [], none_because: "no product knowledge gained" },
     })
     await markActivity(r.hooks, "playwright")
-    await expect(jiraWrite(r)).resolves.toBeUndefined()
+    await expect(jiraWrite(r)).rejects.toThrow(/QA_EVIDENCE_INVALID:[\s\S]*NO_TEST/)
+    await idle(r)
+    expect(r.prompts).toHaveLength(0)
   })
 
   test("per-ticket scoping (F2): evidence for SHOP-1 does not cover a SHOP-2 run", async () => {

@@ -1,0 +1,11 @@
+{
+  "checks": [
+    {"type":"created","path":"output/review.json"},
+    {"type":"json_equals","path":"output/review.json","pointer":"/status","value":"rejected"},
+    {"type":"json_equals","path":"output/review.json","pointer":"/reason","value":"intent_drift"},
+    {"type":"json_equals","path":"output/review.json","pointer":"/applied","value":false},
+    {"type":"json_equals","path":"output/review.json","pointer":"/original_verdict","value":"FAIL"},
+    {"type":"not_created","path":"output/candidate.json"},
+    {"type":"unchanged","path":"tests/navigation.spec.ts"}
+  ]
+}

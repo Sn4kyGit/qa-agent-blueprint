@@ -23,6 +23,7 @@ import json
 import sys
 import urllib.request
 import urllib.error
+from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 UPSTREAM = "https://openrouter.ai/api"  # CLI haengt selbst /v1/... an
@@ -51,8 +52,9 @@ def estimate_tokens(body: bytes) -> int:
 class Shim(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
-    def log_message(self, fmt, *args):  # quiet: method + path + status only
-        sys.stderr.write("shim: %s %s\n" % (self.command, self.path))
+    def log_message(self, fmt, *args):
+        path = urlsplit(self.path).path
+        sys.stderr.write("shim: %s %s\n" % (self.command, path))
 
     # -- locally answered endpoints -------------------------------------
 

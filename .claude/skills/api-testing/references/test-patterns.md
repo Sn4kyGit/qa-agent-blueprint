@@ -236,7 +236,7 @@ test.describe('GraphQL API', () => {
 
 ### GraphQL Introspection-Diff Snapshot
 
-The highest-value GraphQL API test: assert that fields and resolvers didn't disappear without a migration note. Snapshot the introspected type map and fail when it shrinks unexpectedly — a removed field is a breaking change for every consumer.
+The highest-value GraphQL API test: assert that fields and resolvers didn't disappear without a migration note. Snapshot the introspected type map and fail when it shrinks unexpectedly — a removed field is a breaking change for every consumer. Commit the snapshot's exact bytes with byte length, SHA-256 and provenance (source, revision/commit, capture time). Verify that digest before the diff and attach it to the run evidence. Drift is FAIL. A missing required snapshot is BLOCKED with the case `not_run`, never PASS. Never run Playwright's snapshot update mode against live introspection; a schema learned from current behavior is not a contract.
 
 ```typescript
 test('schema has not lost public fields', async ({ request }) => {

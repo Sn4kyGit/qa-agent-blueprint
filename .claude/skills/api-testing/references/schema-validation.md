@@ -62,7 +62,28 @@ test('GET /api/users/:id conforms to JSON Schema', async ({ request }) => {
 
 ## Schema-as-Contract Pattern
 
-Both API and tests import the same schema file. If the response shape changes, consumer tests fail immediately. With an OpenAPI spec, auto-generate the schema with `orval` or `openapi-zod-client` (the maintained round-trip tools) so the contract stays in sync with the spec.
+Both API and tests import the same schema file. If the response shape changes, consumer tests fail immediately. With a **reviewed, versioned** OpenAPI snapshot, generate the schema with `orval` or `openapi-zod-client` (the maintained round-trip tools). Generation from a live endpoint is discovery only, never a contract update.
+
+Commit the exact snapshot bytes plus a provenance sidecar:
+
+```json
+{
+  "source_document": "contracts/user-service.openapi.json",
+  "revision": "a3f9c21",
+  "captured_at": "2026-09-04T14:30:00Z",
+  "captured_by": "contract-owner",
+  "byte_length": 18422,
+  "sha256": "64-lowercase-hex-characters"
+}
+```
+
+The test setup reads the file as bytes, verifies byte length and SHA-256 before
+parsing it, and attaches the sidecar to the run evidence. A hash mismatch or
+response/schema drift is FAIL. If a required snapshot or sidecar is unavailable,
+do not run the contract assertion: record its cases as `not_run` and the run as
+BLOCKED. A schema generated from the current live response is circular evidence
+and can never produce a contract PASS. Updating provenance requires a reviewed
+contract change; never use snapshot-update flags to bless current behavior.
 
 ```typescript
 // shared/schemas/user.schema.ts  (imported by both API and tests)
@@ -82,7 +103,7 @@ export type UserResponse = z.infer<typeof UserResponseSchema>;
 When you have an OpenAPI spec, you can go further than hand-written schemas. **Schemathesis** (Python, built on Hypothesis) generates thousands of test cases from the spec and catches 500s on edge-case input, undocumented response shapes, and validation bypasses — zero per-endpoint maintenance. Point it at the live API and the spec:
 
 ```bash
-schemathesis run http://localhost:3000/openapi.json --checks all
+schemathesis run contracts/openapi.json --base-url http://localhost:3000 --checks all
 ```
 
 Run it as a CI job for spec-first teams; it complements (does not replace) the targeted happy/error-path tests in `test-patterns.md`.

@@ -1,0 +1,8 @@
+{
+  "checks": [
+    {"type":"created","path":"evidence/ACME/ACME-12/20260907-120000/proposed-report.md"},
+    {"type":"modified","path":"evidence/ACME/ACME-12/20260907-120000/execution_summary.json"},
+    {"type":"json_equals","path":"evidence/ACME/ACME-12/20260907-120000/execution_summary.json","pointer":"/shadow","value":true},
+    {"type":"json_equals","path":"evidence/ACME/ACME-12/20260907-120000/execution_summary.json","pointer":"/reported_to_jira","value":false}
+  ]
+}

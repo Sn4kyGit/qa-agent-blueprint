@@ -3,20 +3,19 @@ name: test-reliability
 description: >-
   Runtime per-test healing with evidence: multi-attribute selector healing,
   environment-aware diagnosis, flake classification, quarantine management,
-  confidence-scored auto-repair. Use when: flaky test, test stability,
-  self-healing locator, broken locator recovery, unreliable test, quarantine flaky
+  confidence-ranked candidate repair. Use when: flaky test, test stability,
+  locator-healing candidate, broken locator recovery, unreliable test, quarantine flaky
   test. Not for bulk selector regeneration after a refactor
   or CI failure clustering.
-license: MIT
+license: MIT AND Apache-2.0
 metadata:
   author: kindlmann
   version: "2.0"
   category: ai-qa
-license: Apache-2.0
 ---
 
 <objective>
-A retried test that still flakes will eventually fail 3-of-3 during your most critical release, and a silently auto-repaired test may now verify a different element entirely. This skill builds suites teams can trust: resilient locators, classified flakes, environment-aware healing, data healing, and observable repair with confidence scoring — every automated fix produces evidence a human can review.
+A retried test that still flakes will eventually fail 3-of-3 during your most critical release, and a silently repaired test may now verify a different element entirely. This skill builds suites teams can trust: resilient locators, classified flakes, environment-aware diagnosis, data healing, and observable candidate repair with confidence ranking — every candidate produces evidence and only a human applies a change.
 </objective>
 
 ## Quick Route
@@ -27,7 +26,7 @@ A retried test that still flakes will eventually fail 3-of-3 during your most cr
 | Locator broke, want resilient replacement | Locator Resilience |
 | Action fails, suspect slow backend not UI bug | Environment-Aware Healing |
 | 401/404/429 mid-test from stale data | Data Healing |
-| Want auto-repair with review gate | Observable Repair Workflow |
+| Want a locator repair candidate with review gate | Observable Repair Workflow |
 | Isolate a flaky test without blocking CI | Quarantine Management |
 | Step-by-step triage of one flaky test | `references/flaky-test-runbook.md` |
 
@@ -46,7 +45,7 @@ Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — it
 
 1. **Prevention over cure.** Writing a resilient test costs 1x. Investigating a flaky one costs 10x. Losing team trust in the suite costs 100x.
 
-2. **Healing must be observable and reviewable.** Every automated repair produces evidence: what broke, what was tried, what worked, the confidence score. Silent fixes erode trust as fast as silent failures.
+2. **Healing must be observable, candidate-only, and reviewable.** Every candidate records what broke, what was tried, what worked in isolated verification, and the confidence score. Scores rank candidates; only a human applies a change.
 
 3. **Classify before fixing.** The fix for a timing issue is completely different from the fix for a data dependency. Wrong diagnosis wastes effort and can make things worse.
 
@@ -54,7 +53,7 @@ Check the project bridge file `.agents/qa-project-context/<KEY>.md` first — it
 
 5. **Track reliability as a metric, not a feeling.** Measure flaky rate, mean time to heal, quarantine age, and selector stability. What gets measured gets fixed.
 
-6. **Self-healing is a spectrum.** Start with resilient locators (Level 1), add fallback strategies (Level 2), then environment-aware healing (Level 3), then confidence-scored auto-repair (Level 4). Do not jump to Level 4 before mastering Level 1.
+6. **Self-healing is a diagnostic spectrum, not an application authority.** Start with resilient locators (Level 1), add candidate strategies (Level 2), then environment-aware diagnosis (Level 3), then confidence-ranked candidates (Level 4). Every level ends in human review before application.
 
 ## Locator Resilience & Flake Classification
 
@@ -144,17 +143,21 @@ Confidence Score Computed (0.0 - 1.0)
 Evidence Diff Produced (what changed, what was tried)
   │
   ▼
-Approval Policy Applied
-  │ ├── Score >= 0.9   → Auto-apply, log for batch review
-  │ ├── Score 0.7-0.89 → Apply in quarantine, flag for individual review
-  │ ├── Score 0.5-0.69 → Do NOT apply, open PR with evidence for review
-  │ └── Score < 0.5    → Discard, manual investigation required
+Candidate Eligibility and Fixed Budgets Checked
   │
   ▼
-Intent Fidelity Check (does repaired test still test the same thing?)
+Confidence Score Ranks Candidates Only
   │
   ▼
-Rollback if intent fidelity drops
+Isolated Green + Negative Control at Original Assertion
+  │
+  ▼
+Human Selects and Reviews the Candidate
+  │ ├── Any score → no automatic application
+  │ └── Only ready_for_human may leave the agent workflow
+  │
+  ▼
+Human Applies or Rejects; Normal Runner Assigns Any New Verdict
 ```
 
 ### Confidence Scoring
@@ -170,21 +173,22 @@ Score each repair candidate on six dimensions (weighted sum, 0.0-1.0):
 | Text similarity | 0.15 | 0.0-1.0 (Levenshtein ratio of accessible name) |
 | Attribute overlap | 0.10 | 0.0-1.0 (Jaccard of shared attributes) |
 
-**Score thresholds** (half-open bands — 0.9 belongs to the auto-apply tier only):
-- **>= 0.9** — Auto-apply, log for batch review.
-- **0.7-0.89** — Apply in quarantine, flag for individual review.
-- **0.5-0.69** — Do not apply; open a PR with evidence for review.
-- **< 0.5** — Discard, manual investigation required.
-
-`references/flaky-test-runbook.md` (Score Interpretation) uses these exact four bands — keep all three locations identical if you edit them.
+**Score ranking:** higher scores appear first for human review. There are no
+application thresholds: 0.99 remains a candidate, and a low score may be
+rejected or investigated but never changes authority. Use
+`.claude/scripts/healing-candidate.py` and `docs/pipeline/healing.md`: at most
+three candidates, one human selection, two CLI verification runs, two origin
+cases, and one locator-only hunk. Ready requires green plus a failing negative
+control at the same original assertion. Candidate green never creates a run
+summary or PASS and never changes the original outcome.
 
 ### Repair Evidence
 
-Every repair produces an evidence record containing: test file, test name, failure type, original locator, candidate replacements (each with confidence, evidence string, and intent-preserved flag), which candidate was selected, timestamp, approval path, rollback trigger, **and a `screencast.webm` recording of the repair run** (Playwright 1.59+ `page.screencast` with `showActions` annotations — the "agentic video receipt"). Without the screencast, a Level-3/4 healed test asks reviewers to trust a JSON record; with it, the diff and the runtime are both inspectable. In this blueprint the record lands in the run's evidence directory (`evidence/<KEY>/<TICKET>/<ts>/`); durable flake knowledge (root cause, stable alternative) belongs to `memory/learnings/flaky-tests.md` via `retro-learn`.
+Every candidate produces an evidence record containing: test file, test name, failure type, original locator, candidate replacements (each with confidence, evidence string, and intent-preserved flag), which candidate a human selected, timestamp, review status, original verdict, origin hashes, **and a `screencast.webm` recording of candidate verification** (Playwright 1.59+ `page.screencast` with `showActions` annotations — the "agentic video receipt"). Without the screencast, a Level-3/4 healed test asks reviewers to trust a JSON record; with it, the diff and the runtime are both inspectable. In this blueprint the record lands in the run's evidence directory (`evidence/<KEY>/<TICKET>/<ts>/`); durable flake knowledge (root cause, stable alternative) belongs to `memory/learnings/flaky-tests.md` via `retro-learn`.
 
 ### Buy vs Build
 
-Hand Levels 3-4 to a vendor when you don't want to own a confidence-scored healer; build in-house when you need on-prem/air-gapped deployment, an explicit AI-prompt audit trail, or quarantine logic your tracker can't express. Building stops being worth it once a hosted tool already fingerprints + clusters + auto-quarantines for you.
+Hand Levels 3-4 to a vendor when you don't want to own candidate ranking and evidence; build in-house when you need on-prem/air-gapped deployment, an explicit AI-prompt audit trail, or review logic your tracker can't express. Building stops being worth it once a hosted tool already fingerprints, clusters, and presents reviewable candidates for you. External automation still does not bypass this blueprint's human-application gate.
 
 - For **Selenium / Selenide / Robot Framework** suites, **Healenium** remains the dedicated self-healing layer (now on AWS Marketplace).
 - For **agent-driven self-healing in Playwright**, **Playwright MCP** is the canonical path — it gives the agent live browser control to discover replacement locators when CLI + skills isn't enough.
@@ -192,14 +196,14 @@ Hand Levels 3-4 to a vendor when you don't want to own a confidence-scored heale
 
 ### Intent Fidelity Checking
 
-After applying a repair, verify the test still exercises the same user intent:
+Before a candidate can become `ready_for_human`, verify it still exercises the same user intent:
 
-- **Element type changed** (e.g. `button` → `a`) — intent NOT preserved, rollback.
-- **ARIA role changed** (e.g. `button` → `link`) — intent NOT preserved, rollback.
-- **Form action changed** (targets a different endpoint) — intent NOT preserved, rollback.
-- **Same tag, role, and form action** — intent preserved, keep repair.
+- **Element type changed** (e.g. `button` → `a`) — intent NOT preserved, reject.
+- **ARIA role changed** (e.g. `button` → `link`) — intent NOT preserved, reject.
+- **Form action changed** (targets a different endpoint) — intent NOT preserved, reject.
+- **Same tag, role, and form action** — intent preserved, retain for human review.
 
-A repair that changes WHAT the test verifies (not just HOW it finds elements) must be rolled back.
+A candidate that changes WHAT the test verifies (not just HOW it finds elements) must be rejected, never applied.
 
 ## Quarantine Management
 
@@ -233,7 +237,7 @@ In CI, run `--project=stable` as a blocking step and `--project=quarantine` with
 2. TAG       — Add @quarantine annotation with ticket link and date
 3. ISOLATE   — Quarantine project runs separately, does not block
 4. DIAGNOSE  — Follow the flaky test runbook (references/flaky-test-runbook.md)
-5. FIX       — Apply the fix pattern for the classified category
+5. FIX       — Human applies the reviewed fix for the classified category
 6. VERIFY    — Run 50x with --repeat-each, zero failures required
 7. RELEASE   — Remove @quarantine tag, add annotation documenting the fix
 ```
@@ -271,7 +275,7 @@ await page.waitForResponse(resp => resp.url().includes('/api/data') && resp.stat
 ```
 
 ### 6. Healing Without Observability
-Auto-repair that produces no logs, evidence, or confidence scores. You cannot improve what you cannot measure, and you cannot trust what you cannot review.
+Locator replacement without candidate evidence, origin hashes, negative control, and human application. You cannot improve what you cannot measure, and you cannot trust what you cannot review.
 
 ### 7. Over-Engineering Healing Before Writing Stable Tests
 Building a complex self-healing framework before adopting basic resilient-locator patterns. Start with multi-attribute selectors and proper waits. Add healing infrastructure only when data shows where breakage occurs.
@@ -285,13 +289,13 @@ Tests sit in quarantine for months. Quarantine is a temporary state, not a perma
 |---------|--------------|--------------|
 | Backend health check itself flaps → false `backend_down` diagnosis | Health endpoint is itself flaky/slow | Track the health endpoint's own p99 separately; don't gate diagnosis on a single probe |
 | Artifact storage balloons after enabling repair video | `page.screencast` recording on every run, not just repairs | Record only on the repair path, not the happy path |
-| Auto-repair accuracy drops below 80% | Confidence threshold too low, or intent-fidelity check skipped | Raise the auto-apply floor; never skip the intent check |
+| Human rejection rate for candidates rises | Ranking is weak, or intent-fidelity check skipped | Improve candidate evidence and ranking; never skip intent or human review |
 | Quarantine project blocks the pipeline | Missing `continue-on-error` on the quarantine CI step | Add it; the quarantine project must never block merges |
 
 ## Verification
 
 - Reproduce the flake: `npx playwright test <spec> --repeat-each=20 --workers=4 --trace=on` — it must fail at least once before you trust any fix.
-- After fixing, prove stability: `npx playwright test <spec> --repeat-each=50 --workers=4` — require 50/50 passes, in CI conditions too.
+- After a human applies a reviewed fix, prove stability through the normal runner: `npx playwright test <spec> --repeat-each=50 --workers=4` — require 50/50 passes, in CI conditions too. Candidate verification does not substitute for this run.
 - Confirm quarantine routing: `npx playwright test --project=stable` excludes `@quarantine` tests and `--project=quarantine` runs only them.
 - Confirm selector audit emits numbers: the stability report lists a score per locator and a suite average.
 

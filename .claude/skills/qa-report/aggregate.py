@@ -40,6 +40,9 @@ def load_summaries(evidence_dir: pathlib.Path, project: str | None, since_days: 
         except Exception as exc:  # noqa: BLE001 - we want the reason in the report
             broken.append((path, str(exc)))
             continue
+        if not isinstance(data, dict):
+            broken.append((path, "summary is not a JSON object"))
+            continue
         if project and data.get("project") != project:
             continue
         if cutoff is not None:
@@ -62,6 +65,19 @@ def parse_ts(value):
         return None
 
 
+def object_list(value):
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def clean_case_pass(case):
+    attempts = case.get("attempts", 1)
+    return case.get("outcome") == "pass" and isinstance(attempts, (int, float)) and not isinstance(attempts, bool) and attempts == 1
+
+
+def string_set(value):
+    return set(value) if isinstance(value, list) and all(isinstance(item, str) for item in value) else set()
+
+
 def scope_key(run):
     """Runs are grouped by what they actually tested: a product when one was
     routed, the project itself for project-wide work."""
@@ -77,17 +93,18 @@ def summarize(runs):
     out = {}
     for key, group in sorted(groups.items()):
         verdicts = Counter(r.get("verdict", "UNKNOWN") for r in group)
-        findings = [f for r in group for f in (r.get("findings") or [])]
+        findings = [f for r in group for f in object_list(r.get("findings"))]
         severities = Counter(f.get("severity", "?") for f in findings)
         # NEEDS_REVIEW ("the test may be outdated") sits in the denominator and never
         # in the numerator, on purpose: a classification that improved the pass rate
         # would be a cheaper route to green than fixing the product.
         decided = verdicts["PASS"] + verdicts["FAIL"] + verdicts["NEEDS_REVIEW"]
 
-        analyses = [r["failure_analysis"] for r in group if isinstance(r.get("failure_analysis"), dict)]
+        analysis_rows = [(r, r["failure_analysis"]) for r in group if isinstance(r.get("failure_analysis"), dict)]
+        analyses = [a for _, a in analysis_rows]
         cause_classes = Counter(a.get("class", "?") for a in analyses)
         awaiting = [
-            r for r, a in zip(group, analyses)
+            r for r, a in analysis_rows
             if a.get("human_decision_required") and not a.get("human_ruling")
         ]
         oldest_awaiting = min((parse_ts(r.get("timestamp")) for r in awaiting if parse_ts(r.get("timestamp"))), default=None)
@@ -95,10 +112,18 @@ def summarize(runs):
         # A retry count exists per test case now, so the flake rate is measurable
         # rather than the "not computable" it used to be. Cases only; a run without
         # test_cases[] (every exploratory run) simply contributes nothing.
-        cases = [c for r in group for c in (r.get("test_cases") or [])]
-        # Pass-on-retry only. A case that still failed after two attempts is not a
-        # flake, it is a failure that was tried twice.
-        retried = sum(1 for c in cases if (c.get("attempts") or 1) > 1 and c.get("outcome") in ("pass", "flaky"))
+        cases = [c for r in group for c in object_list(r.get("test_cases"))]
+        case_outcomes = Counter(c.get("outcome", "unknown") for c in cases)
+        required_cases = [c for c in cases if c.get("required", True) is True]
+        retried = sum(
+            1 for c in cases
+            if isinstance(c.get("attempts"), (int, float)) and not isinstance(c.get("attempts"), bool)
+            and c.get("attempts") > 1 and c.get("outcome") in ("pass", "flaky")
+        )
+        coverage_missing = sum(
+            len(string_set(r["coverage"].get("required")) - string_set(r["coverage"].get("executed")))
+            for r in group if isinstance(r.get("coverage"), dict)
+        )
 
         routed_by = Counter(r.get("product_routed_by") for r in group if r.get("product_routed_by"))
         # "Needed a human, or leaned on a weak signal" — the number that says whether
@@ -110,7 +135,7 @@ def summarize(runs):
             learn = r.get("learnings")
             if not isinstance(learn, dict):
                 undeclared += 1
-            elif learn.get("captured"):
+            elif isinstance(learn.get("captured"), list) and learn.get("captured"):
                 captured += len(learn["captured"])
             elif (learn.get("none_because") or "").strip():
                 declared_none += 1
@@ -142,6 +167,13 @@ def summarize(runs):
             "oldest_awaiting_days": (
                 (datetime.now(timezone.utc) - oldest_awaiting).days if oldest_awaiting else None
             ),
+            "cases": {
+                "total": len(cases),
+                "outcomes": dict(case_outcomes),
+                "required": len(required_cases),
+                "required_not_passed": sum(1 for c in required_cases if not clean_case_pass(c)),
+                "coverage_missing": coverage_missing,
+            },
             "flake": {
                 "cases": len(cases),
                 "retried": retried,
@@ -209,6 +241,13 @@ def render(stats, runs, broken, args):
                 + " — every one is a test the suite is currently lying about; a number that"
                 " grows week over week means the suite is drifting from the product"
             )
+        if s["cases"]["total"]:
+            outcomes = ", ".join(f"{k}={v}" for k, v in sorted(s["cases"]["outcomes"].items()))
+            detail.append(
+                f"  - Cases: {s['cases']['total']} ({outcomes}); "
+                f"{s['cases']['required_not_passed']} required case(s) not cleanly passed; "
+                f"{s['cases']['coverage_missing']} required case(s) not executed"
+            )
         if s["flake"]["rate"] is not None and s["flake"]["retried"]:
             detail.append(
                 f"  - {s['flake']['retried']} of {s['flake']['cases']} test case(s) passed only on"
@@ -237,7 +276,7 @@ def render(stats, runs, broken, args):
     lines.append("  which only the CLI runner produces. An exploratory run contributes no cases and")
     lines.append("  is therefore absent from that number, not counted as clean.")
     lines.append("- **Defect escape rate** — needs production incidents, which this repo never sees.")
-    lines.append("- **Coverage** — lives in the test suite's own reporting, not in the evidence.")
+    lines.append("- **Code coverage** — lives in the test suite's own reporting; v2 required-case coverage is counted above.")
     return "\n".join(lines)
 
 
