@@ -32,7 +32,7 @@ afterEach(async () => {
 
 async function hooks() {
   const { ctx } = fakeCtx(dir)
-  return qaBlueprint(ctx as never)
+  return qaBlueprint.server(ctx as never)
 }
 
 async function fire(tool: string, args: Record<string, unknown> = {}, opts: { error?: boolean } = {}) {

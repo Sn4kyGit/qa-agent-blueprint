@@ -50,7 +50,7 @@ interface Rig {
 
 async function rig(): Promise<Rig> {
   const { ctx, prompts } = fakeCtx(dir)
-  const hooks = await qaBlueprint(ctx as never)
+  const hooks = await qaBlueprint.server(ctx as never)
   return { hooks, prompts }
 }
 
@@ -189,7 +189,7 @@ describe("evidence gate (opencode) — session-perf model affinity (0.21.0)", ()
         { info: { role: "assistant", modelID: "claude-opus-4" } },
       ],
     })
-    const hooks = await qaBlueprint(ctx as never)
+    const hooks = await qaBlueprint.server(ctx as never)
     const call = toolAfter("bash", { command: "npm run test:e2e" })
     await hooks["tool.execute.after"](call.input as never, call.output as never)
     await mkdir(join(dir, "evidence"), { recursive: true })

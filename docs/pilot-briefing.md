@@ -97,7 +97,9 @@ for us to see what actually happened without reading your tickets.
 - **No mobile, cross-browser or non-web testing.** Chromium, headless, web only.
 - **No test-data lifecycle, no stage leases.** Parallel testing on a shared stage
   will produce confusing failures; coordinate manually for now.
-- **Evidence grows forever.** No retention job exists yet.
+- **Evidence retention is implemented (0.23.0)** — `/evidence-retention` plans a
+  two-stage cleanup and notifies; pruning is a human step (the agent never
+  deletes). Set the per-project policy in `PROJECT.md` → `## Evidence retention`.
 - **Epics and releases** are not modelled — the unit of work is one ticket.
 
 Full list with reasoning: `docs/architecture.md` and the "Deliberate non-goals"

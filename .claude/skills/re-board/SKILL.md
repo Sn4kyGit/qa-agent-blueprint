@@ -28,7 +28,10 @@ offer only the delta, confirm each change individually, and re-stamp. Expect
       `Readiness API/CLI`, `Build verification`, `Merge requirement`, the whole
       **Execution mode** section — a project without it runs `hybrid` with the
       template defaults; offer the section with `Mode` as the one real question,
-      sub-fields defaulted). Compare by field
+      sub-fields defaulted). The **Evidence retention** section (0.23.0) is
+      likewise optional with blueprint defaults (30 / 365 / 7 days) — offer it
+      defaulted, no interview (`/evidence-retention`; pruning stays a human
+      step). Compare by field
      name, not by section text — a renamed heading is not a missing field.
    - **Missing files**: `flow-map.md` (project and each product). Offer a seed
      draft from recent evidence and learnings, confirmed before writing, under

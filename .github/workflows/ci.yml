@@ -9,6 +9,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Version-independence is proven, not assumed (port-plan D12): the installer
+    # shim, agentswitch audit and eval-runner CLI flags must work on opencode 1.x
+    # AND 2.x. fail-fast:false so a regression on one version still reports the
+    # other. Both versions are pinned for reproducibility.
+    strategy:
+      fail-fast: false
+      matrix:
+        opencode-version: ["1.19.4", "2.4.1"]
+    name: test (opencode ${{ matrix.opencode-version }})
     steps:
       - uses: actions/checkout@v4
 
@@ -23,8 +32,8 @@ jobs:
       - name: Install pinned Claude Code
         run: npm install --global @anthropic-ai/claude-code@2.1.263
 
-      - name: Install pinned opencode
-        run: npm install --global opencode-ai@1.19.4
+      - name: Install pinned opencode (${{ matrix.opencode-version }})
+        run: npm install --global opencode-ai@${{ matrix.opencode-version }}
 
       - name: Run bash fixture battery
         run: |
@@ -50,3 +59,33 @@ jobs:
 
       - name: Validate plugin manifest
         run: claude plugin validate .
+
+  plugin-smoke:
+    runs-on: ubuntu-latest
+    # Runtime proof the plugin loads + the guard fires in the real CLI (the bun
+    # suites use synthetic payloads). Needs a model-key secret; skips without one
+    # (fork PRs have no secrets). Human step: add ALIBABA_TOKEN_PLAN_API_KEY (or
+    # OPENROUTER_API_KEY + repo variable QA_SMOKE_MODEL) to the repository secrets.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install opencode (2.x)
+        run: npm install --global opencode-ai@2.4.1
+
+      - name: Runtime plugin smoke
+        env:
+          ALIBABA_TOKEN_PLAN_API_KEY: ${{ secrets.ALIBABA_TOKEN_PLAN_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          QA_SMOKE_MODEL: ${{ vars.QA_SMOKE_MODEL || 'alibaba-token-plan/qwen3.8-flash' }}
+        run: |
+          if [ -z "$ALIBABA_TOKEN_PLAN_API_KEY" ] && [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "No model-key secret configured — skipping runtime smoke."
+            echo "Human step: add ALIBABA_TOKEN_PLAN_API_KEY to repo secrets to enable it."
+            exit 0
+          fi
+          bash evals/plugin-runtime-smoke.sh

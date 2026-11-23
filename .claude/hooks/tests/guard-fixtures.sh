@@ -431,6 +431,15 @@ check "curl GET GitHub API allowed" 0 '{"tool_name":"Bash","tool_input":{"comman
 check "wget --post-file to GitHub blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"wget --post-file=x.json https://api.github.com/repos/owner/repo/commits"},"cwd":"'"$TOG"'"}'
 check "curl --post-file to GitLab blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"curl --post-file=x.json https://gitlab.com/api/v4/projects/1/repository/commits"},"cwd":"'"$TOG"'"}'
 
+# --- S4 (0.23.0): evidence retention prune is a human step (plan D1)
+check "S4 python prune blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"python3 .claude/scripts/evidence-retention.py prune --yes"},"cwd":"'"$TOG"'"}'
+check "S4 bare prune blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"python3 evidence-retention.py prune"},"cwd":"'"$TOG"'"}'
+check "S4 executable prune blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"./.claude/scripts/evidence-retention.py prune --yes"},"cwd":"'"$TOG"'"}'
+check "S4 subshell prune blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"bash -c '"'"'python3 evidence-retention.py prune --yes'"'"'"},"cwd":"'"$TOG"'"}'
+check "S4 control: plan allowed" 0 '{"tool_name":"Bash","tool_input":{"command":"python3 .claude/scripts/evidence-retention.py plan"},"cwd":"'"$TOG"'"}'
+check "S4 control: status allowed" 0 '{"tool_name":"Bash","tool_input":{"command":"python3 .claude/scripts/evidence-retention.py status --hint"},"cwd":"'"$TOG"'"}'
+check "S4 control: plan --out prune-plan.md allowed" 0 '{"tool_name":"Bash","tool_input":{"command":"python3 evidence-retention.py plan --out prune-plan.md"},"cwd":"'"$TOG"'"}'
+
 # --- H4: secret destruction
 check "tee .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"echo EVIL=1 | tee .env"},"cwd":"'"$TOG"'"}'
 check "truncate .env blocked" 2 '{"tool_name":"Bash","tool_input":{"command":"truncate -s 0 .env"},"cwd":"'"$TOG"'"}'

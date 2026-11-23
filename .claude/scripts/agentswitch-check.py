@@ -227,6 +227,24 @@ def surface_state(session, root, report):
             continue
         if relative.startswith(".opencode/"):
             state["opencode"] = True
+        # opencode 2.x discovers plugins only as real files, so .opencode/plugins
+        # is a REAL dir holding a shim that re-exports this checkout's plugin
+        # (install.sh opencode_plugin_shim) — accept it instead of a symlink.
+        if relative == ".opencode/plugins" and os.path.isdir(path) and not os.path.islink(path):
+            shim = os.path.join(path, "qa-blueprint.ts")
+            expected_src = os.path.join(root, "opencode", "plugins", "qa-blueprint.ts") if root else ""
+            content = ""
+            if os.path.isfile(shim):
+                try:
+                    with open(shim, encoding="utf-8") as handle:
+                        content = handle.read()
+                except OSError:
+                    content = ""
+            if expected_src and expected_src in content:
+                state["valid"].append(relative)
+                continue
+            report.add("BLOCK", "real collision: .opencode/plugins is not the blueprint plugin shim")
+            continue
         if not os.path.islink(path):
             report.add("BLOCK", "real collision: " + relative + " is not a selective symlink")
             continue

@@ -96,6 +96,7 @@ Filled-in examples: `projects/EXAMPLE/qa-project-context.md` (project scope) and
 | `docs/quickstart-plugin.md` | Plugin on a fresh machine (JIRA + stage URL, no app repo) — all three wiring variants |
 | `docs/architecture.md` | The five-layer concept and why it is token-efficient |
 | `docs/artifact-strategy.md` | Evidence capture defaults, retention, PII, access |
+| `docs/retention-leases-rollup-plan.md` | Design + decision log: evidence retention (0.23.0, implemented), epic/release rollup and stage coordination (planned) |
 | `docs/memory-layers.md` | Repo learnings vs auto memory; why no memory server is wired in |
 | `docs/runbooks/stage-deploy-general.md` | Generic stage-deploy runbook scaffold |
 

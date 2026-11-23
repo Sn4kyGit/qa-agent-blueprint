@@ -438,6 +438,15 @@ if [ "$TOOL_NAME" = "Bash" ] || { [ -z "$TOOL_NAME" ] && [ -n "$COMMAND" ]; }; t
     && printf '%s' "$COMMAND" | grep -qiE '(api\.github\.com|github\.com/api|gitlab\.com/api|api\.gitlab|bitbucket\.org/api|api\.bitbucket|/api/v4/projects|/api/v3/repos|/repos/.*/(commits|git/refs|branches|releases|trees|contents))'; then
     block "refusing an interpreter-based git hosting REST write (python/node/perl/ruby HTTP write to a GitHub/GitLab/Bitbucket API endpoint) — code changes go through git so the safety protocol applies."
   fi
+
+  # S4 (0.23.0): evidence retention prune is a HUMAN step (plan D1). The agent
+  # may plan/status and notify, but never execute the deletion — same class as
+  # the keychain commands. Keys on the script filename + the prune subcommand as
+  # a standalone token, so `plan --out prune-plan.md` stays allowed (the token
+  # 'prune' must be followed by whitespace or end, not a hyphen).
+  if printf '%s' "$COMMAND" | grep -qE 'evidence-retention\.py[^;&|]*[[:space:]]prune([[:space:]]|$)'; then
+    block "refusing to run evidence-retention.py prune — deleting evidence is a human step (the agent never deletes evidence). Run evidence-retention.py plan, show the human the plan, and hand them the prune command to run in their own terminal."
+  fi
 fi
 
 # 2b. MCP config stays project-scoped (field report 2026-09-22: a GLOBAL

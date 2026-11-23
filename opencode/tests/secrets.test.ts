@@ -38,7 +38,7 @@ afterEach(() => {
 
 async function runShellEnv(deps?: { resolveJiraPat?: (directory: string) => Promise<string | undefined> }) {
   const { ctx } = fakeCtx("/tmp/qa-secrets-test")
-  const hooks = await qaBlueprint(ctx as never, deps as never)
+  const hooks = await qaBlueprint.server(ctx as never, deps as never)
   const output: { env: Record<string, string> } = { env: {} }
   await hooks["shell.env"]({ cwd: "/tmp/qa-secrets-test" } as never, output as never)
   return output.env

@@ -135,9 +135,12 @@ attempt uses a new fixture and a new synthetic canary.
 Both harnesses use `@playwright/mcp@0.0.84`, headless Chromium, an isolated
 in-memory profile, and an origin allowlist containing only the active fixture
 URL; requests outside that allowlist are rejected by MCP. Claude uses a strict MCP
-config containing only `playwright`. opencode's browser materialization includes
-`.opencode/plugins/qa-blueprint.ts` and omits `--pure`, so the actual plugin is
-loaded; standard opencode runs use `--pure` and do not copy the plugin.
+config containing only `playwright`. opencode's browser materialization copies
+`.opencode/plugins/qa-blueprint.ts` as real files (2.x discovers plugins only as
+real files) and omits `--pure`, so the actual plugin is loaded; standard opencode
+runs do not copy the plugin. The runner detects the opencode major version: 1.x
+isolates with `--pure` and selects the workspace with `--dir`, while 2.x dropped
+both flags and isolates via the `XDG_*` overrides + subprocess cwd.
 
 Every opencode attempt gets fresh `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, and
 `XDG_CACHE_HOME`; browser attempts do the same on both harnesses. Workspace,
@@ -146,6 +149,19 @@ per attempt. The Playwright MCP process starts through `env -i`: provider keys
 and other inherited secrets are not passed to it. Its dotenv file contains only
 synthetic eval material. Browser runs set shadow/preflight eval controls because
 there is deliberately no JIRA or external stage to preflight.
+
+## Plugin runtime smoke (real CLI)
+
+The bun suites drive the plugin with synthetic payloads; they prove the policy
+logic but not that the plugin loads and fires in a real opencode process.
+`evals/plugin-runtime-smoke.sh` closes that gap: it installs the blueprint into a
+scratch consumer (the installer's real shim), strips the router rules so the
+model actually attempts the command, and asserts the guard mechanically blocks
+`cat .env` (a synthetic canary never leaks) and `evidence-retention.py prune`.
+It needs a model key in the environment (`ALIBABA_TOKEN_PLAN_API_KEY`, or
+`OPENROUTER_API_KEY` with `QA_SMOKE_MODEL=openrouter/<id>`). CI runs it as the
+`plugin-smoke` job alongside the opencode version matrix; the job skips when no
+model-key secret is configured (human step: add the secret to the repository).
 
 Structured harness events are normalized into JSONL tool/result events.
 Sensitive keys, authorization headers, URL credentials/query secrets, binary

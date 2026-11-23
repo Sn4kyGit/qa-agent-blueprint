@@ -310,6 +310,19 @@ except Exception:
   fi
 }
 
+# Evidence retention notification (0.23.0, plan D3): a fail-open hint when
+# prunable evidence crosses the threshold. The agent plans and notifies; pruning
+# is a human step (the guard blocks agent prune invocations on both harnesses).
+retention_status() {
+  local script="$HERE/../scripts/evidence-retention.py"
+  [ -f "$script" ] || script="$HERE/../../scripts/evidence-retention.py"
+  [ -f "$script" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  local line
+  line="$(python3 "$script" status --qa-home "$CWD" --hint 2>/dev/null)" || return 0
+  [ -n "$line" ] && printf '\n- %s' "$line"
+}
+
 # A hook cannot ask an MCP server whether it started — but it CAN see what is
 # configured, read-only: ~/.claude.json (user scope) and .mcp.json (project
 # scope). Prints space-separated flags: HAS_PW, HAS_AT, PW_UNMASKED (a playwright
@@ -575,7 +588,7 @@ $(list_projects)
 - Read memory/INDEX.md before anything else; then only the active project's
   PROJECT.md, with targeted keyword lookups in learnings.md. No full-repo scans.
 - Lost? The qa-help skill lists every command (in plugin mode:
-  /qa-agent-blueprint:qa-help) — plain language works too.$(mcp_hint)$(inbox_status)$(secrets_status)$(secrets_keys_line)$(jira_pat_resolve)$AUTO_SECRETS$BROWSER_SEED_NOTE$(browser_console_status)$(update_notice)"
+  /qa-agent-blueprint:qa-help) — plain language works too.$(mcp_hint)$(inbox_status)$(retention_status)$(secrets_status)$(secrets_keys_line)$(jira_pat_resolve)$AUTO_SECRETS$BROWSER_SEED_NOTE$(browser_console_status)$(update_notice)"
 
 if [ "$PLUGIN_BOOTSTRAP" -eq 1 ]; then
   # The router is the plugin's own CLAUDE.md, injected VERBATIM. If the file is

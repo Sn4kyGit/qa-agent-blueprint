@@ -185,6 +185,22 @@ Phases, contracts and escalation rules: `docs/pipeline/`.
   never builds, and never bisects unasked. Left as "none", the analysis says so in
   its output instead of guessing.
 
+## Evidence retention
+
+Optional — an absent section means the blueprint defaults (30 / 365 / 7 days,
+notify on). Pruning is a **human step**: the agent plans and notifies via
+`/evidence-retention`, a human runs the prune command in their own terminal (the
+guard blocks agent prune invocations). Details: `docs/artifact-strategy.md` →
+"Retention"; design: `docs/retention-leases-rollup-plan.md` §3.
+
+- **Artifact retention**: `30` days — binaries/logs/traces inside run dirs
+  (stage A; the curated JSON/MD verdict records stay)
+- **Summary retention**: `365` days — whole run dirs (stage B; minimum 90, a
+  compact fact line is indexed before deletion so metric history survives)
+- **Raw MCP output**: `7` days — `evidence/.mcp-out`
+- **Proposal protection**: `30` days — pending shadow proposals stay protected
+- **Notify above**: `1` GB or `100` prunable runs — session-start cleanup hint
+
 ## Gotchas
 
 <Project-specific traps the agent must know before the first test: feature flags,

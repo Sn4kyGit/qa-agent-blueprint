@@ -50,6 +50,7 @@ project recognized → project knowledge applied → tested → evidence produce
 | Harness readiness / switch | `agentswitch` |
 | Present a bug/test to audience | `demo` |
 | Testing summary / metrics | `qa-report` |
+| Evidence cleanup / retention | `evidence-retention` |
 | Session end / surprise happened | `retro-learn` |
 | Ticket orchestration & strategy | `qa-manager` |
 | Command overview / help | `qa-help` |

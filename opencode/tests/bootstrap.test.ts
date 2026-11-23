@@ -41,7 +41,7 @@ const gitTest = GIT_OK ? test : test.skip
 
 async function init(target = dir) {
   const { ctx, prompts } = fakeCtx(target)
-  const hooks = await qaBlueprint(ctx as never)
+  const hooks = await qaBlueprint.server(ctx as never)
   return { hooks, prompts }
 }
 
@@ -49,7 +49,11 @@ describe("bootstrap (opencode)", () => {
   test("exposes only the default export to the opencode plugin loader", async () => {
     const module = await import("../plugins/qa-blueprint.ts")
     expect(Object.keys(module)).toEqual(["default"])
-    expect(typeof qaBlueprint).toBe("function")
+    // 2.x requires a plain-object default with id+setup; 1.18.29+ calls server().
+    expect(typeof qaBlueprint).toBe("object")
+    expect(qaBlueprint.id).toBe("qa-agent-blueprint")
+    expect(typeof qaBlueprint.setup).toBe("function")
+    expect(typeof qaBlueprint.server).toBe("function")
     expect(typeof qaBlueprint.orientation).toBe("function")
     expect(typeof qaBlueprint.resolveQaHome).toBe("function")
     expect(typeof qaBlueprint.scanMcpServers).toBe("function")
@@ -202,6 +206,32 @@ describe("orientation (opencode)", () => {
     expect(bySize).toContain("16 KB")
   })
 
+  test("evidence retention hint fires past the notify threshold (parity with session-start.sh)", async () => {
+    await init()
+    await mkdir(join(dir, "projects", "SHOP"), { recursive: true })
+    await writeFile(
+      join(dir, "projects", "SHOP", "PROJECT.md"),
+      "# Project File: SHOP\n## Evidence retention\n- **Notify above**: `0` GB or `1` prunable runs\n",
+    )
+    const old = join(dir, "evidence", "SHOP", "SHOP-1", "20240101-120000")
+    await mkdir(join(old, "screenshots"), { recursive: true })
+    await writeFile(
+      join(old, "execution_summary.json"),
+      JSON.stringify({ schema_version: 2, ticket: "SHOP-1", project: "SHOP", timestamp: "2024-01-01T12:00:00Z", verdict: "PASS", reported_to_jira: true, shadow: false }),
+    )
+    await writeFile(join(old, "screenshots", "x.png"), "x".repeat(2000))
+    const newest = join(dir, "evidence", "SHOP", "SHOP-1", "20261120-120000")
+    await mkdir(newest, { recursive: true })
+    await writeFile(
+      join(newest, "execution_summary.json"),
+      JSON.stringify({ schema_version: 2, ticket: "SHOP-1", project: "SHOP", timestamp: new Date().toISOString(), verdict: "PASS", reported_to_jira: true, shadow: false }),
+    )
+    const text = await qaBlueprint.orientation(dir)
+    expect(text).toContain("runs prunable")
+    expect(text).toContain("/evidence-retention")
+    expect(text).toContain("pruning is a human step")
+  })
+
   test("flags a playwright entry without the contract flags", async () => {
     await writeFile(
       join(dir, "opencode.json"),
@@ -286,7 +316,7 @@ describe("QA home resolution (walk-up)", () => {
   test("plugin in a subfolder: data at the home, harness seeds at the session dir", async () => {
     const { home, sub } = await mkHome(false) // legacy trio, no marker yet
     const { ctx } = fakeCtx(sub)
-    await qaBlueprint(ctx as never)
+    await qaBlueprint.server(ctx as never)
     // no dual scaffold in the subfolder
     expect(existsSync(join(sub, "projects"))).toBe(false)
     expect(existsSync(join(sub, "memory"))).toBe(false)

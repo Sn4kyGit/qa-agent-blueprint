@@ -83,6 +83,17 @@ deploy to it is in flight. When nothing non-colliding remains, end the turn
 with the job backgrounded and state what you are waiting for — that is a
 visible status, not a stall.
 
+## Evidence retention in CI
+
+A scheduled pipeline job may run `python3 .claude/scripts/evidence-retention.py
+plan --qa-home <home>` and surface the cleanup hint in the log/report. The
+recommended CI default is **plan + notification, never unattended deletion**. A
+pipeline that calls `prune --yes` directly is an explicit human decision encoded
+in pipeline config (outside the agent, not guard-blocked); the per-project policy
+in `PROJECT.md` → `## Evidence retention` still applies. The agent itself never
+prunes — `/evidence-retention` plans and hands the human the command
+(`docs/artifact-strategy.md` → "Retention").
+
 ## What the agent never does in CI/CD
 
 - Never edits pipeline definitions (`.github/workflows/*`, `.gitlab-ci.yml`, etc.)

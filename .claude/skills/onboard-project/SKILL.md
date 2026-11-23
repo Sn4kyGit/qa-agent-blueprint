@@ -94,6 +94,11 @@ opencode) forbids ("never guess a project's process").
       `Red check required`, `Escalate at risk`, `Plan approval`) take the
       template defaults unless the user objects — do not interview them
       individually. Background: `docs/pipeline/00-overview.md`.
+    - **Evidence retention.** Optional, with blueprint defaults (30 / 365 / 7
+      days). One sentence: the agent plans a cleanup and notifies, a human runs
+      the prune — `/evidence-retention`. Take the template defaults unless the
+      team wants different periods; do not interview the sub-fields individually.
+      Background: `docs/artifact-strategy.md` → "Retention".
 4. Leave any field the user can't answer yet as `TODO:` — never fill a guess.
    Flag TODOs clearly at the end so they get resolved before the first real test.
 5. Seed `projects/<KEY>/learnings.md` from the template (empty, ready for

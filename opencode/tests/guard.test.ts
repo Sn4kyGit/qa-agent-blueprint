@@ -15,13 +15,13 @@ import { bashBefore, fakeCtx, fileBefore, unknownBefore, SESSION_ID, type Before
 
 async function hooks() {
   const { ctx } = fakeCtx("/tmp/qa-guard-test")
-  return qaBlueprint(ctx as never)
+  return qaBlueprint.server(ctx as never)
 }
 
 /** Plugin instance rooted at a fresh temp dir (for projects/<KEY>/PROJECT.md). */
 async function hooksIn(dir: string) {
   const { ctx } = fakeCtx(dir)
-  return qaBlueprint(ctx as never)
+  return qaBlueprint.server(ctx as never)
 }
 
 async function tempProject(projectMd?: string): Promise<string> {
@@ -98,6 +98,10 @@ const blocked: Array<[string, BeforeCall]> = [
   // == fail closed: tool name missing → scan the raw args ==
   ["unknown tool, args mention cat .env", unknownBefore({ command: "cat .env" })],
   ["unknown tool, args name a secret file", unknownBefore({ filePath: ".env.production" })],
+  // == S4 (0.23.0): evidence retention prune is a human step (plan D1) ==
+  ["Bash evidence-retention prune", bashBefore("python3 .claude/scripts/evidence-retention.py prune --yes")],
+  ["Bash evidence-retention bare prune", bashBefore("python3 evidence-retention.py prune")],
+  ["Bash evidence-retention subshell prune", bashBefore("bash -c 'python3 evidence-retention.py prune --yes'")],
 ]
 
 const allowed: Array<[string, BeforeCall]> = [
@@ -123,6 +127,10 @@ const allowed: Array<[string, BeforeCall]> = [
   // == ordinary work is unaffected ==
   ["Write a normal file", fileBefore("write", "README.md")],
   ["Bash normal command", bashBefore("npx playwright test")],
+  // == S4 controls: plan/status stay agent-runnable; prune-plan.md is not prune ==
+  ["Bash evidence-retention plan", bashBefore("python3 .claude/scripts/evidence-retention.py plan")],
+  ["Bash evidence-retention status", bashBefore("python3 .claude/scripts/evidence-retention.py status --hint")],
+  ["Bash evidence-retention plan --out prune-plan.md", bashBefore("python3 evidence-retention.py plan --out prune-plan.md")],
 ]
 
 describe("pre-tool guard (opencode)", () => {

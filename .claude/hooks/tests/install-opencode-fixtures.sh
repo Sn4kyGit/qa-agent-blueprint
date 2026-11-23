@@ -7,8 +7,9 @@
 # opencode`, run against throwaway dirs in $TMPDIR.
 #
 # Contract under test (docs/opencode-port-plan.md, Phase 6 + D10):
-#   - .opencode/{ROUTER.md,agents,commands,plugins} are SYMLINKS into the
-#     blueprint checkout (updates = git pull, nothing is copied)
+#   - .opencode/{ROUTER.md,agents,commands} are SYMLINKS into the blueprint
+#     checkout (updates = git pull); .opencode/plugins/qa-blueprint.ts is a REAL
+#     shim re-exporting the repo plugin (opencode 2.x skips symlinked plugins)
 #   - compat symlinks .claude, docs, .agents resolve the literal path
 #     references inside skill/rule/agent bodies
 #   - opencode.json merges the template: existing mcp names win, the
@@ -84,7 +85,11 @@ if [ $? -ne 0 ]; then fail "installer exits 0" "$(printf '%s' "$OUT" | tail -3)"
 assert_link_to "ROUTER.md linked"   "$TARGET/.opencode/ROUTER.md" "$REPO/opencode/ROUTER.md"
 assert_link_to "agents linked"      "$TARGET/.opencode/agents"    "$REPO/opencode/agents"
 assert_link_to "commands linked"    "$TARGET/.opencode/commands"  "$REPO/opencode/commands"
-assert_link_to "plugins linked"     "$TARGET/.opencode/plugins"   "$REPO/opencode/plugins"
+# opencode 2.x discovers plugins only as REAL files (its scan skips symlinks),
+# so the installer writes a real shim re-exporting the repo plugin (D12).
+assert_file "plugin shim is a real file" "$TARGET/.opencode/plugins/qa-blueprint.ts"
+assert_grep "plugin shim re-exports repo plugin" "$TARGET/.opencode/plugins/qa-blueprint.ts" "$REPO/opencode/plugins/qa-blueprint.ts"
+[ ! -L "$TARGET/.opencode/plugins/qa-blueprint.ts" ] && pass "plugin shim not a symlink" || fail "plugin shim not a symlink" "opencode 2.x skips symlinked plugins"
 for agent in test-executor test-executor-cheap test-executor-deep test-automator test-automator-cheap test-automator-deep qa-manager failure-analyst bug-reporter; do
   assert_file "agent $agent readable via .opencode/agents" "$TARGET/.opencode/agents/$agent.md"
 done

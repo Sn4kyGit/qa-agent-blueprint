@@ -169,7 +169,7 @@ describe("opencode write gate", () => {
       }))
     }
     const { ctx } = fakeCtx(dir)
-    return qaBlueprint(ctx as never)
+    return qaBlueprint.server(ctx as never)
   }
 
   test("blocks the same fixed sleep as the Claude write hook", async () => {

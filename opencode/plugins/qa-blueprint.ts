@@ -32,6 +32,7 @@ import { spawnSync } from "node:child_process"
 // scaffold sources are found regardless of install mode.
 const BLUEPRINT_ROOT = join(dirname(realpathSync(fileURLToPath(import.meta.url))), "..", "..")
 const EVIDENCE_VALIDATOR = join(BLUEPRINT_ROOT, ".claude", "scripts", "validate-evidence.py")
+const RETENTION_SCRIPT = join(BLUEPRINT_ROOT, ".claude", "scripts", "evidence-retention.py")
 const TEST_CODE_SCANNER = join(BLUEPRINT_ROOT, ".claude", "scripts", "qa-test-code-scan.mjs")
 
 // --------------------------------------------------------------------------
@@ -145,6 +146,8 @@ const HARNESS_CFG_WRITER = /(?:sed\s+-i|\btee\b|>>?|\bcp\b|\bmv\b|\brm\b|truncat
 const HUMAN_ONLY_BASH_WRITER = /(sed\s+-i|tee\s|>>?|cp\s|mv\s|rm\s|truncate|dd\s|install\s|rsync\s|ed\s|perl\s+-[a-zA-Z]*i|ruby\s+-[a-zA-Z]*i|git\s+(apply|checkout|restore|reset|stash|config)|tar\s+-|unzip\s|ln\s+-s?)[^;&|]*(settings\.json|settings\.local\.json|hooks\.json|\.claude-plugin\/|hooks\/.*\.sh|rules\/|skills\/|agents\/|scripts\/|project\.md|\.qa-guard\.json|\.git\/(hooks|config))/i
 // 0.19.3 H6: interpreter writes to human-only files
 const HUMAN_ONLY_INTERPRETER = /(python3?|perl|ruby|node|php)\s[^;&|]*(open|write|writeFile|require|include|slurp|file_put_contents|File\.write)[^;&|]*(project\.md|\.qa-guard\.json|settings\.json|hooks\.json|\.git\/)/i
+// S4 (0.23.0): evidence retention prune is a human step (plan D1) — matches bash guard.
+const RETENTION_PRUNE = /evidence-retention\.py[^;&|]*\sprune(\s|$)/
 
 // Tools whose filePath argument is a WRITE (reads are governed by opencode
 // permission denies — D8 — not by this guard, same split as Claude where the
@@ -352,6 +355,8 @@ function guardCheck(tool: string, args: Record<string, unknown>, secretsRead: "b
     if (JIRA_INTERPRETER_WRITE(command)) block("refusing an interpreter-based JIRA REST write (python/node/perl/ruby HTTP write to /rest/api/ or /rest/agile/) — JIRA writes go through the Atlassian MCP tools so the shadow gate and write audit apply. Read-only requests stay allowed.")
     if (GIT_HOSTING_BASH_WRITE(command)) block("refusing a git hosting REST write (curl/wget/http with a write method to a GitHub/GitLab/Bitbucket API endpoint) — code changes go through git so the safety protocol applies. Read-only GET requests stay allowed.")
     if (GIT_HOSTING_INTERPRETER_WRITE(command)) block("refusing an interpreter-based git hosting REST write (python/node/perl/ruby HTTP write to a GitHub/GitLab/Bitbucket API endpoint) — code changes go through git so the safety protocol applies.")
+    // S4 (0.23.0): evidence retention prune is a human step (plan D1)
+    if (RETENTION_PRUNE.test(command)) block(RETENTION_PRUNE_MSG)
     // Strip only the literal ".env.example" before the .env checks: the
     // template must stay writable; .env/.env.local/.env.playwright-secrets
     // still match in full.
@@ -477,6 +482,7 @@ const GIT_CONFIG_MSG = "refusing to modify git config ($FILE_PATH) — git confi
 const GIT_MODIFY_MSG = "refusing to modify files via git ($FILE_PATH) — git apply/checkout/restore/reset/stash can overwrite protected files. Use the Write/Edit tools for individual file changes."
 const HUMAN_ONLY_BASH_MSG = "refusing to modify a human-only file via Bash ($FILE_PATH) — guard config, hooks, rules, skills, agents, scripts, project config, and .git/ internals are human tasks."
 const HUMAN_ONLY_INTERP_MSG = "refusing to modify a human-only file via an interpreter ($FILE_PATH) — guard config, project config, and .git/ internals are human tasks."
+const RETENTION_PRUNE_MSG = "refusing to run evidence-retention.py prune — deleting evidence is a human step (the agent never deletes evidence). Run evidence-retention.py plan, show the human the plan, and hand them the prune command to run in their own terminal."
 
 async function shadowGateBlocks(directory: string, tool: string, args: Record<string, unknown> | undefined): Promise<boolean> {
   if (!tool) {
@@ -1110,6 +1116,12 @@ async function orientation(home: string, sessionDir: string = home): Promise<str
     const line = (r.status === 0 ? r.stdout ?? "" : "").trim()
     if (line) lines.push(`- Secrets: ${line}`)
   }
+  // Evidence retention notification (0.23.0, plan D3): fail-open hint only.
+  if (existsSync(RETENTION_SCRIPT)) {
+    const r = spawnSync("python3", [RETENTION_SCRIPT, "status", "--qa-home", home, "--hint"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: process.env })
+    const line = (r.status === 0 ? r.stdout ?? "" : "").trim()
+    if (line) lines.push(`- ${line}`)
+  }
   const seed = seedNotes.get(sessionDir)
   if (seed?.autoSecrets) lines.push(`- ${seed.autoSecrets}`)
   if (seed?.browserConfig) {
@@ -1384,4 +1396,128 @@ async function qaBlueprint(ctx: PluginCtx, deps: Deps = {}) {
   }
 }
 
-export default Object.assign(qaBlueprint, { orientation, resolveQaHome, scanMcpServers })
+// --------------------------------------------------------------------------
+// 7. opencode 2.x (V2) adapter + dual-API export
+// --------------------------------------------------------------------------
+// opencode 2.x changed the plugin contract: a V1 function returning hook keys is
+// rejected (verified empirically); V2 default-exports a plain object with an `id`
+// and `setup(ctx)`, registering hooks via ctx.tool.hook / ctx.shell.hook /
+// ctx.event.subscribe. Tool names and arg keys changed too (bash→shell,
+// filePath→path, old_string→oldString, new_string→newString), the before/after
+// callback receives ONE mutable event instead of (input, output), shell.env
+// became ctx.shell.hook("create.before"), and headless completion is
+// session.execution.succeeded instead of session.idle.
+//
+// The policy core above is version-agnostic. These adapters normalize a V2 event
+// into the V1 (input, output) shape the handlers already speak, so ONE
+// implementation serves both APIs. V1 calls server(), V2 calls setup() — the
+// dual-export pattern from the opencode docs ("Support V1 and V2 from one
+// package"). The default export stays a SINGLE object (no named exports): the
+// 1.x loader rejects extra exports, and 2.x rejects a function default.
+
+const V2_TOOL_MAP: Record<string, string> = { shell: "bash" }
+
+function mapToolName(tool: string): string {
+  return V2_TOOL_MAP[tool] ?? tool
+}
+
+/** Normalize V2 arg keys to the V1 canonical names the policy core reads. */
+function normalizeV2Args(input: Record<string, unknown> | undefined): Record<string, unknown> {
+  const args: Record<string, unknown> = { ...(input ?? {}) }
+  if (typeof args.path === "string" && args.filePath === undefined) args.filePath = args.path
+  if (typeof args.oldString === "string" && args.old_string === undefined) args.old_string = args.oldString
+  if (typeof args.newString === "string" && args.new_string === undefined) args.new_string = args.newString
+  if (typeof args.newSource === "string" && args.new_source === undefined) args.new_source = args.newSource
+  return args
+}
+
+function v2SessionID(ev: Record<string, unknown> | undefined): string {
+  const data = (ev?.data ?? {}) as Record<string, unknown>
+  const info = (data.info ?? {}) as Record<string, unknown>
+  const props = (ev?.properties ?? {}) as Record<string, unknown>
+  return String(ev?.sessionID ?? data.sessionID ?? info.id ?? props.sessionID ?? "")
+}
+
+/** Map a V2 server event to the V1 {event:{type,properties}} shape. */
+function adaptV2Event(ev: Record<string, unknown>): { event: { type: string; properties: Record<string, unknown> } } {
+  const sid = v2SessionID(ev)
+  // 2.x headless completion is session.execution.succeeded; interactive idle is
+  // session.idle. Both drive the evidence-gate closeout + perf log.
+  const rawType = String(ev?.type ?? "")
+  const type = rawType === "session.execution.succeeded" ? "session.idle" : rawType
+  return { event: { type, properties: { sessionID: sid, info: { id: sid }, ...((ev?.data ?? {}) as Record<string, unknown>) } } }
+}
+
+interface V2Ctx {
+  location?: { directory?: string }
+  directory?: string
+  session?: { prompt?: (a: unknown) => Promise<unknown>; messages?: (a: unknown) => Promise<unknown> }
+  app?: { log?: (a: unknown) => Promise<unknown> }
+  tool: { hook: (name: string, cb: (ev: Record<string, unknown>) => unknown) => Promise<unknown> }
+  shell: { hook: (name: string, cb: (ev: Record<string, unknown>) => unknown) => Promise<unknown> }
+  event: { subscribe: (opts: { signal: AbortSignal }) => AsyncIterable<Record<string, unknown>> }
+}
+
+/** Build the V1-shaped PluginCtx the factory expects from a V2 context. */
+function normalizeV2Ctx(ctx: V2Ctx): PluginCtx {
+  const directory = ctx.location?.directory ?? ctx.directory ?? process.cwd()
+  const session: Record<string, unknown> = {}
+  if (ctx.session?.prompt) session.prompt = ctx.session.prompt.bind(ctx.session)
+  if (ctx.session?.messages) session.messages = ctx.session.messages.bind(ctx.session)
+  return {
+    directory,
+    client: {
+      session: session as never,
+      app: { log: ctx.app?.log?.bind(ctx.app) } as never,
+    },
+  }
+}
+
+/** V2 entrypoint: register the shared handlers through the 2.x domain APIs. */
+async function setupV2(ctx: V2Ctx, deps: Deps = {}) {
+  const hooks = await qaBlueprint(normalizeV2Ctx(ctx), deps)
+  const before = hooks["tool.execute.before"] as (i: unknown, o: unknown) => Promise<void>
+  const after = hooks["tool.execute.after"] as (i: unknown, o: unknown) => Promise<void>
+  const eventHook = hooks.event as (e: unknown) => Promise<void>
+  const shellEnv = hooks["shell.env"] as (i: unknown, o: unknown) => Promise<void>
+
+  await ctx.tool.hook("execute.before", async (ev) => {
+    await before(
+      { tool: mapToolName(String(ev?.tool ?? "")), sessionID: v2SessionID(ev), callID: String(ev?.id ?? "") },
+      { args: normalizeV2Args(ev?.input as Record<string, unknown>) },
+    )
+  })
+  await ctx.tool.hook("execute.after", async (ev) => {
+    const result = (ev?.result ?? {}) as Record<string, unknown>
+    const md = (result.metadata ?? {}) as Record<string, unknown>
+    const failed = ev?.status === "error" || Boolean(result.error) || Boolean(md.error)
+    await after(
+      { tool: mapToolName(String(ev?.tool ?? "")), sessionID: v2SessionID(ev), callID: String(ev?.id ?? ""), args: normalizeV2Args(ev?.input as Record<string, unknown>) },
+      { title: String(ev?.tool ?? ""), metadata: { ...md, error: failed }, output: typeof ev?.result === "string" ? ev.result : JSON.stringify(result) },
+    )
+  })
+  await ctx.shell.hook("create.before", async (ev) => {
+    await shellEnv({ cwd: String(ev?.cwd ?? "") }, { env: (ev?.env ?? {}) as Record<string, string> })
+  })
+
+  const controller = new AbortController()
+  void (async () => {
+    try {
+      for await (const ev of ctx.event.subscribe({ signal: controller.signal })) {
+        await eventHook(adaptV2Event(ev))
+      }
+    } catch { /* subscription aborted on unload */ }
+  })()
+  return () => controller.abort()
+}
+
+// Single default export: a plain object (2.x requires id+setup; 1.18.29+ calls
+// server()). Test helpers stay attached to this one export — no named exports.
+export default {
+  id: "qa-agent-blueprint",
+  async setup(ctx: V2Ctx) { return setupV2(ctx) },
+  async server(ctx: PluginCtx, deps: Deps = {}) { return qaBlueprint(ctx, deps) },
+  orientation,
+  resolveQaHome,
+  scanMcpServers,
+}

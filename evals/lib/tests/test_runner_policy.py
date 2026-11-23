@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -135,6 +136,7 @@ class RunnerMaterializationTest(unittest.TestCase):
 
     def test_opencode_browser_loads_plugin_and_standard_does_not(self):
         browser = self.runner("opencode", "browser")
+        browser._oc_major = 1
         prepared = browser._prepare("browser-evidence-real")
         tempdir, workspace, runtime, before, environment, canary, fixture = prepared
         try:
@@ -148,6 +150,7 @@ class RunnerMaterializationTest(unittest.TestCase):
             fixture.close()
             tempdir.cleanup()
         standard = self.runner("opencode", "standard")
+        standard._oc_major = 1
         prepared = standard._prepare("shadow-mode")
         tempdir, workspace, runtime, before, environment, canary, fixture = prepared
         try:
@@ -158,6 +161,41 @@ class RunnerMaterializationTest(unittest.TestCase):
             self.assertIn("--pure", command)
         finally:
             tempdir.cleanup()
+
+    def test_opencode_command_is_version_aware(self):
+        # opencode 2.x removed --pure/--dir from `run`; cwd + XDG isolation replace
+        # them. 1.x keeps the explicit flags. The runner must build the right shape
+        # for whichever CLI is installed (detected via `opencode --version`).
+        for major, legacy in ((1, True), (2, False)):
+            with self.subTest(major=major):
+                runner = self.runner("opencode", "standard")
+                runner._oc_major = major
+                prepared = runner._prepare("shadow-mode")
+                tempdir, workspace, runtime, before, environment, canary, fixture = prepared
+                try:
+                    command = runner._command("shadow-mode", workspace, runtime, "prompt")
+                    self.assertIn("--auto", command)
+                    self.assertIn("--format", command)
+                    if legacy:
+                        self.assertIn("--pure", command)
+                        self.assertIn("--dir", command)
+                    else:
+                        self.assertNotIn("--pure", command)
+                        self.assertNotIn("--dir", command)
+                finally:
+                    tempdir.cleanup()
+
+    def test_opencode_major_detection_matches_installed_cli(self):
+        # The CI matrix installs opencode 1.x and 2.x; this asserts the runner's
+        # version detection agrees with the real CLI, so the matrix actually
+        # exercises both flag shapes (not just the mocked ones above).
+        runner = self.runner("opencode", "standard")
+        if not runner.opencode:
+            self.skipTest("opencode CLI not installed")
+        proc = subprocess.run([runner.opencode, "--version"], capture_output=True, text=True)
+        match = re.search(r"(\d+)\.\d+\.\d+", proc.stdout or "")
+        expected = int(match.group(1)) if match else 1
+        self.assertEqual(runner._opencode_major(), expected)
 
 
 class ShellWrapperTest(unittest.TestCase):

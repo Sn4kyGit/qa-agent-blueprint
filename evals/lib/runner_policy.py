@@ -188,6 +188,7 @@ class EvalRunner:
         self.judge_model = args.judge_model or os.environ.get("QA_JUDGE_MODEL", "") or self.model
         self.claude = os.environ.get("CLAUDE_CODE_EXECPATH") or shutil.which("claude") or ""
         self.opencode = shutil.which("opencode") or ""
+        self._oc_major: int | None = None
         self.secrets = provider_secret_values(dict(os.environ))
         self.output: Path | None = None
         self.infra_messages: list[str] = []
@@ -365,6 +366,31 @@ class EvalRunner:
             prompt = prompt.replace("{{FIXTURE_URL}}", fixture.base_url).replace("{{CANARY}}", canary)
         return prompt
 
+    def _opencode_major(self) -> int:
+        """Detect the opencode CLI major version once (cached).
+
+        opencode 2.x removed ``--pure`` and ``--dir`` from ``run``: the workspace
+        is selected by the subprocess cwd (set in ``_invoke``) and config/auth
+        isolation by the ``XDG_*`` overrides in ``_prepare``. 1.x still needs the
+        explicit flags. Detecting the version keeps the runner independent of the
+        installed CLI; an unparseable version falls back to the legacy 1.x shape.
+        """
+        if self._oc_major is None:
+            major = 1
+            try:
+                proc = subprocess.run(
+                    [self.opencode, "--version"],
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    text=True, timeout=30, check=False,
+                )
+                match = re.search(r"(\d+)\.\d+\.\d+", proc.stdout or "")
+                if match:
+                    major = int(match.group(1))
+            except (OSError, subprocess.SubprocessError):
+                major = 1
+            self._oc_major = major
+        return self._oc_major
+
     def _command(self, name: str, workspace: Path, runtime: Path, prompt: str) -> list[str]:
         model_args = ["--model", self.model] if self.model else []
         if self.harness == "claude":
@@ -376,6 +402,12 @@ class EvalRunner:
                 self.claude, "-p", "--dangerously-skip-permissions",
                 "--output-format", "stream-json", "--verbose", "--no-session-persistence",
                 *mcp_args, *model_args, prompt,
+            ]
+        if self._opencode_major() >= 2:
+            # opencode 2.x: cwd selects the workspace; XDG isolation replaces --pure.
+            return [
+                self.opencode, "run", "--auto",
+                "--format", "json", "--model", self.model, prompt,
             ]
         pure_args = [] if self.args.suite == "browser" else ["--pure"]
         return [
@@ -477,7 +509,10 @@ RUN 2: FAIL
                         command.extend(["--model", model])
                     command.append(prompt)
                 else:
-                    command = [self.opencode, "run", "--auto", "--pure", "--dir", directory, "--model", model, prompt]
+                    if self._opencode_major() >= 2:
+                        command = [self.opencode, "run", "--auto", "--model", model, prompt]
+                    else:
+                        command = [self.opencode, "run", "--auto", "--pure", "--dir", directory, "--model", model, prompt]
                 result = self._invoke(command, Path(directory), env)
                 return result, result.output
 

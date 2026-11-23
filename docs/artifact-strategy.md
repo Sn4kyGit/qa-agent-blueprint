@@ -28,15 +28,29 @@ Decisions about test evidence: what we capture, how long it lives, who sees it.
 
 ## Retention
 
-- **Local**: developer machines clean `evidence/` ad hoc; suggest ≥ 30 days
-  (a retention period per project, chosen by the team). **Not implemented:** no
-  script, hook or job prunes `evidence/` today, so it grows until someone deletes
-  it. Evidence dirs are gitignored — the repo
-  never grows.
+- **Local (implemented, 0.23.0)**: `.claude/scripts/evidence-retention.py` prunes
+  `evidence/` in two stages — **A** deletes heavy artifacts (screenshots, logs,
+  traces, videos) inside old run dirs but keeps the curated JSON/MD verdict
+  records and writes a `.retention.json` marker (default 30 days); **B** deletes
+  whole run dirs after a longer period (default 365 days, minimum 90), appending
+  a compact fact line to `evidence/.audit/retention-index.log` *first* so metric
+  history survives. `evidence/.mcp-out/` raw output is pruned by age separately
+  (default 7 days). Protection rules keep the newest run per ticket, fresh runs,
+  pending shadow proposals, `NEEDS_REVIEW` awaiting a ruling, `.retain`-pinned
+  runs, and `.audit/`/`.preflight/`/`_rollups/`. **Pruning is a human step**: the
+  agent runs `plan`/`status` and notifies ("bitte aufräumen"), the guard blocks
+  agent `prune` invocations on both harnesses, and a human runs `prune --yes` in
+  their own terminal. Per-project policy lives in `PROJECT.md` →
+  `## Evidence retention`; the `/evidence-retention` skill drives the workflow.
+  Design: `docs/retention-leases-rollup-plan.md` §3. Evidence dirs are gitignored
+  — the repo never grows.
 - **JIRA**: artifacts attached to tickets live with the ticket (permanent record of
-  the verdict).
+  the verdict). Retention never touches JIRA attachments.
 - **CI**: run dirs uploaded as pipeline artifacts with the project's retention
-  (suggest 30 days; traces/videos of PASS runs may be dropped immediately).
+  (suggest 30 days; traces/videos of PASS runs may be dropped immediately). A CI
+  cron may call `evidence-retention.py plan` and surface the hint; a direct
+  `prune --yes` in a pipeline is an explicit human choice (the recommended CI
+  default is plan + notification, never unattended deletion).
 - Optional central storage (share/S3) is a team decision — record it in the project
   file if adopted.
 

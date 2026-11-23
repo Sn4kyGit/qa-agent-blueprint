@@ -55,7 +55,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
 Unter **opencode** (modell-agnostisch, Modell = deine `/models`-Wahl): `install.sh --mode opencode --target <projekt> --yes` vom Clone aus — Details: [Quickstart opencode](https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md).
 Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: `install.sh --mode shared` — beide bleiben ohne Re-Onboarding startbereit, `/agentswitch` prüft read-only.
 
-Ende-zu-Ende verifiziert (claude 2.1.263): registriert 33 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
+Ende-zu-Ende verifiziert (claude 2.1.263): registriert 34 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
 
 ## Der Ablauf
 
@@ -481,7 +481,7 @@ Die Fragen, die im Gespräch immer kommen — beantwortet ohne Fachjargon.
 
 Gar nicht im Kopf — alles liegt als normale Textdateien in deinem Projektordner,
 einsehbar und per Git teilbar. Fünf Schubladen: das **Handbuch** (immer dabei,
-nur die Regeln), die **Fachbücher** (33 Skills, laden nur bei Bedarf), die
+nur die Regeln), die **Fachbücher** (34 Skills, laden nur bei Bedarf), die
 **Projektakte** (Umgebungen, Testuser, Runbooks — einmal eingerichtet), das
 **Lerntagebuch** (Überraschungen aus Läufen) und die **Beweise**
 (Screenshots, Logs — als Datei, nie im Gedächtnis). Der Clou: Am Ende jeder Session
@@ -567,7 +567,7 @@ es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Age
 vollständig, postet aber nichts, bis du es freigibst.
 
 QA Agent Blueprint · Stand: 30. Oktober 2026 (0.19.0) —
-aktualisiert auf Repo-Stand (33 Skills, 9 Subagents, Fixture-Batterie + 152 bun-Tests, 46 Eval-Cases,
+aktualisiert auf Repo-Stand (34 Skills, 9 Subagents, Fixture-Batterie + 190 bun-Tests, 64 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
 Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,

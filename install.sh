@@ -2245,6 +2245,47 @@ opencode_link() {
   report ADDED "$link" "-> $src"
 }
 
+opencode_plugin_shim() {
+  # opencode 2.x discovers plugins only as REAL files (its directory scan uses
+  # dirent.isFile(), false for symlinks) — a symlinked .opencode/plugins dir or
+  # file never loads. Write a real shim re-exporting the repo plugin by absolute
+  # path: discoverable by 2.x, BLUEPRINT_ROOT stays the repo (the real plugin
+  # file's realpath), and git-pull updates still flow. V1 (1.18.29+) loads the
+  # same default object via server(). See docs/opencode-port-plan.md D12.
+  local dir="$TARGET/.opencode/plugins" shim="$TARGET/.opencode/plugins/qa-blueprint.ts"
+  local src="$REPO_ROOT/opencode/plugins/qa-blueprint.ts"
+  local content
+  content="$(printf 'import plugin from "%s"\nexport default plugin\n' "$src")"
+  if [ -L "$dir" ]; then
+    local cur; cur="$(readlink "$dir")"
+    case "$cur" in
+      "$REPO_ROOT"|"$REPO_ROOT/"*|*qa-agent-blueprint*|*qa-blueprint*)
+        if [ "$DRY_RUN" -eq 1 ]; then dry "replace symlinked .opencode/plugins with real shim dir"; return 0; fi
+        rm -f "$dir"; mkdir -p "$dir"
+        report MERGED ".opencode/plugins" "symlink -> real dir (opencode 2.x plugin discovery)" ;;
+      *) report WARN ".opencode/plugins" "foreign symlink (-> $cur) left untouched"; return 0 ;;
+    esac
+  fi
+  if [ -e "$shim" ] && [ ! -L "$shim" ]; then
+    if printf '%s' "$content" | cmp -s - "$shim"; then
+      report SKIPPED ".opencode/plugins/qa-blueprint.ts" "shim already current"; return 0
+    fi
+    if grep -qF "$src" "$shim" 2>/dev/null; then
+      : # our stale shim (e.g. moved checkout) — rewrite below
+    else
+      report WARN ".opencode/plugins/qa-blueprint.ts" "exists and is not our shim — left untouched"; return 0
+    fi
+  fi
+  if [ -L "$shim" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then dry "replace plugin symlink with real shim"; return 0; fi
+    rm -f "$shim"
+  fi
+  if [ "$DRY_RUN" -eq 1 ]; then dry "write plugin shim .opencode/plugins/qa-blueprint.ts -> $src"; return 0; fi
+  mkdir -p "$dir"
+  printf '%s' "$content" > "$shim"
+  report ADDED ".opencode/plugins/qa-blueprint.ts" "real shim re-exporting repo plugin (opencode 2.x)"
+}
+
 opencode_notice_links() {
   local primary="$TARGET/NOTICE" fallback="$TARGET/NOTICE.qa-agent-blueprint" source="$REPO_ROOT/NOTICE"
   if [ ! -e "$primary" ] && [ ! -L "$primary" ]; then
@@ -2539,6 +2580,17 @@ opencode_uninstall() {
         report SKIPPED "$l" "symlink points elsewhere — left untouched" ;;
     esac
   done
+  # Real plugin shim (opencode 2.x): remove only if it re-exports this checkout.
+  local shim="$TARGET/.opencode/plugins/qa-blueprint.ts"
+  if [ -f "$shim" ] && [ ! -L "$shim" ] && grep -qF "$REPO_ROOT/opencode/plugins/qa-blueprint.ts" "$shim" 2>/dev/null; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      dry "remove plugin shim $shim"
+    else
+      rm -f "$shim"
+      report REMOVED ".opencode/plugins/qa-blueprint.ts" "shim removed"
+      rmdir "$TARGET/.opencode/plugins" 2>/dev/null && report REMOVED ".opencode/plugins/" "was empty after shim removal"
+    fi
+  fi
   # .opencode/ dir goes only when it is now empty (foreign files stay).
   if [ -d "$TARGET/.opencode" ] && [ -z "$(ls -A "$TARGET/.opencode" 2>/dev/null)" ]; then
     [ "$DRY_RUN" -eq 1 ] || rmdir "$TARGET/.opencode"
@@ -2560,7 +2612,7 @@ run_opencode_mode() {
   opencode_link "$TARGET/.opencode/ROUTER.md" "$REPO_ROOT/opencode/ROUTER.md"
   opencode_link "$TARGET/.opencode/agents"    "$REPO_ROOT/opencode/agents"
   opencode_link "$TARGET/.opencode/commands"  "$REPO_ROOT/opencode/commands"
-  opencode_link "$TARGET/.opencode/plugins"   "$REPO_ROOT/opencode/plugins"
+  opencode_plugin_shim
   # D10 compat links: skill/rule/agent bodies reference these paths literally
   opencode_link "$TARGET/.claude" "$REPO_ROOT/.claude"
   opencode_link "$TARGET/docs"    "$REPO_ROOT/docs"
@@ -2667,6 +2719,12 @@ shared_preflight() {
       *) src="$REPO_ROOT/$item" ;;
     esac
     if [ -e "$TARGET/$item" ] || [ -L "$TARGET/$item" ]; then
+      # opencode 2.x: .opencode/plugins is a REAL dir holding our shim (not a
+      # symlink) — accept it when the shim re-exports this checkout's plugin.
+      if [ "$item" = ".opencode/plugins" ] && [ -d "$TARGET/$item" ] && [ ! -L "$TARGET/$item" ] \
+         && grep -qF "$REPO_ROOT/opencode/plugins/qa-blueprint.ts" "$TARGET/$item/qa-blueprint.ts" 2>/dev/null; then
+        continue
+      fi
       shared_link_is "$TARGET/$item" "$src" || collisions+=("$item")
     fi
   done
@@ -2763,7 +2821,7 @@ shared_surface_links() {
   opencode_link "$TARGET/.opencode/ROUTER.md" "$REPO_ROOT/opencode/ROUTER.md"
   opencode_link "$TARGET/.opencode/agents" "$REPO_ROOT/opencode/agents"
   opencode_link "$TARGET/.opencode/commands" "$REPO_ROOT/opencode/commands"
-  opencode_link "$TARGET/.opencode/plugins" "$REPO_ROOT/opencode/plugins"
+  opencode_plugin_shim
   opencode_link "$TARGET/docs" "$REPO_ROOT/docs"
   opencode_link "$TARGET/projects/_template" "$REPO_ROOT/projects/_template"
   opencode_link "$TARGET/projects/EXAMPLE" "$REPO_ROOT/projects/EXAMPLE"
@@ -3118,6 +3176,17 @@ shared_uninstall() {
       *) report SKIPPED "$item" "symlink points elsewhere — left untouched" ;;
     esac
   done
+  # Real plugin shim (opencode 2.x): remove only if it re-exports this checkout.
+  local shim="$TARGET/.opencode/plugins/qa-blueprint.ts"
+  if [ -f "$shim" ] && [ ! -L "$shim" ] && grep -qF "$REPO_ROOT/opencode/plugins/qa-blueprint.ts" "$shim" 2>/dev/null; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      report DRY-RUN ".opencode/plugins/qa-blueprint.ts" "would remove the plugin shim"
+    else
+      rm -f "$shim"
+      report REMOVED ".opencode/plugins/qa-blueprint.ts" "plugin shim removed"
+      rmdir "$TARGET/.opencode/plugins" 2>/dev/null && report REMOVED ".opencode/plugins/" "was empty after shim removal"
+    fi
+  fi
   shared_uninstall_settings
   shared_uninstall_opencode_config
   shared_uninstall_router

@@ -30,7 +30,7 @@ contributions. Here's how to get started with code:
    ```bash
    bash opencode/tests/run-all.sh
    ```
-   This runs 27 bash fixture suites + 184 bun tests. All must pass.
+   This runs 28 bash fixture suites + 190 bun tests. All must pass.
 
 ## Making changes
 

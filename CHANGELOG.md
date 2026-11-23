@@ -8,6 +8,66 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.23.0] — 2026-11-23
+
+Theme: **evidence retention — notification-first, human-only pruning.** Bounded
+`evidence/` growth without losing verdict history, metric inputs, or protected
+runs. Design: `docs/retention-leases-rollup-plan.md` §3 (decision log D1–D3).
+
+### Added
+- `.claude/scripts/evidence-retention.py` — two-stage retention: stage A deletes
+  heavy artifacts inside old run dirs but keeps the curated JSON/MD verdict
+  records and writes a `.retention.json` marker (default 30 days); stage B deletes
+  whole run dirs after a longer period (default 365 days, minimum 90), appending
+  a compact fact line to `evidence/.audit/retention-index.log` first so metric
+  history survives. `evidence/.mcp-out/` raw output is pruned by age (default
+  7 days). `plan`/`status` are agent-runnable; `prune` requires `--yes`.
+- Protection rules: the newest run per ticket, fresh runs, pending shadow
+  proposals, `NEEDS_REVIEW` awaiting a ruling, `.retain` pins, and
+  `.audit/`/`.preflight/`/`_rollups/` are never pruned; missing/malformed
+  summaries fail open (kept, never deleted).
+- `/evidence-retention` skill + opencode command wrapper: the agent plans and
+  notifies, then hands the human the prune command. The session-start orientation
+  prints a fail-open cleanup hint past a threshold (both harnesses).
+- Optional `## Evidence retention` section in `PROJECT.md` (per-project policy);
+  `onboard-project` offers it defaulted, `re-board` adds the delta.
+- `evidence-retention-fixtures.sh` (36 cases) + guard fixtures for the human-only
+  prune rule on both harnesses.
+
+### Changed
+- The pre-tool guard (bash + opencode plugin) blocks agent invocations of
+  `evidence-retention.py prune` — deleting evidence is a human step (D1), the
+  same class as the keychain commands. `plan`/`status` stay allowed; the block
+  message is identical on both harnesses (message-parity).
+- `docs/artifact-strategy.md` retention section rewritten (implemented);
+  `docs/rules/core/cicd.md` gains the CI retention pattern (plan + notification
+  default, never unattended deletion); `docs/pilot-briefing.md` updated.
+- **opencode 2.x compatibility (D12).** The plugin now default-exports a plain
+  `{ id, setup(ctx), server(ctx) }` object: `setup()` registers hooks through the
+  2.x domain APIs (`ctx.tool.hook`, `ctx.shell.hook`, `ctx.event.subscribe`) and
+  adapts V2 events (tool `shell`, args `path`/`oldString`/`newString`,
+  `session.execution.succeeded`) into the V1 shape the shared policy core speaks;
+  `server()` keeps opencode 1.18.29+ working. 2.x rejects V1 function exports and
+  discovers plugins only as real files, so `install.sh` writes a REAL
+  `.opencode/plugins/qa-blueprint.ts` shim re-exporting the repo plugin (instead
+  of a symlinked dir); uninstall, shared preflight and `agentswitch-check.py`
+  accept the shim. The eval runner detects the opencode major version and drops
+  `--pure`/`--dir` on 2.x (cwd + XDG isolation). Verified on opencode 2.4.1: the
+  guard blocks `cat .env` and `evidence-retention.py prune`.
+- CI runs a **version matrix** (opencode 1.19.4 + 2.4.1, `fail-fast: false`)
+  instead of a single pin, plus a model-backed **plugin runtime smoke** job
+  (`evals/plugin-runtime-smoke.sh`): it installs the blueprint into a scratch
+  consumer, strips the router rules so the model attempts the command, and
+  asserts the guard mechanically blocks `cat .env` (canary never leaks) and
+  `evidence-retention.py prune`. The smoke skips without a model-key secret —
+  human step: add `ALIBABA_TOKEN_PLAN_API_KEY` (or `OPENROUTER_API_KEY` + repo
+  variable `QA_SMOKE_MODEL`) to the repository secrets.
+
+### Migration
+- No action required. An absent `## Evidence retention` section means the
+  blueprint defaults (30 / 365 / 7 days). Historical evidence is never rewritten;
+  pruning is opt-in and human-executed.
+
 ## [0.22.0] — 2026-11-16
 
 Theme: **verifiable agentic test generation.** Deterministic quality gates,
