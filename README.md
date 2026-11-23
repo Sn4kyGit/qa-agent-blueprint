@@ -101,7 +101,7 @@ The agent knows *your* project because it reads `PROJECT.md` (test users,
 environments, deploy runbook) and `PRODUCT.md` (what differs per product).
 None of that is in the prompt — it comes from files in your repo.
 
-**34 skills · 9 subagents · 4 hooks · 2 MCP servers** — all in plain Markdown,
+**35 skills · 9 subagents · 4 hooks · 2 MCP servers** — all in plain Markdown,
 reviewable and diffable through Git.
 
 > 📖 **[Detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
@@ -244,17 +244,17 @@ claude plugin update --scope project qa-agent-blueprint
 
 ## What's in the box
 
-![34 Skills — the complete toolbox](docs/images/features.png)
+![35 Skills — the complete toolbox](docs/images/features.png)
 
 | Component | Count | What it does |
 |---|---|---|
-| **Skills** | 34 | Test workflows, bug reports, analysis, reporting, learning, retention |
+| **Skills** | 35 | Test workflows, bug reports, analysis, reporting, learning, retention, rollup |
 | **Subagents** | 9 | qa-manager, test-executor, test-automator, failure-analyst, bug-reporter (+ cheap/deep lanes) |
 | **Hooks** | 4 | SessionStart (bootstrap), PreToolUse (guard), Stop (evidence gate), PostToolUse (audit) |
 | **MCP servers** | 2 | playwright (browser), atlassian (JIRA) |
 | **Always-loaded rules** | 5 | evidence-policy, product-layer, qa-principles, security, token-discipline |
 | **On-demand docs** | 12 | Detailed rules, read when the topic comes up |
-| **Tests** | 28 suites + 190 bun | Fixture battery, manifest conventions, eval cases (64) |
+| **Tests** | 29 suites + 190 bun | Fixture battery, manifest conventions, eval cases (65) |
 
 ### Skills you'll use most
 
@@ -269,9 +269,9 @@ claude plugin update --scope project qa-agent-blueprint
 | `/onboard-project` | Teach the agent a new project |
 
 <details>
-<summary><b>All 34 skills</b></summary>
+<summary><b>All 35 skills</b></summary>
 
-**Core workflow**: test-ticket, retest-bug, exploratory-testing, test-automation, recon, failure-analysis, bug-report, report-to-jira, deploy-to-stage, onboard-project, onboard-product, re-board, scaffold-suite, qa-report, evidence-retention, retro-learn, whats-new, skill-review, perf-analysis, demo, qa-help, agentswitch, model-setup
+**Core workflow**: test-ticket, retest-bug, exploratory-testing, test-automation, recon, failure-analysis, bug-report, report-to-jira, deploy-to-stage, onboard-project, onboard-product, re-board, scaffold-suite, qa-report, evidence-retention, rollup, retro-learn, whats-new, skill-review, perf-analysis, demo, qa-help, agentswitch, model-setup
 
 **Vendored** (MIT, from [petrkindlmann/qa-skills](https://github.com/petrkindlmann/qa-skills)): api-testing, accessibility-testing, security-testing, visual-testing, risk-based-testing, bug-reproduction, test-reliability, qa-metrics, test-case-management, release-readiness
 

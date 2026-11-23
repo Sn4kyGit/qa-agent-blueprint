@@ -1,10 +1,11 @@
 # Feature plan — evidence retention, epic/release rollup, stage coordination (0.23.0–0.25.0)
 
-Status: **Feature A (evidence retention, 0.23.0) IMPLEMENTED; B (rollup) and C
-(stage coordination) PLANNED, not implemented.** Design decisions approved by the
-maintainer on 2026-11-23; the decision log (§1) is authoritative for
-implementation, in the same spirit as `docs/opencode-port-plan.md` §7. Read this
-before touching any of the three features.
+Status: **Feature A (evidence retention, 0.23.0) and Feature B (epic/release
+rollup, 0.24.0) IMPLEMENTED; C (stage coordination) PLANNED, not implemented.**
+Design decisions approved by the maintainer on 2026-11-23; the decision log (§1)
+is authoritative for implementation, in the same spirit as
+`docs/opencode-port-plan.md` §7. Read this before touching any of the three
+features.
 
 Companion documents: `docs/artifact-strategy.md` (retention policy surface),
 `docs/rules/core/cicd.md` (shared-stage rules), `docs/pipeline/01a-readiness.md`

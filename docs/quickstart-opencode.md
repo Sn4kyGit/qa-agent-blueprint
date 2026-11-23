@@ -1,7 +1,7 @@
 # Quickstart: opencode on a fresh machine
 
 The opencode path through the blueprint: the same ticket-driven QA Manager +
-Tester (34 skills, 9 agents, evidence gate), running under
+Tester (35 skills, 9 agents, evidence gate), running under
 [opencode](https://opencode.ai) instead of Claude Code — with **your** choice
 of model. The blueprint pins none: the model is whatever you pick in
 `/models` (docs/opencode-port-plan.md, D6).
@@ -178,7 +178,7 @@ In `~/qa-workspace`:
 opencode run "list your available skills"
 ```
 
-should show the 34 blueprint skills, and `/test-ticket` `/retest-bug`
+should show the 35 blueprint skills, and `/test-ticket` `/retest-bug`
 `/qa-report` etc. should appear as commands. The evidence gate is active from
 the first session: a JIRA write without fresh evidence is blocked with
 `QA_EVIDENCE_MISSING:`.

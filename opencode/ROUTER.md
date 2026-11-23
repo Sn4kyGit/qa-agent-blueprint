@@ -51,6 +51,7 @@ project recognized → project knowledge applied → tested → evidence produce
 | Present a bug/test to audience | `demo` |
 | Testing summary / metrics | `qa-report` |
 | Evidence cleanup / retention | `evidence-retention` |
+| Epic/release rollup (go/no-go) | `rollup` |
 | Session end / surprise happened | `retro-learn` |
 | Ticket orchestration & strategy | `qa-manager` |
 | Command overview / help | `qa-help` |

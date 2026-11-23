@@ -8,6 +8,35 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.24.0] — 2026-11-23
+
+Theme: **epic/release rollup.** Answer "is this epic/release tested well enough to
+ship?" from existing evidence + JIRA structure — a report, not a run. Design:
+`docs/retention-leases-rollup-plan.md` §4 (D5).
+
+### Added
+- `.claude/scripts/epic-rollup.py` — deterministic aggregation over JIRA children:
+  classifies each child (`tested-pass/fail/blocked/needs-review/untested/stale/
+  no-test`), flags stale builds (a PASS on an old build is not a PASS for the
+  release), `legacy-evidence`/`pruned-evidence`, worst-verdict-wins, coverage +
+  decided pass rate, gate breaches → `recommendation: go|no-go|insufficient-evidence`.
+  Writes `rollup.json` + `rollup.md` to `evidence/<KEY>/_rollups/<id>/<ts>/` —
+  never a run summary. Retention-index fallback for pruned history.
+- `/rollup` skill + opencode command wrapper: the agent fetches children (one
+  deployment-aware JQL), probes the current build, runs the aggregator, surfaces
+  the untested/stale gaps, and hands the result to `release-readiness`. Shadow
+  proposal, no epic transition.
+- `rollup-fixtures.sh` (29 cases) + eval `rollup-honest-coverage` + COVERAGE row.
+
+### Changed
+- `release-readiness` consumes `rollup.json`; `qa-report` points to `/rollup` for
+  structure-over-children (vs time-window metrics over runs).
+- Counts: 35 skills, 24 commands, 65 eval cases.
+
+### Migration
+- No action required. A rollup is read-only over existing evidence; it never
+  executes tests or writes run summaries.
+
 ## [0.23.0] — 2026-11-23
 
 Theme: **evidence retention — notification-first, human-only pruning.** Bounded

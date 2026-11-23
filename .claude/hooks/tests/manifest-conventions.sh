@@ -314,7 +314,7 @@ else:
 ENTRY_POINTS = [
     "agentswitch", "bug-report", "deploy-to-stage", "evidence-retention", "exploratory-testing", "failure-analysis",
     "onboard-product", "onboard-project", "perf-analysis", "qa-help", "qa-report", "re-board",
-    "recon", "report-to-jira", "retest-bug", "retro-learn", "scaffold-suite",
+    "recon", "report-to-jira", "retest-bug", "retro-learn", "rollup", "scaffold-suite",
     "skill-review", "test-automation", "test-ticket", "whats-new", "model-setup",
 ]
 skills = {os.path.basename(os.path.dirname(p)) for p in glob.glob(os.path.join(root, ".claude", "skills", "*", "SKILL.md"))}
@@ -327,7 +327,7 @@ expected_cmds = set(ENTRY_POINTS) | {"demo"}
 if missing:
     fail("every entry-point skill has a command wrapper", f"missing commands: {', '.join(missing)}")
 elif cmds != expected_cmds:
-    fail("command inventory is exactly the 23 expected commands",
+    fail("command inventory is exactly the 24 expected commands",
          f"missing={sorted(expected_cmds - cmds)}, extra={sorted(cmds - expected_cmds)}")
 else:
     ok(f"command <-> skill parity ({len(cmds)} commands)")

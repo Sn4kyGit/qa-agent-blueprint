@@ -65,3 +65,8 @@ order: the schema grew `attempts` first, then the aggregator started counting.
 
 It also does not judge people. The unit of every number here is a *run*, not a
 tester.
+
+For **structure over JIRA children** — "is this epic/release tested well enough
+to ship?" — use `/rollup` (a report over an epic's children, with a go/no-go
+recommendation). This skill is time-window metrics over runs; the two complement
+each other.

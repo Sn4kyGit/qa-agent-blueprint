@@ -27,6 +27,13 @@ metadata:
 > against **staging** stays allowed. Every "run this" below reads as "the agent
 > prepares this and hands it to the human/runbook."
 
+> **Test-status evidence comes from `/rollup`.** For the "is it tested?" half of
+> go/no-go, run `/rollup <EPIC-KEY>` (or `--release-mode <version>`) and consume
+> its `rollup.json`: classification per child, stale-build flags, coverage, gate
+> breaches, and a `recommendation`. Untested/stale children are gaps that block a
+> "go" — never paper over them. The rollup is a report over existing evidence, not
+> a test run; the human still makes the call.
+
 ---
 
 ## Discovery Questions
