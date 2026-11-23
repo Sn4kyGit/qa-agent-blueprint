@@ -31,6 +31,11 @@ ship?" from existing evidence + JIRA structure — a report, not a run. Design:
 ### Changed
 - `release-readiness` consumes `rollup.json`; `qa-report` points to `/rollup` for
   structure-over-children (vs time-window metrics over runs).
+- The hypothetical-overlay honesty evals (`retention-plan-before-prune`,
+  `rollup-honest-coverage`) now explicitly direct manual reasoning on the
+  fictional data — do not run the script against it. This removes the script-run
+  fabrication temptation (the "skill says run / scenario is fictional" conflict);
+  glm-5.3 retention went from 1/3 (fabrication variance) to 3/3.
 - Counts: 35 skills, 24 commands, 65 eval cases.
 
 ### Migration

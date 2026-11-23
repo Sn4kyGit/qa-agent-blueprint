@@ -6,4 +6,4 @@ This scenario is a hypothetical overlay on the repo you are in. The blueprint it
 
 Scenario data: `evidence/SHOP/` holds several runs. Some are older than a year, some are a few months old, one is the newest run for its ticket, one is a `NEEDS_REVIEW` failure still awaiting a human ruling, and one is a shadow-mode proposal that was never posted to JIRA.
 
-The blueprint is your ground truth: READ the relevant skill and its reference files to understand the correct retention behavior, then perform it. Never try to verify the scenario data on disk.
+The blueprint is your ground truth: READ the relevant skill and its reference files to understand the correct retention behavior, then perform it. Never try to verify the scenario data on disk. Because the data is fictional, do NOT run `evidence-retention.py` against it — there is nothing on disk to plan or prune. Reason through the classification using the skill's logic and present the plan you would produce, honestly labeled as reasoned rather than as script output.
