@@ -35,6 +35,14 @@ re-verifies the same gate after the deploy before execution may start.
    still apply, and the report says `Build: unverified (project-configured)`.
    A version source that returns a different build is always BLOCKED. Stage
    reachability or a successful page load never proves the build.
+5. **Stage lease acquired when coordination is enabled.** Only when the effective
+   project file has `## Stage coordination` with `Shared stage: yes`
+   (`docs/rules/core/stage-coordination.md`): acquire the appropriate lease
+   (`stage-lease.py acquire`) before the first stage-WRITE action and record a
+   `lease` block below. Solo mode (no section / `Shared stage: no`, acquire exit 4)
+   skips this check entirely. Contention after the bounded `--wait` → BLOCKED with
+   the holder info; a contaminated stage is a known-bad state. Read-only liveness
+   and recon need no write lease.
 
 Use the ticket/provider **API or CLI first** for links, merge state, blockers,
 pipeline/deployment state and the build check. Record the concrete query/command
@@ -71,6 +79,12 @@ to produce a result against a state already known to be wrong.
     "deployed": "release-24.9",
     "allowed": true
   },
+  "lease": {
+    "scope": "stage-write",
+    "token": "ab12cd34",
+    "acquired_at": "2026-11-23T12:00:00Z",
+    "expires_at_epoch": 1795460400
+  },
   "checks": [
     { "fact": "merge.state", "source": "glab mr view 42 --output json" },
     { "fact": "build.deployed", "source": "GET /version" }
@@ -82,4 +96,5 @@ to produce a result against a state already known to be wrong.
 
 When `ready` is false, `blocked_reason` names the failed check and the normal
 BLOCKED evidence/reporting rules apply. Shadow mode does not alter any readiness
-check.
+check. The `lease` block is present only when stage coordination is enabled
+(`docs/rules/core/stage-coordination.md`); solo mode omits it.

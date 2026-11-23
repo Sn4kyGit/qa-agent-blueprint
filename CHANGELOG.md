@@ -8,6 +8,40 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.25.0] — 2026-11-23
+
+Theme: **stage coordination + test-data lifecycle.** Parallel sessions/humans on a
+shared stage stop contaminating each other; solo users see zero change. Design:
+`docs/retention-leases-rollup-plan.md` §5 (D4).
+
+### Added
+- `.claude/scripts/stage-lease.py` — local-backend leases (`evidence/.leases/`,
+  `fcntl.flock` per environment, TTL + heartbeat, atomic stale takeover).
+  `acquire`/`release`/`heartbeat`/`status`/`break`; conflict matrix (`deploy`
+  conflicts with everything; `reset` with write/data; `stage-write` with
+  stage-write; `data:<ns>` only the same namespace). Bounded `--wait` inside one
+  process (no agent sleep-polling). Audit `lease.log`.
+- Adaptive solo/team (D4): an absent `## Stage coordination` section (or `Shared
+  stage: no`) means solo — `acquire` exits 4, zero friction. Team is opt-in;
+  `Write lease: required` only as an explicit human escalation, never a default.
+- Readiness check 5 + `lease` block in `readiness.json`; `deploy-to-stage` holds an
+  exclusive `deploy` lease across deploy + verification; `test-ticket`/`qa-manager`
+  acquire after readiness, release at closeout.
+- `docs/rules/core/stage-coordination.md`; `PROJECT.md` template section;
+  onboarding question; `cicd.md` deploy-exclusivity note.
+- `stage-lease-fixtures.sh` (21 cases) + eval `lease-before-stage-write` + COVERAGE.
+
+### Changed
+- Eval runner: an **exhausted allocated quota** (Alibaba `Throttling.AllocationQuota`
+  / "Allocated quota exceeded") is no longer retried — it recovers only on a quota
+  increase/reset, unlike a rate-limit 429 (`Throttling.RateQuota`, RPM/TPM). Two
+  new eval-lib tests distinguish them.
+- Counts: 30 bash suites, 66 eval cases (skills/commands unchanged: 35 / 24).
+
+### Migration
+- No action required. Solo projects (no coordination section) are unaffected;
+  team mode is opt-in via `PROJECT.md`.
+
 ## [0.24.0] — 2026-11-23
 
 Theme: **epic/release rollup.** Answer "is this epic/release tested well enough to

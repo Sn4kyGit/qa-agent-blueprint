@@ -254,7 +254,7 @@ claude plugin update --scope project qa-agent-blueprint
 | **MCP servers** | 2 | playwright (browser), atlassian (JIRA) |
 | **Always-loaded rules** | 5 | evidence-policy, product-layer, qa-principles, security, token-discipline |
 | **On-demand docs** | 12 | Detailed rules, read when the topic comes up |
-| **Tests** | 29 suites + 190 bun | Fixture battery, manifest conventions, eval cases (65) |
+| **Tests** | 30 suites + 190 bun | Fixture battery, manifest conventions, eval cases (66) |
 
 ### Skills you'll use most
 

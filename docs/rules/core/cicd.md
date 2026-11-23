@@ -79,7 +79,10 @@ the running job:
 
 Colliding work still waits: browser-driving subagents are strictly sequential
 (one MCP server = one shared tab), and nothing writes to a shared stage while a
-deploy to it is in flight. When nothing non-colliding remains, end the turn
+deploy to it is in flight. When a project enables `## Stage coordination`, that
+deploy exclusivity is mechanical — an exclusive `deploy` lease blocks other stage
+writes (`docs/rules/core/stage-coordination.md`); solo projects coordinate by
+etiquette. When nothing non-colliding remains, end the turn
 with the job backgrounded and state what you are waiting for — that is a
 visible status, not a stall.
 

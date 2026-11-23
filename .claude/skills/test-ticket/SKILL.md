@@ -41,7 +41,10 @@ orchestration to `qa-manager`.
    `Build verification: unavailable`, reported as unverified). Prefer API/CLI checks. Only after a
    ready result may one Playwright navigation check stage liveness and recon or test
    execution begin. A missing merge/required build is BLOCKED or a `deploy-to-stage` handoff
-   followed by re-verification — never a test against a known-wrong state.
+   followed by re-verification — never a test against a known-wrong state. When
+   the project enables `## Stage coordination`, acquire the stage lease here
+   (readiness check 5) and release it at closeout; solo mode needs no lease
+   (`docs/rules/core/stage-coordination.md`).
 5. **Read shadow mode and decide strategy from the effective Execution mode.**
    Shadow mode, evidence and reporting remain unchanged. `mcp-only` uses
    `test-executor`; `cli-first` uses the existing suite through `test-automator`;

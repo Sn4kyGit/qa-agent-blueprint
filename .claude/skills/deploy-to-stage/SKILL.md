@@ -28,7 +28,12 @@ license: Apache-2.0
    and tell the user who to ask — do not trigger the pipeline yourself.
 4. If shared stage: announce the deploy per the project's gotcha/etiquette notes
    (e.g. team chat) before triggering — check `memory/learnings/env-gotchas.md`
-   for the "shared stage" pattern if the project file is thin on this.
+   for the "shared stage" pattern if the project file is thin on this. When
+   `## Stage coordination` is enabled, hold an **exclusive `deploy` lease**
+   (`stage-lease.py acquire --scope deploy`) across the deploy AND post-deploy
+   verification, and release it afterwards — nothing else writes to the stage
+   while a deploy is in flight (`docs/rules/core/stage-coordination.md`). Solo
+   mode (acquire exit 4) needs no lease.
 5. Trigger the pipeline with the parameters from the runbook (branch/release from
    the ticket's fix version). Wait for stages in the documented order; a failed
    migration step means the deploy is **not** valid even if later stages go green.

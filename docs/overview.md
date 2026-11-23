@@ -567,7 +567,7 @@ es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Age
 vollständig, postet aber nichts, bis du es freigibst.
 
 QA Agent Blueprint · Stand: 30. Oktober 2026 (0.19.0) —
-aktualisiert auf Repo-Stand (35 Skills, 9 Subagents, Fixture-Batterie + 190 bun-Tests, 65 Eval-Cases,
+aktualisiert auf Repo-Stand (35 Skills, 9 Subagents, Fixture-Batterie + 190 bun-Tests, 66 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
 Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,

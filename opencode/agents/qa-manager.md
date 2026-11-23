@@ -87,7 +87,10 @@ unchanged fallback.
    navigation/recon/execution may happen before a ready result. A missing merge →
    BLOCKED; a missing required build → BLOCKED or `deploy-to-stage` when allowed,
    then re-verify. Explicitly unavailable verification is reported as unverified. No universal MR/PR
-   requirement and no test against a known-wrong state.
+   requirement and no test against a known-wrong state. When the project enables
+   `## Stage coordination`, the lease is acquired at readiness (check 5) and
+   released at closeout; a deploy holds an exclusive `deploy` lease
+   (`docs/rules/core/stage-coordination.md`). Solo mode needs no lease.
 3b. **Only when ready**, make one Playwright navigation to stage as liveness,
    then start the mode-required recon or execution. This navigation never replaces
    the version check.

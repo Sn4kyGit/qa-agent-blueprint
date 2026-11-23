@@ -99,6 +99,11 @@ opencode) forbids ("never guess a project's process").
       the prune — `/evidence-retention`. Take the template defaults unless the
       team wants different periods; do not interview the sub-fields individually.
       Background: `docs/artifact-strategy.md` → "Retention".
+    - **Stage coordination.** Optional, default SOLO (no leases). One question:
+      "Is this stage shared with a team or parallel sessions?" No → omit the
+      section. Yes → enable `Shared stage: yes` with namespacing + exclusive-op
+      leases; `Write lease` stays `off` unless the team explicitly wants full
+      serialization. Background: `docs/rules/core/stage-coordination.md`.
 4. Leave any field the user can't answer yet as `TODO:` — never fill a guess.
    Flag TODOs clearly at the end so they get resolved before the first real test.
 5. Seed `projects/<KEY>/learnings.md` from the template (empty, ready for

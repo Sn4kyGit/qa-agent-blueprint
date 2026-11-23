@@ -201,6 +201,19 @@ guard blocks agent prune invocations). Details: `docs/artifact-strategy.md` →
 - **Proposal protection**: `30` days — pending shadow proposals stay protected
 - **Notify above**: `1` GB or `100` prunable runs — session-start cleanup hint
 
+## Stage coordination
+
+Optional — an absent section means **SOLO mode** (no leases, zero friction).
+Enable only when this stage is shared with a team or parallel sessions. Details:
+`docs/rules/core/stage-coordination.md`; script: `.claude/scripts/stage-lease.py`.
+
+- **Shared stage**: `no` ← `yes` enables coordination (exclusive-op leases + namespacing)
+- **Lease backend**: `local` ← QA-home `evidence/.leases/`; `shared-path`/`api` are later phases
+- **Write lease**: `off` ← `required` is an explicit team escalation (full serialization), never a default
+- **Exclusive operations**: deploy, global-reset, cache-flush, feature-flags
+- **Data namespace**: `qa-<runid>-` — runs create entities only under this prefix
+- **Cleanup**: <reset endpoint/command per run; a global reset needs an exclusive lease + human OK>
+
 ## Gotchas
 
 <Project-specific traps the agent must know before the first test: feature flags,
