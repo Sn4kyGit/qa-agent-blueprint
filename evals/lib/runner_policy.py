@@ -64,6 +64,19 @@ TRANSIENT_MARKERS = (
     "status 504",
     "socket hang up",
 )
+# Exhausted allocated quota is NOT transient: it recovers only when the quota is
+# increased or reset, not within a minute. Retrying wastes a call, and the 429
+# status would otherwise match TRANSIENT_MARKERS. Distinguish Alibaba
+# Throttling.AllocationQuota / insufficient_quota ("Allocated quota exceeded")
+# from Throttling.RateQuota (RPM/TPM, "Requests rate limit exceeded"), which IS
+# transient. These markers are specific to allocation so a rate-limit 429 still
+# retries.
+QUOTA_EXHAUSTED_MARKERS = (
+    "allocated quota exceeded",
+    "insufficient_quota",
+    "throttling.allocationquota",
+    "increase your quota",
+)
 
 
 @dataclass
@@ -120,6 +133,8 @@ def is_transient(result: ProcessResult, answer: str = "") -> bool:
     if result.returncode == 0 and not has_meaningful_answer(answer):
         return True
     output = result.output.lower()
+    if any(marker in output for marker in QUOTA_EXHAUSTED_MARKERS):
+        return False  # exhausted allocated quota: a retry cannot recover it
     if any(marker in output for marker in TRANSIENT_MARKERS):
         return True
     return result.returncode < 0

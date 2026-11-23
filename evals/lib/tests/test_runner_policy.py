@@ -68,6 +68,22 @@ class RunnerPolicyTest(unittest.TestCase):
         result = ProcessResult(1, "401 unauthorized: invalid api key")
         self.assertFalse(is_transient(result))
 
+    def test_allocation_quota_exhausted_is_not_transient_even_with_429(self):
+        # Alibaba Throttling.AllocationQuota: the allocated token quota is spent;
+        # a retry cannot recover it. The 429 status must NOT make it transient.
+        for msg in (
+            "HTTP 429 Throttling.AllocationQuota: Allocated quota exceeded, please increase your quota limit.",
+            "status 429 insufficient_quota",
+            "Error: Allocated quota exceeded, please increase your quota limit.",
+        ):
+            with self.subTest(msg=msg):
+                self.assertFalse(is_transient(ProcessResult(1, msg)))
+
+    def test_rate_quota_is_transient(self):
+        # Throttling.RateQuota (RPM/TPM) recovers within a minute -> retryable.
+        self.assertTrue(is_transient(ProcessResult(1, "HTTP 429 Throttling.RateQuota: Requests rate limit exceeded, please try again later.")))
+        self.assertTrue(is_transient(ProcessResult(1, "status 429 too many requests")))
+
     def test_empty_success_is_transient(self):
         self.assertTrue(is_transient(ProcessResult(0, ""), ""))
         self.assertTrue(is_transient(ProcessResult(0, "{}"), "[claude-code:unrecognized_model] {\"model\":\"test\"}\n"))
