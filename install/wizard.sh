@@ -178,6 +178,11 @@ wizard_run() {
         wizard_valid_model "$MODEL_DEEP" || { warn "Use provider/model"; MODEL_DEEP=""; }
       done
       wizard_read "Deep lane variant (optional)" MODEL_DEEP_VARIANT ""
+      wizard_read "Judge model for the verdict court (optional, provider/model; empty = inherit)" MODEL_JUDGE ""
+      if [ -n "$MODEL_JUDGE" ]; then
+        wizard_valid_model "$MODEL_JUDGE" || { warn "Use provider/model; judge left to inherit"; MODEL_JUDGE=""; }
+      fi
+      [ -n "$MODEL_JUDGE" ] && wizard_read "Judge variant (optional)" MODEL_JUDGE_VARIANT ""
     fi
   else
     MODEL_SETUP_MODE="${MODEL_SETUP_MODE:-later}"
@@ -453,6 +458,8 @@ wizard_apply_model_setup() {
   [ -n "$MODEL_CHEAP_VARIANT" ] && args+=(--cheap-variant "$MODEL_CHEAP_VARIANT")
   [ -n "$MODEL_STANDARD_VARIANT" ] && args+=(--standard-variant "$MODEL_STANDARD_VARIANT")
   [ -n "$MODEL_DEEP_VARIANT" ] && args+=(--deep-variant "$MODEL_DEEP_VARIANT")
+  [ -n "$MODEL_JUDGE" ] && args+=(--judge "$MODEL_JUDGE")
+  [ -n "$MODEL_JUDGE_VARIANT" ] && args+=(--judge-variant "$MODEL_JUDGE_VARIANT")
   [ "$DRY_RUN" -eq 1 ] && args+=(--dry-run)
   if python3 "$helper" "${args[@]}"; then
     report OK "model lanes" "cheap/standard/deep consumer overrides configured"

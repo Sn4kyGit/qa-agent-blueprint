@@ -26,6 +26,7 @@
 #                [--browser headless|headful] [--model-setup now|later|skip]
 #                [--cheap <provider/model>] [--standard <provider/model>] [--deep <provider/model>]
 #                [--cheap-variant <v>] [--standard-variant <v>] [--deep-variant <v>]
+#                [--judge <provider/model>] [--judge-variant <v>]
 #                [--skill-profile full|standard|minimal|custom] [--skills-exclude "a,b"]
 #                [--dry-run] [--yes] [--uninstall] [--move <new-target>]
 #                [--non-interactive] [-h|--help]
@@ -100,6 +101,8 @@ MODEL_DEEP=""
 MODEL_CHEAP_VARIANT=""
 MODEL_STANDARD_VARIANT=""
 MODEL_DEEP_VARIANT=""
+MODEL_JUDGE=""
+MODEL_JUDGE_VARIANT=""
 SKILL_PROFILE=""
 SKILL_PROFILE_FLAG=0
 SKILLS_EXCLUDE_RAW=""
@@ -133,6 +136,10 @@ while [ $# -gt 0 ]; do
     --standard-variant=*) MODEL_STANDARD_VARIANT="${1#*=}"; shift ;;
     --deep-variant)     MODEL_DEEP_VARIANT="${2:-}"; shift 2 ;;
     --deep-variant=*)   MODEL_DEEP_VARIANT="${1#*=}"; shift ;;
+    --judge)            MODEL_JUDGE="${2:?--judge needs provider/model}"; shift 2 ;;
+    --judge=*)          MODEL_JUDGE="${1#*=}"; shift ;;
+    --judge-variant)    MODEL_JUDGE_VARIANT="${2:-}"; shift 2 ;;
+    --judge-variant=*)  MODEL_JUDGE_VARIANT="${1#*=}"; shift ;;
     --skill-profile)    SKILL_PROFILE="${2:?--skill-profile needs a value}"; SKILL_PROFILE_FLAG=1; shift 2 ;;
     --skill-profile=*)  SKILL_PROFILE="${1#*=}"; SKILL_PROFILE_FLAG=1; shift ;;
     --skills-exclude)   SKILLS_EXCLUDE_RAW="${2:?--skills-exclude needs a value}"; SKILLS_EXCLUDE_FLAG=1; shift 2 ;;

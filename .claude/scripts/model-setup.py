@@ -17,6 +17,12 @@ LANES = (
     ("test-automator", "standard"),
     ("test-automator-deep", "deep"),
 )
+# Optional judge roles (0.27.0): the adversarial verdict court. --judge sets both
+# prosecutor and defender to one model; --failure-analyst is separate. These are
+# additive and optional — inherit stays the working default (D6).
+JUDGE_ROLES = ("verdict-prosecutor", "verdict-defender")
+ANALYST_ROLE = "failure-analyst"
+EXTRA_ROLES = JUDGE_ROLES + (ANALYST_ROLE,)
 MODEL_PART = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._:@-]*")
 
 
@@ -114,6 +120,9 @@ def load_config(path):
         for lane, _ in LANES:
             if lane in agents and not isinstance(agents[lane], dict):
                 raise ValueError("a target agent override must be an object")
+        for role in EXTRA_ROLES:
+            if role in agents and not isinstance(agents[role], dict):
+                raise ValueError("a target agent override must be an object")
     return config, original
 
 
@@ -128,6 +137,15 @@ def show(config):
         variant = override.get("variant")
         suffix = f" variant={variant}" if isinstance(variant, str) and variant else ""
         print(f"agent.{lane}: {model}{suffix}")
+    for role in EXTRA_ROLES:
+        override = agents.get(role) or {}
+        model = override.get("model")
+        if not isinstance(model, str) or not model:
+            print(f"agent.{role}: <inherit>")
+            continue
+        variant = override.get("variant")
+        suffix = f" variant={variant}" if isinstance(variant, str) and variant else ""
+        print(f"agent.{role}: {model}{suffix}")
 
 
 def write_bytes(path, data):
@@ -151,21 +169,45 @@ def build_parser():
     for group in ("cheap", "standard", "deep"):
         parser.add_argument("--" + group)
         parser.add_argument("--" + group + "-variant")
+    parser.add_argument("--judge", help="model for both verdict-prosecutor and verdict-defender (optional)")
+    parser.add_argument("--judge-variant")
+    parser.add_argument("--failure-analyst", help="model for failure-analyst (optional)")
+    parser.add_argument("--failure-analyst-variant")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--check", action="store_true")
     return parser
 
 
+def _set_role(agents, role, model, variant):
+    override = agents.setdefault(role, {})
+    override["model"] = model
+    variant = variant.strip() if isinstance(variant, str) else None
+    if variant:
+        override["variant"] = variant
+    else:
+        override.pop("variant", None)
+
+
 def main():
     parser = build_parser()
     args = parser.parse_args()
+    lanes_provided = any(getattr(args, g) is not None for g in ("cheap", "standard", "deep"))
+    judge_provided = args.judge is not None
+    analyst_provided = args.failure_analyst is not None
     if not args.check:
-        missing = [group for group in ("cheap", "standard", "deep") if getattr(args, group) is None]
-        if missing:
-            parser.error("--cheap, --standard and --deep are required unless --check is used")
-        for group in ("cheap", "standard", "deep"):
-            if not valid_model(getattr(args, group)):
-                parser.error("invalid model reference for --" + group + "; expected provider/model")
+        if not (lanes_provided or judge_provided or analyst_provided):
+            parser.error("specify --cheap/--standard/--deep and/or --judge (or --failure-analyst); or use --check")
+        if lanes_provided:
+            missing = [g for g in ("cheap", "standard", "deep") if getattr(args, g) is None]
+            if missing:
+                parser.error("--cheap, --standard and --deep must be set together")
+            for g in ("cheap", "standard", "deep"):
+                if not valid_model(getattr(args, g)):
+                    parser.error("invalid model reference for --" + g + "; expected provider/model")
+        if judge_provided and not valid_model(args.judge):
+            parser.error("invalid model reference for --judge; expected provider/model")
+        if analyst_provided and not valid_model(args.failure_analyst):
+            parser.error("invalid model reference for --failure-analyst; expected provider/model")
     session = os.path.abspath(os.path.expanduser(args.cwd))
     if not os.path.isdir(session):
         raise ValueError("--cwd must name an existing session directory")
@@ -175,16 +217,26 @@ def main():
         show(config)
         return
     agents = config.setdefault("agent", {})
-    for lane, group in LANES:
-        override = agents.setdefault(lane, {})
-        override["model"] = getattr(args, group)
-        variant = getattr(args, group + "_variant")
-        if variant is not None:
-            variant = variant.strip()
-        if variant:
-            override["variant"] = variant
-        else:
-            override.pop("variant", None)
+    if lanes_provided:
+        for lane, group in LANES:
+            _set_role(agents, lane, getattr(args, group), getattr(args, group + "_variant"))
+    if judge_provided:
+        for role in JUDGE_ROLES:
+            _set_role(agents, role, args.judge, args.judge_variant)
+    if analyst_provided:
+        _set_role(agents, ANALYST_ROLE, args.failure_analyst, args.failure_analyst_variant)
+    # Independence hint (advisory, never blocks): a judge on the same model as an
+    # executor lane reviews its own work. Prefer a different, ideally stronger model.
+    if judge_provided:
+        lane_models = {getattr(args, g) for g in ("cheap", "standard", "deep") if getattr(args, g)}
+        for lane, _ in LANES:
+            m = (agents.get(lane) or {}).get("model")
+            if isinstance(m, str) and m:
+                lane_models.add(m)
+        if args.judge in lane_models:
+            print("WARNING: judge model equals an executor lane model — the judge reviews its "
+                  "own work, so independence is reduced. Prefer a different (ideally stronger) "
+                  "model for the judge.", file=sys.stderr)
     rendered = (json.dumps(config, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     if args.dry_run:
         print("Dry run: no files written")

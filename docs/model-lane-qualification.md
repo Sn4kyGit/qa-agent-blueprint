@@ -58,6 +58,16 @@ The Qwen models (`flash`, `max`) were robust across runs.
 fabrication variance. Re-qualify after a model update — availability and behavior
 drift; never assume a model or variant from memory (`/model-setup` step 2).
 
+**Judge roles (verdict court):** assign a strong, ideally *different* model than the
+executor lanes (`/model-setup --judge <provider/model>` sets both `verdict-prosecutor`
+and `verdict-defender`). The helper warns — never blocks — when the judge equals an
+executor lane model, because the judge would review its own work (reduced independence).
+Omitted, the judges inherit the caller's model, which always works.
+
+**OpenRouter free models:** `<model>:free` / `opencode/...-free` tiers are a legitimate
+cost option for the cheap lane and smoke tests. They are often weaker — do **not**
+default the judge or deep lane to a free model; quality-critical roles need capability.
+
 ## Reproduce / extend
 
 The eval cases live in `evals/`; the norm→case matrix is `evals/COVERAGE.md`.

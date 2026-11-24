@@ -8,6 +8,27 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.27.0] — 2026-11-24
+
+Theme: **model setup for the judge roles — optional + guided, never forced (D6).**
+
+### Added
+- `/model-setup` and `model-setup.py` cover the verdict-court roles: `--judge` sets
+  both `verdict-prosecutor` and `verdict-defender`; `--failure-analyst` is separate.
+  Additive and optional — lanes, judges, or both in one call; omitted roles inherit
+  (the working default). `--check` lists them (`<inherit>` when unset).
+- Independence warning (advisory, never blocks): a judge model equal to an executor
+  lane model reviews its own work — prefer a different, ideally stronger model.
+- Installer wizard asks an optional judge model (empty = inherit); `--judge` /
+  `--judge-variant` flags for non-interactive runs.
+- Guidance: judge = strong + different model; OpenRouter free models (`<model>:free`,
+  `opencode/...-free`) are a cost option for cheap/smoke, not judge/deep (capability).
+  `docs/model-lane-qualification.md` + the model-setup skill.
+- `model-setup-fixtures.sh` judge cases (judge-only, combine, warning, check, usage).
+
+### Migration
+- No action required. Existing lane setup is unchanged; judge roles are opt-in.
+
 ## [0.26.0] — 2026-11-24
 
 Theme: **the adversarial verdict court — judges, not guards.** An independent

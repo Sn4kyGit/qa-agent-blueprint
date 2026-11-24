@@ -185,5 +185,32 @@ with tempfile.TemporaryDirectory() as temporary:
     assert not (new_case / "opencode.json.bak").exists()
     print("ok    absent config stays absent for check and dry-run")
 
+    judge_case = root / "judge"
+    judge_case.mkdir()
+    run(judge_case, "--judge", "openrouter/judge-strong")
+    jc = json.loads((judge_case / "opencode.json").read_text())
+    assert jc["agent"]["verdict-prosecutor"]["model"] == "openrouter/judge-strong"
+    assert jc["agent"]["verdict-defender"]["model"] == "openrouter/judge-strong"
+    assert "test-executor" not in jc["agent"]
+    print("ok    judge-only sets both court roles without lanes")
+
+    run(judge_case, *model_arguments(), "--judge", "openrouter/judge-strong", "--failure-analyst", "openrouter/analyst")
+    jc = json.loads((judge_case / "opencode.json").read_text())
+    assert set(jc["agent"]) >= set(lanes) | {"verdict-prosecutor", "verdict-defender", "failure-analyst"}
+    assert jc["agent"]["failure-analyst"]["model"] == "openrouter/analyst"
+    print("ok    lanes + judge + failure-analyst combine")
+
+    res = run(judge_case, *model_arguments(), "--judge", models["deep"])
+    assert "WARNING" in res.stderr and "independence" in res.stderr
+    print("ok    judge==executor model warns (never blocks)")
+
+    res = run(judge_case, "--check")
+    assert "agent.verdict-prosecutor:" in res.stdout
+    assert "agent.verdict-defender:" in res.stdout
+    print("ok    check lists judge roles")
+
+    run(judge_case, expected=2)
+    print("ok    no lanes/judge/analyst -> usage error")
+
 print("all fixtures passed")
 PY
