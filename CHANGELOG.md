@@ -8,6 +8,31 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.28.0] — 2026-11-24
+
+Theme: **independent adjudicator + stage-lease visibility.**
+
+### Added
+- `verdict-judge` subagent (both harnesses): the independent read-only adjudicator of
+  the verdict court. Weighs the prosecutor/defender briefs against the mechanical
+  evidence (verifying their citations against the actual files) and renders
+  `judge_verdict` — a fresh context, not the orchestrator that chose the strategy nor
+  the executor that ran the tests. The court is now a trio; the orchestrator spawns
+  prosecutor + defender (parallel), then the judge, and records `judge-review.json`.
+- Stage-lease orientation hint (both harnesses): session-start shows active leases
+  (`Stage leases active: deploy on stage by anna@host (SHOP-123)`), fail-open;
+  `stage-lease.py status --hint`. Solo homes stay silent.
+- Fixtures: `stage-lease-fixtures.sh` `--hint` cases + a TS orientation lease test.
+
+### Changed
+- Agent inventory 11 → 12 (`verdict-judge`); `qa-manager` task whitelist 10 → 11 leaves.
+- `judge.md`, `qa-manager`, `test-ticket`, `report-to-jira`, `05-verification`:
+  adjudication is by the independent `verdict-judge`, not the orchestrator.
+
+### Migration
+- No action required. The court gains an independent adjudicator; the lease hint is
+  additive visibility.
+
 ## [0.27.0] — 2026-11-24
 
 Theme: **model setup for the judge roles — optional + guided, never forced (D6).**

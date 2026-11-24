@@ -74,8 +74,8 @@ root-causing.
 The mechanical checks above prove the evidence is well-formed; the adversarial court
 (`docs/pipeline/judge.md`) proves the verdict is *meaningfully supported*. Before a
 verdict is reported, the orchestrator spawns `verdict-prosecutor` (attacks the verdict)
-and `verdict-defender` (defends it with cited evidence), adjudicates the two briefs,
-and writes `judge-review.json`. It catches the false-green class the validator cannot
+and `verdict-defender` (defends it with cited evidence), then the independent
+`verdict-judge` adjudicates the two briefs; the orchestrator writes `judge-review.json`. It catches the false-green class the validator cannot
 see (negative-assertion false-greens, ACs flattened in translation). An `unsupported`
 PASS becomes NEEDS_REVIEW. Fast Path low-risk may skip it (recorded, never silent).
 

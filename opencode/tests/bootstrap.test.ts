@@ -232,6 +232,22 @@ describe("orientation (opencode)", () => {
     expect(text).toContain("pruning is a human step")
   })
 
+  test("stage-lease visibility hint fires when a lease is active (parity)", async () => {
+    await init()
+    const ld = join(dir, "evidence", ".leases")
+    await mkdir(ld, { recursive: true })
+    const future = Math.floor(Date.now() / 1000) + 900
+    await writeFile(join(ld, "stage__deploy__abcd1234.json"), JSON.stringify({
+      token: "abcd1234", scope: "deploy", env: "stage", project: "SHOP",
+      holder: "anna@host", ticket: "SHOP-123", acquired_at_epoch: future - 900,
+      expires_at_epoch: future, ttl_s: 900, heartbeat_at: "2026-11-24T12:00:00Z",
+    }))
+    const text = await qaBlueprint.orientation(dir)
+    expect(text).toContain("Stage leases active")
+    expect(text).toContain("deploy")
+    expect(text).toContain("SHOP-123")
+  })
+
   test("flags a playwright entry without the contract flags", async () => {
     await writeFile(
       join(dir, "opencode.json"),

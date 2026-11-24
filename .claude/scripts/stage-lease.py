@@ -218,6 +218,12 @@ def cmd_status(args):
             continue
         if not is_stale(data, now):
             active.append(data)
+    if args.hint:
+        if active:
+            parts = [f"{d.get('scope')} on {d.get('env')} by {d.get('holder')} ({d.get('ticket')})" for d in active[:3]]
+            more = f" (+{len(active) - 3} more)" if len(active) > 3 else ""
+            print("Stage leases active: " + "; ".join(parts) + more)
+        return 0
     if args.json:
         print(json.dumps(active, indent=2, sort_keys=True))
     else:
@@ -268,6 +274,7 @@ def main(argv=None):
 
     p = sub.add_parser("status", parents=[common])
     p.add_argument("--json", action="store_true")
+    p.add_argument("--hint", action="store_true", help="one-line summary only when leases are active (orientation)")
     p.set_defaults(func=cmd_status)
 
     p = sub.add_parser("break", parents=[common])

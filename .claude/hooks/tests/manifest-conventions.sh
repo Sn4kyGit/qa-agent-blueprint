@@ -124,13 +124,14 @@ claude_models = {
     "bug-reporter": "inherit",
     "verdict-prosecutor": "inherit",
     "verdict-defender": "inherit",
+    "verdict-judge": "inherit",
 }
 claude_dir = os.path.join(root, ".claude", "agents")
 actual_names = {name[:-3] for name in os.listdir(claude_dir) if name.endswith(".md")}
 if actual_names == set(claude_models):
-    ok("Claude agent inventory is exactly the 11 expected agents")
+    ok("Claude agent inventory is exactly the 12 expected agents")
 else:
-    fail("Claude agent inventory is exactly the 11 expected agents",
+    fail("Claude agent inventory is exactly the 12 expected agents",
          f"missing={sorted(set(claude_models) - actual_names)}, extra={sorted(actual_names - set(claude_models))}")
 claude_texts = {}
 for agent, expected in claude_models.items():
@@ -378,13 +379,13 @@ expected_agents = {
     "test-executor", "test-executor-cheap", "test-executor-deep",
     "test-automator", "test-automator-cheap", "test-automator-deep",
     "qa-manager", "failure-analyst", "bug-reporter",
-    "verdict-prosecutor", "verdict-defender",
+    "verdict-prosecutor", "verdict-defender", "verdict-judge",
 }
 actual_agents = {os.path.basename(a)[:-3] for a in agents}
 if actual_agents == expected_agents:
-    ok("opencode agent inventory is exactly the 11 expected agents")
+    ok("opencode agent inventory is exactly the 12 expected agents")
 else:
-    fail("opencode agent inventory is exactly the 11 expected agents",
+    fail("opencode agent inventory is exactly the 12 expected agents",
          f"missing={sorted(expected_agents - actual_agents)}, extra={sorted(actual_agents - expected_agents)}")
 opencode_texts = {}
 for a in agents:
@@ -413,16 +414,16 @@ for a in agents:
 LEAVES = [
     "test-executor", "test-executor-cheap", "test-executor-deep",
     "test-automator", "test-automator-cheap", "test-automator-deep",
-    "failure-analyst", "bug-reporter", "verdict-prosecutor", "verdict-defender",
+    "failure-analyst", "bug-reporter", "verdict-prosecutor", "verdict-defender", "verdict-judge",
 ]
 qm_path = os.path.join(oc, "agents", "qa-manager.md")
 qm = open(qm_path).read() if os.path.exists(qm_path) else ""
 task_block = re.search(r"(?ms)^  task:\n((?:^    .*\n)+)", qm)
 allowed_leaves = re.findall(r"^    ([a-z0-9-]+): allow$", task_block.group(1), re.M) if task_block else []
-if task_block and '"*": deny' in task_block.group(1) and set(allowed_leaves) == set(LEAVES) and len(allowed_leaves) == 10:
-    ok("qa-manager task permission whitelists exactly the 10 leaf agents")
+if task_block and '"*": deny' in task_block.group(1) and set(allowed_leaves) == set(LEAVES) and len(allowed_leaves) == 11:
+    ok("qa-manager task permission whitelists exactly the 11 leaf agents")
 else:
-    fail("qa-manager task permission whitelists exactly the 10 leaf agents",
+    fail("qa-manager task permission whitelists exactly the 11 leaf agents",
          f"expected '*' deny + exactly {LEAVES}, got {allowed_leaves}")
 for leaf in LEAVES:
     p = os.path.join(oc, "agents", f"{leaf}.md")

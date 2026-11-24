@@ -33,6 +33,7 @@ import { spawnSync } from "node:child_process"
 const BLUEPRINT_ROOT = join(dirname(realpathSync(fileURLToPath(import.meta.url))), "..", "..")
 const EVIDENCE_VALIDATOR = join(BLUEPRINT_ROOT, ".claude", "scripts", "validate-evidence.py")
 const RETENTION_SCRIPT = join(BLUEPRINT_ROOT, ".claude", "scripts", "evidence-retention.py")
+const LEASE_SCRIPT = join(BLUEPRINT_ROOT, ".claude", "scripts", "stage-lease.py")
 const TEST_CODE_SCANNER = join(BLUEPRINT_ROOT, ".claude", "scripts", "qa-test-code-scan.mjs")
 
 // --------------------------------------------------------------------------
@@ -1119,6 +1120,12 @@ async function orientation(home: string, sessionDir: string = home): Promise<str
   // Evidence retention notification (0.23.0, plan D3): fail-open hint only.
   if (existsSync(RETENTION_SCRIPT)) {
     const r = spawnSync("python3", [RETENTION_SCRIPT, "status", "--qa-home", home, "--hint"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: process.env })
+    const line = (r.status === 0 ? r.stdout ?? "" : "").trim()
+    if (line) lines.push(`- ${line}`)
+  }
+  // Stage-lease visibility (0.28.0): fail-open hint when leases are active.
+  if (existsSync(LEASE_SCRIPT)) {
+    const r = spawnSync("python3", [LEASE_SCRIPT, "status", "--qa-home", home, "--hint"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], env: process.env })
     const line = (r.status === 0 ? r.stdout ?? "" : "").trim()
     if (line) lines.push(`- ${line}`)
   }

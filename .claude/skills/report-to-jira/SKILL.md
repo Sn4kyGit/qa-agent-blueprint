@@ -28,7 +28,8 @@ Apply the same verdict gates on the browser channel. After updating
 The mechanical validator proves the evidence is well-formed; the adversarial court
 (`docs/pipeline/judge.md`) proves the verdict is *meaningfully supported*. Before a
 PASS is reported, the orchestrator spawns `verdict-prosecutor` + `verdict-defender`,
-adjudicates their cited briefs and records `judge-review.json`. A PASS whose review
+then the independent `verdict-judge` adjudicates their cited briefs; the orchestrator
+records `judge-review.json`. A PASS whose review
 is `unsupported` is **not reported as PASS** — it becomes NEEDS_REVIEW (a human
 rules). Fast Path low-risk runs may skip the court, recorded as `judge_skipped: true`
 in the summary (never silent). The court complements the validator, never replaces it.

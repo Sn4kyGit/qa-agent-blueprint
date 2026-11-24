@@ -19,9 +19,9 @@ semantically hollow — a negative assertion (`toHaveCount(0)`) green because an
 element was renamed, an AC flattened in translation ("understandable error message"
 → `toBeVisible()`), coverage complete on paper but meaningless.
 
-## The adversarial pair
+## The adversarial court (three independent judges)
 
-Two independent read-only subagents, opposing mandates, both OEV-grounded:
+Three independent read-only subagents, all OEV-grounded:
 
 - **`verdict-prosecutor`** — attacks the verdict: argues why it is UNSUPPORTED. Hunts
   Observable gaps (no artifact for a claimed step), Executable gaps (unexecuted
@@ -31,11 +31,15 @@ Two independent read-only subagents, opposing mandates, both OEV-grounded:
   artifact, the executed run/red-check, and the meaningful assertion per required AC.
   Rebuts likely attacks with citations, and **concedes** what the evidence does not
   support. Every defense cites evidence.
+- **`verdict-judge`** — the independent adjudicator. Weighs the two briefs against the
+  mechanical evidence (verifying their citations against the actual files) and renders
+  the final `judge_verdict`. A fresh context: it chose neither the strategy nor ran the
+  tests, so it is not invested in the outcome.
 
-Both are spawned by the **orchestrator** (main or `qa-manager`), never by an
+All three are spawned by the **orchestrator** (main or `qa-manager`), never by an
 execution leaf — separation of powers. They are read-only (no Write/Edit, no
-delegation, no browser, no JIRA write). They may run in parallel (read-only, no
-shared mutable state).
+delegation, no browser, no JIRA write). Prosecutor and defender may run in parallel;
+the judge runs after them with both briefs.
 
 ## OEV — the shared checklist
 
@@ -54,10 +58,12 @@ never invent figures or claim an execution that did not happen. Their briefs are
 themselves verifiable: a human can follow the citations. The mechanical validator
 remains ground truth for "did something happen"; the judges argue meaning on top.
 
-## Adjudication (the orchestrator, constrained)
+## Adjudication (the independent verdict-judge, constrained)
 
-The orchestrator weighs the two cited briefs against the mechanical evidence and
-records the result. It is bound by citation rules, not free to confirm:
+The `verdict-judge` weighs the two cited briefs against the mechanical evidence
+(verifying citations against the actual files) and renders the result; the
+orchestrator records it as `judge-review.json`. The judge is bound by citation rules,
+not free to confirm:
 
 - **`supported`** — the defender cites evidence covering every required AC, AND every
   prosecutor gap is rebutted by a defense citation, AND the mechanical validator
@@ -68,7 +74,7 @@ records the result. It is bound by citation rules, not free to confirm:
 - **`needs-human`** — contested (both sides cite conflicting evidence) or insufficient
   evidence to decide.
 
-The orchestrator never overrules a cited, undefended gap to force a PASS. Shadow mode
+The judge never overrules a cited, undefended gap to force a PASS. Shadow mode
 applies to the report regardless.
 
 ## Output: `judge-review.json` in the run dir

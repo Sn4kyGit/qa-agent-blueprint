@@ -68,6 +68,13 @@ H=$(new_home wait); team "$H"
 acq "$H" stage deploy a@h SHOP-1 900 >/dev/null
 check "busy with --wait 0 -> 3" 3 "$(python3 "$SCRIPT" acquire --qa-home "$H" --project SHOP --env stage --scope deploy --holder b@h --ticket SHOP-2 --wait 0 >/dev/null 2>&1; echo $?)"
 
+echo "== status --hint (orientation) =="
+H=$(new_home hint); team "$H"
+check "hint empty when no leases" "" "$(python3 "$SCRIPT" status --qa-home "$H" --hint 2>/dev/null)"
+acq "$H" stage deploy a@h SHOP-1 900 >/dev/null
+HINT="$(python3 "$SCRIPT" status --qa-home "$H" --hint 2>/dev/null)"
+case "$HINT" in *"Stage leases active"*deploy*) check "hint shows active lease" 0 0;; *) check "hint shows active lease" 0 1;; esac
+
 echo
 if [ "$fails" -eq 0 ]; then echo "all fixtures passed"; else echo "$fails fixture(s) failed"; fi
 exit "$fails"
