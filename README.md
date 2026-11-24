@@ -101,7 +101,7 @@ The agent knows *your* project because it reads `PROJECT.md` (test users,
 environments, deploy runbook) and `PRODUCT.md` (what differs per product).
 None of that is in the prompt — it comes from files in your repo.
 
-**35 skills · 9 subagents · 4 hooks · 2 MCP servers** — all in plain Markdown,
+**35 skills · 11 subagents · 4 hooks · 2 MCP servers** — all in plain Markdown,
 reviewable and diffable through Git.
 
 > 📖 **[Detailed overview](https://sn4kygit.github.io/qa-agent-blueprint/overview.html)** —
@@ -249,7 +249,7 @@ claude plugin update --scope project qa-agent-blueprint
 | Component | Count | What it does |
 |---|---|---|
 | **Skills** | 35 | Test workflows, bug reports, analysis, reporting, learning, retention, rollup |
-| **Subagents** | 9 | qa-manager, test-executor, test-automator, failure-analyst, bug-reporter (+ cheap/deep lanes) |
+| **Subagents** | 11 | qa-manager, test-executor, test-automator, failure-analyst, bug-reporter (+ cheap/deep lanes), verdict-prosecutor, verdict-defender |
 | **Hooks** | 4 | SessionStart (bootstrap), PreToolUse (guard), Stop (evidence gate), PostToolUse (audit) |
 | **MCP servers** | 2 | playwright (browser), atlassian (JIRA) |
 | **Always-loaded rules** | 5 | evidence-policy, product-layer, qa-principles, security, token-discipline |

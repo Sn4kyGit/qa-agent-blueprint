@@ -23,6 +23,16 @@ Before each Atlassian write, also run the summary validator with
 Apply the same verdict gates on the browser channel. After updating
 `reported_to_jira`/`shadow`, revalidate the final summary.
 
+## Before reporting a PASS: the verdict court
+
+The mechanical validator proves the evidence is well-formed; the adversarial court
+(`docs/pipeline/judge.md`) proves the verdict is *meaningfully supported*. Before a
+PASS is reported, the orchestrator spawns `verdict-prosecutor` + `verdict-defender`,
+adjudicates their cited briefs and records `judge-review.json`. A PASS whose review
+is `unsupported` is **not reported as PASS** — it becomes NEEDS_REVIEW (a human
+rules). Fast Path low-risk runs may skip the court, recorded as `judge_skipped: true`
+in the summary (never silent). The court complements the validator, never replaces it.
+
 ## Before anything: is this a shadow run?
 
 Shadow mode is **on by default**. Only when `QA_AGENT_SHADOW=0` is set or

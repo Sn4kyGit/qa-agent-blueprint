@@ -14,6 +14,8 @@ permission:
     test-automator-deep: allow
     failure-analyst: allow
     bug-reporter: allow
+    verdict-prosecutor: allow
+    verdict-defender: allow
 ---
 
 You are the **QA Manager** — the orchestrator for one ticket's full test lifecycle.
@@ -252,6 +254,14 @@ While a Task call runs, the user sees **nothing** — counter that mechanically:
      only the human applies it and a later normal run earns a new verdict.
    Then report via the `report-to-jira` skill, which picks the transition from the
    class — including "no transition at all" for a stale test.
+7b. **Verdict court before reporting** (`docs/pipeline/judge.md`). Before any
+   verdict is reported, spawn the adversarial pair `verdict-prosecutor` +
+   `verdict-defender` (independent, read-only, may run in parallel), adjudicate their
+   cited briefs against the mechanical evidence, and write `judge-review.json`. A
+   PASS with an `unsupported` review is not reported as PASS — it becomes
+   NEEDS_REVIEW (a human rules); headless it stays unreported. Fast Path low-risk may
+   skip the court (record `judge_skipped: true`, never silent). The mechanical
+   validator always runs; the court adds semantic review, never replaces the gate.
 8. **On PASS** — report via `report-to-jira` (comment + final screenshot +
    transition to the project's PASS transition). Every report carries the run's
    **mode** (`Mode: <mcp-only|hybrid|cli-first>` in the header per

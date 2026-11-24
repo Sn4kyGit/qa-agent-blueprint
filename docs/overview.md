@@ -55,7 +55,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
 Unter **opencode** (modell-agnostisch, Modell = deine `/models`-Wahl): `install.sh --mode opencode --target <projekt> --yes` vom Clone aus — Details: [Quickstart opencode](https://github.com/Sn4kyGit/qa-agent-blueprint/blob/main/docs/quickstart-opencode.md).
 Für wechselnde Claude-Code- und opencode-Sessions in derselben QA-Home: `install.sh --mode shared` — beide bleiben ohne Re-Onboarding startbereit, `/agentswitch` prüft read-only.
 
-Ende-zu-Ende verifiziert (claude 2.1.263): registriert 35 Skills, 9 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
+Ende-zu-Ende verifiziert (claude 2.1.263): registriert 35 Skills, 11 Subagents, 4 Hooks und beide MCP-Server. Solange das Repo privat ist, braucht der Fetch GitHub-Auth (`gh auth login`) — darunter läuft schlicht git. Alternativ: Clone + `install.sh` (siehe README).
 
 ## Der Ablauf
 
@@ -243,7 +243,7 @@ schreiben, die als read-only gilt. Und ihre Beschreibungen verweisen auf rund 24
 es hier nicht gibt. Die Eingrenzung steht als offener Punkt auf der Liste; bis dahin ist
 qa-manager die Instanz, die entscheidet, was von einem Spezialisten tatsächlich ausgeführt wird.
 
-### Die 9 Subagents
+### Die 11 Subagents
 
 | Subagent | Rolle | Werkzeuge |
 | --- | --- | --- |
@@ -567,7 +567,7 @@ es nur noch: „Teste *TICKET*." Der Shadow-Modus ist ab Tag eins an — der Age
 vollständig, postet aber nichts, bis du es freigibst.
 
 QA Agent Blueprint · Stand: 30. Oktober 2026 (0.19.0) —
-aktualisiert auf Repo-Stand (35 Skills, 9 Subagents, Fixture-Batterie + 190 bun-Tests, 66 Eval-Cases,
+aktualisiert auf Repo-Stand (35 Skills, 11 Subagents, Fixture-Batterie + 190 bun-Tests, 66 Eval-Cases,
 5 Verdikte, zwei Harnesses — Claude Code als Plugin, opencode per Symlink-Install —,
 Execution Modes mcp-only/hybrid/cli-first mit /recon-Probe, Rotprobe und Beobachtungslauf,
 Keychain-Secrets für Testuser-Logins und JIRA-PAT, wertefreie Credential-Injection via qa-secrets.mjs,

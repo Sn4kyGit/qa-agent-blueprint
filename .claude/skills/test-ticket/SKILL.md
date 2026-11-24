@@ -97,7 +97,11 @@ orchestration to `qa-manager`.
  9. Validate schema-v2 `run.json` and `execution_summary.json` with
     `validate-evidence.py` (run/path binding, timestamps, coverage, normalized
     attempts/outcomes and artifact hashes) before reporting. Malformed new evidence
-    is invalid; historical files stay untouched. Report through `report-to-jira` on
+    is invalid; historical files stay untouched. Before reporting, run the verdict
+   court (`docs/pipeline/judge.md`): spawn `verdict-prosecutor` + `verdict-defender`,
+   adjudicate their cited briefs, write `judge-review.json`; an `unsupported` PASS
+   becomes NEEDS_REVIEW. Fast Path low-risk may skip the court (record
+   `judge_skipped: true`). Report through `report-to-jira` on
     PASS/FAIL/BLOCKED/NEEDS_REVIEW exactly as before, including mode and shadow.
     NO_TEST posts nothing; NEEDS_REVIEW is interactive-only and proposal-comment
     only, while headless brittle/outdated tests stay FAIL. The summary's `skills_used` names every skill

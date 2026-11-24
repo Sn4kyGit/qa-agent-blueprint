@@ -8,6 +8,39 @@ claude plugin marketplace update qa-agent-blueprint-marketplace
 claude plugin update --scope project qa-agent-blueprint   # restart afterwards
 ```
 
+## [0.26.0] — 2026-11-24
+
+Theme: **the adversarial verdict court — judges, not guards.** An independent
+read-only pair critically reviews every verdict before it is reported, applying OEV
+(Observable, Executable, Verifiable). Catches the semantically-hollow PASS the
+mechanical validator cannot see (false-green negative assertions, ACs flattened in
+translation).
+
+### Added
+- `verdict-prosecutor` + `verdict-defender` subagents (both harnesses): independent,
+  read-only, opposing mandates, every claim cited to evidence. The prosecutor attacks
+  the verdict (OEV gaps, false-greens, flattened ACs); the defender defends with
+  per-AC citations and concedes what the evidence does not support.
+- `docs/pipeline/judge.md`: the court contract, OEV checklist, grounding rule (OEV
+  applies to the judges themselves — no fabrication), `judge-review.json` schema, and
+  constrained adjudication (`supported` / `unsupported` / `needs-human`).
+- Integration: the orchestrator spawns the pair before `report-to-jira`, adjudicates
+  the cited briefs, writes `judge-review.json`; an `unsupported` PASS becomes
+  NEEDS_REVIEW. Fast Path low-risk may skip the court (`judge_skipped` recorded, never
+  silent). `qa-manager` whitelist + manifest conventions updated.
+- OEV lens named in `qa-principles.md`; `evidence-policy` records `judge-review.json`
+  + `judge_skipped`; `05-verification`, `report-to-jira`, `test-ticket` wired.
+- Eval `verdict-court-hollow-pass` + COVERAGE row.
+
+### Changed
+- Agent inventory 9 → 11 (`verdict-prosecutor`, `verdict-defender`); `qa-manager` task
+  whitelist 8 → 10 leaves.
+- Counts: 67 eval cases (skills/commands unchanged: 35 / 24).
+
+### Migration
+- No action required. The court adds semantic review before reporting; the mechanical
+  evidence validator remains the gate. Fast Path low-risk skips it (recorded).
+
 ## [0.25.0] — 2026-11-23
 
 Theme: **stage coordination + test-data lifecycle.** Parallel sessions/humans on a
