@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Sn4kyGit/qa-agent-blueprint)](https://github.com/Sn4kyGit/qa-agent-blueprint/releases)
 
-![QA Agent Blueprint — Turn Claude Code into a learning QA Manager](docs/images/hero.png)
+![QA Agent Blueprint — the QA harness for coding agents](docs/images/hero.png)
 
 **The QA harness for coding agents.**
 
