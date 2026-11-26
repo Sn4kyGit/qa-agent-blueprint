@@ -4,6 +4,34 @@ Compact English statement of the blueprint concept. Goal: Claude Code becomes a
 learning QA Manager + Tester — ticket in, tested ticket out, with evidence and a
 report, without burning the token budget.
 
+## Positioning — an outer QA harness
+
+An agent is a model plus a harness (loop, tools, context, memory, guardrails,
+feedback). Claude Code, opencode and DeepSeek Harness are *inner* harnesses: they run
+the model. The blueprint is the **outer / QA / verification harness** layered on top —
+it does not run the model loop, it makes that execution trustworthy and verifiable.
+It is harness-agnostic (the same outer layer runs on Claude Code and opencode).
+
+```
+┌────────────────────────────────────────────────┐
+│ QA AGENT BLUEPRINT — outer / QA harness         │
+│ guides:  router · rules · skills                │
+│ sensors: evidence · validator · court · evals   │
+│ state:   projects · memory · evidence           │
+├────────────────────────────────────────────────┤
+│ INNER HARNESS — Claude Code / opencode / dsh    │
+│ loop · tools · context · sandbox                │
+├────────────────────────────────────────────────┤
+│ MODEL — qwen / claude / deepseek / …            │
+└────────────────────────────────────────────────┘
+        agent = model + inner harness + outer harness
+```
+
+The name is a double meaning: a *test harness* in the classic QA sense (execution
+engine + script repository) that is itself an *agent harness* in the
+"Code as Agent Harness" sense (executable, inspectable, stateful). The layers below
+are the harness anatomy: guides (1–2), sensors (hooks/validators/court), state (3–5).
+
 ## The layers
 
 ```

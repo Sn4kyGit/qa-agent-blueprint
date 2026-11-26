@@ -6,10 +6,11 @@
 
 ![QA Agent Blueprint — Turn Claude Code into a learning QA Manager](docs/images/hero.png)
 
-**Turn Claude Code or opencode into a QA Manager that tests tickets autonomously.**
+**The QA harness for coding agents.**
 
-Hand it a JIRA ticket — it tests or re-tests the ticket, produces evidence, reports
-back in your project's format, and remembers what it learned.
+Evidence, an adversarial verdict court, and a learning loop — on top of Claude Code
+or opencode. Hand it a JIRA ticket; it tests or re-tests it, produces evidence,
+reports back in your project's format, and remembers what it learned.
 
 ```
 /test-ticket SHOP-1234
@@ -76,6 +77,36 @@ That's it. The agent knows your project because it reads the files in your repo.
    tickets, browser transcripts stay in subagents.
 5. **Security-audited** — guard blocks secret reads, shadow mode, destructive commands,
    self-escalation. 47+ fixtures prove it.
+
+---
+
+## Why a harness?
+
+An agent is a model plus a **harness** — the loop, tools, context, memory, guardrails
+and feedback that turn raw intelligence into reliable work. Claude Code, opencode and
+DeepSeek Harness are *inner* harnesses: they run the model. The blueprint is the
+**outer harness** on top — the QA domain layer that makes that execution trustworthy:
+
+```
+┌────────────────────────────────────────────────┐
+│ QA AGENT BLUEPRINT — outer / QA harness         │
+│ guides:  router · rules · skills                │
+│ sensors: evidence · validator · court · evals   │
+│ state:   projects · memory · evidence           │
+├────────────────────────────────────────────────┤
+│ INNER HARNESS — Claude Code / opencode / dsh    │
+│ loop · tools · context · sandbox                │
+├────────────────────────────────────────────────┤
+│ MODEL — qwen / claude / deepseek / …            │
+└────────────────────────────────────────────────┘
+        agent = model + inner harness + outer harness
+```
+
+It is also a *test harness* in the classic QA sense — an execution engine plus a
+script repository — so the name is a double meaning, not a buzzword: **a test harness
+that is itself an agent harness.** Strong harnesses make average models useful; the
+evidence gates and the verdict court catch what the model gets wrong, which is why
+the blueprint is model-agnostic.
 
 ---
 

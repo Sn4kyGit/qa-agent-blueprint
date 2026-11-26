@@ -10,9 +10,11 @@ task. Humans start at `README.md`.
 
 ## What this is
 
-`qa-agent-blueprint`: a ticket-driven QA Manager + Tester for Claude Code
-(JIRA ticket in → tested ticket out, mandatory evidence, learning loop).
-Ships 35 skills, 12 subagents, 4 hooks, and 2 MCP servers (`playwright`,
+`qa-agent-blueprint`: the **outer QA harness for coding agents** — a ticket-driven
+QA Manager + Tester layered on Claude Code / opencode (JIRA ticket in → tested ticket
+out, mandatory evidence, an adversarial verdict court, learning loop). It is the
+verification harness on top of an inner execution harness, not the execution harness
+itself. Ships 35 skills, 12 subagents, 4 hooks, and 2 MCP servers (`playwright`,
 `atlassian`). Installs into any project as a Claude Code plugin — nothing is
 copied into the consumer repo; only the user's own data (`projects/`,
 `memory/`, `evidence/`) lives there.

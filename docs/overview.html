@@ -140,12 +140,12 @@
 <!-- ============================= OVERVIEW ============================= -->
 <div class="tab-panel active" id="overview" role="tabpanel">
   <header class="hero">
-    <p class="kicker">Claude Code &amp; opencode · AI QA Manager</p>
-    <h1>Hand it a ticket.<br>Get back a tested ticket.</h1>
+    <p class="kicker">Claude Code &amp; opencode · outer QA harness</p>
+    <h1>The QA harness<br>for coding agents.</h1>
     <p class="lede">
-      QA Agent Blueprint turns Claude Code or opencode into a <strong>learning QA manager</strong>:
-      JIRA ticket in → routed, tested, evidenced, reported, and remembered. Not a chatbot that
-      says “looks good” — an agent that <em>proves</em> what it tested, and gets better every run.
+      Evidence, an adversarial verdict court, and a learning loop — on top of Claude Code
+      or opencode. Ticket in, tested ticket out: not a chatbot that says “looks good”, but an
+      agent that <em>proves</em> what it tested, and gets better every run.
     </p>
     <div class="stats">
       <div class="stat"><div class="n">35</div><div class="l">Skills</div></div>
@@ -187,6 +187,26 @@
   </section>
 
   <section>
+    <h2>The harness, precisely</h2>
+    <p class="sub">An agent is a model plus a harness. Claude Code / opencode / DeepSeek Harness are <strong>inner</strong> harnesses (they run the model); the blueprint is the <strong>outer</strong> harness — the QA layer that makes execution trustworthy.</p>
+    <pre><code>┌────────────────────────────────────────────────┐
+│ <span class="g">QA AGENT BLUEPRINT — outer / QA harness</span>         │
+│ guides:  router · rules · skills                │
+│ sensors: evidence · validator · court · evals   │
+│ state:   projects · memory · evidence           │
+├────────────────────────────────────────────────┤
+│ INNER HARNESS — Claude Code / opencode / dsh    │
+│ loop · tools · context · sandbox                │
+├────────────────────────────────────────────────┤
+│ MODEL — qwen / claude / deepseek / …            │
+└────────────────────────────────────────────────┘
+        agent = model + inner harness + outer harness</code></pre>
+    <div class="callout">
+      <strong>A double meaning, not a buzzword.</strong> It is a <em>test harness</em> in the classic QA sense (execution engine + script repository) that is itself an <em>agent harness</em>. Strong harnesses make average models useful — the evidence gates and verdict court catch what the model gets wrong, which is why the blueprint is model-agnostic.
+    </div>
+  </section>
+
+  <section>
     <h2>Install in two commands</h2>
     <p class="sub">Paste into Claude Code, in the project to be tested:</p>
     <pre><code>claude plugin marketplace add Sn4kyGit/qa-agent-blueprint
@@ -214,6 +234,7 @@ claude plugin install --scope project qa-agent-blueprint@qa-agent-blueprint-mark
     <div class="card"><h4><span class="num">3</span>Project &amp; product context</h4><p>Only the active project is read. Multi-product projects add one short product file listing only the deltas.</p><span class="path">projects/&lt;KEY&gt;/ → products/&lt;PRODUCT&gt;/</span></div>
     <div class="card"><h4><span class="num">4</span>Learning system</h4><p>Inbox → topic files → promotion into rules and project files. Knowledge only counts once it arrives there.</p><span class="path">memory/INDEX.md · memory/learnings/</span></div>
     <div class="card"><h4><span class="num">5</span>Evidence</h4><p>Screenshots, logs, traces, a machine-readable summary per run. Never in the model context — and read back by <code>/qa-report</code> and the rollup.</p><span class="path">evidence/&lt;KEY&gt;/&lt;TICKET&gt;/&lt;ts&gt;/</span></div>
+    <div class="callout">In harness terms: layers 1–2 are <strong>guides</strong> (steer before acting), the hooks / validators / verdict court are <strong>sensors</strong> (observe and correct), layers 3–5 are <strong>state</strong> (what persists). The inner harness runs the loop; this outer harness makes it reliable.</div>
   </section>
 
   <section>
