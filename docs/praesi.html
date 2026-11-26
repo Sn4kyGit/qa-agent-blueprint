@@ -201,7 +201,7 @@
     <div class="row">
       <div class="card col"><h3>Evidence</h3><p>Zwingend produzierte, maschinenlesbare Testbeweise: Screenshots, Logs, Run-JSON — validiert, nicht behauptet.</p></div>
       <div class="card col"><h3>Verdict Court</h3><p>Drei unabhängige Agenten prüfen jedes Urteil adversarial, bevor es nach JIRA geht. Kein Rubber-Stamp-PASS.</p></div>
-      <div class="card col"><h3>Learning Loop</h3><p>Capture → Groom → Promote: Wissen wird team-geteilt in Git versioniert und automatisch geladen.</p></div>
+      <div class="card col"><h3>Learning Loop</h3><p>Capture → Groom → Promote: Wissen landet in Repo-Dateien und wird automatisch geladen. Commit, Push &amp; Review: Schritt des Teams.</p></div>
     </div>
   </div>
   <div class="foot"><span>QA Agent Blueprint</span><span>03 · Überblick</span></div>
@@ -429,7 +429,7 @@
 <section class="slide"><div class="stage compact">
   <div class="kicker">Learning Loop</div>
   <h2>„Einmal erklären, nie wieder"</h2>
-  <div class="sub">Wissen gilt erst als gelernt, wenn es in einer Rule oder PROJECT.md steht — automatisch geladen, reviewbar im Merge Request.</div>
+  <div class="sub">Wissen gilt erst als gelernt, wenn es in einer Rule oder PROJECT.md steht — automatisch geladen; reviewbar, sobald das Team committet.</div>
   <div class="body">
     <div class="row">
       <div class="card col"><h3 style="color:var(--cyan)">Capture</h3><p>Jede Session: nur echt neue Findings in den Inbox (<span class="mono">memory/learnings/_inbox.md</span>), mit Kandidaten-Ziel. Agent-Fehler bekommen vorher eine 5-Whys-RCA.</p></div>
@@ -439,13 +439,15 @@
       <div class="card col"><h3 style="color:var(--amber)">Promote</h3><p>Gate: <strong>≥ 2 Sessions</strong>. Dann Merge in Rules, Skills oder Projektkontext — validierungs-gegated über Evals.</p></div>
     </div>
     <div class="row">
-      <div class="card col" style="flex:1.2"><h3>Team-geteilt in Git — bewusst kein Memory-Server</h3>
-        <ul><li>Lokale DBs isolieren Wissen pro Laptop — genau die Wiederholung, die der Blueprint beseitigt.</li><li>Ein Recall-Server nimmt den Druck zu promoten; Git erzwingt Review und Teilung.</li><li>Korpus ist Plain Text: jeder Memory-Server kann ihn später ingesten.</li></ul></div>
+      <div class="card col" style="flex:1.2"><h3>Git ist die Ablage — Committen ist Team-Disziplin</h3>
+        <ul><li><strong>Kein Auto-Push:</strong> Die Loop endet im Working Tree; Commit, Push und MR-Review sind Menschen-Schritte (Review-Gate bleibt erhalten).</li>
+        <li>QA-Home darf unversioniert sein — dann bleibt Wissen lokal: die Isolation, die wir Memory-Servern vorwerfen. Deshalb: versionieren und Promotion-Commits reviewen wie Code.</li>
+        <li>Lokale DBs isolieren pro Laptop; ein Recall-Server nimmt den Druck zu promoten. Der Korpus ist Plain Text — jeder Server kann ihn später ingesten.</li></ul></div>
       <div class="note col" style="flex:1;align-self:stretch"><strong>Mechanisch verankert:</strong> Stop-Hook blockiert ohne Learnings-Deklaration; SessionStart meldet den Inbox-Backlog. Beide Enden der Pipeline sind erzwungen, nicht optional.</div>
     </div>
   </div>
   <div class="foot"><span>QA Agent Blueprint</span><span>13 · Memory</span></div>
-  <aside class="notes">Unterschied Recall vs. Promotion erklären: ein durchsuchbarer Haufen alter Notizen ist kein gelerntes Wissen. Gelernt = steht in der Datei, die der Agent ohnehin liest, und ist im MR reviewbar. Fürs Team: eure Learnings landen in Git, nicht auf einer Laptop-DB — Kollegen profitieren ab dem Merge.</aside>
+  <aside class="notes">Unterschied Recall vs. Promotion erklären: ein durchsuchbarer Haufen alter Notizen ist kein gelerntes Wissen. Gelernt = steht in der Datei, die der Agent ohnehin liest. Ehrlich bleiben: der Blueprint committet und pusht NICHT selbst — die Loop endet im Working Tree; Commit/Push/MR-Review ist Team-Disziplin (bewusst: Review-Gate). Ein unversioniertes QA-Home behält Wissen lokal — dann greift die Isolation-Kritik an Memory-Server auch uns. Empfehlung ans Team: QA Home versionieren, Promotion-Commits wie Code reviewen, z. B. fester Rhythmus nach dem Grooming.</aside>
 </div></section>
 
 <!-- 13 ─ Skills -->
@@ -492,7 +494,7 @@
         <li>Zwei read-only Audits: Hygiene (Größe, Duplikate, Widersprüche, Provenienz) + Harness-Delta (MCP-Contract, Secrets-Wiring).</li>
         <li><strong>Jede Änderung einzeln bestätigt</strong>, dann Versions-Stempel neu. Kein Projekt wird zum Re-Onboarding gezwungen.</li></ul></div>
     </div>
-    <div class="note"><strong>Warum das fürs Team zählt:</strong> Das Interview passiert einmal; das Wissen liegt versioniert in Git und wird automatisch geladen. Updates bleiben billig — genau deshalb aktualisieren Teams überhaupt.</div>
+    <div class="note"><strong>Warum das fürs Team zählt:</strong> Das Interview passiert einmal; das Wissen liegt in Repo-Dateien und wird automatisch geladen — versioniert und geteilt ist es, sobald das Team committet. Updates bleiben billig — genau deshalb aktualisieren Teams überhaupt.</div>
   </div>
   <div class="foot"><span>QA Agent Blueprint</span><span>15 · Onboarding &amp; Lifecycle</span></div>
   <aside class="notes">Drei Lebenszyklus-Momente: neues Projekt (Interview, einmalig), neues Produkt im Projekt (Delta, Minuten), Blueprint-Update (re-board, Delta mit Einzelbestätigung). Betonung: Routing-Registry wird aus echten JIRA-Components gebaut, nicht aus Erinnerung — tote Routing-Zeilen kosten sonst eine ganze Session. re-board ist der Grund, warum das Team Updates nicht fürchtet.</aside>
@@ -596,7 +598,7 @@
     <div class="row">
       <div class="card col"><h3 style="color:var(--green)">Skalierbare Verifikation</h3><p>Mehr KI-Code, ohne die Kontrollinstanz abzugeben: Evidence, Court und Audit laufen mechanisch mit — nicht nur wenn jemand Zeit hat.</p></div>
       <div class="card col"><h3 style="color:var(--green)">Weniger Bug-Ping-Pong</h3><p>Triage trennt echte Defekte von veralteten Tests, bevor ein Ticket filed wird. NEEDS_REVIEW statt Reopen-Schleife.</p></div>
-      <div class="card col"><h3 style="color:var(--green)">Team-Wissen statt Chat-Wissen</h3><p>Learnings in Git, reviewbar, automatisch geladen. Neue Kollegen erben die Stolperfallen des Teams.</p></div>
+      <div class="card col"><h3 style="color:var(--green)">Team-Wissen statt Chat-Wissen</h3><p>Learnings landen in Repo-Dateien und werden automatisch geladen. Commit, Push und Review sind Team-Disziplin — dann erben neue Kollegen die Stolperfallen des Teams.</p></div>
     </div>
     <div class="note"><strong>Ehrlicher Status:</strong> Alpha. Gegen Fixtures und ein fiktives Referenzprojekt getestet; noch keine Validierung im Realbetrieb. APIs und Formate können sich zwischen Releases ändern. <strong>Einladung zum Pilot:</strong> benutzen, kaputt machen, Feedback geben.</div>
   </div>
