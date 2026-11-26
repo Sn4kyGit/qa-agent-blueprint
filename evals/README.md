@@ -80,11 +80,13 @@ Each attempt and case has an explicit status:
   enabled, an unscored judged run is not a pass.
 
 Only transport-style failures and empty gateway responses receive **one retry** by
-default: timeouts, connection failures, 429, and transient 5xx responses. An
-**exhausted allocated quota** is the exception: Alibaba `Throttling.AllocationQuota`
-/ `insufficient_quota` ("Allocated quota exceeded") is **not** retried — it recovers
-only on a quota increase/reset, unlike a rate-limit 429 (`Throttling.RateQuota`,
-RPM/TPM), which recovers within a minute and stays retryable.
+default: timeouts, connection failures, 429, and transient 5xx responses. Alibaba's
+wording is tricky: `Throttling.AllocationQuota` ("Allocated quota exceeded") **with**
+the error-code `#token-limit` anchor is a *transient* TPM/TPS cap that clears within
+the minute — it **is** retried. The same wording **without** the anchor (or "Free
+allocated quota exceeded" / `FreeTierOnly`) is permanent account/free-quota
+exhaustion and is **not** retried. A plain rate-limit 429 (`Throttling.RateQuota`)
+stays retryable.
 `--transient-retries 0` disables this retry for both answer and judge calls, which
 is useful for free-provider diagnostics where a timeout is already sufficient
 evidence. Authentication, content failure, deterministic-check failure, and a

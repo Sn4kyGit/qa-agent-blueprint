@@ -69,15 +69,26 @@ class RunnerPolicyTest(unittest.TestCase):
         self.assertFalse(is_transient(result))
 
     def test_allocation_quota_exhausted_is_not_transient_even_with_429(self):
-        # Alibaba Throttling.AllocationQuota: the allocated token quota is spent;
-        # a retry cannot recover it. The 429 status must NOT make it transient.
+        # Allocation-quota wording WITHOUT the #token-limit anchor = permanent
+        # account/free-quota exhaustion; a retry cannot recover it.
         for msg in (
             "HTTP 429 Throttling.AllocationQuota: Allocated quota exceeded, please increase your quota limit.",
             "status 429 insufficient_quota",
             "Error: Allocated quota exceeded, please increase your quota limit.",
+            "403 AllocationQuota.FreeTierOnly: free tier exhausted",
         ):
             with self.subTest(msg=msg):
                 self.assertFalse(is_transient(ProcessResult(1, msg)))
+
+    def test_dashscope_token_limit_throttle_is_transient(self):
+        # The SAME billing wording WITH the error-code #token-limit anchor is the
+        # documented transient TPM/TPS cap (clears within the minute) -> retryable.
+        for msg in (
+            "Error: Allocated quota exceeded, please increase your quota limit. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#token-limit",
+            "429 You exceeded your current quota, please check your plan and billing details. (error-code#token-limit)",
+        ):
+            with self.subTest(msg=msg):
+                self.assertTrue(is_transient(ProcessResult(1, msg)))
 
     def test_rate_quota_is_transient(self):
         # Throttling.RateQuota (RPM/TPM) recovers within a minute -> retryable.

@@ -64,19 +64,26 @@ TRANSIENT_MARKERS = (
     "status 504",
     "socket hang up",
 )
-# Exhausted allocated quota is NOT transient: it recovers only when the quota is
-# increased or reset, not within a minute. Retrying wastes a call, and the 429
-# status would otherwise match TRANSIENT_MARKERS. Distinguish Alibaba
-# Throttling.AllocationQuota / insufficient_quota ("Allocated quota exceeded")
-# from Throttling.RateQuota (RPM/TPM, "Requests rate limit exceeded"), which IS
-# transient. These markers are specific to allocation so a rate-limit 429 still
-# retries.
+# Permanent free-quota exhaustion is NOT transient: it needs a plan/billing change,
+# not a retry. (The transient TPM throttle that *looks* like quota exhaustion is
+# handled separately by _is_dashscope_tpm_throttle below.)
 QUOTA_EXHAUSTED_MARKERS = (
-    "allocated quota exceeded",
-    "insufficient_quota",
-    "throttling.allocationquota",
-    "increase your quota",
+    "free allocated quota exceeded",
+    "freetieronly",
+    "free tier of the model has been exhausted",
 )
+
+
+def _is_dashscope_tpm_throttle(output: str) -> bool:
+    # DashScope/Bailian reports its per-minute TOKEN throttle (429
+    # Throttling.AllocationQuota) with billing wording ("Allocated quota exceeded /
+    # you exceeded your current quota ... billing") AND the error-code "#token-limit"
+    # anchor. Per the doc that anchor marks a transient TPM/TPS cap that clears
+    # within the minute — retryable, NOT account-quota exhaustion. The same wording
+    # WITHOUT the anchor is permanent exhaustion (handled by the markers below).
+    return "#token-limit" in output and (
+        "allocated quota exceeded" in output or "exceeded your current quota" in output
+    )
 
 
 @dataclass
@@ -133,8 +140,17 @@ def is_transient(result: ProcessResult, answer: str = "") -> bool:
     if result.returncode == 0 and not has_meaningful_answer(answer):
         return True
     output = result.output.lower()
-    if any(marker in output for marker in QUOTA_EXHAUSTED_MARKERS):
-        return False  # exhausted allocated quota: a retry cannot recover it
+    if _is_dashscope_tpm_throttle(output):
+        return True  # transient TPM/TPS cap (#token-limit): clears within the minute
+    # Allocation-quota wording WITHOUT the throttle anchor = permanent exhaustion
+    # (account quota / free tier), not a retryable rate limit.
+    if "#token-limit" not in output and (
+        "allocated quota exceeded" in output
+        or "throttling.allocationquota" in output
+        or "insufficient_quota" in output
+        or any(marker in output for marker in QUOTA_EXHAUSTED_MARKERS)
+    ):
+        return False
     if any(marker in output for marker in TRANSIENT_MARKERS):
         return True
     return result.returncode < 0
