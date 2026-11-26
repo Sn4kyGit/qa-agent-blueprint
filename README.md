@@ -285,7 +285,7 @@ claude plugin update --scope project qa-agent-blueprint
 | **MCP servers** | 2 | playwright (browser), atlassian (JIRA) |
 | **Always-loaded rules** | 5 | evidence-policy, product-layer, qa-principles, security, token-discipline |
 | **On-demand docs** | 12 | Detailed rules, read when the topic comes up |
-| **Tests** | 30 suites + 190 bun | Fixture battery, manifest conventions, eval cases (66) |
+| **Tests** | 30 suites + 200 bun | Fixture battery, manifest conventions, eval cases (67) |
 
 ### Skills you'll use most
 
@@ -361,8 +361,10 @@ input tokens (mostly browser interaction) and 5-15k output tokens.
 <summary><b>Not built yet, and honest about it</b></summary>
 
 - Web only (Chromium) as default — mobile/cross-browser via WDIO+Appium is reference-only
-- One ticket at a time — epics and releases have no rollup
-- No test-data lifecycle or stage leases — parallel testing on shared stages will confuse itself
+- One ticket per run — `/rollup` reports over existing epic/release evidence, but nothing
+  tests a whole epic in one shot
+- Shared-stage coordination is opt-in — solo is the default; team mode (stage leases,
+  data namespaces) must be enabled in `PROJECT.md`
 - No project has been onboarded for real yet — everything is verified against fixtures
   and a fictional reference project. The first pilot is the actual test.
 
@@ -413,7 +415,7 @@ never values.
 | [docs/architecture.md](docs/architecture.md) | Five layers, token budgets |
 | [docs/pilot-briefing.md](docs/pilot-briefing.md) | Read before the first real onboarding |
 | [docs/rules/](docs/rules/) | Detailed rules, read on demand |
-| [evals/COVERAGE.md](evals/COVERAGE.md) | Norm → test matrix (60 standard + 3 real-browser cases) |
+| [evals/COVERAGE.md](evals/COVERAGE.md) | Norm → test matrix (64 standard + 3 real-browser cases) |
 
 ---
 

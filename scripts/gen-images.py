@@ -39,65 +39,59 @@ def right_arrow(draw, x, y, size=10, color=MUTED):
     draw.polygon([(x - size, y - size), (x + size, y), (x - size, y + size)], fill=color)
 
 def make_hero():
-    W, H = 1200, 680
+    W, H = 1200, 780
     img = Image.new('RGB', (W, H), BG)
     draw = ImageDraw.Draw(img)
     gradient(draw, W, H)
 
-    draw.text((60, 45), "QA Agent Blueprint", font=title_font, fill=INK)
-    draw.text((60, 105), "Turn Claude Code into a learning QA Manager", font=h2_font, fill=MUTED)
+    draw.text((60, 40), "OPEN-SOURCE · OUTER QA HARNESS", font=mono_small, fill=TEAL)
+    draw.text((60, 66), "QA Agent Blueprint", font=title_font, fill=INK)
+    draw.text((60, 126), "The QA harness for coding agents — ticket in, tested ticket out.", font=h2_font, fill=MUTED)
 
-    badges = ["33 Skills", "9 Subagents", "4 Hooks", "2 MCP Servers", "Apache 2.0"]
+    badges = ["35 Skills", "12 Subagents", "4 Hooks", "2 MCP Servers", "Apache 2.0"]
     bx = 60
     for b in badges:
         bbox = draw.textbbox((0, 0), b, font=small_font)
         bw = bbox[2] - bbox[0] + 24
-        draw.rounded_rectangle((bx, 155, bx + bw, 185), radius=15, fill=CARD, outline=BORDER)
-        draw.text((bx + 12, 162), b, font=small_font, fill=MUTED)
+        draw.rounded_rectangle((bx, 172, bx + bw, 202), radius=15, fill=CARD, outline=BORDER)
+        draw.text((bx + 12, 179), b, font=small_font, fill=MUTED)
         bx += bw + 12
 
-    pipe_y = 245
-    pipe_h = 90
-    pipe_w = 150
-    gap = 22
-    start_x = 60
-
-    steps = [
-        ("JIRA Ticket", "SHOP-1234", VIOLET),
-        ("Route", "Project + Product", FUCHSIA),
-        ("Test", "Exploratory + CLI", ORANGE),
-        ("Evidence", "Screenshots + Logs", TEAL),
-        ("Report", "Comment + Transition", VIOLET),
-        ("Learn", "Captured + Enforced", FUCHSIA),
+    # The harness stack: outer (blueprint) / inner (execution) / model.
+    stack_x, stack_w = 60, W - 120
+    layers = [
+        ("QA AGENT BLUEPRINT — outer / QA harness", VIOLET,
+         "guides: router · rules · skills    sensors: evidence · validator · court · evals    state: projects · memory · evidence"),
+        ("INNER HARNESS — Claude Code / opencode / DeepSeek Harness", ORANGE,
+         "loop · tools · context · sandbox   (runs the model)"),
+        ("MODEL — qwen / claude / deepseek / …", TEAL,
+         "reasoning   (model-agnostic: the harness makes average models useful)"),
     ]
+    ly = 236
+    for name, color, desc in layers:
+        draw.rounded_rectangle((stack_x, ly, stack_x + stack_w, ly + 86), radius=14, fill=CARD, outline=color, width=2)
+        draw.rounded_rectangle((stack_x + 2, ly + 2, stack_x + 6, ly + 84), radius=3, fill=color)
+        draw.text((stack_x + 22, ly + 14), name, font=body_font, fill=color)
+        draw.text((stack_x + 22, ly + 48), desc, font=small_font, fill=MUTED)
+        ly += 98
+    draw.text((stack_x, ly + 2), "agent = model + inner harness + outer harness", font=mono_small, fill=MUTED)
 
-    for i, (title, sub, color) in enumerate(steps):
-        x = start_x + i * (pipe_w + gap)
-        draw.rounded_rectangle((x, pipe_y, x + pipe_w, pipe_y + pipe_h), radius=14, fill=CARD, outline=color, width=2)
-        draw.rounded_rectangle((x + 2, pipe_y + 2, x + pipe_w - 2, pipe_y + 6), radius=2, fill=color)
-        draw.text((x + 14, pipe_y + 22), title, font=body_font, fill=INK)
-        draw.text((x + 14, pipe_y + 52), sub, font=small_font, fill=MUTED)
-        if i < len(steps) - 1:
-            ax = x + pipe_w + 8
-            ay = pipe_y + pipe_h // 2
-            right_arrow(draw, ax, ay, size=10)
-
-    stats_y = 400
+    stats_y = ly + 40
     stats = [
-        ("~7k", "Token Budget", VIOLET),
-        ("46", "Eval Cases", FUCHSIA),
-        ("152+17", "Tests", ORANGE),
-        ("Security", "Audited", TEAL),
+        ("~8.4k", "Token Budget", VIOLET),
+        ("67", "Eval Cases", FUCHSIA),
+        ("30+200", "Suites + bun Tests", ORANGE),
+        ("Verdict", "Court · OEV", TEAL),
     ]
     sx = 60
     for val, label, color in stats:
-        draw.rounded_rectangle((sx, stats_y, sx + 190, stats_y + 75), radius=14, fill=CARD, outline=BORDER)
+        draw.rounded_rectangle((sx, stats_y, sx + 265, stats_y + 75), radius=14, fill=CARD, outline=BORDER)
         draw.text((sx + 18, stats_y + 14), val, font=h3_font, fill=color)
         draw.text((sx + 18, stats_y + 46), label, font=small_font, fill=MUTED)
-        sx += 205
+        sx += 280
 
-    draw.text((60, H - 55), "github.com/Sn4kyGit/qa-agent-blueprint", font=mono_small, fill=MUTED)
-    draw.text((W - 280, H - 55), "Claude Code + opencode", font=small_font, fill=MUTED)
+    draw.text((60, H - 48), "github.com/Sn4kyGit/qa-agent-blueprint", font=mono_small, fill=MUTED)
+    draw.text((W - 280, H - 48), "Claude Code + opencode", font=small_font, fill=MUTED)
     img.save('docs/images/hero.png', 'PNG', optimize=True)
     print(f"hero.png: {os.path.getsize('docs/images/hero.png')} bytes")
 
