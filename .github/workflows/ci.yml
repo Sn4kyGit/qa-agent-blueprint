@@ -13,10 +13,16 @@ jobs:
     # shim, agentswitch audit and eval-runner CLI flags must work on opencode 1.x
     # AND 2.x. fail-fast:false so a regression on one version still reports the
     # other. Both versions are pinned for reproducibility.
+    # 1.x ships as `opencode-ai`, 2.x as `@opencode/cli` (same `opencode`
+    # binary) — the old name never published a 2.x, so the package is per-entry.
     strategy:
       fail-fast: false
       matrix:
-        opencode-version: ["1.19.4", "2.4.1"]
+        include:
+          - opencode-version: "1.19.4"
+            opencode-package: "opencode-ai"
+          - opencode-version: "2.4.1"
+            opencode-package: "@opencode/cli"
     name: test (opencode ${{ matrix.opencode-version }})
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +39,7 @@ jobs:
         run: npm install --global @anthropic-ai/claude-code@2.1.263
 
       - name: Install pinned opencode (${{ matrix.opencode-version }})
-        run: npm install --global opencode-ai@${{ matrix.opencode-version }}
+        run: npm install --global ${{ matrix.opencode-package }}@${{ matrix.opencode-version }}
 
       - name: Run bash fixture battery
         run: |
@@ -75,7 +81,7 @@ jobs:
           node-version: 22
 
       - name: Install opencode (2.x)
-        run: npm install --global opencode-ai@2.4.1
+        run: npm install --global @opencode/cli@2.4.1
 
       - name: Runtime plugin smoke
         env:
